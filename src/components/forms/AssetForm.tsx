@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { supabase, AssetType, Location, AssetWithDetails } from '../lib/supabase';
+import { supabase, AssetType, Location, AssetWithDetails } from '../../lib/supabase';
 
 type AssetFormProps = {
   onClose: () => void;

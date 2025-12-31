@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader2, Eye, EyeOff } from 'lucide-react';
-import { supabase, Location } from '../lib/supabase';
+import { supabase, Location } from '../../lib/supabase';
 
 type User = {
   id: string;

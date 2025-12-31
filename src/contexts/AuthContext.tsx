@@ -60,7 +60,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (usersData && usersData.length > 0) {
         // Verificar si alguno de estos usuarios tiene contraseña
         const hasPasswordUsers = usersData.some(user => user.password && user.password.trim() !== '');
-        
+
         if (!hasPasswordUsers) {
           setNeedsPasswordSetup(true);
         }
@@ -86,59 +86,65 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const rolePermissions = {
       admin: [
         // Menús principales
-        'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 
-        'locations', 'mtc', 'users', 'servers', 'audit', 'integrity',
+        'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
+        'locations', 'mtc', 'users', 'servers', 'audit', 'integrity', 'flota-vehicular',
         // Submenús de inventario
-        'inventory-pc', 'inventory-celular', 'inventory-camaras-web', 'inventory-dvr',
+        'inventory-pc', 'inventory-celular', 'inventory-dvr',
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
         'inventory-proyector', 'inventory-switch', 'inventory-chip', 'inventory-tinte',
         'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
         // Submenús de cámaras
-        'cameras-revision', 'cameras-escuela', 'cameras-policlinico',
+        'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
         // Submenús de mantenimiento
         'maintenance-pending', 'maintenance-in-progress', 'maintenance-completed',
         'maintenance-preventive', 'maintenance-corrective',
         // Submenús de enviados
-        'sent-lima', 'sent-provincias'
+        'sent-lima', 'sent-provincias',
+        // Submenús de checklist
+        'checklist-escon', 'checklist-ecsal', 'checklist-citv'
       ],
       supervisor: [
         // Menús principales
-        'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 
-        'locations', 'users',
+        'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
+        'locations', 'users', 'flota-vehicular',
         // Submenús de inventario
-        'inventory-pc', 'inventory-celular', 'inventory-camaras-web', 'inventory-dvr',
+        'inventory-pc', 'inventory-celular', 'inventory-dvr',
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
         'inventory-proyector', 'inventory-switch', 'inventory-chip', 'inventory-tinte',
         'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
         // Submenús de cámaras
-        'cameras-revision', 'cameras-escuela', 'cameras-policlinico',
+        'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
         // Submenús de mantenimiento
         'maintenance-pending', 'maintenance-in-progress', 'maintenance-completed',
         'maintenance-preventive', 'maintenance-corrective',
         // Submenús de enviados
-        'sent-lima', 'sent-provincias'
+        'sent-lima', 'sent-provincias',
+        // Submenús de checklist
+        'checklist-escon', 'checklist-ecsal', 'checklist-citv'
       ],
       technician: [
         // Menús principales
-        'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 
-        'locations', 'users',
+        'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
+        'locations', 'users', 'flota-vehicular',
         // Submenús de inventario
-        'inventory-pc', 'inventory-celular', 'inventory-camaras-web', 'inventory-dvr',
+        'inventory-pc', 'inventory-celular', 'inventory-dvr',
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
         'inventory-proyector', 'inventory-switch', 'inventory-chip', 'inventory-tinte',
         'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
         // Submenús de cámaras
-        'cameras-revision', 'cameras-escuela', 'cameras-policlinico',
+        'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
         // Submenús de mantenimiento
         'maintenance-pending', 'maintenance-in-progress', 'maintenance-completed',
         'maintenance-preventive', 'maintenance-corrective',
         // Submenús de enviados
-        'sent-lima', 'sent-provincias'
+        'sent-lima', 'sent-provincias',
+        // Submenús de checklist
+        'checklist-escon', 'checklist-ecsal', 'checklist-citv'
       ],
       user: [
         'dashboard', 'cameras',
         // Submenús de cámaras
-        'cameras-revision', 'cameras-escuela', 'cameras-policlinico'
+        'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito'
       ]
     };
 

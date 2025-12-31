@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { LayoutDashboard, Package, Key, Users, FileText, ChevronDown, ChevronUp, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Wrench, AlertTriangle, Clock, CheckCircle, Send, MapPin, Building2, Menu, X, Shield } from 'lucide-react';
+import { LayoutDashboard, Package, Key, Users, FileText, ChevronDown, ChevronUp, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Wrench, AlertTriangle, Clock, CheckCircle, Send, MapPin, Building2, Menu, X, Shield, Car, ClipboardList } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { GrServerCluster } from 'react-icons/gr';
-import { BsWebcam } from 'react-icons/bs';
 import { useAuth } from '../contexts/AuthContext';
 
 type SidebarProps = {
@@ -44,15 +43,14 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
 
   const allMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { 
-      id: 'inventory', 
-      label: 'Inventario', 
+    {
+      id: 'inventory',
+      label: 'Inventario',
       icon: Package,
       hasSubmenu: true,
       submenu: [
         { id: 'inventory-pc', label: 'PCs', icon: Monitor },
         { id: 'inventory-celular', label: 'Celulares', icon: Smartphone },
-        { id: 'inventory-camaras-web', label: 'Cámaras web', icon: BsWebcam },
         { id: 'inventory-dvr', label: 'DVRs', icon: HardDrive },
         { id: 'inventory-impresora', label: 'Impresoras', icon: Printer },
         { id: 'inventory-escaner', label: 'Escáneres', icon: Scan },
@@ -68,20 +66,21 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
         { id: 'inventory-disco-extraido', label: 'Discos Extraídos', icon: HardDriveIcon },
       ]
     },
-    { 
-      id: 'cameras', 
-      label: 'Vista Cámaras', 
+    {
+      id: 'cameras',
+      label: 'Vista Cámaras',
       icon: GiCctvCamera,
       hasSubmenu: true,
       submenu: [
         { id: 'cameras-revision', label: 'Cámaras de Revisión', icon: GiCctvCamera },
         { id: 'cameras-escuela', label: 'Cámaras de Escuela', icon: GiCctvCamera },
         { id: 'cameras-policlinico', label: 'Cámaras de Policlínico', icon: GiCctvCamera },
+        { id: 'cameras-circuito', label: 'Cámaras de Circuito', icon: GiCctvCamera },
       ]
     },
-    { 
-      id: 'maintenance', 
-      label: 'Mantenimiento', 
+    {
+      id: 'maintenance',
+      label: 'Mantenimiento',
       icon: Wrench,
       hasSubmenu: true,
       submenu: [
@@ -92,9 +91,9 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
         { id: 'maintenance-corrective', label: 'Correctivo', icon: AlertTriangle },
       ]
     },
-    { 
-      id: 'sent', 
-      label: 'Enviados', 
+    {
+      id: 'sent',
+      label: 'Enviados',
       icon: Send,
       hasSubmenu: true,
       submenu: [
@@ -103,9 +102,21 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
       ]
     },
     { id: 'sutran', label: 'Visitas de Sutran', icon: Building2 },
+    {
+      id: 'checklist',
+      label: 'Checklist',
+      icon: ClipboardList,
+      hasSubmenu: true,
+      submenu: [
+        { id: 'checklist-escon', label: 'ESCON', icon: ClipboardList },
+        { id: 'checklist-ecsal', label: 'ECSAL', icon: ClipboardList },
+        { id: 'checklist-citv', label: 'CITV', icon: ClipboardList },
+      ]
+    },
     { id: 'locations', label: 'Sedes', icon: MapPin },
     { id: 'mtc', label: 'MTC Accesos', icon: Key },
     { id: 'servers', label: 'Servidores', icon: GrServerCluster },
+    { id: 'flota-vehicular', label: 'Flota Vehicular', icon: Car },
     { id: 'users', label: 'Usuarios', icon: Users },
     { id: 'audit', label: 'Auditoría', icon: FileText },
     { id: 'integrity', label: 'Integridad del Sistema', icon: Shield },
@@ -114,14 +125,14 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
   // Filtrar menús según permisos del usuario
   const menuItems = allMenuItems.filter(item => {
     if (!hasPermission(item.id)) return false;
-    
+
     // Si tiene submenú, filtrar también los submenús
     if (item.hasSubmenu && item.submenu) {
       const filteredSubmenu = item.submenu.filter(subItem => hasPermission(subItem.id));
       if (filteredSubmenu.length === 0) return false;
       item.submenu = filteredSubmenu;
     }
-    
+
     return true;
   });
 
@@ -144,150 +155,150 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
           }
         `}
       </style>
-      <aside 
+      <aside
         className={`${collapsed ? 'w-16' : 'w-80'} bg-slate-800 border-r border-slate-700 h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-10 flex flex-col overflow-y-auto sidebar-scroll`}
         style={{
           scrollbarWidth: 'thin',
           scrollbarColor: '#475569 #1e293b'
         }}
       >
-      <div className={`${collapsed ? 'p-3' : 'p-6'} border-b border-slate-700`}>
-        <div className="flex items-center justify-center">
-          {!collapsed ? (
-            <>
-              <div className="flex-1">
-                <h1 className="text-xl font-bold text-white">Sistema IT</h1>
-                <p className="text-sm text-slate-300">Gestión y Control</p>
-              </div>
+        <div className={`${collapsed ? 'p-3' : 'p-6'} border-b border-slate-700`}>
+          <div className="flex items-center justify-center">
+            {!collapsed ? (
+              <>
+                <div className="flex-1">
+                  <h1 className="text-xl font-bold text-white">Sistema GSC</h1>
+                  <p className="text-sm text-slate-300">Gestión y Control</p>
+                </div>
+                <button
+                  onClick={onToggleCollapse}
+                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </>
+            ) : (
               <button
                 onClick={onToggleCollapse}
                 className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
               >
-                <X size={20} />
+                <Menu size={20} />
               </button>
-            </>
-          ) : (
-            <button
-              onClick={onToggleCollapse}
-              className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-            >
-              <Menu size={20} />
-            </button>
-          )}
+            )}
+          </div>
         </div>
-      </div>
 
-      <nav className={`${collapsed ? 'p-2' : 'p-4 pl-4'} flex-1`}>
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeView === item.id || (item.hasSubmenu && item.submenu?.some(sub => activeView === sub.id));
-          const isExpanded = expandedMenus.has(item.id);
+        <nav className={`${collapsed ? 'p-2' : 'p-4 pl-4'} flex-1`}>
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id || (item.hasSubmenu && item.submenu?.some(sub => activeView === sub.id));
+            const isExpanded = expandedMenus.has(item.id);
 
-          return (
-            <div key={item.id} className="mb-1">
-              <div className={`${collapsed ? 'flex justify-center' : 'flex items-center'} rounded-lg transition-colors ${
-                isActive
+            return (
+              <div key={item.id} className="mb-1">
+                <div className={`${collapsed ? 'flex justify-center' : 'flex items-center'} rounded-lg transition-colors ${isActive
                   ? 'bg-slate-700 text-white font-medium'
                   : 'text-slate-300 hover:bg-slate-700 hover:text-white'
-              }`}>
-                <button
-                  onClick={() => handleMenuClick(item)}
-                  className={`${collapsed ? 'p-3 w-full flex justify-center h-12' : 'flex items-center gap-3 px-4 py-3 flex-1 text-left h-12'}`}
-                  title={collapsed ? item.label : undefined}
-                >
-                  <Icon size={24} />
-                  {!collapsed && <span>{item.label}</span>}
-                </button>
-                {item.hasSubmenu && !collapsed && (
+                  }`}>
                   <button
-                    onClick={(e) => handleArrowClick(item, e)}
-                    className="px-2 py-3 hover:bg-slate-600 rounded-r-lg transition-colors h-12"
+                    onClick={() => handleMenuClick(item)}
+                    className={`
+    ${collapsed ? 'p-3 w-full flex justify-center h-12' : 'flex items-center gap-3 px-4 py-3 flex-1 text-left h-12'}
+    ${isActive ? 'bg-slate-700 text-white font-medium' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}
+  `}
+                    title={collapsed ? item.label : undefined}
                   >
-                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    <Icon size={24} />
+                    {!collapsed && <span>{item.label}</span>}
                   </button>
-                )}
-              </div>
+                  {item.hasSubmenu && !collapsed && (
+                    <button
+                      onClick={(e) => handleArrowClick(item, e)}
+                      className="px-2 py-3 hover:bg-slate-600 rounded-r-lg transition-colors h-12"
+                    >
+                      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </button>
+                  )}
+                </div>
 
-              {/* Submenú desplegable */}
-              {item.hasSubmenu && isExpanded && !collapsed && (
-                <div className="ml-4 mt-1 space-y-1">
-                  {item.submenu?.map((subItem) => {
-                    const SubIcon = subItem.icon;
-                    const isSubActive = activeView === subItem.id;
+                {/* Submenú desplegable */}
+                {item.hasSubmenu && isExpanded && !collapsed && (
+                  <div className="ml-4 mt-1 space-y-1">
+                    {item.submenu?.map((subItem) => {
+                      const SubIcon = subItem.icon;
+                      const isSubActive = activeView === subItem.id;
 
-                    return (
-                      <button
-                        key={subItem.id}
-                        onClick={() => onViewChange(subItem.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${
-                          isSubActive
+                      return (
+                        <button
+                          key={subItem.id}
+                          onClick={() => onViewChange(subItem.id)}
+                          className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${isSubActive
                             ? 'bg-slate-600 text-white font-medium'
                             : 'text-slate-400 hover:bg-slate-700 hover:text-white'
-                        }`}
-                      >
-                        <SubIcon size={18} />
-                        <span>{subItem.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </nav>
+                            }`}
+                        >
+                          <SubIcon size={18} />
+                          <span>{subItem.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
 
-      {/* Información del usuario y logout */}
-      {user && (
-        <div className={`${collapsed ? 'p-2' : 'p-4'} border-t border-slate-700`}>
-          {!collapsed ? (
-            <div className="space-y-3">
-              <div className="bg-slate-700 rounded-lg p-3">
-                <div className="text-sm text-slate-300">
-                  <div className="font-medium text-white">{user.full_name}</div>
-                  <div className="text-xs">{user.email}</div>
-                  <div className="text-xs mt-1">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                      user.role === 'supervisor' ? 'bg-blue-100 text-blue-800' :
-                      user.role === 'technician' ? 'bg-green-100 text-green-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.role === 'admin' ? 'Administrador' :
-                       user.role === 'supervisor' ? 'Supervisor' :
-                       user.role === 'technician' ? 'Técnico' :
-                       'Usuario'}
-                    </span>
+        {/* Información del usuario y logout */}
+        {user && (
+          <div className={`${collapsed ? 'p-2' : 'p-4'} border-t border-slate-700`}>
+            {!collapsed ? (
+              <div className="space-y-3">
+                <div className="bg-slate-700 rounded-lg p-3">
+                  <div className="text-sm text-slate-300">
+                    <div className="font-medium text-white">{user.full_name}</div>
+                    <div className="text-xs">{user.email}</div>
+                    <div className="text-xs mt-1">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                        user.role === 'supervisor' ? 'bg-blue-100 text-blue-800' :
+                          user.role === 'technician' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                        }`}>
+                        {user.role === 'admin' ? 'Administrador' :
+                          user.role === 'supervisor' ? 'Supervisor' :
+                            user.role === 'technician' ? 'Técnico' :
+                              'Usuario'}
+                      </span>
+                    </div>
                   </div>
                 </div>
+                <button
+                  onClick={logout}
+                  className="w-full bg-red-600 text-white py-2 px-3 rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2"
+                >
+                  <X size={16} />
+                  Cerrar Sesión
+                </button>
               </div>
-              <button
-                onClick={logout}
-                className="w-full bg-red-600 text-white py-2 px-3 rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2"
-              >
-                <X size={16} />
-                Cerrar Sesión
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center space-y-2">
-              <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">
-                  {user.full_name.charAt(0).toUpperCase()}
-                </span>
+            ) : (
+              <div className="flex flex-col items-center space-y-2">
+                <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">
+                    {user.full_name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                  title="Cerrar Sesión"
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <button
-                onClick={logout}
-                className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-                title="Cerrar Sesión"
-              >
-                <X size={16} />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </aside>
+            )}
+          </div>
+        )}
+      </aside>
     </>
   );
 }

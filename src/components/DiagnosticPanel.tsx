@@ -30,7 +30,7 @@ export default function DiagnosticPanel() {
 
     // Test 2: Verificar conexión básica
     try {
-      const { data, error } = await supabase.from('locations').select('count', { count: 'exact', head: true });
+      const { error } = await supabase.from('locations').select('count', { count: 'exact', head: true });
       
       newResults.push({
         test: 'Conexión a Supabase',

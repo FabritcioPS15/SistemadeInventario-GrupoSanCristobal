@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Save, AlertCircle } from 'lucide-react';
-import { supabase, Location } from '../lib/supabase';
+import { supabase, Location } from '../../lib/supabase';
 
 type PCFormProps = {
   editPC?: any;

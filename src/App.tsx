@@ -13,12 +13,13 @@ import SystemIntegrity from './components/SystemIntegrity';
 import DiagnosticPanel from './components/DiagnosticPanel';
 import ConnectionTest from './components/ConnectionTest';
 import QuickDiagnostic from './components/QuickDiagnostic';
-import Webcams from './views/Webcams';
 import Cameras from './views/Cameras';
 import Servers from './views/Servers';
+import FlotaVehicular from './views/FlotaVehicular';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import PasswordSetup from './components/PasswordSetup';
+import Checklist from './views/Checklist';
 
 function AppContent() {
   const [activeView, setActiveView] = useState('dashboard');
@@ -67,34 +68,40 @@ function AppContent() {
       if (activeView === 'inventory-camara') {
         return <Cameras />;
       }
-      if (activeView === 'inventory-camaras-web') {
-        return <Webcams />;
-      }
       return <Inventory categoryFilter={activeView} />;
     }
-    
+
     // Rutas de cámaras por categoría (usar vista dedicada que mantiene cards completas)
     if (activeView.startsWith('cameras-')) {
       return <Cameras subview={activeView} />;
     }
-    
+
     // Rutas de mantenimiento por categoría
     if (activeView.startsWith('maintenance-')) {
       return <Maintenance categoryFilter={activeView} />;
     }
-    
+
     // Rutas de envíos por ubicación
     if (activeView.startsWith('sent-')) {
       return <Enviados locationFilter={activeView} />;
     }
 
+    // Rutas de checklist
+    if (activeView === 'checklist') {
+      return <Checklist />;
+    }
+    if (activeView.startsWith('checklist-')) {
+      const type = activeView.replace('checklist-', '');
+      return <Checklist type={type} />;
+    }
+
     // Rutas principales
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard 
-          onShowDiagnostic={() => setActiveView('diagnostic')} 
-          onShowConnectionTest={() => setActiveView('connection-test')} 
-          onShowQuickDiagnostic={() => setActiveView('quick-diagnostic')} 
+        return <Dashboard
+          onShowDiagnostic={() => setActiveView('diagnostic')}
+          onShowConnectionTest={() => setActiveView('connection-test')}
+          onShowQuickDiagnostic={() => setActiveView('quick-diagnostic')}
         />;
       case 'inventory':
       case 'inventory-all':
@@ -118,6 +125,8 @@ function AppContent() {
         return <Users />;
       case 'servers':
         return <Servers />;
+      case 'flota-vehicular':
+        return <FlotaVehicular />;
       case 'audit':
         return <Audit />;
       case 'integrity':
@@ -128,6 +137,8 @@ function AppContent() {
         return <ConnectionTest />;
       case 'quick-diagnostic':
         return <QuickDiagnostic />;
+      case 'checklist':
+        return <Checklist />;
       default:
         return <Dashboard />;
     }
@@ -135,8 +146,8 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <Sidebar 
-        activeView={activeView} 
+      <Sidebar
+        activeView={activeView}
         onViewChange={setActiveView}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}

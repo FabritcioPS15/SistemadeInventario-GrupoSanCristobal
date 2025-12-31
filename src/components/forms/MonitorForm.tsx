@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, Monitor } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 interface MonitorFormProps {
   editMonitor?: any;

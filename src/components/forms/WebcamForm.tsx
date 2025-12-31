@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { X, Smartphone } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { X, Camera } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
-interface PhoneFormProps {
-  editPhone?: any;
+interface WebcamFormProps {
+  editWebcam?: any;
   onClose: () => void;
   onSave: () => void;
 }
 
-export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps) {
+export default function WebcamForm({ editWebcam, onClose, onSave }: WebcamFormProps) {
   const [formData, setFormData] = useState({
     code: '',
     sede: '',
@@ -16,16 +16,14 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
     marca: '',
     modelo: '',
     numero_serie: '',
-    imei: '',
-    numero_telefono: '',
-    operador: '',
-    plan_datos: '',
-    estado_fisico: '',
+    resolucion: '',
+    tipo_conexion: '',
+    interfaz: '',
+    compatibilidad: '',
     sistema_operativo: '',
-    version_so: '',
-    almacenamiento: '',
-    ram: '',
-    bateria_estado: '',
+    software_incluido: '',
+    caracteristicas: '',
+    estado_fisico: '',
     accesorios: '',
     notas: ''
   });
@@ -35,31 +33,29 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
 
   useEffect(() => {
     fetchLocations();
-    if (editPhone) {
+    if (editWebcam) {
       setFormData({
-        code: editPhone.code || '',
-        sede: editPhone.location_id || '',
-        area: editPhone.area || '',
-        marca: editPhone.brand || '',
-        modelo: editPhone.model || '',
-        numero_serie: editPhone.serial_number || '',
-        imei: editPhone.imei || '',
-        numero_telefono: editPhone.phone_number || '',
-        operador: editPhone.operator || '',
-        plan_datos: editPhone.data_plan || '',
-        estado_fisico: editPhone.physical_condition || '',
-        sistema_operativo: editPhone.operating_system || '',
-        version_so: editPhone.os_version || '',
-        almacenamiento: editPhone.storage || '',
-        ram: editPhone.ram || '',
-        bateria_estado: editPhone.battery_condition || '',
-        accesorios: editPhone.accessories || '',
-        notas: editPhone.notes || ''
+        code: editWebcam.code || '',
+        sede: editWebcam.location_id || '',
+        area: editWebcam.area || '',
+        marca: editWebcam.brand || '',
+        modelo: editWebcam.model || '',
+        numero_serie: editWebcam.serial_number || '',
+        resolucion: editWebcam.resolution || '',
+        tipo_conexion: editWebcam.connection_type || '',
+        interfaz: editWebcam.interface || '',
+        compatibilidad: editWebcam.compatibility || '',
+        sistema_operativo: editWebcam.operating_system || '',
+        software_incluido: editWebcam.included_software || '',
+        caracteristicas: editWebcam.features || '',
+        estado_fisico: editWebcam.physical_condition || '',
+        accesorios: editWebcam.accessories || '',
+        notas: editWebcam.notes || ''
       });
     } else {
       generateRandomCode();
     }
-  }, [editPhone]);
+  }, [editWebcam]);
 
   const fetchLocations = async () => {
     const { data } = await supabase
@@ -86,27 +82,25 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
         brand: formData.marca,
         model: formData.modelo,
         serial_number: formData.numero_serie,
-        imei: formData.imei,
-        phone_number: formData.numero_telefono,
-        operator: formData.operador,
-        data_plan: formData.plan_datos,
-        physical_condition: formData.estado_fisico,
+        resolution: formData.resolucion,
+        connection_type: formData.tipo_conexion,
+        interface: formData.interfaz,
+        compatibility: formData.compatibilidad,
         operating_system: formData.sistema_operativo,
-        os_version: formData.version_so,
-        storage: formData.almacenamiento,
-        ram: formData.ram,
-        battery_condition: formData.bateria_estado,
+        included_software: formData.software_incluido,
+        features: formData.caracteristicas,
+        physical_condition: formData.estado_fisico,
         accessories: formData.accesorios,
         notes: formData.notas,
         status: 'active',
-        asset_type_id: await getAssetTypeId('Celular')
+        asset_type_id: await getAssetTypeId('Cámara')
       };
 
-      if (editPhone) {
+      if (editWebcam) {
         const { error } = await supabase
           .from('assets')
           .update(dataToSave)
-          .eq('id', editPhone.id);
+          .eq('id', editWebcam.id);
         
         if (error) throw error;
       } else {
@@ -119,8 +113,8 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
 
       onSave();
     } catch (error) {
-      console.error('Error saving phone:', error);
-      alert('Error al guardar el celular');
+      console.error('Error saving webcam:', error);
+      alert('Error al guardar la cámara web');
     } finally {
       setLoading(false);
     }
@@ -140,9 +134,9 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Smartphone className="text-blue-600" size={24} />
+            <Camera className="text-green-600" size={24} />
             <h2 className="text-lg font-semibold text-gray-800">
-              {editPhone ? 'Editar Celular' : 'Nuevo Celular'}
+              {editWebcam ? 'Editar Cámara Web' : 'Nueva Cámara Web'}
             </h2>
           </div>
           <button
@@ -208,7 +202,7 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
                 value={formData.area}
                 onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Administración, Ventas"
+                placeholder="Ej: Sala de reuniones, Oficina"
               />
             </div>
 
@@ -222,7 +216,7 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
                 value={formData.marca}
                 onChange={(e) => setFormData(prev => ({ ...prev, marca: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Samsung, iPhone, Xiaomi"
+                placeholder="Ej: Logitech, Microsoft, Creative"
                 required
               />
             </div>
@@ -237,7 +231,7 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
                 value={formData.modelo}
                 onChange={(e) => setFormData(prev => ({ ...prev, modelo: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Galaxy S21, iPhone 13"
+                placeholder="Ej: C920, LifeCam Studio"
                 required
               />
             </div>
@@ -255,65 +249,121 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
               />
             </div>
 
-            {/* IMEI */}
+            {/* Resolución */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                IMEI *
-              </label>
-              <input
-                type="text"
-                value={formData.imei}
-                onChange={(e) => setFormData(prev => ({ ...prev, imei: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="15 dígitos"
-                required
-              />
-            </div>
-
-            {/* Número de Teléfono */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Número de Teléfono
-              </label>
-              <input
-                type="text"
-                value={formData.numero_telefono}
-                onChange={(e) => setFormData(prev => ({ ...prev, numero_telefono: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="+51 999 999 999"
-              />
-            </div>
-
-            {/* Operador */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Operador
+                Resolución
               </label>
               <select
-                value={formData.operador}
-                onChange={(e) => setFormData(prev => ({ ...prev, operador: e.target.value }))}
+                value={formData.resolucion}
+                onChange={(e) => setFormData(prev => ({ ...prev, resolucion: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Seleccionar operador</option>
-                <option value="Movistar">Movistar</option>
-                <option value="Claro">Claro</option>
-                <option value="Entel">Entel</option>
-                <option value="Bitel">Bitel</option>
-                <option value="Virgin Mobile">Virgin Mobile</option>
+                <option value="">Seleccionar resolución</option>
+                <option value="720p">720p HD</option>
+                <option value="1080p">1080p Full HD</option>
+                <option value="4K">4K Ultra HD</option>
+                <option value="Otro">Otro</option>
               </select>
             </div>
 
-            {/* Plan de Datos */}
+            {/* Tipo de Conexión */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Plan de Datos
+                Tipo de Conexión
+              </label>
+              <select
+                value={formData.tipo_conexion}
+                onChange={(e) => setFormData(prev => ({ ...prev, tipo_conexion: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Seleccionar tipo</option>
+                <option value="USB">USB</option>
+                <option value="USB-C">USB-C</option>
+                <option value="Inalámbrica">Inalámbrica</option>
+                <option value="Bluetooth">Bluetooth</option>
+                <option value="WiFi">WiFi</option>
+              </select>
+            </div>
+
+            {/* Interfaz */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Interfaz
+              </label>
+              <select
+                value={formData.interfaz}
+                onChange={(e) => setFormData(prev => ({ ...prev, interfaz: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Seleccionar interfaz</option>
+                <option value="USB 2.0">USB 2.0</option>
+                <option value="USB 3.0">USB 3.0</option>
+                <option value="USB 3.1">USB 3.1</option>
+                <option value="USB-C">USB-C</option>
+                <option value="Thunderbolt">Thunderbolt</option>
+              </select>
+            </div>
+
+            {/* Compatibilidad */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Compatibilidad
+              </label>
+              <select
+                value={formData.compatibilidad}
+                onChange={(e) => setFormData(prev => ({ ...prev, compatibilidad: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Seleccionar compatibilidad</option>
+                <option value="Windows">Windows</option>
+                <option value="macOS">macOS</option>
+                <option value="Linux">Linux</option>
+                <option value="Multiplataforma">Multiplataforma</option>
+                <option value="Android">Android</option>
+                <option value="iOS">iOS</option>
+              </select>
+            </div>
+
+            {/* Sistema Operativo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sistema Operativo
               </label>
               <input
                 type="text"
-                value={formData.plan_datos}
-                onChange={(e) => setFormData(prev => ({ ...prev, plan_datos: e.target.value }))}
+                value={formData.sistema_operativo}
+                onChange={(e) => setFormData(prev => ({ ...prev, sistema_operativo: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: 5GB, Ilimitado"
+                placeholder="Ej: Windows 10, macOS 12"
+              />
+            </div>
+
+            {/* Software Incluido */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Software Incluido
+              </label>
+              <input
+                type="text"
+                value={formData.software_incluido}
+                onChange={(e) => setFormData(prev => ({ ...prev, software_incluido: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ej: Logitech Capture, Microsoft Camera"
+              />
+            </div>
+
+            {/* Características */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Características
+              </label>
+              <input
+                type="text"
+                value={formData.caracteristicas}
+                onChange={(e) => setFormData(prev => ({ ...prev, caracteristicas: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ej: Autofocus, Zoom digital, Micrófono"
               />
             </div>
 
@@ -336,84 +386,6 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
               </select>
             </div>
 
-            {/* Sistema Operativo */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Sistema Operativo
-              </label>
-              <select
-                value={formData.sistema_operativo}
-                onChange={(e) => setFormData(prev => ({ ...prev, sistema_operativo: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar SO</option>
-                <option value="Android">Android</option>
-                <option value="iOS">iOS</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-
-            {/* Versión SO */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Versión SO
-              </label>
-              <input
-                type="text"
-                value={formData.version_so}
-                onChange={(e) => setFormData(prev => ({ ...prev, version_so: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Android 12, iOS 16"
-              />
-            </div>
-
-            {/* Almacenamiento */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Almacenamiento
-              </label>
-              <input
-                type="text"
-                value={formData.almacenamiento}
-                onChange={(e) => setFormData(prev => ({ ...prev, almacenamiento: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: 128GB, 256GB"
-              />
-            </div>
-
-            {/* RAM */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                RAM
-              </label>
-              <input
-                type="text"
-                value={formData.ram}
-                onChange={(e) => setFormData(prev => ({ ...prev, ram: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: 6GB, 8GB"
-              />
-            </div>
-
-            {/* Estado de Batería */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado de Batería
-              </label>
-              <select
-                value={formData.bateria_estado}
-                onChange={(e) => setFormData(prev => ({ ...prev, bateria_estado: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar estado</option>
-                <option value="Excelente">Excelente</option>
-                <option value="Bueno">Bueno</option>
-                <option value="Regular">Regular</option>
-                <option value="Malo">Malo</option>
-                <option value="Requiere cambio">Requiere cambio</option>
-              </select>
-            </div>
-
             {/* Accesorios */}
             <div className="md:col-span-2 lg:col-span-3">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -424,7 +396,7 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
                 value={formData.accesorios}
                 onChange={(e) => setFormData(prev => ({ ...prev, accesorios: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Cargador, Audífonos, Funda"
+                placeholder="Ej: Cable USB, Soporte, Funda protectora"
               />
             </div>
 
@@ -454,9 +426,9 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              {loading ? 'Guardando...' : editPhone ? 'Actualizar' : 'Crear'}
+              {loading ? 'Guardando...' : editWebcam ? 'Actualizar' : 'Crear'}
             </button>
           </div>
         </form>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Eye, Clock, AlertTriangle, CheckCircle, Wrench, X, Filter, Copy, Check, Calendar, User, Package } from 'lucide-react';
 import { supabase, AssetWithDetails, Location } from '../lib/supabase';
-import MaintenanceForm from '../components/MaintenanceForm';
+import MaintenanceForm from '../components/forms/MaintenanceForm';
 import { useAuth } from '../contexts/AuthContext';
 
 type MaintenanceProps = {
@@ -64,13 +64,13 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         .from('maintenance_records')
         .select('*, assets(*, asset_types(*), locations(*))')
         .order('created_at', { ascending: false });
-      
+
       if (error) {
         console.error('❌ Error al cargar registros de mantenimiento:', error);
         alert(`Error al cargar registros: ${error.message}`);
         return;
       }
-      
+
       if (data) {
         console.log(`✅ ${data.length} registros de mantenimiento cargados`);
         setMaintenanceRecords(data as MaintenanceRecord[]);
@@ -181,7 +181,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
   const handleDeleteRecord = async (record: MaintenanceRecord) => {
     console.log('🗑️ Iniciando eliminación de registro:', record.id);
-    
+
     if (window.confirm(`¿Estás seguro de que quieres eliminar el registro de mantenimiento "${record.description}"?`)) {
       try {
         const { data, error } = await supabase
@@ -229,7 +229,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   // Mapear filtro de categoría de mantenimiento
   const getMaintenanceCategoryFromFilter = (filter?: string) => {
     if (!filter) return '';
-    
+
     const categoryMap: Record<string, string> = {
       'maintenance-pending': 'Pendientes',
       'maintenance-in-progress': 'En Progreso',
@@ -237,7 +237,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
       'maintenance-preventive': 'Preventivo',
       'maintenance-corrective': 'Correctivo',
     };
-    
+
     return categoryMap[filter] || '';
   };
 
@@ -329,16 +329,16 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
     <div className="p-6">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-2">
-            <Wrench size={24} className="text-orange-700" />
+          <div className="bg-orange-100 border border-orange-200 rounded-lg p-2">
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {getMaintenanceCategoryFromFilter(categoryFilter) ? `Mantenimiento - ${getMaintenanceCategoryFromFilter(categoryFilter)}` : 'Mantenimiento'}
+              Mantenimiento
+              {categoryFilter && (
+                <span className="ml-2 text-sm font-normal text-orange-600">({getMaintenanceCategoryFromFilter(categoryFilter)})</span>
+              )}
             </h1>
-            <p className="text-gray-600">
-              {getMaintenanceCategoryFromFilter(categoryFilter) ? `Gestión de mantenimientos ${getMaintenanceCategoryFromFilter(categoryFilter).toLowerCase()}` : 'Gestión de mantenimientos de activos'}
-            </p>
+            <p className="text-gray-600">Gestión de mantenimientos de activos</p>
           </div>
         </div>
 
@@ -515,19 +515,18 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
       </div>
 
       {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+        <div className="flex flex-col items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
           <p className="mt-4 text-gray-600">Cargando mantenimientos...</p>
         </div>
       ) : (
         <div className="space-y-4">
           {filteredRecords.map(record => {
             const isOverdue = record.scheduled_date && record.status !== 'completed' && new Date(record.scheduled_date) < new Date();
-            
+
             return (
-              <div key={record.id} className={`bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow ${
-                isOverdue ? 'border-red-200 bg-red-50' : 'border-gray-200'
-              }`}>
+              <div key={record.id} className={`bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow ${isOverdue ? 'border-red-200 bg-red-50' : 'border-gray-200'
+                }`}>
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start gap-3 flex-1">
@@ -578,7 +577,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         </p>
                       </div>
                     )}
-                    
+
                     {record.completed_date && (
                       <div className="bg-gray-50 p-3 rounded-lg">
                         <label className="text-xs font-medium text-gray-500 block mb-1">Fecha Completado</label>
@@ -587,7 +586,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         </p>
                       </div>
                     )}
-                    
+
                     {record.technician && (
                       <div className="bg-gray-50 p-3 rounded-lg">
                         <label className="text-xs font-medium text-gray-500 block mb-1">Técnico</label>
@@ -667,8 +666,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-800">Detalles de Mantenimiento</h2>
-              <button 
-                onClick={() => setViewingRecord(undefined)} 
+              <button
+                onClick={() => setViewingRecord(undefined)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={24} />

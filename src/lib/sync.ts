@@ -1,13 +1,6 @@
 import { supabase } from './supabase';
-import { logAuditAction } from './relations';
+import { logAuditAction, Shipment } from './relations';
 
-/**
- * Funciones de sincronización para mantener la integridad de los datos
- */
-
-/**
- * Sincroniza el estado de un activo cuando se crea un registro de mantenimiento
- */
 export async function syncAssetMaintenanceStatus(
   assetId: string,
   maintenanceStatus: 'pending' | 'in_progress' | 'completed',
@@ -15,7 +8,7 @@ export async function syncAssetMaintenanceStatus(
 ): Promise<boolean> {
   try {
     let assetStatus: 'active' | 'inactive' | 'maintenance' | 'extracted';
-    
+
     switch (maintenanceStatus) {
       case 'pending':
       case 'in_progress':
@@ -30,7 +23,7 @@ export async function syncAssetMaintenanceStatus(
 
     const { error } = await supabase
       .from('assets')
-      .update({ 
+      .update({
         status: assetStatus,
         updated_at: new Date().toISOString()
       })
@@ -85,7 +78,7 @@ export async function syncAssetLocationOnShipmentComplete(
     if (shipment.status === 'delivered') {
       const { error: updateError } = await supabase
         .from('assets')
-        .update({ 
+        .update({
           location_id: shipment.to_location_id,
           updated_at: new Date().toISOString()
         })
@@ -164,13 +157,13 @@ export async function validateAndSyncAssetIntegrity(assetId: string): Promise<{
 
     // Validar estado vs mantenimiento
     const hasActiveMaintenance = asset.maintenance_records?.some(
-      record => record.status === 'pending' || record.status === 'in_progress'
+      (record: { status: string }) => record.status === 'pending' || record.status === 'in_progress'
     );
 
     if (hasActiveMaintenance && asset.status !== 'maintenance') {
       issues.push('Asset has active maintenance but status is not maintenance');
       fixes.push('Update asset status to maintenance');
-      
+
       // Auto-fix
       await supabase
         .from('assets')
@@ -181,13 +174,13 @@ export async function validateAndSyncAssetIntegrity(assetId: string): Promise<{
 
     // Validar envíos pendientes
     const hasInTransitShipments = asset.shipments?.some(
-      shipment => shipment.status === 'in_transit'
+      (shipment: Shipment) => shipment.status === 'in_transit'
     );
 
     if (hasInTransitShipments && asset.status !== 'maintenance') {
       issues.push('Asset has in-transit shipments but status is not maintenance');
       fixes.push('Update asset status to maintenance');
-      
+
       // Auto-fix
       await supabase
         .from('assets')
@@ -295,40 +288,40 @@ export async function generateIntegrityReport(): Promise<{
     const shipments = shipmentsResult.data || [];
 
     // Calcular problemas
-    const assetsWithoutLocation = assets.filter(asset => 
+    const assetsWithoutLocation = assets.filter(asset =>
       !asset.location_id && asset.status !== 'extracted'
     ).length;
 
     const assetsWithInconsistentStatus = assets.filter(asset => {
-      const hasActiveMaintenance = maintenanceRecords.some(record => 
+      const hasActiveMaintenance = maintenanceRecords.some(record =>
         record.asset_id === asset.id
       );
       return hasActiveMaintenance && asset.status !== 'maintenance';
     }).length;
 
-    const maintenanceRecordsWithoutAssets = maintenanceRecords.filter(record => 
+    const maintenanceRecordsWithoutAssets = maintenanceRecords.filter(record =>
       !assets.some(asset => asset.id === record.asset_id)
     ).length;
 
-    const shipmentsWithoutAssets = shipments.filter(shipment => 
+    const shipmentsWithoutAssets = shipments.filter(shipment =>
       !assets.some(asset => asset.id === shipment.asset_id)
     ).length;
 
     // Generar recomendaciones
     const recommendations: string[] = [];
-    
+
     if (assetsWithoutLocation > 0) {
       recommendations.push(`Asignar ubicaciones a ${assetsWithoutLocation} activos sin ubicación`);
     }
-    
+
     if (assetsWithInconsistentStatus > 0) {
       recommendations.push(`Corregir estado de ${assetsWithInconsistentStatus} activos con estado inconsistente`);
     }
-    
+
     if (maintenanceRecordsWithoutAssets > 0) {
       recommendations.push(`Eliminar ${maintenanceRecordsWithoutAssets} registros de mantenimiento huérfanos`);
     }
-    
+
     if (shipmentsWithoutAssets > 0) {
       recommendations.push(`Eliminar ${shipmentsWithoutAssets} envíos huérfanos`);
     }

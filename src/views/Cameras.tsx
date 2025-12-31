@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, Link as LinkIcon, ChevronDown, ChevronUp, EyeOff } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, Link as LinkIcon, ChevronDown, ChevronUp, EyeOff, Camera as CameraIcon } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { supabase, Camera, Location } from '../lib/supabase';
-import CameraForm from '../components/CameraForm';
+import CameraForm from '../components/forms/CameraForm';
 import { useAuth } from '../contexts/AuthContext';
 
 type CamerasProps = {
@@ -87,19 +87,20 @@ export default function Cameras({ subview }: CamerasProps) {
     if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
-    } catch {}
+    } catch { }
   };
 
   // Función para obtener el tipo de ubicación basado en el subview
   const getLocationTypeFromSubview = (subview?: string) => {
     if (!subview) return null;
-    
+
     const typeMap: Record<string, string> = {
       'cameras-revision': 'revision',
       'cameras-escuela': 'escuela_conductores',
       'cameras-policlinico': 'policlinico',
+      'cameras-circuito': 'circuito',
     };
-    
+
     return typeMap[subview] || null;
   };
 
@@ -112,17 +113,16 @@ export default function Cameras({ subview }: CamerasProps) {
     return t.toUpperCase();
   };
 
-  // Función para obtener el título basado en el subview
-  const getTitleFromSubview = (subview?: string) => {
-    if (!subview) return 'Cámaras';
-    
-    const titleMap: Record<string, string> = {
-      'cameras-revision': 'Cámaras de Revisión',
-      'cameras-escuela': 'Cámaras de Escuela',
-      'cameras-policlinico': 'Cámaras de Policlínico',
+  // Función para obtener el subtítulo basado en el subview
+  const getSubtitleFromSubview = (subview?: string) => {
+    if (!subview) return '';
+    const map: Record<string, string> = {
+      'cameras-revision': 'Revisión',
+      'cameras-escuela': 'Escuela',
+      'cameras-policlinico': 'Policlínico',
+      'cameras-circuito': 'Circuito',
     };
-    
-    return titleMap[subview] || 'Cámaras';
+    return map[subview] || '';
   };
 
   const filtered = cameras.filter((c) => {
@@ -131,7 +131,7 @@ export default function Cameras({ subview }: CamerasProps) {
     if (locationType && (c as any).locations?.type !== locationType) {
       return false;
     }
-    
+
     // Filtro por búsqueda
     const q = search.toLowerCase();
     return (
@@ -144,11 +144,20 @@ export default function Cameras({ subview }: CamerasProps) {
   });
 
   return (
-    <div className="p-8">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">{getTitleFromSubview(subview)}</h2>
-          <p className="text-gray-600">Gestión de cámaras con formulario exclusivo</p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="bg-orange-100 border border-orange-200 rounded-lg p-2">
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Cámaras
+              {subview && (
+                <span className="ml-2 text-sm font-normal text-orange-600">({getSubtitleFromSubview(subview)})</span>
+              )}
+            </h2>
+            <p className="text-gray-600">Gestión de cámaras con formulario exclusivo</p>
+          </div>
         </div>
         {canEdit() && (
           <button onClick={openCreate} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
@@ -172,8 +181,8 @@ export default function Cameras({ subview }: CamerasProps) {
       </div>
 
       {loading ? (
-        <div className="text-left py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -192,12 +201,11 @@ export default function Cameras({ subview }: CamerasProps) {
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{cam.display_count}</span>
                       )}
                       {cam.access_type && (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          cam.access_type === 'url' ? 'bg-blue-100 text-blue-800' :
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cam.access_type === 'url' ? 'bg-blue-100 text-blue-800' :
                           cam.access_type === 'ivms' ? 'bg-purple-100 text-purple-800' :
-                          cam.access_type === 'esviz' ? 'bg-emerald-100 text-emerald-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>{humanAccess(cam.access_type)}</span>
+                            cam.access_type === 'esviz' ? 'bg-emerald-100 text-emerald-800' :
+                              'bg-gray-100 text-gray-800'
+                          }`}>{humanAccess(cam.access_type)}</span>
                       )}
                     </div>
                     {(cam as any).locations && (
@@ -210,11 +218,10 @@ export default function Cameras({ subview }: CamerasProps) {
                 </div>
                 {/* Status badge */}
                 <div>
-                  <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                    cam.status === 'active' ? 'bg-green-100 text-green-800' :
+                  <span className={`px-2 py-1 text-xs rounded-full font-medium ${cam.status === 'active' ? 'bg-green-100 text-green-800' :
                     cam.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
+                      'bg-gray-100 text-gray-800'
+                    }`}>
                     {cam.status === 'active' ? 'Activo' : cam.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
                   </span>
                 </div>
@@ -256,7 +263,7 @@ export default function Cameras({ subview }: CamerasProps) {
                     <div className="flex items-center gap-2">
                       <span className="text-gray-500">URL:</span>
                       <span className="font-mono break-all text-blue-600">{cam.url}</span>
-                      <button 
+                      <button
                         onClick={() => window.open(cam.url, '_blank', 'noopener')}
                         className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
                         title="Abrir URL"
@@ -339,50 +346,49 @@ export default function Cameras({ subview }: CamerasProps) {
                     <div className="mt-1 text-xs text-gray-500">Sin discos configurados</div>
                   </div>
                 )}
-                  {cam.camera_disks && cam.camera_disks.length > 0 && (
-                    <div className="lg:col-span-2 mt-2">
-                      <button
-                        onClick={() => toggleStorage(cam.id)}
-                        className="inline-flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900"
-                      >
-                        {expandedStorage.has(cam.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        Almacenamiento ({cam.camera_disks.length} discos)
-                      </button>
+                {cam.camera_disks && cam.camera_disks.length > 0 && (
+                  <div className="lg:col-span-2 mt-2">
+                    <button
+                      onClick={() => toggleStorage(cam.id)}
+                      className="inline-flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900"
+                    >
+                      {expandedStorage.has(cam.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      Almacenamiento ({cam.camera_disks.length} discos)
+                    </button>
 
-                      {/* Collapsible storage details */}
-                      {expandedStorage.has(cam.id) && (
-                        <div className="mt-2 space-y-2">
-                          {cam.camera_disks.map((d) => {
-                            const total = Number(d.total_capacity_gb) || 0;
-                            const used = Number(d.used_space_gb) || 0;
-                            const percent = total > 0 ? Math.min(100, Math.max(0, Math.round((used / total) * 100))) : 0;
-                            return (
-                              <div key={d.id} className="border border-gray-200 rounded-lg p-3">
-                                <div className="flex items-center justify-between text-sm">
-                                  <div className="text-gray-700">Disco #{d.disk_number} • {d.disk_type || '—'}</div>
-                                  <div className="text-gray-500">{used} / {total} GB</div>
-                                </div>
-                                <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                  <div className={`h-full ${percent > 85 ? 'bg-red-500' : percent > 65 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${percent}%` }} />
-                                </div>
-                                <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
-                                  <span className={`px-2 py-0.5 rounded-full ${
-                                    d.status === 'active' ? 'bg-green-100 text-green-800' :
-                                    d.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                                    d.status === 'full' ? 'bg-red-100 text-red-800' :
-                                    'bg-gray-100 text-gray-800'
-                                  }`}>{d.status || '—'}</span>
-                                  {typeof d.remaining_capacity_gb !== 'undefined' && (
-                                    <span>Libre: {Number(d.remaining_capacity_gb) || (total - used)} GB</span>
-                                  )}
-                                </div>
+                    {/* Collapsible storage details */}
+                    {expandedStorage.has(cam.id) && (
+                      <div className="mt-2 space-y-2">
+                        {cam.camera_disks.map((d) => {
+                          const total = Number(d.total_capacity_gb) || 0;
+                          const used = Number(d.used_space_gb) || 0;
+                          const percent = total > 0 ? Math.min(100, Math.max(0, Math.round((used / total) * 100))) : 0;
+                          return (
+                            <div key={d.id} className="border border-gray-200 rounded-lg p-3">
+                              <div className="flex items-center justify-between text-sm">
+                                <div className="text-gray-700">Disco #{d.disk_number} • {d.disk_type || '—'}</div>
+                                <div className="text-gray-500">{used} / {total} GB</div>
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                              <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                <div className={`h-full ${percent > 85 ? 'bg-red-500' : percent > 65 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${percent}%` }} />
+                              </div>
+                              <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded-full ${d.status === 'active' ? 'bg-green-100 text-green-800' :
+                                  d.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                                    d.status === 'full' ? 'bg-red-100 text-red-800' :
+                                      'bg-gray-100 text-gray-800'
+                                  }`}>{d.status || '—'}</span>
+                                {typeof d.remaining_capacity_gb !== 'undefined' && (
+                                  <span>Libre: {Number(d.remaining_capacity_gb) || (total - used)} GB</span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 mt-4">
@@ -434,11 +440,10 @@ export default function Cameras({ subview }: CamerasProps) {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Estado:</span>
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                          selectedCamera.status === 'active' ? 'bg-green-100 text-green-800' :
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${selectedCamera.status === 'active' ? 'bg-green-100 text-green-800' :
                           selectedCamera.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                            'bg-gray-100 text-gray-800'
+                          }`}>
                           {selectedCamera.status === 'active' ? 'Activo' : selectedCamera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
                         </span>
                       </div>
@@ -466,12 +471,11 @@ export default function Cameras({ subview }: CamerasProps) {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500">Tipo de acceso:</span>
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                          selectedCamera.access_type === 'url' ? 'bg-blue-100 text-blue-800' :
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${selectedCamera.access_type === 'url' ? 'bg-blue-100 text-blue-800' :
                           selectedCamera.access_type === 'ivms' ? 'bg-purple-100 text-purple-800' :
-                          selectedCamera.access_type === 'esviz' ? 'bg-emerald-100 text-emerald-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                            selectedCamera.access_type === 'esviz' ? 'bg-emerald-100 text-emerald-800' :
+                              'bg-gray-100 text-gray-800'
+                          }`}>
                           {humanAccess(selectedCamera.access_type)}
                         </span>
                       </div>
@@ -480,7 +484,7 @@ export default function Cameras({ subview }: CamerasProps) {
                           <span className="text-gray-500">URL:</span>
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs break-all max-w-48">{selectedCamera.url}</span>
-                            <button 
+                            <button
                               onClick={() => window.open(selectedCamera.url, '_blank', 'noopener')}
                               className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
                             >
@@ -605,12 +609,11 @@ export default function Cameras({ subview }: CamerasProps) {
                                   <div className={`h-full ${percent > 85 ? 'bg-red-500' : percent > 65 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${percent}%` }} />
                                 </div>
                                 <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
-                                  <span className={`px-2 py-0.5 rounded-full ${
-                                    d.status === 'active' ? 'bg-green-100 text-green-800' :
+                                  <span className={`px-2 py-0.5 rounded-full ${d.status === 'active' ? 'bg-green-100 text-green-800' :
                                     d.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                                    d.status === 'full' ? 'bg-red-100 text-red-800' :
-                                    'bg-gray-100 text-gray-800'
-                                  }`}>{d.status || '—'}</span>
+                                      d.status === 'full' ? 'bg-red-100 text-red-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }`}>{d.status || '—'}</span>
                                   <span>Libre: {Number(d.remaining_capacity_gb) || (total - used)} GB</span>
                                 </div>
                               </div>

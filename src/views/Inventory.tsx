@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Monitor, Smartphone, Camera, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, ChevronDown, ChevronUp, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Monitor, Smartphone, Camera, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, ChevronDown, ChevronUp, Edit, Trash2, Eye, Package } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { supabase, AssetWithDetails, Location, AssetType } from '../lib/supabase';
-import AssetForm from '../components/AssetForm';
+import AssetForm from '../components/forms/AssetForm';
 import AssetDetails from '../components/AssetDetails';
 import CollapsibleCategory from '../components/CollapsibleCategory';
-import PCForm from '../components/PCForm';
+import PCForm from '../components/forms/PCForm';
 import { useAuth } from '../contexts/AuthContext';
 
 type InventoryProps = {
@@ -25,10 +25,8 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   const [selectedAsset, setSelectedAsset] = useState<AssetWithDetails | undefined>();
   const [editingAsset, setEditingAsset] = useState<AssetWithDetails | undefined>();
   const [editingPC, setEditingPC] = useState<any | undefined>();
-  const [deleteConfirm, setDeleteConfirm] = useState<AssetWithDetails | undefined>();
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -62,7 +60,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
 
   const handleDeleteAsset = async (asset: AssetWithDetails) => {
     console.log('Eliminando activo:', asset);
-    
+
     // Check for related records first
     try {
       const { data: maintenanceRecords, error: maintenanceError } = await supabase
@@ -83,7 +81,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       const hasShipments = shipments && shipments.length > 0;
 
       let confirmMessage = `¿Estás seguro de que quieres eliminar el activo "${asset.brand} ${asset.model}"?`;
-      
+
       if (hasMaintenanceRecords || hasShipments) {
         confirmMessage += '\n\nEste activo tiene registros relacionados:';
         if (hasMaintenanceRecords) {
@@ -98,7 +96,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       if (window.confirm(confirmMessage)) {
         try {
           console.log('Iniciando eliminación...');
-          
+
           // Delete the asset (related records will be deleted automatically due to CASCADE)
           const { error } = await supabase
             .from('assets')
@@ -217,7 +215,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   // Mapear filtro de categoría a tipo de activo
   const getCategoryFromFilter = (filter?: string) => {
     if (!filter) return '';
-    
+
     const categoryMap: Record<string, string> = {
       'inventory-pc': 'PC',
       'inventory-celular': 'Celular',
@@ -236,7 +234,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       'inventory-disco': 'Disco de Almacenamiento',
       'inventory-disco-extraido': 'Disco Extraído',
     };
-    
+
     return categoryMap[filter] || '';
   };
 
@@ -260,12 +258,11 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
     const matchesCategoryFilter = !categoryFromFilter || asset.asset_types.name === categoryFromFilter;
     // Excluir cámaras de la vista general de inventario
     const isCamera = asset.asset_types.name === 'Cámara';
-    
-    const matchesType = !filterType || asset.asset_type_id === filterType;
+
     const matchesLocation = !filterLocation || asset.location_id === filterLocation;
     const matchesStatus = !filterStatus || asset.status === filterStatus;
 
-    return !isCamera && matchesSearch && matchesCategoryFilter && matchesType && matchesLocation && matchesStatus;
+    return !isCamera && matchesSearch && matchesCategoryFilter && matchesLocation && matchesStatus;
   });
 
   // Mapeo de iconos para cada tipo de activo
@@ -288,7 +285,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       'Disco de Almacenamiento': Database,
       'Disco Extraído': HardDriveIcon,
     };
-    
+
     return iconMap[typeName] || Monitor;
   };
 
@@ -312,7 +309,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       'Disco de Almacenamiento': 'bg-rose-50 text-rose-700 border-rose-200',
       'Disco Extraído': 'bg-slate-50 text-slate-700 border-slate-200',
     };
-    
+
     return colorMap[typeName] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
@@ -343,15 +340,22 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {categoryFromFilter ? `${categoryFromFilter} - Inventario` : 'Inventario'}
-          </h2>
-          <p className="text-gray-600">
-            {categoryFromFilter ? `Gestión de activos ${categoryFromFilter.toLowerCase()}` : 'Gestión de activos tecnológicos'}
-          </p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="bg-orange-100 border border-orange-200 rounded-lg p-2">
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Inventario
+              {categoryFromFilter && (
+                <span className="ml-2 text-sm font-normal text-orange-600">({categoryFromFilter})</span>
+              )}
+            </h2>
+            <p className="text-gray-600">
+              {categoryFromFilter ? `Gestión de activos ${categoryFromFilter.toLowerCase()}` : 'Gestión de activos tecnológicos'}
+            </p>
+          </div>
         </div>
         {canEdit() && (
           <button
@@ -430,8 +434,8 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       </div>
 
       {loading ? (
-        <div className="text-left py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
       ) : (
         <div className="space-y-4">

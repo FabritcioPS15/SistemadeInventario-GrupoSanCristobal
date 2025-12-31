@@ -1,55 +1,81 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { supabase, Location } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
-type LocationFormProps = {
-  onClose: () => void;
-  onSave: () => void;
-  editLocation?: Location;
+type MTCAcceso = {
+  id: string;
+  name: string;
+  url: string;
+  username?: string;
+  password?: string;
+  access_type: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
 };
 
-export default function LocationForm({ onClose, onSave, editLocation }: LocationFormProps) {
+type MTCAccesoFormProps = {
+  onClose: () => void;
+  onSave: () => void;
+  editAcceso?: MTCAcceso;
+};
+
+export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAccesoFormProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'checking' | null>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: editLocation?.name || '',
-    type: editLocation?.type || 'revision',
-    address: editLocation?.address || '',
-    notes: editLocation?.notes || '',
+    name: editAcceso?.name || '',
+    url: editAcceso?.url || '',
+    username: editAcceso?.username || '',
+    password: editAcceso?.password || '',
+    access_type: editAcceso?.access_type || 'web',
+    notes: editAcceso?.notes || '',
   });
 
   // Detectar cambios en el formulario
   useEffect(() => {
-    if (editLocation) {
+    if (editAcceso) {
       const originalData = {
-        name: editLocation.name,
-        type: editLocation.type,
-        address: editLocation.address || '',
-        notes: editLocation.notes || '',
+        name: editAcceso.name,
+        url: editAcceso.url,
+        username: editAcceso.username || '',
+        password: editAcceso.password || '',
+        access_type: editAcceso.access_type,
+        notes: editAcceso.notes || '',
       };
       
       const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
       setHasChanges(hasFormChanges);
     }
-  }, [formData, editLocation]);
+  }, [formData, editAcceso]);
 
   // Funciones de validación
-  const checkDuplicateLocationName = async (name: string, currentLocationId?: string): Promise<boolean> => {
+  const validateURL = (url: string): boolean => {
+    if (!url) return false; // Campo requerido
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const checkDuplicateAccessName = async (name: string, currentAccessId?: string): Promise<boolean> => {
     if (!name) return false; // Campo requerido
     
     const { data, error } = await supabase
-      .from('locations')
+      .from('mtc_accesos')
       .select('id')
       .eq('name', name);
     
     if (error) return false;
     
-    // Si estamos editando, excluir la ubicación actual
-    if (currentLocationId && data) {
-      return !data.some(location => location.id !== currentLocationId);
+    // Si estamos editando, excluir el acceso actual
+    if (currentAccessId && data) {
+      return !data.some(access => access.id !== currentAccessId);
     }
     
     return data?.length === 0;
@@ -70,11 +96,21 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
           isValid = false;
           errorMessage = 'El nombre debe tener al menos 2 caracteres';
         } else {
-          const isUnique = await checkDuplicateLocationName(value, editLocation?.id);
+          const isUnique = await checkDuplicateAccessName(value, editAcceso?.id);
           if (!isUnique) {
             isValid = false;
-            errorMessage = 'Este nombre de ubicación ya está en uso';
+            errorMessage = 'Este nombre de acceso ya está en uso';
           }
+        }
+        break;
+      
+      case 'url':
+        if (!value.trim()) {
+          isValid = false;
+          errorMessage = 'La URL es requerida';
+        } else if (!validateURL(value)) {
+          isValid = false;
+          errorMessage = 'URL inválida (debe incluir http:// o https://)';
         }
         break;
     }
@@ -87,7 +123,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
     e.preventDefault();
     
     // Validar campos requeridos
-    const requiredFields = ['name', 'type'];
+    const requiredFields = ['name', 'url', 'access_type'];
     const newErrors: Record<string, string> = {};
     
     requiredFields.forEach(field => {
@@ -96,6 +132,11 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
       }
     });
 
+    // Validar campos con formato específico
+    if (formData.url && !validateURL(formData.url)) {
+      newErrors.url = 'URL inválida';
+    }
+
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
@@ -103,7 +144,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
     }
 
     // Confirmar cambios si estamos editando
-    if (editLocation && hasChanges) {
+    if (editAcceso && hasChanges) {
       const confirmed = window.confirm(
         '¿Estás seguro de que quieres guardar los cambios realizados?'
       );
@@ -118,26 +159,26 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
     };
 
     try {
-      if (editLocation) {
+      if (editAcceso) {
         const { error } = await supabase
-          .from('locations')
+          .from('mtc_accesos')
           .update(dataToSave)
-          .eq('id', editLocation.id);
+          .eq('id', editAcceso.id);
 
         if (error) {
-          console.error('Error al actualizar ubicación:', error);
-          setErrors({ submit: 'Error al actualizar la ubicación: ' + error.message });
+          console.error('Error al actualizar acceso MTC:', error);
+          setErrors({ submit: 'Error al actualizar el acceso MTC: ' + error.message });
           setLoading(false);
           return;
         }
       } else {
         const { error } = await supabase
-          .from('locations')
+          .from('mtc_accesos')
           .insert([dataToSave]);
 
         if (error) {
-          console.error('Error al crear ubicación:', error);
-          setErrors({ submit: 'Error al crear la ubicación: ' + error.message });
+          console.error('Error al crear acceso MTC:', error);
+          setErrors({ submit: 'Error al crear el acceso MTC: ' + error.message });
           setLoading(false);
           return;
         }
@@ -166,7 +207,8 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
     }
 
     // Validar campos específicos en tiempo real (con debounce)
-    if (name === 'name') {
+    const fieldsToValidate = ['name', 'url'];
+    if (fieldsToValidate.includes(name)) {
       // Debounce para evitar muchas validaciones
       setTimeout(() => {
         validateField(name, value);
@@ -207,9 +249,9 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-gray-800">
-              {editLocation ? 'Editar Ubicación' : 'Nueva Ubicación'}
+              {editAcceso ? 'Editar Acceso MTC' : 'Nuevo Acceso MTC'}
             </h2>
-            {editLocation && hasChanges && (
+            {editAcceso && hasChanges && (
               <p className="text-sm text-orange-600 mt-1">
                 ⚠️ Tienes cambios sin guardar
               </p>
@@ -242,7 +284,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
                 onChange={handleChange}
                 required
                 className={getFieldClasses('name')}
-                placeholder="Ej: Policlínico Lima Centro"
+                placeholder="Ej: Portal MTC Principal"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {renderValidationIcon('name')}
@@ -255,33 +297,72 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo *
+              Tipo de Acceso *
             </label>
             <select
-              name="type"
-              value={formData.type}
+              name="access_type"
+              value={formData.access_type}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="revision">Revisión</option>
-              <option value="policlinico">Policlínico</option>
-              <option value="escuela_conductores">Escuela de Conductores</option>
-              <option value="central">Central</option>
+              <option value="web">Web</option>
+              <option value="api">API</option>
+              <option value="ftp">FTP</option>
+              <option value="ssh">SSH</option>
+              <option value="database">Base de Datos</option>
+              <option value="other">Otro</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Dirección
+              URL *
+            </label>
+            <div className="relative">
+              <input
+                type="url"
+                name="url"
+                value={formData.url}
+                onChange={handleChange}
+                required
+                className={getFieldClasses('url')}
+                placeholder="https://portal.mtc.gob.pe"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {renderValidationIcon('url')}
+              </div>
+            </div>
+            {errors.url && (
+              <p className="text-red-500 text-sm mt-1">{errors.url}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Usuario
             </label>
             <input
               type="text"
-              name="address"
-              value={formData.address}
+              name="username"
+              value={formData.username}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Ej: Av. Principal 123, Lima"
+              placeholder="usuario@mtc.gob.pe"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Contraseña
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="••••••••"
             />
           </div>
 
@@ -295,7 +376,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
               onChange={handleChange}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Información adicional..."
+              placeholder="Información adicional sobre el acceso..."
             />
           </div>
 
@@ -313,7 +394,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
               ) : (
                 <>
                   <CheckCircle size={16} />
-                  {editLocation ? 'Actualizar' : 'Crear'} Ubicación
+                  {editAcceso ? 'Actualizar' : 'Crear'} Acceso
                 </>
               )}
             </button>

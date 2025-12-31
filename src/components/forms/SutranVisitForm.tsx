@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Calendar, User, MapPin, FileText, AlertTriangle, CheckCircle, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import type { SutranVisit, Location } from '../lib/supabase';
+import { Calendar, User, MapPin, FileText, AlertTriangle, CheckCircle, Clock, X } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import type { SutranVisit, Location } from '../../lib/supabase';
 
 interface SutranVisitFormProps {
   visit?: SutranVisit;

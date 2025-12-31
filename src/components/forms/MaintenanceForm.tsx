@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { supabase, AssetWithDetails } from '../lib/supabase';
+import { supabase, AssetWithDetails } from '../../lib/supabase';
 
 type MaintenanceRecord = {
   id: string;

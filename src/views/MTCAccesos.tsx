@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, Filter } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import MTCAccesoForm from '../components/MTCAccesoForm';
+import MTCAccesoForm from '../components/forms/MTCAccesoForm';
 
 type MTCAcceso = {
   id: string;
@@ -59,12 +59,12 @@ export default function MTCAccesos() {
     accesosData.forEach(acceso => {
       // Contar por tipo
       byType[acceso.access_type] = (byType[acceso.access_type] || 0) + 1;
-      
+
       // Contar con credenciales
       if (acceso.username && acceso.password) {
         withCredentials++;
       }
-      
+
       // Contar recientes
       if (new Date(acceso.created_at) > oneWeekAgo) {
         recentlyAdded++;
@@ -91,7 +91,7 @@ export default function MTCAccesos() {
 
   const handleDeleteAcceso = async (acceso: MTCAcceso) => {
     console.log('🗑️ Iniciando eliminación de acceso MTC:', acceso);
-    
+
     if (window.confirm(`¿Estás seguro de que quieres eliminar el acceso "${acceso.name}"?`)) {
       try {
         console.log(`🗑️ Eliminando acceso: ${acceso.name} (ID: ${acceso.id})`);
@@ -181,11 +181,11 @@ export default function MTCAccesos() {
 
   const filteredAccesos = accesos.filter(acceso => {
     const matchesSearch = acceso.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         acceso.access_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         acceso.url.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      acceso.access_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      acceso.url.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesType = !accessTypeFilter || acceso.access_type === accessTypeFilter;
-    
+
     return matchesSearch && matchesType;
   });
 
@@ -205,7 +205,7 @@ export default function MTCAccesos() {
                   .from('mtc_accesos')
                   .select('count')
                   .limit(1);
-                
+
                 if (error) {
                   console.error('❌ Error de conexión:', error);
                   alert(`Error de conexión: ${error.message}`);
@@ -248,7 +248,7 @@ export default function MTCAccesos() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="bg-green-100 p-2 rounded-lg">
@@ -260,7 +260,7 @@ export default function MTCAccesos() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="bg-purple-100 p-2 rounded-lg">
@@ -272,7 +272,7 @@ export default function MTCAccesos() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="bg-orange-100 p-2 rounded-lg">
@@ -315,7 +315,7 @@ export default function MTCAccesos() {
             </select>
           </div>
         </div>
-        
+
         {/* Resumen de filtros activos */}
         {(searchTerm || accessTypeFilter) && (
           <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
@@ -345,8 +345,8 @@ export default function MTCAccesos() {
       </div>
 
       {loading ? (
-        <div className="text-left py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -394,7 +394,7 @@ export default function MTCAccesos() {
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-xs font-medium text-blue-700">Usuario</label>
                           <button
-                            onClick={() => copyToClipboard(acceso.username, `username-${acceso.id}`)}
+                            onClick={() => copyToClipboard(acceso.username!, `username-${acceso.id}`)}
                             className="text-blue-400 hover:text-blue-600 transition-colors"
                             title="Copiar usuario"
                           >
@@ -409,7 +409,7 @@ export default function MTCAccesos() {
                             <label className="text-xs font-medium text-blue-700">Contraseña</label>
                             <div className="flex items-center gap-1">
                               <button
-                                onClick={() => copyToClipboard(acceso.password, `password-${acceso.id}`)}
+                                onClick={() => copyToClipboard(acceso.password!, `password-${acceso.id}`)}
                                 className="text-blue-400 hover:text-blue-600 transition-colors"
                                 title="Copiar contraseña"
                               >
@@ -486,8 +486,8 @@ export default function MTCAccesos() {
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-800">Detalles de Acceso MTC</h2>
-              <button 
-                onClick={() => setViewingAcceso(undefined)} 
+              <button
+                onClick={() => setViewingAcceso(undefined)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={24} />

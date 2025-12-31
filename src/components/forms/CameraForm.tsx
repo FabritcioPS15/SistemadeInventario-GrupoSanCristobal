@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { supabase, Location, CameraDisk } from '../lib/supabase';
-import CameraDiskManager from './CameraDiskManager';
+import { supabase, Location, CameraDisk } from '../../lib/supabase';
+import CameraDiskManager from '../CameraDiskManager';
 
 type Camera = {
   id: string;
@@ -77,7 +77,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
         access_type: editCamera.access_type || 'url',
         auth_code: editCamera.auth_code || '',
       };
-      
+
       const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
       setHasChanges(hasFormChanges);
     }
@@ -116,30 +116,30 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
 
   const checkDuplicateCameraName = async (name: string, currentCameraId?: string): Promise<boolean> => {
     if (!name) return false; // Campo requerido
-    
+
     const { data, error } = await supabase
       .from('cameras')
       .select('id')
       .eq('name', name);
-    
+
     if (error) {
       console.error('Error checking duplicate camera name:', error);
       return false;
     }
-    
+
     // Si estamos editando, excluir la cámara actual
     if (currentCameraId && data) {
       // Retornar true si no hay duplicados (excluyendo la cámara actual)
       return !data.some(camera => camera.id !== currentCameraId);
     }
-    
+
     // Retornar true si no hay duplicados
     return data?.length === 0;
   };
 
   const validateField = async (fieldName: string, value: string) => {
     setValidationStatus(prev => ({ ...prev, [fieldName]: 'checking' }));
-    
+
     let isValid = true;
     let errorMessage = '';
 
@@ -156,7 +156,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
           }
         }
         break;
-      
+
       case 'url':
         if (!value.trim()) {
           isValid = false;
@@ -166,22 +166,22 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
           errorMessage = 'URL inválida (debe incluir http:// o https://)';
         }
         break;
-      
-      
+
+
       case 'auth_code':
         if (!value.trim()) {
           isValid = false;
           errorMessage = 'El código de autenticación es requerido';
         }
         break;
-      
+
       case 'ip_address':
         if (value && !validateIPAddress(value)) {
           isValid = false;
           errorMessage = 'Formato de IP inválido (ej: 192.168.1.1)';
         }
         break;
-      
+
       case 'port':
         if (value && !validatePort(value)) {
           isValid = false;
@@ -196,15 +196,15 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     console.log('🔍 Iniciando envío del formulario de cámara...');
     console.log('📋 Datos del formulario:', formData);
     console.log('✏️ Editando cámara:', editCamera ? 'Sí' : 'No');
-    
+
     // Validar campos requeridos
     const requiredFields = ['name', 'status'];
     const newErrors: Record<string, string> = {};
-    
+
     requiredFields.forEach(field => {
       if (!formData[field as keyof typeof formData]) {
         newErrors[field] = 'Este campo es requerido';
@@ -225,11 +225,11 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
     if (formData.url && !validateURL(formData.url)) {
       newErrors.url = 'URL inválida';
     }
-    
+
     if (formData.ip_address && !validateIPAddress(formData.ip_address)) {
       newErrors.ip_address = 'Formato de IP inválido';
     }
-    
+
     if (formData.port && !validatePort(formData.port)) {
       newErrors.port = 'Puerto inválido';
     }
@@ -244,12 +244,12 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
     // Verificar también errores de validación en tiempo real
     const currentErrors = { ...errors, ...newErrors };
     console.log('🔍 Errores de validación:', currentErrors);
-    
+
     // Filtrar errores vacíos o nulos
-    const validErrors = Object.entries(currentErrors).filter(([key, value]) => 
+    const validErrors = Object.entries(currentErrors).filter(([key, value]) =>
       value && value.trim() !== ''
     );
-    
+
     console.log('🔍 Errores válidos:', validErrors);
     setErrors(currentErrors);
 
@@ -406,7 +406,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -444,13 +444,13 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
   const getFieldClasses = (fieldName: string) => {
     const baseClasses = "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2";
     const status = validationStatus[fieldName];
-    
+
     if (status === 'invalid' || errors[fieldName]) {
       return `${baseClasses} border-red-300 focus:ring-red-500`;
     } else if (status === 'valid') {
       return `${baseClasses} border-green-300 focus:ring-green-500`;
     }
-    
+
     return `${baseClasses} border-gray-300 focus:ring-blue-500`;
   };
 
@@ -767,12 +767,12 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
               <CheckCircle size={16} />
               {showDiskManager ? 'Ocultar' : 'Gestionar'} Discos de Almacenamiento
             </button>
-            
+
             {showDiskManager && (
               <div className="mt-4">
                 {editCamera ? (
-                  <CameraDiskManager 
-                    cameraId={editCamera.id} 
+                  <CameraDiskManager
+                    cameraId={editCamera.id}
                     onDisksChange={setCameraDisks}
                   />
                 ) : (

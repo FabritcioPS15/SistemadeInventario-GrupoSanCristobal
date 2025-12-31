@@ -19,7 +19,7 @@ export default function Login() {
     try {
       // Determinar si el input es email o DNI
       const isEmail = emailOrDni.includes('@');
-      
+
       let query = supabase
         .from('users')
         .select('*')
@@ -56,8 +56,8 @@ export default function Login() {
           <div className="bg-slate-800 text-white rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
             <LogIn size={32} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Sistema IT</h1>
-          <p className="text-gray-600">Gestión y Control</p>
+          <h1 className="text-2xl font-bold text-gray-800">Sistema GSC</h1>
+          <p className="text-gray-600">Gestión y Control del Grupo San Cristobal</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

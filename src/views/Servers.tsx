@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, ExternalLink, Eye, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MapPin, X } from 'lucide-react';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 import { supabase, Server, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -146,8 +146,8 @@ export default function Servers() {
       </div>
 
       {loading ? (
-        <div className="text-left py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

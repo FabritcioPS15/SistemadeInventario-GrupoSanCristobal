@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Building2, Calendar, MapPin, User, Clock, Search, Plus, Edit, Trash2, Eye, Filter, X, Copy, Check, AlertTriangle, CheckCircle, FileText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { SutranVisit } from '../lib/supabase';
-import SutranVisitForm from '../components/SutranVisitForm';
+import SutranVisitForm from '../components/forms/SutranVisitForm';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Sutran() {
@@ -37,15 +37,15 @@ export default function Sutran() {
         .from('sutran_visits')
         .select('*, locations(*)')
         .order('visit_date', { ascending: false });
-      
+
       console.log('📋 Resultado de fetchVisits:', { data, error });
-      
+
       if (error) {
         console.error('❌ Error al cargar visitas:', error);
         alert(`Error al cargar visitas: ${error.message}`);
         return;
       }
-      
+
       if (data) {
         console.log(`✅ ${data.length} visitas cargadas`);
         setVisits(data);
@@ -104,7 +104,7 @@ export default function Sutran() {
   };
 
   const filteredVisits = visits.filter(visit => {
-    const matchesSearch = 
+    const matchesSearch =
       visit.inspector_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       visit.location_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (visit.observations && visit.observations.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -189,7 +189,7 @@ export default function Sutran() {
 
   const handleDeleteVisit = async (id: string) => {
     console.log('🗑️ Iniciando eliminación de visita:', id);
-    
+
     if (window.confirm('¿Está seguro de eliminar esta visita? Esta acción no se puede deshacer.')) {
       try {
         const { data, error } = await supabase
@@ -246,8 +246,7 @@ export default function Sutran() {
     <div className="p-6">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
-            <Building2 size={24} className="text-blue-700" />
+          <div className="bg-orange-100 border border-orange-200 rounded-lg p-2">
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Visitas de Sutran</h1>
@@ -307,15 +306,15 @@ export default function Sutran() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div className="relative">
-            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
+              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
                 placeholder="Buscar por inspector, ubicación, observaciones..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
 
             <select
               value={statusFilter}
@@ -382,7 +381,7 @@ export default function Sutran() {
                   .from('sutran_visits')
                   .select('id, inspector_name, status')
                   .limit(1);
-                
+
                 if (error) {
                   console.error('❌ Error de conexión:', error);
                   alert(`Error de conexión: ${error.message}`);
@@ -400,7 +399,7 @@ export default function Sutran() {
             <Building2 size={20} />
             Probar Conexión
           </button>
-          
+
           {canEdit() && (
             <button
               onClick={() => {
@@ -417,8 +416,8 @@ export default function Sutran() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+        <div className="flex flex-col items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
           <p className="mt-4 text-gray-600">Cargando visitas...</p>
         </div>
       ) : (
@@ -462,12 +461,12 @@ export default function Sutran() {
                       {getStatusLabel(visit.status)}
                     </span>
                   </div>
-                  
+
                   {visit.observations && (
-                  <div className="mb-3">
-                    <h3 className="font-medium text-gray-900 mb-1">Observaciones:</h3>
-                    <p className="text-gray-600">{visit.observations}</p>
-                  </div>
+                    <div className="mb-3">
+                      <h3 className="font-medium text-gray-900 mb-1">Observaciones:</h3>
+                      <p className="text-gray-600">{visit.observations}</p>
+                    </div>
                   )}
 
                   {visit.findings && (
@@ -526,12 +525,12 @@ export default function Sutran() {
 
       {!loading && filteredVisits.length === 0 && (
         <div className="text-center py-12">
-            <Building2 size={48} className="mx-auto mb-4 text-gray-300" />
-            <p className="text-gray-500 text-lg mb-2">No se encontraron visitas</p>
-            <p className="text-gray-400">
+          <Building2 size={48} className="mx-auto mb-4 text-gray-300" />
+          <p className="text-gray-500 text-lg mb-2">No se encontraron visitas</p>
+          <p className="text-gray-400">
             {hasActiveFilters ? 'Intenta con otros términos de búsqueda' : 'Comienza agregando una nueva visita'}
-            </p>
-          </div>
+          </p>
+        </div>
       )}
 
       {/* Modal de Vista Detallada */}
@@ -646,8 +645,8 @@ export default function Sutran() {
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">Hallazgos</h3>
                     <p className="text-gray-700">{viewingVisit.findings}</p>
-        </div>
-      )}
+                  </div>
+                )}
 
                 {viewingVisit.recommendations && (
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -676,8 +675,8 @@ export default function Sutran() {
                   Cerrar
                 </button>
               </div>
+            </div>
           </div>
-        </div>
         </div>
       )}
 

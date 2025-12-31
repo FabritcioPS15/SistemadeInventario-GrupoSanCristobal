@@ -94,8 +94,8 @@ export default function Audit() {
       </div>
 
       {loading ? (
-        <div className="text-left py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
       ) : (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">

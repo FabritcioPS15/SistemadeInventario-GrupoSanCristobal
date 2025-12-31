@@ -1,81 +1,55 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, Location } from '../../lib/supabase';
 
-type MTCAcceso = {
-  id: string;
-  name: string;
-  url: string;
-  username?: string;
-  password?: string;
-  access_type: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-};
-
-type MTCAccesoFormProps = {
+type LocationFormProps = {
   onClose: () => void;
   onSave: () => void;
-  editAcceso?: MTCAcceso;
+  editLocation?: Location;
 };
 
-export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAccesoFormProps) {
+export default function LocationForm({ onClose, onSave, editLocation }: LocationFormProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'checking' | null>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: editAcceso?.name || '',
-    url: editAcceso?.url || '',
-    username: editAcceso?.username || '',
-    password: editAcceso?.password || '',
-    access_type: editAcceso?.access_type || 'web',
-    notes: editAcceso?.notes || '',
+    name: editLocation?.name || '',
+    type: editLocation?.type || 'revision',
+    address: editLocation?.address || '',
+    notes: editLocation?.notes || '',
   });
 
   // Detectar cambios en el formulario
   useEffect(() => {
-    if (editAcceso) {
+    if (editLocation) {
       const originalData = {
-        name: editAcceso.name,
-        url: editAcceso.url,
-        username: editAcceso.username || '',
-        password: editAcceso.password || '',
-        access_type: editAcceso.access_type,
-        notes: editAcceso.notes || '',
+        name: editLocation.name,
+        type: editLocation.type,
+        address: editLocation.address || '',
+        notes: editLocation.notes || '',
       };
       
       const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
       setHasChanges(hasFormChanges);
     }
-  }, [formData, editAcceso]);
+  }, [formData, editLocation]);
 
   // Funciones de validación
-  const validateURL = (url: string): boolean => {
-    if (!url) return false; // Campo requerido
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const checkDuplicateAccessName = async (name: string, currentAccessId?: string): Promise<boolean> => {
+  const checkDuplicateLocationName = async (name: string, currentLocationId?: string): Promise<boolean> => {
     if (!name) return false; // Campo requerido
     
     const { data, error } = await supabase
-      .from('mtc_accesos')
+      .from('locations')
       .select('id')
       .eq('name', name);
     
     if (error) return false;
     
-    // Si estamos editando, excluir el acceso actual
-    if (currentAccessId && data) {
-      return !data.some(access => access.id !== currentAccessId);
+    // Si estamos editando, excluir la ubicación actual
+    if (currentLocationId && data) {
+      return !data.some(location => location.id !== currentLocationId);
     }
     
     return data?.length === 0;
@@ -96,21 +70,11 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
           isValid = false;
           errorMessage = 'El nombre debe tener al menos 2 caracteres';
         } else {
-          const isUnique = await checkDuplicateAccessName(value, editAcceso?.id);
+          const isUnique = await checkDuplicateLocationName(value, editLocation?.id);
           if (!isUnique) {
             isValid = false;
-            errorMessage = 'Este nombre de acceso ya está en uso';
+            errorMessage = 'Este nombre de ubicación ya está en uso';
           }
-        }
-        break;
-      
-      case 'url':
-        if (!value.trim()) {
-          isValid = false;
-          errorMessage = 'La URL es requerida';
-        } else if (!validateURL(value)) {
-          isValid = false;
-          errorMessage = 'URL inválida (debe incluir http:// o https://)';
         }
         break;
     }
@@ -123,7 +87,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
     e.preventDefault();
     
     // Validar campos requeridos
-    const requiredFields = ['name', 'url', 'access_type'];
+    const requiredFields = ['name', 'type'];
     const newErrors: Record<string, string> = {};
     
     requiredFields.forEach(field => {
@@ -132,11 +96,6 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
       }
     });
 
-    // Validar campos con formato específico
-    if (formData.url && !validateURL(formData.url)) {
-      newErrors.url = 'URL inválida';
-    }
-
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
@@ -144,7 +103,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
     }
 
     // Confirmar cambios si estamos editando
-    if (editAcceso && hasChanges) {
+    if (editLocation && hasChanges) {
       const confirmed = window.confirm(
         '¿Estás seguro de que quieres guardar los cambios realizados?'
       );
@@ -159,26 +118,26 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
     };
 
     try {
-      if (editAcceso) {
+      if (editLocation) {
         const { error } = await supabase
-          .from('mtc_accesos')
+          .from('locations')
           .update(dataToSave)
-          .eq('id', editAcceso.id);
+          .eq('id', editLocation.id);
 
         if (error) {
-          console.error('Error al actualizar acceso MTC:', error);
-          setErrors({ submit: 'Error al actualizar el acceso MTC: ' + error.message });
+          console.error('Error al actualizar ubicación:', error);
+          setErrors({ submit: 'Error al actualizar la ubicación: ' + error.message });
           setLoading(false);
           return;
         }
       } else {
         const { error } = await supabase
-          .from('mtc_accesos')
+          .from('locations')
           .insert([dataToSave]);
 
         if (error) {
-          console.error('Error al crear acceso MTC:', error);
-          setErrors({ submit: 'Error al crear el acceso MTC: ' + error.message });
+          console.error('Error al crear ubicación:', error);
+          setErrors({ submit: 'Error al crear la ubicación: ' + error.message });
           setLoading(false);
           return;
         }
@@ -207,8 +166,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
     }
 
     // Validar campos específicos en tiempo real (con debounce)
-    const fieldsToValidate = ['name', 'url'];
-    if (fieldsToValidate.includes(name)) {
+    if (name === 'name') {
       // Debounce para evitar muchas validaciones
       setTimeout(() => {
         validateField(name, value);
@@ -249,9 +207,9 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold text-gray-800">
-              {editAcceso ? 'Editar Acceso MTC' : 'Nuevo Acceso MTC'}
+              {editLocation ? 'Editar Ubicación' : 'Nueva Ubicación'}
             </h2>
-            {editAcceso && hasChanges && (
+            {editLocation && hasChanges && (
               <p className="text-sm text-orange-600 mt-1">
                 ⚠️ Tienes cambios sin guardar
               </p>
@@ -284,7 +242,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
                 onChange={handleChange}
                 required
                 className={getFieldClasses('name')}
-                placeholder="Ej: Portal MTC Principal"
+                placeholder="Ej: Policlínico Lima Centro"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {renderValidationIcon('name')}
@@ -297,72 +255,33 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Acceso *
+              Tipo *
             </label>
             <select
-              name="access_type"
-              value={formData.access_type}
+              name="type"
+              value={formData.type}
               onChange={handleChange}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="web">Web</option>
-              <option value="api">API</option>
-              <option value="ftp">FTP</option>
-              <option value="ssh">SSH</option>
-              <option value="database">Base de Datos</option>
-              <option value="other">Otro</option>
+              <option value="revision">Revisión</option>
+              <option value="policlinico">Policlínico</option>
+              <option value="escuela_conductores">Escuela de Conductores</option>
+              <option value="central">Central</option>
             </select>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              URL *
-            </label>
-            <div className="relative">
-              <input
-                type="url"
-                name="url"
-                value={formData.url}
-                onChange={handleChange}
-                required
-                className={getFieldClasses('url')}
-                placeholder="https://portal.mtc.gob.pe"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {renderValidationIcon('url')}
-              </div>
-            </div>
-            {errors.url && (
-              <p className="text-red-500 text-sm mt-1">{errors.url}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Usuario
+              Dirección
             </label>
             <input
               type="text"
-              name="username"
-              value={formData.username}
+              name="address"
+              value={formData.address}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="usuario@mtc.gob.pe"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contraseña
-            </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••"
+              placeholder="Ej: Av. Principal 123, Lima"
             />
           </div>
 
@@ -376,7 +295,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
               onChange={handleChange}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Información adicional sobre el acceso..."
+              placeholder="Información adicional..."
             />
           </div>
 
@@ -394,7 +313,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
               ) : (
                 <>
                   <CheckCircle size={16} />
-                  {editAcceso ? 'Actualizar' : 'Crear'} Acceso
+                  {editLocation ? 'Actualizar' : 'Crear'} Ubicación
                 </>
               )}
             </button>

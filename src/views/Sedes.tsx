@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, MapPin, Building, Users, Package, Eye, X } from 'lucide-react';
 import { supabase, Location } from '../lib/supabase';
-import LocationForm from '../components/LocationForm';
+import LocationForm from '../components/forms/LocationForm';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Sedes() {
@@ -38,7 +38,7 @@ export default function Sedes() {
     const { data } = await supabase
       .from('cameras')
       .select('location_id');
-    
+
     if (data) {
       const counts: Record<string, number> = {};
       data.forEach(camera => {
@@ -62,11 +62,11 @@ export default function Sedes() {
 
   const handleDeleteLocation = async (location: Location) => {
     console.log('🗑️ Iniciando eliminación de sede:', location);
-    
+
     // Verificar si hay cámaras asociadas a esta sede
     const cameraCount = cameraCounts[location.id] || 0;
     console.log('📊 Cámaras asociadas:', cameraCount);
-    
+
     // Verificar assets asociados
     let assetsCount = 0;
     try {
@@ -105,16 +105,16 @@ export default function Sedes() {
     } catch (err) {
       console.log('⚠️ No se pudo verificar shipments:', err);
     }
-    
+
     const totalAssociated = cameraCount + assetsCount + usersCount + shipmentsCount;
-    
+
     const message = totalAssociated > 0
       ? `⚠️ Esta sede tiene elementos asociados:\n`
-        + `${cameraCount > 0 ? `• ${cameraCount} cámara${cameraCount > 1 ? 's' : ''}\n` : ''}`
-        + `${assetsCount > 0 ? `• ${assetsCount} asset${assetsCount > 1 ? 's' : ''}\n` : ''}`
-        + `${usersCount > 0 ? `• ${usersCount} usuario${usersCount > 1 ? 's' : ''}\n` : ''}`
-        + `${shipmentsCount > 0 ? `• ${shipmentsCount} envío${shipmentsCount > 1 ? 's' : ''}\n` : ''}`
-        + `\nAl eliminar la sede "${location.name}", los elementos quedarán con ubicación no definida.`
+      + `${cameraCount > 0 ? `• ${cameraCount} cámara${cameraCount > 1 ? 's' : ''}\n` : ''}`
+      + `${assetsCount > 0 ? `• ${assetsCount} asset${assetsCount > 1 ? 's' : ''}\n` : ''}`
+      + `${usersCount > 0 ? `• ${usersCount} usuario${usersCount > 1 ? 's' : ''}\n` : ''}`
+      + `${shipmentsCount > 0 ? `• ${shipmentsCount} envío${shipmentsCount > 1 ? 's' : ''}\n` : ''}`
+      + `\nAl eliminar la sede "${location.name}", los elementos quedarán con ubicación no definida.`
       : `¿Estás seguro de que quieres eliminar la ubicación "${location.name}"?`;
 
     if (!window.confirm(message)) return;
@@ -195,7 +195,7 @@ export default function Sedes() {
                   .from('locations')
                   .select('count')
                   .limit(1);
-                
+
                 if (error) {
                   console.error('❌ Error de conexión:', error);
                   alert(`Error de conexión: ${error.message}`);
@@ -240,7 +240,7 @@ export default function Sedes() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="bg-green-100 p-2 rounded-lg">
@@ -254,7 +254,7 @@ export default function Sedes() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="bg-purple-100 p-2 rounded-lg">
@@ -268,7 +268,7 @@ export default function Sedes() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="bg-orange-100 p-2 rounded-lg">
@@ -312,8 +312,8 @@ export default function Sedes() {
       </div>
 
       {loading ? (
-        <div className="text-left py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -379,11 +379,10 @@ export default function Sedes() {
                       </button>
                       <button
                         onClick={() => handleDeleteLocation(location)}
-                        className={`flex items-center justify-center gap-1 px-3 py-2 text-sm rounded transition-colors ${
-                          cameraCounts[location.id] > 0 
-                            ? 'bg-orange-50 text-orange-700 hover:bg-orange-100' 
-                            : 'bg-red-50 text-red-700 hover:bg-red-100'
-                        }`}
+                        className={`flex items-center justify-center gap-1 px-3 py-2 text-sm rounded transition-colors ${cameraCounts[location.id] > 0
+                          ? 'bg-orange-50 text-orange-700 hover:bg-orange-100'
+                          : 'bg-red-50 text-red-700 hover:bg-red-100'
+                          }`}
                         title={cameraCounts[location.id] > 0 ? 'Eliminar sede y sus cámaras asociadas' : 'Eliminar sede'}
                       >
                         <Trash2 size={16} />
@@ -421,8 +420,8 @@ export default function Sedes() {
                 </div>
                 <h2 className="text-xl font-semibold text-gray-800">Detalles de Sede</h2>
               </div>
-              <button 
-                onClick={() => setViewingLocation(undefined)} 
+              <button
+                onClick={() => setViewingLocation(undefined)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={24} />
@@ -474,8 +473,8 @@ export default function Sedes() {
                   </div>
                   <div className="bg-white p-4 rounded border text-center">
                     <div className="text-2xl font-bold text-purple-600">
-                      {viewingLocation.type === 'revision' ? 'Revisión' : 
-                       viewingLocation.type === 'policlinico' ? 'Salud' : 'Educación'}
+                      {viewingLocation.type === 'revision' ? 'Revisión' :
+                        viewingLocation.type === 'policlinico' ? 'Salud' : 'Educación'}
                     </div>
                     <div className="text-sm text-gray-600">Sector</div>
                   </div>

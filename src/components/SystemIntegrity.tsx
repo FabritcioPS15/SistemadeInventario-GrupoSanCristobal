@@ -148,13 +148,13 @@ export default function SystemIntegrity() {
             {getHealthIcon(systemHealth)}
             <div>
               <h3 className="font-semibold">
-                Estado del Sistema: {systemHealth === 'excellent' ? 'Excelente' : 
-                                   systemHealth === 'good' ? 'Bueno' :
-                                   systemHealth === 'warning' ? 'Advertencia' : 'Crítico'}
+                Estado del Sistema: {systemHealth === 'excellent' ? 'Excelente' :
+                  systemHealth === 'good' ? 'Bueno' :
+                    systemHealth === 'warning' ? 'Advertencia' : 'Crítico'}
               </h3>
               <p className="text-sm">
-                {totalIssues === 0 ? 'No se encontraron problemas' : 
-                 `${totalIssues} problema${totalIssues > 1 ? 's' : ''} detectado${totalIssues > 1 ? 's' : ''}`}
+                {totalIssues === 0 ? 'No se encontraron problemas' :
+                  `${totalIssues} problema${totalIssues > 1 ? 's' : ''} detectado${totalIssues > 1 ? 's' : ''}`}
               </p>
             </div>
           </div>
@@ -304,6 +304,10 @@ export default function SystemIntegrity() {
           Última actualización: {lastUpdated.toLocaleString()}
         </div>
       )}
+
+      <div className="mt-8 text-center">
+        <p className="text-gray-300 text-xs opacity-50">Sistema realizado por: Fabritcio</p>
+      </div>
     </div>
   );
 }

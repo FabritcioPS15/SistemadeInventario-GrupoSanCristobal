@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader2, Package, MapPin, Calendar, User, Truck, Filter, Search } from 'lucide-react';
-import { supabase, AssetWithDetails, Location } from '../lib/supabase';
+import { supabase, AssetWithDetails, Location } from '../../lib/supabase';
 
 type Shipment = {
   id: string;

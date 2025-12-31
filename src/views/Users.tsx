@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Mail, Phone, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, Filter, Copy, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import UserForm from '../components/UserForm';
+import UserForm from '../components/forms/UserForm';
 import { useAuth } from '../contexts/AuthContext';
 
 type User = {
@@ -63,7 +63,7 @@ export default function Users() {
 
   const handleDeleteUser = async (user: User) => {
     console.log('🗑️ Iniciando eliminación de usuario:', user);
-    
+
     if (window.confirm(`¿Estás seguro de que quieres eliminar al usuario "${user.full_name}"?`)) {
       try {
         console.log(`🗑️ Eliminando usuario: ${user.full_name} (ID: ${user.id})`);
@@ -116,15 +116,15 @@ export default function Users() {
         .from('users')
         .select('*, locations(*)')
         .order('created_at', { ascending: false });
-      
+
       console.log('📋 Resultado de fetchUsers:', { data, error });
-      
+
       if (error) {
         console.error('❌ Error al cargar usuarios:', error);
         alert(`Error al cargar usuarios: ${error.message}`);
         return;
       }
-      
+
       if (data) {
         console.log(`✅ ${data.length} usuarios cargados`);
         setUsers(data);
@@ -151,14 +151,14 @@ export default function Users() {
     usersData.forEach(user => {
       // Contar por rol
       byRole[user.role] = (byRole[user.role] || 0) + 1;
-      
+
       // Contar por estado
       if (user.status === 'active') {
         active++;
       } else {
         inactive++;
       }
-      
+
       // Contar recientes
       if (new Date(user.created_at) > oneWeekAgo) {
         recentlyAdded++;
@@ -230,12 +230,12 @@ export default function Users() {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.role.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesRole = !roleFilter || user.role === roleFilter;
     const matchesStatus = !statusFilter || user.status === statusFilter;
-    
+
     return matchesSearch && matchesRole && matchesStatus;
   });
 
@@ -265,7 +265,7 @@ export default function Users() {
                   .from('users')
                   .select('count')
                   .limit(1);
-                
+
                 if (error) {
                   console.error('❌ Error de conexión:', error);
                   alert(`Error de conexión: ${error.message}`);
@@ -310,7 +310,7 @@ export default function Users() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="bg-green-100 p-2 rounded-lg">
@@ -322,7 +322,7 @@ export default function Users() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="bg-purple-100 p-2 rounded-lg">
@@ -334,7 +334,7 @@ export default function Users() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="bg-blue-100 p-2 rounded-lg">
@@ -346,7 +346,7 @@ export default function Users() {
             </div>
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center gap-3">
             <div className="bg-orange-100 p-2 rounded-lg">
@@ -399,7 +399,7 @@ export default function Users() {
             </select>
           </div>
         </div>
-        
+
         {/* Resumen de filtros activos */}
         {(searchTerm || roleFilter || statusFilter) && (
           <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
@@ -435,8 +435,8 @@ export default function Users() {
       </div>
 
       {loading ? (
-        <div className="text-left py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -553,8 +553,8 @@ export default function Users() {
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-800">Detalles de Usuario</h2>
-              <button 
-                onClick={() => setViewingUser(undefined)} 
+              <button
+                onClick={() => setViewingUser(undefined)}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={24} />
