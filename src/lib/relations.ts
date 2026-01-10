@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, AssetWithDetails } from './supabase';
 
 // Tipos extendidos para relaciones completas
 export type LocationWithAssets = {
@@ -74,13 +74,23 @@ export type CameraWithDetails = {
 export type MaintenanceRecord = {
   id: string;
   asset_id: string;
-  maintenance_type: 'preventive' | 'corrective';
-  status: 'pending' | 'in_progress' | 'completed';
+  maintenance_type: 'preventive' | 'corrective' | 'technical_review' | 'repair';
+  status: 'pending' | 'in_progress' | 'completed' | 'waiting_parts';
   description: string;
   scheduled_date?: string;
   completed_date?: string;
   technician?: string;
   notes?: string;
+  failure_cause?: string;
+  solution_applied?: string;
+  work_hours?: number;
+  parts_used?: any[];
+  next_maintenance_date?: string;
+  maintenance_frequency?: number;
+  total_cost?: number;
+  warranty_claim?: boolean;
+  warranty_details?: string;
+  location_id?: string;
   created_at: string;
   updated_at: string;
   assets?: AssetWithFullDetails;
@@ -352,8 +362,8 @@ export async function getAuditLogsWithDetails(): Promise<AuditLog[]> {
  * Actualiza la ubicación de un activo y registra el cambio en auditoría
  */
 export async function updateAssetLocation(
-  assetId: string, 
-  newLocationId: string | null, 
+  assetId: string,
+  newLocationId: string | null,
   userId?: string
 ): Promise<boolean> {
   try {
@@ -367,7 +377,7 @@ export async function updateAssetLocation(
     // Actualizar la ubicación del activo
     const { error: updateError } = await supabase
       .from('assets')
-      .update({ 
+      .update({
         location_id: newLocationId,
         updated_at: new Date().toISOString()
       })

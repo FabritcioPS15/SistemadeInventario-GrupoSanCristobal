@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Dashboard from './views/Dashboard';
 import Inventory from './views/Inventory';
@@ -18,11 +18,12 @@ import Cameras from './views/Cameras';
 import Servers from './views/Servers';
 import FlotaVehicular from './views/FlotaVehicular';
 import SpareParts from './views/SpareParts';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import PasswordSetup from './components/PasswordSetup';
 import Checklist from './views/Checklist';
 
+// Componente para proteger rutas basadas en permisos
 function ProtectedRoute({ children, permission }: { children: React.ReactNode, permission?: string }) {
   const { user, hasPermission } = useAuth();
   const location = useLocation();
@@ -47,9 +48,50 @@ function ProtectedRoute({ children, permission }: { children: React.ReactNode, p
   return <>{children}</>;
 }
 
+// Wrappers para manejar parámetros de ruta similares a activeView.startsWith
+function InventoryWrapper() {
+  const { category } = useParams();
+  const { hasPermission } = useAuth();
+  const viewId = `inventory-${category}`;
+  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
+  return <Inventory categoryFilter={viewId} />;
+}
+
+function CamerasWrapper() {
+  const { subview } = useParams();
+  const { hasPermission } = useAuth();
+  const viewId = `cameras-${subview}`;
+  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
+  return <Cameras subview={viewId} />;
+}
+
+function MaintenanceWrapper() {
+  const { category } = useParams();
+  const { hasPermission } = useAuth();
+  const viewId = `maintenance-${category}`;
+  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
+  return <Maintenance categoryFilter={viewId} />;
+}
+
+function EnviadosWrapper() {
+  const { location } = useParams();
+  const { hasPermission } = useAuth();
+  const viewId = `sent-${location}`;
+  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
+  return <Enviados locationFilter={viewId} />;
+}
+
+function ChecklistWrapper() {
+  const { type } = useParams();
+  const { hasPermission } = useAuth();
+  const viewId = `checklist-${type}`;
+  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
+  return <Checklist type={type} />;
+}
+
 function AppContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { user, loading, hasPermission, needsPasswordSetup } = useAuth();
+  const { user, loading, needsPasswordSetup } = useAuth();
   const location = useLocation();
 
   // Mostrar loading mientras se verifica la autenticación
@@ -141,55 +183,8 @@ function AppContent() {
   );
 }
 
-// Wrappers para manejar parámetros de ruta similares a activeView.startsWith
-import { useParams } from 'react-router-dom';
-
-function InventoryWrapper() {
-  const { category } = useParams();
-  const { hasPermission } = useAuth();
-  const viewId = `inventory-${category}`;
-  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
-  return <Inventory categoryFilter={viewId} />;
-}
-
-function CamerasWrapper() {
-  const { subview } = useParams();
-  const { hasPermission } = useAuth();
-  const viewId = `cameras-${subview}`;
-  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
-  return <Cameras subview={viewId} />;
-}
-
-function MaintenanceWrapper() {
-  const { category } = useParams();
-  const { hasPermission } = useAuth();
-  const viewId = `maintenance-${category}`;
-  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
-  return <Maintenance categoryFilter={viewId} />;
-}
-
-function EnviadosWrapper() {
-  const { location } = useParams();
-  const { hasPermission } = useAuth();
-  const viewId = `sent-${location}`;
-  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
-  return <Enviados locationFilter={viewId} />;
-}
-
-function ChecklistWrapper() {
-  const { type } = useParams();
-  const { hasPermission } = useAuth();
-  const viewId = `checklist-${type}`;
-  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
-  return <Checklist type={type} />;
-}
-
 function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
+  return <AppContent />;
 }
 
 export default App;
