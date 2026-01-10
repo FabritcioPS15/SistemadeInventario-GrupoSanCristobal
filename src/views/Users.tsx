@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Mail, Phone, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, Filter, Copy, Check } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Mail, Phone, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, Copy, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import UserForm from '../components/forms/UserForm';
 import { useAuth } from '../contexts/AuthContext';
@@ -251,36 +251,25 @@ export default function Users() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-8 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Usuarios</h2>
-          <p className="text-gray-600">Gestión de personal y usuarios del sistema</p>
+          <p className="text-gray-600">Gestión de personal corporativo y permisos del sistema</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
           <button
             onClick={async () => {
-              console.log('🔍 Probando conexión con Supabase...');
               try {
-                const { data, error } = await supabase
-                  .from('users')
-                  .select('count')
-                  .limit(1);
-
-                if (error) {
-                  console.error('❌ Error de conexión:', error);
-                  alert(`Error de conexión: ${error.message}`);
-                } else {
-                  console.log('✅ Conexión exitosa:', data);
-                  alert('Conexión con Supabase exitosa');
-                }
-              } catch (err) {
-                console.error('❌ Error inesperado:', err);
-                alert('Error inesperado: ' + err);
+                const { error } = await supabase.from('users').select('count', { count: 'exact', head: true });
+                if (error) throw error;
+                alert('Conexión con Supabase exitosa');
+              } catch (err: any) {
+                alert('Error de conexión: ' + err.message);
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-200 transition-all text-sm font-medium active:scale-95"
           >
-            🔍 Probar Conexión
+            Probar Conexión
           </button>
           {canEdit() && (
             <button
@@ -288,97 +277,75 @@ export default function Users() {
                 setEditingUser(undefined);
                 setShowForm(true);
               }}
-              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-md shadow-blue-100 active:transform active:scale-95"
             >
-              <Plus size={20} />
+              <Plus size={18} />
               Nuevo Usuario
             </button>
           )}
         </div>
       </div>
-
       {/* Dashboard de estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-100 p-2 rounded-lg">
-              <UsersIcon className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Usuarios</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Total Usuarios</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+            <UsersIcon className="h-5 w-5 text-gray-300" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-green-100 p-2 rounded-lg">
-              <UserCheck className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Activos</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
-            </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Activos</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-gray-900">{stats.active}</div>
+            <UserCheck className="h-5 w-5 text-emerald-300" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-purple-100 p-2 rounded-lg">
-              <Crown className="h-6 w-6 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Administradores</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.byRole.admin || 0}</p>
-            </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Administradores</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-gray-900">{stats.byRole.admin || 0}</div>
+            <Crown className="h-5 w-5 text-amber-300" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-100 p-2 rounded-lg">
-              <Shield className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Supervisores</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.byRole.supervisor || 0}</p>
-            </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Supervisores</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-gray-900">{stats.byRole.supervisor || 0}</div>
+            <Shield className="h-5 w-5 text-blue-300" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-orange-100 p-2 rounded-lg">
-              <Plus className="h-6 w-6 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Recientes (7 días)</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.recentlyAdded}</p>
-            </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Recientes (7d)</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-blue-500">{stats.recentlyAdded}</div>
+            <Plus className="h-5 w-5 text-blue-500/20" />
           </div>
         </div>
       </div>
 
       {/* Filtros avanzados */}
-      {/* Filtros avanzados */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="md:col-span-2 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Buscar por nombre, email o rol..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-blue-100/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-medium"
             />
           </div>
-          <div className="md:w-48">
+          <div>
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-blue-100/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1em_1em] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] font-medium text-gray-700"
             >
               <option value="">Todos los roles</option>
               <option value="admin">Administrador</option>
@@ -387,11 +354,11 @@ export default function Users() {
               <option value="user">Usuario</option>
             </select>
           </div>
-          <div className="md:w-48">
+          <div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-blue-100/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1em_1em] bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] font-medium text-gray-700"
             >
               <option value="">Todos los estados</option>
               <option value="active">Activo</option>
@@ -402,132 +369,138 @@ export default function Users() {
 
         {/* Resumen de filtros activos */}
         {(searchTerm || roleFilter || statusFilter) && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
-            <Filter className="h-4 w-4" />
-            <span>Filtros activos:</span>
-            {searchTerm && (
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                "{searchTerm}"
-              </span>
-            )}
-            {roleFilter && (
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                {getRoleLabel(roleFilter)}
-              </span>
-            )}
-            {statusFilter && (
-              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
-                {statusFilter === 'active' ? 'Activo' : 'Inactivo'}
-              </span>
-            )}
+          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Filtros:</span>
+              <div className="flex flex-wrap gap-2">
+                {searchTerm && (
+                  <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100 text-[10px] font-bold uppercase tracking-widest">
+                    "{searchTerm}"
+                  </span>
+                )}
+                {roleFilter && (
+                  <span className="bg-gray-50 text-gray-700 px-2 py-0.5 rounded border border-gray-100 text-[10px] font-bold uppercase tracking-widest">
+                    {getRoleLabel(roleFilter)}
+                  </span>
+                )}
+                {statusFilter && (
+                  <span className="bg-gray-50 text-gray-700 px-2 py-0.5 rounded border border-gray-100 text-[10px] font-bold uppercase tracking-widest">
+                    {statusLabels[statusFilter as keyof typeof statusLabels]}
+                  </span>
+                )}
+              </div>
+            </div>
             <button
               onClick={() => {
                 setSearchTerm('');
                 setRoleFilter('');
                 setStatusFilter('');
               }}
-              className="text-red-600 hover:text-red-800 text-xs underline"
+              className="flex items-center gap-1 text-[10px] font-black text-gray-400 hover:text-rose-600 transition-colors uppercase tracking-widest"
             >
-              Limpiar filtros
+              <X size={14} /> Limpiar filtros
             </button>
           </div>
         )}
       </div>
-
       {loading ? (
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredUsers.map(user => (
-            <div key={user.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
+            <div key={user.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400/50 transition-all duration-300 flex flex-col group overflow-hidden">
+              <div className="p-6 flex-1">
+                <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 text-lg mb-1">{user.full_name}</h3>
+                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors uppercase tracking-tight mb-2">
+                      {user.full_name}
+                    </h3>
                     <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getRoleColor(user.role)}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${getRoleColor(user.role)}`}>
                         {getRoleIcon(user.role)}
                         {getRoleLabel(user.role)}
                       </span>
                     </div>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[user.status]}`}>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${statusColors[user.status]}`}>
                     {statusLabels[user.status]}
                   </span>
                 </div>
 
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <Mail size={16} />
-                      <a href={`mailto:${user.email}`} className="hover:text-blue-600">
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center justify-between text-sm text-gray-700 bg-gray-50/50 p-2.5 rounded-xl border border-gray-100/50 group/item">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Mail size={16} className="text-blue-500 shrink-0" />
+                      <a href={`mailto:${user.email}`} className="hover:text-blue-600 font-medium truncate">
                         {user.email}
                       </a>
                     </div>
                     <button
                       onClick={() => copyToClipboard(user.email, `email-${user.id}`)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      className="text-gray-400 hover:text-blue-600 p-1 hover:bg-white rounded-lg transition-all"
                       title="Copiar email"
                     >
-                      {copiedItems[`email-${user.id}`] ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+                      {copiedItems[`email-${user.id}`] ? <Check size={14} className="text-green-600" /> : <Copy size={12} />}
                     </button>
                   </div>
 
                   {user.phone && (
-                    <div className="flex items-center justify-between text-sm text-gray-600">
+                    <div className="flex items-center justify-between text-sm text-gray-700 bg-gray-50/50 p-2.5 rounded-xl border border-gray-100/50 group/item">
                       <div className="flex items-center gap-2">
-                        <Phone size={16} />
-                        <span>{user.phone}</span>
+                        <Phone size={16} className="text-emerald-500 shrink-0" />
+                        <span className="font-medium tracking-tight">{user.phone}</span>
                       </div>
                       <button
                         onClick={() => copyToClipboard(user.phone || '', `phone-${user.id}`)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        className="text-gray-400 hover:text-emerald-600 p-1 hover:bg-white rounded-lg transition-all"
                         title="Copiar teléfono"
                       >
-                        {copiedItems[`phone-${user.id}`] ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+                        {copiedItems[`phone-${user.id}`] ? <Check size={14} className="text-green-600" /> : <Copy size={12} />}
                       </button>
                     </div>
                   )}
 
                   {user.locations && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <MapPin size={16} />
+                    <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-widest px-1">
+                      <MapPin size={14} className="text-blue-500" />
                       <span>{user.locations.name}</span>
                     </div>
                   )}
                 </div>
 
                 {user.notes && (
-                  <p className="text-sm text-gray-600 mb-4 line-clamp-2">{user.notes}</p>
+                  <p className="text-xs text-gray-500 font-medium italic leading-relaxed line-clamp-2 px-1">
+                    "{user.notes}"
+                  </p>
                 )}
+              </div>
 
-                <div className="flex gap-2 pt-3 border-t">
-                  <button
-                    onClick={() => handleViewUser(user)}
-                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-                  >
-                    <Eye size={16} />
-                    Ver
-                  </button>
-                  {canEdit() && (
-                    <>
-                      <button
-                        onClick={() => handleEditUser(user)}
-                        className="flex items-center justify-center gap-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(user)}
-                        className="flex items-center justify-center gap-1 px-3 py-2 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100 transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </>
-                  )}
-                </div>
+              <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-50 flex gap-2">
+                <button
+                  onClick={() => handleViewUser(user)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+                >
+                  <Eye size={16} />
+                  DETALLES
+                </button>
+                {canEdit() && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEditUser(user)}
+                      className="p-2 bg-white text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(user)}
+                      className="p-2 bg-white text-rose-500 border border-rose-100 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -549,73 +522,127 @@ export default function Users() {
       )}
 
       {viewingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-800">Detalles de Usuario</h2>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className={`px-8 py-6 flex items-center justify-between border-b border-gray-100 ${getRoleColor(viewingUser.role).split(' ')[0]} bg-opacity-30`}>
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-2xl bg-white shadow-sm border border-gray-100">
+                  {getRoleIcon(viewingUser.role)}
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Perfil de Usuario</h2>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none mt-1">{getRoleLabel(viewingUser.role)}</p>
+                </div>
+              </div>
               <button
                 onClick={() => setViewingUser(undefined)}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-2 hover:bg-white rounded-full transition-colors text-gray-400 hover:text-gray-600"
               >
                 <X size={24} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Nombre Completo</label>
-                <p className="text-gray-900 font-medium">{viewingUser.full_name}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
-                <p className="text-gray-900">{viewingUser.email}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Rol</label>
-                <p className="text-gray-900">{viewingUser.role}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Estado</label>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[viewingUser.status]}`}>
-                  {statusLabels[viewingUser.status]}
-                </span>
-              </div>
-              {viewingUser.phone && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Teléfono</label>
-                  <p className="text-gray-900">{viewingUser.phone}</p>
+
+            <div className="p-8 overflow-y-auto space-y-8">
+              {/* Información Personal */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Datos Personales y Perfil</h3>
                 </div>
-              )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50">
+                  <div className="md:col-span-2">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nombre Completo</label>
+                    <p className="text-gray-900 font-bold text-lg leading-tight uppercase">{viewingUser.full_name}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Cargo / Rol</label>
+                    <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${getRoleColor(viewingUser.role)}`}>
+                      {getRoleIcon(viewingUser.role)}
+                      {getRoleLabel(viewingUser.role)}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Estado de Cuenta</label>
+                    <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${statusColors[viewingUser.status as keyof typeof statusColors]}`}>
+                      {statusLabels[viewingUser.status as keyof typeof statusLabels]}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Contacto */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-4 bg-purple-500 rounded-full" />
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Canales de Contacto</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Correo Institucional</label>
+                    <p className="text-gray-900 font-black font-mono lowercase break-all">{viewingUser.email}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Teléfono Móvil</label>
+                    <p className="text-gray-900 font-black font-mono tracking-tight">{viewingUser.phone || 'No registrado'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Asignación */}
               {viewingUser.locations && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Ubicación</label>
-                  <p className="text-gray-900">{viewingUser.locations.name}</p>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Ubicación y Sede</h3>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
+                    <div className="p-2 bg-emerald-50 rounded-lg">
+                      <MapPin size={20} className="text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-gray-900 uppercase">{viewingUser.locations.name}</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{viewingUser.locations.type}</p>
+                    </div>
+                  </div>
                 </div>
               )}
+
+              {/* Notas */}
               {viewingUser.notes && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Notas</label>
-                  <p className="text-gray-900">{viewingUser.notes}</p>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Notas del Perfil</h3>
+                  </div>
+                  <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100">
+                    <p className="text-sm text-amber-950 font-medium italic leading-relaxed whitespace-pre-wrap">"{viewingUser.notes}"</p>
+                  </div>
                 </div>
               )}
-              <div className="flex gap-3 pt-4">
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => setViewingUser(undefined)}
+                className="flex-1 px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-widest bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+              >
+                Cerrar
+              </button>
+              {canEdit() && (
                 <button
-                  onClick={() => setViewingUser(undefined)}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  onClick={() => {
+                    setViewingUser(undefined);
+                    handleEditUser(viewingUser);
+                  }}
+                  className="flex-1 px-4 py-3 text-xs font-black text-white uppercase tracking-widest bg-blue-600 rounded-xl hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-100"
                 >
-                  Cerrar
+                  Editar Usuario
                 </button>
-                {canEdit() && (
-                  <button
-                    onClick={() => {
-                      setViewingUser(undefined);
-                      handleEditUser(viewingUser);
-                    }}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Editar
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -623,4 +650,3 @@ export default function Users() {
     </div>
   );
 }
-

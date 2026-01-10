@@ -19,6 +19,9 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
     type: editLocation?.type || 'revision',
     address: editLocation?.address || '',
     notes: editLocation?.notes || '',
+    region: editLocation?.region || 'lima',
+    checklist_url: editLocation?.checklist_url || '',
+    history_url: editLocation?.history_url || '',
   });
 
   // Detectar cambios en el formulario
@@ -29,8 +32,11 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
         type: editLocation.type,
         address: editLocation.address || '',
         notes: editLocation.notes || '',
+        region: editLocation.region || 'lima',
+        checklist_url: editLocation.checklist_url || '',
+        history_url: editLocation.history_url || '',
       };
-      
+
       const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
       setHasChanges(hasFormChanges);
     }
@@ -39,25 +45,25 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
   // Funciones de validación
   const checkDuplicateLocationName = async (name: string, currentLocationId?: string): Promise<boolean> => {
     if (!name) return false; // Campo requerido
-    
+
     const { data, error } = await supabase
       .from('locations')
       .select('id')
       .eq('name', name);
-    
+
     if (error) return false;
-    
+
     // Si estamos editando, excluir la ubicación actual
     if (currentLocationId && data) {
       return !data.some(location => location.id !== currentLocationId);
     }
-    
+
     return data?.length === 0;
   };
 
   const validateField = async (fieldName: string, value: string) => {
     setValidationStatus(prev => ({ ...prev, [fieldName]: 'checking' }));
-    
+
     let isValid = true;
     let errorMessage = '';
 
@@ -85,11 +91,11 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validar campos requeridos
-    const requiredFields = ['name', 'type'];
+    const requiredFields = ['name', 'type', 'region'];
     const newErrors: Record<string, string> = {};
-    
+
     requiredFields.forEach(field => {
       if (!formData[field as keyof typeof formData]) {
         newErrors[field] = 'Este campo es requerido';
@@ -102,13 +108,15 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
       return;
     }
 
-    // Confirmar cambios si estamos editando
+    // Confirmar cambios si estamos editando (opcional, removido para mejorar confiabilidad)
+    /* 
     if (editLocation && hasChanges) {
       const confirmed = window.confirm(
         '¿Estás seguro de que quieres guardar los cambios realizados?'
       );
       if (!confirmed) return;
     }
+    */
 
     setLoading(true);
 
@@ -154,7 +162,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -191,13 +199,13 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
   const getFieldClasses = (fieldName: string) => {
     const baseClasses = "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2";
     const status = validationStatus[fieldName];
-    
+
     if (status === 'invalid' || errors[fieldName]) {
       return `${baseClasses} border-red-300 focus:ring-red-500`;
     } else if (status === 'valid') {
       return `${baseClasses} border-green-300 focus:ring-green-500`;
     }
-    
+
     return `${baseClasses} border-gray-300 focus:ring-blue-500`;
   };
 
@@ -268,6 +276,23 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
               <option value="policlinico">Policlínico</option>
               <option value="escuela_conductores">Escuela de Conductores</option>
               <option value="central">Central</option>
+              <option value="circuito">Circuito</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Región *
+            </label>
+            <select
+              name="region"
+              value={formData.region}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="lima">Lima</option>
+              <option value="provincia">Provincias</option>
             </select>
           </div>
 
@@ -296,6 +321,34 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Información adicional..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Link de Checklist (Google Sheets, etc.)
+            </label>
+            <input
+              type="text"
+              name="checklist_url"
+              value={formData.checklist_url}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://docs.google.com/spreadsheets/..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Link de Historial (Drive, etc.)
+            </label>
+            <input
+              type="text"
+              name="history_url"
+              value={formData.history_url}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://drive.google.com/drive/..."
             />
           </div>
 

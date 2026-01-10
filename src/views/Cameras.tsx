@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, Link as LinkIcon, ChevronDown, ChevronUp, EyeOff, Camera as CameraIcon } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, Download } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
+import ExcelJS from 'exceljs';
 import { supabase, Camera, Location } from '../lib/supabase';
 import CameraForm from '../components/forms/CameraForm';
 import { useAuth } from '../contexts/AuthContext';
+import { RiFileExcel2Line } from "react-icons/ri";
 
 type CamerasProps = {
   subview?: string;
@@ -21,6 +23,9 @@ export default function Cameras({ subview }: CamerasProps) {
   const [selectedCamera, setSelectedCamera] = useState<Camera | undefined>();
   const [expandedStorage, setExpandedStorage] = useState<Set<string>>(new Set());
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+  const [filterLocation, setFilterLocation] = useState('todos');
+  const [filterStatus, setFilterStatus] = useState('todos');
+  const [filterStorage, setFilterStorage] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -134,440 +139,393 @@ export default function Cameras({ subview }: CamerasProps) {
 
     // Filtro por búsqueda
     const q = search.toLowerCase();
-    return (
+    const matchesSearch =
       c.name?.toLowerCase().includes(q) ||
       c.brand?.toLowerCase().includes(q) ||
       c.model?.toLowerCase().includes(q) ||
       c.ip_address?.toLowerCase().includes(q) ||
-      (c as any).locations?.name?.toLowerCase().includes(q)
-    );
+      (c as any).locations?.name?.toLowerCase().includes(q);
+
+    if (!matchesSearch) return false;
+
+    // Filtro por Sede
+    if (filterLocation !== 'todos' && (c as any).locations?.id !== filterLocation) {
+      return false;
+    }
+
+    // Filtro por Estado
+    if (filterStatus !== 'todos' && c.status !== filterStatus) {
+      return false;
+    }
+
+    // Filtro por Almacenamiento Crítico (algún disco > 75%)
+    if (filterStorage) {
+      const hasCriticalDisk = c.camera_disks?.some(d => {
+        const total = Number(d.total_capacity_gb) || 0;
+        const used = Number(d.used_space_gb) || 0;
+        const percent = total > 0 ? (used / total) * 100 : 0;
+        return percent > 75;
+      });
+      if (!hasCriticalDisk) return false;
+    }
+
+    return true;
   });
 
+  const handleExportExcel = async () => {
+    // Crear un nuevo libro de trabajo
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Cámaras');
+
+    // Definir columnas con anchos apropiados
+    worksheet.columns = [
+      { header: 'Nombre', key: 'name', width: 25 },
+      { header: 'Marca', key: 'brand', width: 15 },
+      { header: 'Modelo', key: 'model', width: 20 },
+      { header: 'Sede', key: 'location', width: 25 },
+      { header: 'IP', key: 'ip', width: 15 },
+      { header: 'Puerto', key: 'port', width: 10 },
+      { header: 'Usuario', key: 'username', width: 20 },
+      { header: 'Contraseña', key: 'password', width: 20 },
+      { header: 'URL', key: 'url', width: 40 },
+      { header: 'Tipo Acceso', key: 'access_type', width: 15 },
+      { header: 'Estado', key: 'status', width: 15 },
+      { header: 'Notas', key: 'notes', width: 30 }
+    ];
+
+    // Estilizar la fila de encabezados
+    worksheet.getRow(1).font = { bold: true, size: 12 };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    };
+    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+    worksheet.getRow(1).height = 25;
+
+    // Agregar bordes a los encabezados
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+
+    // Agregar datos
+    filtered.forEach((camera) => {
+      const locationName = (camera as any).locations?.name || '';
+      const statusLabel = camera.status === 'active' ? 'Activo' :
+        camera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo';
+
+      const row = worksheet.addRow({
+        name: camera.name || '',
+        brand: camera.brand || '',
+        model: camera.model || '',
+        location: locationName,
+        ip: camera.ip_address || '',
+        port: camera.port || '',
+        username: camera.username || '',
+        password: camera.password || '',
+        url: camera.url || '',
+        access_type: humanAccess(camera.access_type),
+        status: statusLabel,
+        notes: camera.notes || ''
+      });
+
+      // Agregar bordes a cada celda de datos
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+        cell.alignment = { vertical: 'middle', wrapText: true };
+      });
+    });
+
+    // Generar el archivo
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+
+    // Crear enlace de descarga
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = `camaras_${subview ? subview.replace('cameras-', '') : 'general'}_${dateStr}.xlsx`;
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Limpiar
+    URL.revokeObjectURL(url);
+  };
+
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="bg-orange-100 border border-orange-200 rounded-lg p-2">
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Cámaras
-              {subview && (
-                <span className="ml-2 text-sm font-normal text-orange-600">({getSubtitleFromSubview(subview)})</span>
-              )}
-            </h2>
-            <p className="text-gray-600">Gestión de cámaras con formulario exclusivo</p>
-          </div>
+    <div className="p-8 relative">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Cámaras
+            {subview && (
+              <span className="ml-2 text-sm font-normal text-blue-600">({getSubtitleFromSubview(subview)})</span>
+            )}
+          </h2>
+          <p className="text-gray-600">Gestión de cámaras y almacenamiento</p>
         </div>
-        {canEdit() && (
-          <button onClick={openCreate} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
-            <Plus size={20} /> Nueva Cámara
-          </button>
-        )}
-      </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex gap-3 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Buscar por nombre, modelo, IP o sede..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((cam) => (
-            <div key={cam.id} className="bg-white rounded-xl shadow border border-gray-200 hover:shadow-md transition-shadow overflow-hidden max-w-md">
-              {/* Header */}
-              <div className="px-5 pt-4 pb-3 flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-green-50 text-green-700 border border-green-200 rounded-md p-2">
-                    <GiCctvCamera size={18} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900 text-base leading-tight">{cam.name}</h3>
-                      {typeof cam.display_count !== 'undefined' && cam.display_count !== null && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">{cam.display_count}</span>
-                      )}
-                      {cam.access_type && (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cam.access_type === 'url' ? 'bg-blue-100 text-blue-800' :
-                          cam.access_type === 'ivms' ? 'bg-purple-100 text-purple-800' :
-                            cam.access_type === 'esviz' ? 'bg-emerald-100 text-emerald-800' :
-                              'bg-gray-100 text-gray-800'
-                          }`}>{humanAccess(cam.access_type)}</span>
-                      )}
-                    </div>
-                    {(cam as any).locations && (
-                      <div className="flex items-center gap-1 text-xs text-gray-600 mt-0.5">
-                        <MapPin size={12} />
-                        <span>{(cam as any).locations.name}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {/* Status badge */}
-                <div>
-                  <span className={`px-2 py-1 text-xs rounded-full font-medium ${cam.status === 'active' ? 'bg-green-100 text-green-800' :
-                    cam.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                    {cam.status === 'active' ? 'Activo' : cam.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Preview / body */}
-              <div className="px-5 pb-4">
-                {/* Última modificación */}
-                <div className="mb-3 pb-3 border-b border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500 text-xs">Última modificación:</span>
-                    <span className="font-mono text-xs text-gray-600">
-                      {new Date(cam.updated_at).toLocaleString('es-ES', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: false
-                      })}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-gray-200 bg-gray-50 h-36 flex items-center justify-center text-gray-400 mb-4">
-                  {/* Placeholder for preview; could embed image/iframe if available */}
-                  <GiCctvCamera size={28} />
-                </div>
-
-                <div className="space-y-2 text-sm text-gray-700">
-                  {(cam.brand || cam.model) && (
-                    <div>
-                      <span className="text-gray-500">Modelo: </span>
-                      <span className="font-mono">{cam.brand || ''} {cam.model || ''}</span>
-                    </div>
-                  )}
-                  {cam.url && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500">URL:</span>
-                      <span className="font-mono break-all text-blue-600">{cam.url}</span>
-                      <button
-                        onClick={() => window.open(cam.url, '_blank', 'noopener')}
-                        className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                        title="Abrir URL"
-                      >
-                        Abrir
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500">Usuario:</span>
-                    <span className="font-mono break-all">{cam.username || '—'}</span>
-                    {cam.username && (
-                      <button onClick={() => copyToClipboard(cam.username)} className="p-1 hover:bg-gray-100 rounded" title="Copiar">
-                        <Copy size={14} />
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500">Contraseña:</span>
-                    <span className="font-mono break-all">{visiblePasswords.has(cam.id) ? (cam.password || '—') : (cam.password ? '••••••••' : '—')}</span>
-                    {cam.password && (
-                      <>
-                        <button onClick={() => togglePasswordVisible(cam.id)} className="p-1 hover:bg-gray-100 rounded" title={visiblePasswords.has(cam.id) ? 'Ocultar' : 'Mostrar'}>
-                          {visiblePasswords.has(cam.id) ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                        <button onClick={() => copyToClipboard(cam.password)} className="p-1 hover:bg-gray-100 rounded" title="Copiar">
-                          <Copy size={14} />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                  {cam.auth_code && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500">Código verificación:</span>
-                      <span className="font-mono break-all">{cam.auth_code}</span>
-                      <button onClick={() => copyToClipboard(cam.auth_code)} className="p-1 hover:bg-gray-100 rounded" title="Copiar">
-                        <Copy size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {(cam.camera_disks && cam.camera_disks.length > 0) ? (
-                  <div className="mt-3">
-                    {(() => {
-                      const totals = cam.camera_disks!.reduce(
-                        (acc, d) => {
-                          const total = Number(d.total_capacity_gb) || 0;
-                          const used = Number(d.used_space_gb) || 0;
-                          return { total: acc.total + total, used: acc.used + used };
-                        },
-                        { total: 0, used: 0 }
-                      );
-                      const percentUsed = totals.total > 0 ? Math.min(100, Math.max(0, Math.round((totals.used / totals.total) * 100))) : 0;
-                      const percentFree = 100 - percentUsed;
-                      const remaining = Math.max(0, totals.total - totals.used);
-                      return (
-                        <div className="flex items-center gap-3">
-                          <div className="text-sm text-gray-700 whitespace-nowrap">Uso total</div>
-                          <div className="text-sm text-gray-700 whitespace-nowrap">{totals.used} / {totals.total} GB</div>
-                          <div className="ml-auto w-32 sm:w-40 h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className={`${percentUsed > 85 ? 'bg-red-500' : percentUsed > 65 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                              style={{ width: `${percentUsed}%`, height: '100%' }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                ) : (
-                  <div className="mt-3">
-                    <div className="flex items-center gap-3">
-                      <div className="text-sm text-gray-700 whitespace-nowrap">Uso total</div>
-                      <div className="text-sm text-gray-700 whitespace-nowrap">0 / 0 GB</div>
-                      <div className="ml-auto w-32 sm:w-40 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-gray-300" style={{ width: '0%' }} />
-                      </div>
-                    </div>
-                    <div className="mt-1 text-xs text-gray-500">Sin discos configurados</div>
-                  </div>
-                )}
-                {cam.camera_disks && cam.camera_disks.length > 0 && (
-                  <div className="lg:col-span-2 mt-2">
-                    <button
-                      onClick={() => toggleStorage(cam.id)}
-                      className="inline-flex items-center gap-2 text-sm text-slate-700 hover:text-slate-900"
-                    >
-                      {expandedStorage.has(cam.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                      Almacenamiento ({cam.camera_disks.length} discos)
-                    </button>
-
-                    {/* Collapsible storage details */}
-                    {expandedStorage.has(cam.id) && (
-                      <div className="mt-2 space-y-2">
-                        {cam.camera_disks.map((d) => {
-                          const total = Number(d.total_capacity_gb) || 0;
-                          const used = Number(d.used_space_gb) || 0;
-                          const percent = total > 0 ? Math.min(100, Math.max(0, Math.round((used / total) * 100))) : 0;
-                          return (
-                            <div key={d.id} className="border border-gray-200 rounded-lg p-3">
-                              <div className="flex items-center justify-between text-sm">
-                                <div className="text-gray-700">Disco #{d.disk_number} • {d.disk_type || '—'}</div>
-                                <div className="text-gray-500">{used} / {total} GB</div>
-                              </div>
-                              <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                <div className={`h-full ${percent > 85 ? 'bg-red-500' : percent > 65 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${percent}%` }} />
-                              </div>
-                              <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
-                                <span className={`px-2 py-0.5 rounded-full ${d.status === 'active' ? 'bg-green-100 text-green-800' :
-                                  d.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                                    d.status === 'full' ? 'bg-red-100 text-red-800' :
-                                      'bg-gray-100 text-gray-800'
-                                  }`}>{d.status || '—'}</span>
-                                {typeof d.remaining_capacity_gb !== 'undefined' && (
-                                  <span>Libre: {Number(d.remaining_capacity_gb) || (total - used)} GB</span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-2 mt-4">
-                  <button
-                    onClick={() => handleView(cam)}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded hover:bg-slate-200"
-                    title="Ver detalles"
-                  >
-                    <Eye size={16} /> Ver
-                  </button>
-                  {canEdit() && (
-                    <>
-                      <button
-                        onClick={() => openEdit(cam)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100"
-                      >
-                        <Edit size={16} /> Editar
-                      </button>
-                      <button
-                        onClick={() => del(cam)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100"
-                      >
-                        <Trash2 size={16} /> Eliminar
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {showDetails && selectedCamera && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-800">Detalles de {selectedCamera.name}</h2>
-              <button onClick={() => setShowDetails(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
+        <div className="flex items-center gap-3">
+          {canEdit() && (
+            <>
+              <button
+                onClick={handleExportExcel}
+                className="inline-flex items-center px-4 py-2 border border-blue-600 text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                title="Explora la lista en Excel"
+              >
+                <RiFileExcel2Line className="-ml-1 mr-2 h-5 w-5" />
+                Excel
               </button>
+              <button
+                onClick={openCreate}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <Plus className="-ml-1 mr-2 h-5 w-5" />
+                Nueva Cámara
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white shadow rounded-lg mb-8">
+        <div className="px-4 py-5 sm:p-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Búsqueda */}
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                placeholder="Buscar nombre, modelo, IP..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left column - Basic info */}
-                <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Información General</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Estado:</span>
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${selectedCamera.status === 'active' ? 'bg-green-100 text-green-800' :
-                          selectedCamera.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                          {selectedCamera.status === 'active' ? 'Activo' : selectedCamera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
-                        </span>
+
+            {/* Filtro Sede */}
+            <div>
+              <select
+                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+              >
+                <option value="todos">Todas las Sedes</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtro Estado */}
+            <div>
+              <select
+                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="todos">Todos los Estados</option>
+                <option value="active">Activo</option>
+                <option value="maintenance">Mantenimiento</option>
+                <option value="inactive">Inactivo</option>
+              </select>
+            </div>
+
+            {/* Filtro Crítico */}
+            <div className="flex items-center">
+              <label className="inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={filterStorage}
+                  onChange={(e) => setFilterStorage(e.target.checked)}
+                />
+                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <span className="ms-3 text-sm font-medium text-gray-700">Espacio Crítico</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {
+        loading ? (
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
+            {filtered.map((cam) => (
+              <div key={cam.id} className="group bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all duration-200 overflow-hidden">
+                {/* Header con diseño minimalista */}
+                <div className="relative bg-gray-50 px-5 pt-4 pb-4 border-b border-gray-100">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`${cam.status === 'active' ? 'bg-green-500 text-white' :
+                        cam.status === 'maintenance' ? 'bg-yellow-500 text-white' :
+                          'bg-gray-400 text-white'} rounded-lg p-2.5 shadow-sm`}>
+                        <GiCctvCamera size={20} />
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Ubicación:</span>
-                        <span>{(selectedCamera as any).locations?.name || '—'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Marca:</span>
-                        <span>{selectedCamera.brand || '—'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Modelo:</span>
-                        <span>{selectedCamera.model || '—'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Cámaras:</span>
-                        <span>{selectedCamera.display_count || '—'}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold text-gray-900 text-base leading-tight group-hover:text-blue-700 transition-colors">{cam.name}</h3>
+                          {typeof cam.display_count !== 'undefined' && cam.display_count !== null && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700 shadow-sm border border-gray-300">{cam.display_count}</span>
+                          )}
+                          {cam.access_type && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold shadow-sm bg-gray-100 text-gray-600 border border-gray-200">
+                              {humanAccess(cam.access_type)}
+                            </span>
+                          )}
+                        </div>
+                        {(cam as any).locations && (
+                          <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium">
+                            <MapPin size={14} className="text-red-500" />
+                            <span>{(cam as any).locations.name}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Acceso y Credenciales</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Tipo de acceso:</span>
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${selectedCamera.access_type === 'url' ? 'bg-blue-100 text-blue-800' :
-                          selectedCamera.access_type === 'ivms' ? 'bg-purple-100 text-purple-800' :
-                            selectedCamera.access_type === 'esviz' ? 'bg-emerald-100 text-emerald-800' :
-                              'bg-gray-100 text-gray-800'
-                          }`}>
-                          {humanAccess(selectedCamera.access_type)}
-                        </span>
-                      </div>
-                      {selectedCamera.url && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500">URL:</span>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs break-all max-w-48">{selectedCamera.url}</span>
-                            <button
-                              onClick={() => window.open(selectedCamera.url, '_blank', 'noopener')}
-                              className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                            >
-                              Abrir
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Usuario:</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono">{selectedCamera.username || '—'}</span>
-                          {selectedCamera.username && (
-                            <button onClick={() => copyToClipboard(selectedCamera.username)} className="p-1 hover:bg-gray-100 rounded">
-                              <Copy size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">Contraseña:</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono">
-                            {visiblePasswords.has(selectedCamera.id) ? (selectedCamera.password || '—') : (selectedCamera.password ? '••••••••' : '—')}
-                          </span>
-                          {selectedCamera.password && (
-                            <>
-                              <button onClick={() => togglePasswordVisible(selectedCamera.id)} className="p-1 hover:bg-gray-100 rounded">
-                                {visiblePasswords.has(selectedCamera.id) ? <EyeOff size={14} /> : <Eye size={14} />}
-                              </button>
-                              <button onClick={() => copyToClipboard(selectedCamera.password)} className="p-1 hover:bg-gray-100 rounded">
-                                <Copy size={14} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      {selectedCamera.auth_code && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Código verificación:</span>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono">{selectedCamera.auth_code}</span>
-                            <button onClick={() => copyToClipboard(selectedCamera.auth_code)} className="p-1 hover:bg-gray-100 rounded">
-                              <Copy size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                    {/* Status badge */}
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`px-3 py-1.5 text-xs rounded-full font-bold shadow-sm ${cam.status === 'active' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                        cam.status === 'maintenance' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                          'bg-slate-100 text-slate-800 border border-slate-200'
+                        }`}>
+                        {cam.status === 'active' ? '✓ Activo' : cam.status === 'maintenance' ? '⚠ Mantenimiento' : 'Inactivo'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Right column - Technical details and storage */}
-                <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Detalles Técnicos</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">IP:</span>
-                        <span className="font-mono">{selectedCamera.ip_address || '—'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Puerto:</span>
-                        <span className="font-mono">{selectedCamera.port || '—'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Creado:</span>
-                        <span>{new Date(selectedCamera.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Actualizado:</span>
-                        <span>{new Date(selectedCamera.updated_at).toLocaleDateString()}</span>
-                      </div>
+                {/* Body con mejor espaciado y diseño */}
+                <div className="px-5 pb-4 space-y-4">
+                  {/* Información técnica compacta */}
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {(cam.brand || cam.model) && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 text-xs font-medium">MODELO:</span>
+                          <span className="font-mono text-xs font-bold text-gray-800">{cam.brand || ''} {cam.model || ''}</span>
+                        </div>
+                      )}
+                      {cam.ip_address && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 text-xs font-medium">IP:</span>
+                          <span className="font-mono text-xs font-bold text-blue-600">{cam.ip_address}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Storage section */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-900 mb-3">Almacenamiento</h3>
-                    {selectedCamera.camera_disks && selectedCamera.camera_disks.length > 0 ? (
-                      <div className="space-y-3">
+
+                  {/* Credenciales y acceso */}
+                  <div className="space-y-3">
+                    {cam.url && (
+                      <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-600 text-xs font-bold">URL:</span>
+                            <span className="font-mono text-xs text-gray-800 break-all flex-1">{cam.url}</span>
+                          </div>
+                          <button
+                            onClick={() => window.open(cam.url, '_blank', 'noopener')}
+                            className="px-3 py-1.5 text-xs bg-gray-800 text-white rounded-lg hover:bg-black transition-colors font-medium shadow-sm"
+                            title="Abrir URL"
+                          >
+                            Abrir
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-2">
+                      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 text-xs font-medium">Usuario:</span>
+                          <span className="font-mono text-xs text-gray-800 break-all flex-1">{cam.username || '—'}</span>
+                        </div>
+                        {cam.username && (
+                          <button onClick={() => copyToClipboard(cam.username)} className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors" title="Copiar">
+                            <Copy size={12} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-600 text-xs font-medium">Contraseña:</span>
+                          <span className="font-mono text-xs text-gray-800 break-all flex-1">{visiblePasswords.has(cam.id) ? (cam.password || '—') : (cam.password ? '••••••••' : '—')}</span>
+                        </div>
+                        {cam.password && (
+                          <div className="flex gap-1">
+                            <button onClick={() => togglePasswordVisible(cam.id)} className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors" title={visiblePasswords.has(cam.id) ? 'Ocultar' : 'Mostrar'}>
+                              {visiblePasswords.has(cam.id) ? <EyeOff size={12} /> : <Eye size={12} />}
+                            </button>
+                            <button onClick={() => copyToClipboard(cam.password)} className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors" title="Copiar">
+                              <Copy size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {cam.auth_code && (
+                      <div className="flex items-center justify-between bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                        <div className="flex items-center gap-2">
+                          <span className="text-yellow-700 text-xs font-medium">Código:</span>
+                          <span className="font-mono text-xs text-yellow-800 break-all flex-1">{cam.auth_code}</span>
+                        </div>
+                        <button onClick={() => copyToClipboard(cam.auth_code)} className="p-1.5 bg-yellow-200 hover:bg-yellow-300 rounded-lg transition-colors" title="Copiar">
+                          <Copy size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Almacenamiento mejorado */}
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-bold text-gray-700">💾 Almacenamiento</span>
+                      {(cam.camera_disks && cam.camera_disks.length > 0) && (
+                        <button
+                          onClick={() => toggleStorage(cam.id)}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                        >
+                          {expandedStorage.has(cam.id) ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          {cam.camera_disks.length} disco{cam.camera_disks.length > 1 ? 's' : ''}
+                        </button>
+                      )}
+                    </div>
+
+                    {(cam.camera_disks && cam.camera_disks.length > 0) ? (
+                      <div>
                         {(() => {
-                          const totals = selectedCamera.camera_disks!.reduce(
+                          const totals = cam.camera_disks!.reduce(
                             (acc, d) => {
                               const total = Number(d.total_capacity_gb) || 0;
                               const used = Number(d.used_space_gb) || 0;
@@ -578,90 +536,348 @@ export default function Cameras({ subview }: CamerasProps) {
                           const percentUsed = totals.total > 0 ? Math.min(100, Math.max(0, Math.round((totals.used / totals.total) * 100))) : 0;
                           const remaining = Math.max(0, totals.total - totals.used);
                           return (
-                            <div>
-                              <div className="flex justify-between text-sm mb-2">
-                                <span>Uso total ({selectedCamera.camera_disks.length} discos)</span>
-                                <span>{totals.used} / {totals.total} GB</span>
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600 font-medium">Uso total:</span>
+                                <span className="font-bold text-gray-800">{totals.used}GB / {totals.total}GB</span>
                               </div>
-                              <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                              <div className="relative h-3 bg-gray-200 rounded-full overflow-hidden">
                                 <div
-                                  className={`h-full ${percentUsed > 85 ? 'bg-red-500' : percentUsed > 65 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                                  className={`h-full transition-all duration-300 ${percentUsed > 75 ? 'bg-red-500' : percentUsed > 50 ? 'bg-yellow-500' : 'bg-green-500'}`}
                                   style={{ width: `${percentUsed}%` }}
                                 />
+                                <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white mix-blend-difference">
+                                  {percentUsed}%
+                                </span>
                               </div>
-                              <div className="text-xs text-gray-500 mt-1">Libre: {remaining} GB ({100 - percentUsed}%)</div>
+                              <div className="flex justify-between text-xs text-gray-500">
+                                <span>Libre: {remaining}GB</span>
+                                <span className={percentUsed > 75 ? 'text-red-600 font-bold' : percentUsed > 50 ? 'text-yellow-600 font-bold' : 'text-green-600 font-bold'}>
+                                  {percentUsed > 75 ? '⚠️ Crítico (<25%)' : percentUsed > 50 ? '⚠️ Precaución (<50%)' : '✓ Normal (>50%)'}
+                                </span>
+                              </div>
                             </div>
                           );
                         })()}
-
-                        <div className="space-y-2">
-                          {selectedCamera.camera_disks.map((d) => {
-                            const total = Number(d.total_capacity_gb) || 0;
-                            const used = Number(d.used_space_gb) || 0;
-                            const percent = total > 0 ? Math.min(100, Math.max(0, Math.round((used / total) * 100))) : 0;
-                            return (
-                              <div key={d.id} className="border border-gray-200 rounded-lg p-3">
-                                <div className="flex items-center justify-between text-sm mb-2">
-                                  <span className="font-medium">Disco #{d.disk_number} • {d.disk_type || '—'}</span>
-                                  <span className="text-gray-500">{used} / {total} GB</span>
-                                </div>
-                                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                  <div className={`h-full ${percent > 85 ? 'bg-red-500' : percent > 65 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${percent}%` }} />
-                                </div>
-                                <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
-                                  <span className={`px-2 py-0.5 rounded-full ${d.status === 'active' ? 'bg-green-100 text-green-800' :
-                                    d.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                                      d.status === 'full' ? 'bg-red-100 text-red-800' :
-                                        'bg-gray-100 text-gray-800'
-                                    }`}>{d.status || '—'}</span>
-                                  <span>Libre: {Number(d.remaining_capacity_gb) || (total - used)} GB</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
                       </div>
                     ) : (
-                      <div className="text-center text-gray-500 py-4">
-                        <GiCctvCamera size={32} className="mx-auto mb-2 text-gray-300" />
-                        <p>Sin discos configurados</p>
+                      <div className="text-center py-2">
+                        <div className="text-gray-400 text-sm">Sin discos configurados</div>
                       </div>
                     )}
                   </div>
 
-                  {selectedCamera.notes && (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="font-semibold text-gray-900 mb-3">Notas</h3>
-                      <p className="text-sm text-gray-700">{selectedCamera.notes}</p>
+                  {/* Detalles expandidos de almacenamiento */}
+                  {cam.camera_disks && cam.camera_disks.length > 0 && expandedStorage.has(cam.id) && (
+                    <div className="space-y-2">
+                      {cam.camera_disks.map((d) => {
+                        const total = Number(d.total_capacity_gb) || 0;
+                        const used = Number(d.used_space_gb) || 0;
+                        const percent = total > 0 ? Math.min(100, Math.max(0, Math.round((used / total) * 100))) : 0;
+                        const remaining = Math.max(0, total - used);
+                        return (
+                          <div key={d.id} className="bg-white border border-gray-200 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-sm font-bold text-gray-700">Disco #{d.disk_number} • {d.disk_type || 'Sin tipo'}</div>
+                              <span className={`px-2 py-0.5 text-xs rounded-full font-bold ${d.status === 'active' ? 'bg-green-100 text-green-800' :
+                                d.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                                  d.status === 'full' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }`}>
+                                {d.status === 'active' ? 'Activo' : d.status === 'maintenance' ? 'Mantenimiento' : d.status === 'full' ? 'Lleno' : 'Desconocido'}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
+                              <span>Usado: {used}GB</span>
+                              <span>Libre: {remaining}GB</span>
+                              <span>Total: {total}GB</span>
+                            </div>
+                            <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div className={`h-full transition-all duration-300 ${percent > 75 ? 'bg-red-500' : percent > 50 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${percent}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
+
+                  {/* Acciones mejoradas */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                    <button
+                      onClick={() => handleView(cam)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                      title="Ver detalles"
+                    >
+                      <Eye size={16} /> Ver
+                    </button>
+                    {canEdit() && (
+                      <>
+                        <button
+                          onClick={() => openEdit(cam)}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors font-medium border border-gray-200"
+                        >
+                          <Edit size={16} /> Editar
+                        </button>
+                        <button
+                          onClick={() => del(cam)}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-400 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors font-medium border border-gray-200"
+                        >
+                          <Trash2 size={16} /> Eliminar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      }
+
+      {
+        showDetails && selectedCamera && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-800">Detalles de {selectedCamera.name}</h2>
+                <button onClick={() => setShowDetails(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left column - Basic info */}
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-3">Información General</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Estado:</span>
+                          <span className={`px-2 py-1 text-xs rounded-full font-medium shadow-sm border ${selectedCamera.status === 'active' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                            selectedCamera.status === 'maintenance' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                              'bg-slate-100 text-slate-800 border-slate-200'
+                            }`}>
+                            {selectedCamera.status === 'active' ? 'Activo' : selectedCamera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Ubicación:</span>
+                          <span>{(selectedCamera as any).locations?.name || '—'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Marca:</span>
+                          <span>{selectedCamera.brand || '—'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Modelo:</span>
+                          <span>{selectedCamera.model || '—'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Cámaras:</span>
+                          <span>{selectedCamera.display_count || '—'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <h3 className="font-semibold text-gray-900 mb-3">Acceso y Credenciales</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Tipo de acceso:</span>
+                          <span className={`px-2 py-1 text-xs rounded-full font-medium shadow-sm border ${selectedCamera.access_type === 'url' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                            selectedCamera.access_type === 'ivms' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                              selectedCamera.access_type === 'esviz' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                                'bg-gray-100 text-gray-800 border-gray-200'
+                            }`}>
+                            {humanAccess(selectedCamera.access_type)}
+                          </span>
+                        </div>
+                        {selectedCamera.url && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-500">URL:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs break-all max-w-48">{selectedCamera.url}</span>
+                              <button
+                                onClick={() => window.open(selectedCamera.url, '_blank', 'noopener')}
+                                className="px-2 py-1 text-xs bg-gray-800 text-white rounded hover:bg-black transition-colors"
+                              >
+                                Abrir
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Usuario:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono">{selectedCamera.username || '—'}</span>
+                            {selectedCamera.username && (
+                              <button onClick={() => copyToClipboard(selectedCamera.username)} className="p-1 hover:bg-gray-100 rounded">
+                                <Copy size={14} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Contraseña:</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono">
+                              {visiblePasswords.has(selectedCamera.id) ? (selectedCamera.password || '—') : (selectedCamera.password ? '••••••••' : '—')}
+                            </span>
+                            {selectedCamera.password && (
+                              <>
+                                <button onClick={() => togglePasswordVisible(selectedCamera.id)} className="p-1 hover:bg-gray-100 rounded">
+                                  {visiblePasswords.has(selectedCamera.id) ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                                <button onClick={() => copyToClipboard(selectedCamera.password)} className="p-1 hover:bg-gray-100 rounded">
+                                  <Copy size={14} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        {selectedCamera.auth_code && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-500">Código verificación:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono">{selectedCamera.auth_code}</span>
+                              <button onClick={() => copyToClipboard(selectedCamera.auth_code)} className="p-1 hover:bg-gray-100 rounded">
+                                <Copy size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right column - Technical details and storage */}
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-3">Detalles Técnicos</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">IP:</span>
+                          <span className="font-mono">{selectedCamera.ip_address || '—'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Puerto:</span>
+                          <span className="font-mono">{selectedCamera.port || '—'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Creado:</span>
+                          <span>{new Date(selectedCamera.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-500">Actualizado:</span>
+                          <span>{new Date(selectedCamera.updated_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Storage section */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-semibold text-gray-900 mb-3">Almacenamiento</h3>
+                      {selectedCamera.camera_disks && selectedCamera.camera_disks.length > 0 ? (
+                        <div className="space-y-3">
+                          {(() => {
+                            const totals = selectedCamera.camera_disks!.reduce(
+                              (acc, d) => {
+                                const total = Number(d.total_capacity_gb) || 0;
+                                const used = Number(d.used_space_gb) || 0;
+                                return { total: acc.total + total, used: acc.used + used };
+                              },
+                              { total: 0, used: 0 }
+                            );
+                            const percentUsed = totals.total > 0 ? Math.min(100, Math.max(0, Math.round((totals.used / totals.total) * 100))) : 0;
+                            const remaining = Math.max(0, totals.total - totals.used);
+                            return (
+                              <div>
+                                <div className="flex justify-between text-sm mb-2">
+                                  <span>Uso total ({selectedCamera.camera_disks.length} discos)</span>
+                                  <span>{totals.used} / {totals.total} GB</span>
+                                </div>
+                                <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full ${percentUsed > 75 ? 'bg-red-500' : percentUsed > 50 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                                    style={{ width: `${percentUsed}%` }}
+                                  />
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">Libre: {remaining} GB ({100 - percentUsed}%)</div>
+                              </div>
+                            );
+                          })()}
+
+                          <div className="space-y-2">
+                            {selectedCamera.camera_disks.map((d) => {
+                              const total = Number(d.total_capacity_gb) || 0;
+                              const used = Number(d.used_space_gb) || 0;
+                              const percent = total > 0 ? Math.min(100, Math.max(0, Math.round((used / total) * 100))) : 0;
+                              return (
+                                <div key={d.id} className="border border-gray-200 rounded-lg p-3">
+                                  <div className="flex items-center justify-between text-sm mb-2">
+                                    <span className="font-medium">Disco #{d.disk_number} • {d.disk_type || '—'}</span>
+                                    <span className="text-gray-500">{used} / {total} GB</span>
+                                  </div>
+                                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className={`h-full ${percent > 75 ? 'bg-red-500' : percent > 50 ? 'bg-yellow-500' : 'bg-green-500'}`} style={{ width: `${percent}%` }} />
+                                  </div>
+                                  <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
+                                    <span className={`px-2 py-0.5 rounded-full ${d.status === 'active' ? 'bg-green-100 text-green-800' :
+                                      d.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                                        d.status === 'full' ? 'bg-red-100 text-red-800' :
+                                          'bg-gray-100 text-gray-800'
+                                      }`}>{d.status || '—'}</span>
+                                    <span>Libre: {Number(d.remaining_capacity_gb) || (total - used)} GB</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center text-gray-500 py-4">
+                          <GiCctvCamera size={32} className="mx-auto mb-2 text-gray-300" />
+                          <p>Sin discos configurados</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedCamera.notes && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h3 className="font-semibold text-gray-900 mb-3">Notas</h3>
+                        <p className="text-sm text-gray-700">{selectedCamera.notes}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-800">{editing ? 'Editar Cámara' : 'Nueva Cámara'}</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6">
-              <CameraForm
-                onClose={() => setShowForm(false)}
-                onSave={onSave}
-                editCamera={editing}
-              />
+      {
+        showForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-800">{editing ? 'Editar Cámara' : 'Nueva Cámara'}</h2>
+                <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6">
+                <CameraForm
+                  onClose={() => setShowForm(false)}
+                  onSave={onSave}
+                  editCamera={editing}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
 

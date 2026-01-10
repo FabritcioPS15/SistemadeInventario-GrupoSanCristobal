@@ -93,6 +93,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
         'inventory-proyector', 'inventory-switch', 'inventory-chip', 'inventory-tinte',
         'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
+        'spare-parts',
         // Submenús de cámaras
         'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
         // Submenús de mantenimiento

@@ -1,21 +1,19 @@
 import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Package, Key, Users, FileText, ChevronDown, ChevronUp, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Wrench, AlertTriangle, Clock, CheckCircle, Send, MapPin, Building2, Menu, X, Shield, Car, ClipboardList } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { GrServerCluster } from 'react-icons/gr';
 import { useAuth } from '../contexts/AuthContext';
 
 type SidebarProps = {
-  activeView: string;
-  onViewChange: (view: string) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
 };
 
-export default function Sidebar({ activeView, onViewChange, collapsed, onToggleCollapse }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
   const { user, hasPermission, logout } = useAuth();
-
-  // (icon mapping helper no longer used)
+  const location = useLocation();
 
   const toggleMenu = (menuId: string) => {
     const newExpanded = new Set(expandedMenus);
@@ -27,106 +25,98 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
     setExpandedMenus(newExpanded);
   };
 
-  // Función para manejar clics en elementos sin submenú
-  const handleMenuClick = (item: any) => {
-    // Hacer click en el menú padre no expande/colapsa automáticamente
-    onViewChange(item.id);
-  };
-
-  // Función para manejar clics en la flecha del desplegable
-  const handleArrowClick = (item: any, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (item.hasSubmenu) {
-      toggleMenu(item.id);
-    }
-  };
-
-  const allMenuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
     {
       id: 'inventory',
       label: 'Inventario',
       icon: Package,
+      path: '/inventory',
       hasSubmenu: true,
       submenu: [
-        { id: 'inventory-pc', label: 'PCs', icon: Monitor },
-        { id: 'inventory-celular', label: 'Celulares', icon: Smartphone },
-        { id: 'inventory-dvr', label: 'DVRs', icon: HardDrive },
-        { id: 'inventory-impresora', label: 'Impresoras', icon: Printer },
-        { id: 'inventory-escaner', label: 'Escáneres', icon: Scan },
-        { id: 'inventory-monitor', label: 'Monitores', icon: Monitor },
-        { id: 'inventory-laptop', label: 'Laptops', icon: Laptop },
-        { id: 'inventory-proyector', label: 'Proyectores', icon: Projector },
-        { id: 'inventory-switch', label: 'Switch', icon: Network },
-        { id: 'inventory-chip', label: 'Chips de Celular', icon: CreditCard },
-        { id: 'inventory-tinte', label: 'Tintes', icon: Droplets },
-        { id: 'inventory-fuente', label: 'Fuentes de Poder', icon: Zap },
-        { id: 'inventory-ram', label: 'Memorias RAM', icon: MemoryStick },
-        { id: 'inventory-disco', label: 'Discos de Almacenamiento', icon: Database },
-        { id: 'inventory-disco-extraido', label: 'Discos Extraídos', icon: HardDriveIcon },
+        { id: 'assets', label: 'Activos', icon: HardDrive, path: '/inventory' },
+        { id: 'asset-types', label: 'Tipos de Activos', icon: MemoryStick, path: '/inventory/types' },
+        { id: 'spare-parts', label: 'Repuestos', icon: Package, path: '/spare-parts' },
+        { id: 'inventory-pc', label: 'PCs', icon: Monitor, path: '/inventory/pc' },
+        { id: 'inventory-celular', label: 'Celulares', icon: Smartphone, path: '/inventory/celular' },
+        { id: 'inventory-dvr', label: 'DVRs', icon: HardDrive, path: '/inventory/dvr' },
+        { id: 'inventory-impresora', label: 'Impresoras', icon: Printer, path: '/inventory/impresora' },
+        { id: 'inventory-escaner', label: 'Escáneres', icon: Scan, path: '/inventory/escaner' },
+        { id: 'inventory-monitor', label: 'Monitores', icon: Monitor, path: '/inventory/monitor' },
+        { id: 'inventory-laptop', label: 'Laptops', icon: Laptop, path: '/inventory/laptop' },
+        { id: 'inventory-proyector', label: 'Proyectores', icon: Projector, path: '/inventory/proyector' },
+        { id: 'inventory-switch', label: 'Switch', icon: Network, path: '/inventory/switch' },
+        { id: 'inventory-chip', label: 'Chips de Celular', icon: CreditCard, path: '/inventory/chip' },
+        { id: 'inventory-tinte', label: 'Tintes', icon: Droplets, path: '/inventory/tinte' },
+        { id: 'inventory-fuente', label: 'Fuentes de Poder', icon: Zap, path: '/inventory/fuente' },
+        { id: 'inventory-ram', label: 'Memorias RAM', icon: MemoryStick, path: '/inventory/ram' },
+        { id: 'inventory-disco', label: 'Discos de Almacenamiento', icon: Database, path: '/inventory/disco' },
+        { id: 'inventory-disco-extraido', label: 'Discos Extraídos', icon: HardDriveIcon, path: '/inventory/disco-extraido' },
       ]
     },
     {
       id: 'cameras',
       label: 'Vista Cámaras',
       icon: GiCctvCamera,
+      path: '/cameras',
       hasSubmenu: true,
       submenu: [
-        { id: 'cameras-revision', label: 'Cámaras de Revisión', icon: GiCctvCamera },
-        { id: 'cameras-escuela', label: 'Cámaras de Escuela', icon: GiCctvCamera },
-        { id: 'cameras-policlinico', label: 'Cámaras de Policlínico', icon: GiCctvCamera },
-        { id: 'cameras-circuito', label: 'Cámaras de Circuito', icon: GiCctvCamera },
+        { id: 'cameras-revision', label: 'Cámaras de Revisión', icon: GiCctvCamera, path: '/cameras/revision' },
+        { id: 'cameras-escuela', label: 'Cámaras de Escuela', icon: GiCctvCamera, path: '/cameras/escuela' },
+        { id: 'cameras-policlinico', label: 'Cámaras de Policlínico', icon: GiCctvCamera, path: '/cameras/policlinico' },
+        { id: 'cameras-circuito', label: 'Cámaras de Circuito', icon: GiCctvCamera, path: '/cameras/circuito' },
       ]
     },
     {
       id: 'maintenance',
       label: 'Mantenimiento',
       icon: Wrench,
+      path: '/maintenance',
       hasSubmenu: true,
       submenu: [
-        { id: 'maintenance-pending', label: 'Pendientes', icon: Clock },
-        { id: 'maintenance-in-progress', label: 'En Progreso', icon: AlertTriangle },
-        { id: 'maintenance-completed', label: 'Completados', icon: CheckCircle },
-        { id: 'maintenance-preventive', label: 'Preventivo', icon: Wrench },
-        { id: 'maintenance-corrective', label: 'Correctivo', icon: AlertTriangle },
+        { id: 'maintenance-pending', label: 'Pendientes', icon: Clock, path: '/maintenance/pending' },
+        { id: 'maintenance-in-progress', label: 'En Progreso', icon: AlertTriangle, path: '/maintenance/in-progress' },
+        { id: 'maintenance-completed', label: 'Completados', icon: CheckCircle, path: '/maintenance/completed' },
+        { id: 'maintenance-preventive', label: 'Preventivo', icon: Wrench, path: '/maintenance/preventive' },
+        { id: 'maintenance-corrective', label: 'Correctivo', icon: AlertTriangle, path: '/maintenance/corrective' },
       ]
     },
     {
       id: 'sent',
       label: 'Enviados',
       icon: Send,
+      path: '/sent',
       hasSubmenu: true,
       submenu: [
-        { id: 'sent-lima', label: 'Lima', icon: Send },
-        { id: 'sent-provincias', label: 'Provincias', icon: Send },
+        { id: 'sent-lima', label: 'Lima', icon: Send, path: '/sent/lima' },
+        { id: 'sent-provincias', label: 'Provincias', icon: Send, path: '/sent/provincias' },
       ]
     },
-    { id: 'sutran', label: 'Visitas de Sutran', icon: Building2 },
+    { id: 'sutran', label: 'Visitas de Sutran', icon: Building2, path: '/sutran' },
     {
       id: 'checklist',
       label: 'Checklist',
       icon: ClipboardList,
+      path: '/checklist',
       hasSubmenu: true,
       submenu: [
-        { id: 'checklist-escon', label: 'ESCON', icon: ClipboardList },
-        { id: 'checklist-ecsal', label: 'ECSAL', icon: ClipboardList },
-        { id: 'checklist-citv', label: 'CITV', icon: ClipboardList },
+        { id: 'checklist-escon', label: 'ESCON', icon: ClipboardList, path: '/checklist/escon' },
+        { id: 'checklist-ecsal', label: 'ECSAL', icon: ClipboardList, path: '/checklist/ecsal' },
+        { id: 'checklist-citv', label: 'CITV', icon: ClipboardList, path: '/checklist/citv' },
       ]
     },
-    { id: 'locations', label: 'Sedes', icon: MapPin },
-    { id: 'mtc', label: 'MTC Accesos', icon: Key },
-    { id: 'servers', label: 'Servidores', icon: GrServerCluster },
-    { id: 'flota-vehicular', label: 'Flota Vehicular', icon: Car },
-    { id: 'users', label: 'Usuarios', icon: Users },
-    { id: 'audit', label: 'Auditoría', icon: FileText },
-    { id: 'integrity', label: 'Integridad del Sistema', icon: Shield },
+    { id: 'locations', label: 'Sedes', icon: MapPin, path: '/locations' },
+    { id: 'mtc', label: 'MTC Accesos', icon: Key, path: '/mtc' },
+    { id: 'servers', label: 'Servidores', icon: GrServerCluster, path: '/servers' },
+    { id: 'flota-vehicular', label: 'Flota Vehicular', icon: Car, path: '/flota-vehicular' },
+    { id: 'users', label: 'Usuarios', icon: Users, path: '/users' },
+    { id: 'audit', label: 'Auditoría', icon: FileText, path: '/audit' },
+    { id: 'integrity', label: 'Integridad del Sistema', icon: Shield, path: '/integrity' },
   ];
 
-  // Filtrar menús según permisos del usuario
-  const menuItems = allMenuItems.filter(item => {
+  const filteredMenuItems = menuItems.filter(item => {
     if (!hasPermission(item.id)) return false;
 
-    // Si tiene submenú, filtrar también los submenús
     if (item.hasSubmenu && item.submenu) {
       const filteredSubmenu = item.submenu.filter(subItem => hasPermission(subItem.id));
       if (filteredSubmenu.length === 0) return false;
@@ -135,6 +125,12 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
 
     return true;
   });
+
+  const isPathActive = (path: string, exact = false) => {
+    if (exact) return location.pathname === path;
+    if (path === '/' && location.pathname !== '/') return false;
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <>
@@ -189,9 +185,9 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
         </div>
 
         <nav className={`${collapsed ? 'p-2' : 'p-4 pl-4'} flex-1`}>
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeView === item.id || (item.hasSubmenu && item.submenu?.some(sub => activeView === sub.id));
+            const isActive = isPathActive(item.path || '');
             const isExpanded = expandedMenus.has(item.id);
 
             return (
@@ -200,20 +196,28 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
                   ? 'bg-slate-700 text-white font-medium'
                   : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                   }`}>
-                  <button
-                    onClick={() => handleMenuClick(item)}
-                    className={`
-    ${collapsed ? 'p-3 w-full flex justify-center h-12' : 'flex items-center gap-3 px-4 py-3 flex-1 text-left h-12'}
-    ${isActive ? 'bg-slate-700 text-white font-medium' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}
-  `}
+                  <NavLink
+                    to={item.path || '#'}
+                    className={({ isActive: linkActive }) => `
+                      ${collapsed ? 'p-3 w-full flex justify-center h-12' : 'flex items-center gap-3 px-4 py-3 flex-1 text-left h-12'}
+                      ${linkActive || isActive ? 'bg-slate-700 text-white font-medium' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}
+                    `}
                     title={collapsed ? item.label : undefined}
+                    onClick={() => {
+                      if (item.hasSubmenu && !collapsed) {
+                        // Opcional: Expandir al hacer clic si colapsado
+                      }
+                    }}
                   >
                     <Icon size={24} />
                     {!collapsed && <span>{item.label}</span>}
-                  </button>
+                  </NavLink>
                   {item.hasSubmenu && !collapsed && (
                     <button
-                      onClick={(e) => handleArrowClick(item, e)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        toggleMenu(item.id);
+                      }}
                       className="px-2 py-3 hover:bg-slate-600 rounded-r-lg transition-colors h-12"
                     >
                       {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -221,25 +225,23 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
                   )}
                 </div>
 
-                {/* Submenú desplegable */}
                 {item.hasSubmenu && isExpanded && !collapsed && (
                   <div className="ml-4 mt-1 space-y-1">
                     {item.submenu?.map((subItem) => {
                       const SubIcon = subItem.icon;
-                      const isSubActive = activeView === subItem.id;
 
                       return (
-                        <button
+                        <NavLink
                           key={subItem.id}
-                          onClick={() => onViewChange(subItem.id)}
-                          className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${isSubActive
-                            ? 'bg-slate-600 text-white font-medium'
-                            : 'text-slate-400 hover:bg-slate-700 hover:text-white'
-                            }`}
+                          to={subItem.path || '#'}
+                          className={({ isActive: subActive }) => `
+                            w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors
+                            ${subActive ? 'bg-slate-600 text-white font-medium' : 'text-slate-400 hover:bg-slate-700 hover:text-white'}
+                          `}
                         >
                           <SubIcon size={18} />
                           <span>{subItem.label}</span>
-                        </button>
+                        </NavLink>
                       );
                     })}
                   </div>
@@ -249,7 +251,6 @@ export default function Sidebar({ activeView, onViewChange, collapsed, onToggleC
           })}
         </nav>
 
-        {/* Información del usuario y logout */}
         {user && (
           <div className={`${collapsed ? 'p-2' : 'p-4'} border-t border-slate-700`}>
             {!collapsed ? (

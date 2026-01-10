@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, User, MapPin, FileText, AlertTriangle, CheckCircle, Clock, X } from 'lucide-react';
+import { Calendar, User, MapPin, FileText, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { SutranVisit, Location } from '../../lib/supabase';
 
@@ -17,8 +17,8 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
     inspector_phone: '',
     location_id: '',
     location_name: '',
-    visit_type: 'routine' as const,
-    status: 'pending' as const,
+    visit_type: 'programada' as SutranVisit['visit_type'],
+    status: 'pending' as SutranVisit['status'],
     observations: '',
     findings: '',
     recommendations: '',
@@ -91,14 +91,14 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
           .update(visitData)
           .eq('id', visit.id)
           .select('*');
-        
+
         console.log('📋 Resultado de actualización:', { data, error });
-        
+
         if (error) {
           console.error('❌ Error al actualizar visita:', error);
           throw error;
         }
-        
+
         console.log('✅ Visita actualizada correctamente');
       } else {
         console.log('➕ Creando nueva visita');
@@ -106,21 +106,21 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
           .from('sutran_visits')
           .insert([visitData])
           .select('*');
-        
+
         console.log('📋 Resultado de inserción:', { data, error });
-        
+
         if (error) {
           console.error('❌ Error al crear visita:', error);
           throw error;
         }
-        
+
         console.log('✅ Visita creada correctamente');
       }
 
       onSave();
     } catch (error: any) {
       console.error('❌ Error inesperado al guardar visita:', error);
-      
+
       let errorMessage = 'Error al guardar la visita';
       if (error?.message) {
         errorMessage += `: ${error.message}`;
@@ -134,7 +134,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
       if (error?.hint) {
         errorMessage += `\nSugerencia: ${error.hint}`;
       }
-      
+
       alert(errorMessage);
     } finally {
       setLoading(false);
@@ -158,33 +158,6 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
     }));
   };
 
-  const getVisitTypeIcon = (type: string) => {
-    switch (type) {
-      case 'programada': return <CheckCircle size={16} className="text-green-600" />;
-      case 'no_programada': return <AlertTriangle size={16} className="text-orange-600" />;
-      case 'de_gabinete': return <FileText size={16} className="text-blue-600" />;
-      default: return <FileText size={16} className="text-gray-600" />;
-    }
-  };
-
-  const getVisitTypeLabel = (type: string) => {
-    switch (type) {
-      case 'programada': return 'Programada';
-      case 'no_programada': return 'No programada';
-      case 'de_gabinete': return 'De gabinete';
-      default: return 'Desconocido';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Pendiente';
-      case 'in_progress': return 'En Progreso';
-      case 'completed': return 'Completada';
-      case 'cancelled': return 'Cancelada';
-      default: return 'Desconocido';
-    }
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -209,7 +182,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                 <Calendar size={20} className="text-blue-600" />
                 Información Básica
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -265,7 +238,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                 <User size={20} className="text-green-600" />
                 Información del Inspector
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -315,7 +288,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                 <MapPin size={20} className="text-red-600" />
                 Ubicación
               </h3>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -325,8 +298,8 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                     value={formData.location_id}
                     onChange={(e) => {
                       const selectedLocation = locations.find(loc => loc.id === e.target.value);
-                      setFormData(prev => ({ 
-                        ...prev, 
+                      setFormData(prev => ({
+                        ...prev,
                         location_id: e.target.value || '',
                         location_name: selectedLocation?.name || ''
                       }));
@@ -364,7 +337,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                 <FileText size={20} className="text-purple-600" />
                 Observaciones y Hallazgos
               </h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -413,7 +386,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                 <FileText size={20} className="text-orange-600" />
                 Documentos
               </h3>
-              
+
               <div className="space-y-4">
                 <div className="flex gap-2">
                   <input

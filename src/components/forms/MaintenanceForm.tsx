@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { X, AlertCircle, CheckCircle, Loader2, ChevronDown, Check } from 'lucide-react';
 import { supabase, AssetWithDetails } from '../../lib/supabase';
+
+type PartUsed = {
+  id?: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  total_cost: number;
+};
 
 type MaintenanceRecord = {
   id: string;
   asset_id: string;
-  maintenance_type: 'preventive' | 'corrective';
-  status: 'pending' | 'in_progress' | 'completed';
+  maintenance_type: 'preventive' | 'corrective' | 'technical_review' | 'repair';
+  status: 'pending' | 'in_progress' | 'completed' | 'waiting_parts';
   description: string;
   scheduled_date?: string;
   completed_date?: string;
@@ -14,6 +23,16 @@ type MaintenanceRecord = {
   notes?: string;
   created_at: string;
   updated_at: string;
+  failure_cause?: string;
+  solution_applied?: string;
+  work_hours?: number;
+  parts_used?: PartUsed[];
+  next_maintenance_date?: string;
+  maintenance_frequency?: number;
+  total_cost?: number;
+  warranty_claim?: boolean;
+  warranty_details?: string;
+  assets?: any;
 };
 
 type MaintenanceFormProps = {
@@ -24,6 +43,10 @@ type MaintenanceFormProps = {
 
 export default function MaintenanceForm({ onClose, onSave, editRecord }: MaintenanceFormProps) {
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
+  const [filteredAssets, setFilteredAssets] = useState<AssetWithDetails[]>([]);
+  const [selectedAsset, setSelectedAsset] = useState<AssetWithDetails | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'checking' | null>>({});
@@ -38,51 +61,126 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
     completed_date: editRecord?.completed_date || '',
     technician: editRecord?.technician || '',
     notes: editRecord?.notes || '',
+    failure_cause: editRecord?.failure_cause || '',
+    solution_applied: editRecord?.solution_applied || '',
+    work_hours: editRecord?.work_hours || 0,
+    parts_used: editRecord?.parts_used || [],
+    next_maintenance_date: editRecord?.next_maintenance_date || '',
+    maintenance_frequency: editRecord?.maintenance_frequency || 30, // Default 30 days
+    total_cost: editRecord?.total_cost || 0,
+    warranty_claim: editRecord?.warranty_claim || false,
+    warranty_details: editRecord?.warranty_details || ''
   });
+
+  const [newPart, setNewPart] = useState<Omit<PartUsed, 'total_cost'>>({ 
+    name: '', 
+    quantity: 1, 
+    unit: 'unidad', 
+    unit_price: 0 
+  });
+  const [showPartForm, setShowPartForm] = useState(false);
+  const [editingPartIndex, setEditingPartIndex] = useState<number | null>(null);
+
+  const fetchAssets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('assets')
+        .select('*, asset_types(*), locations(*)')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      if (data) {
+        setAssets(data as AssetWithDetails[]);
+        setFilteredAssets(data as AssetWithDetails[]);
+        
+        // Set selected asset if editing
+        if (editRecord?.asset_id) {
+          const asset = data.find((a: any) => a.id === editRecord.asset_id);
+          if (asset) {
+            setSelectedAsset(asset);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error al cargar los activos:', error);
+      setErrors(prev => ({ ...prev, fetch: 'Error al cargar la lista de activos' }));
+    }
+  };
 
   useEffect(() => {
     fetchAssets();
   }, []);
 
-  // Detectar cambios en el formulario
+  const handleAssetSelect = (asset: AssetWithDetails) => {
+    if (!asset) return;
+    
+    setFormData(prev => ({
+      ...prev,
+      asset_id: asset.id,
+    }));
+    
+    setSelectedAsset(asset);
+    setSearchTerm(`${asset.brand || ''} ${asset.model || ''} ${asset.serial_number ? `- ${asset.serial_number}` : ''}`.trim());
+    setIsAssetDropdownOpen(false);
+    setErrors(prev => ({ ...prev, asset_id: '' }));
+    setHasChanges(true);
+    
+    // Update validation
+    validateField('asset_id', asset.id);
+  };
+
   useEffect(() => {
-    if (editRecord) {
-      const originalData = {
-        asset_id: editRecord.asset_id,
-        maintenance_type: editRecord.maintenance_type,
-        status: editRecord.status,
-        description: editRecord.description,
-        scheduled_date: editRecord.scheduled_date || '',
-        completed_date: editRecord.completed_date || '',
-        technician: editRecord.technician || '',
-        notes: editRecord.notes || '',
-      };
-      
-      const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
-      setHasChanges(hasFormChanges);
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (isAssetDropdownOpen && !target.closest('.relative')) {
+        setIsAssetDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAssetDropdownOpen]);
+
+  useEffect(() => {
+    if (editRecord?.asset_id && assets.length > 0) {
+      const asset = assets.find(a => a.id === editRecord.asset_id);
+      if (asset) {
+        setSearchTerm(`${asset.brand} ${asset.model} - ${asset.serial_number || ''}`.trim());
+      }
     }
-  }, [formData, editRecord]);
+  }, [editRecord, assets]);
 
-  const fetchAssets = async () => {
-    const { data } = await supabase
-      .from('assets')
-      .select('*, asset_types(*), locations(*)')
-      .order('brand');
-    if (data) setAssets(data as AssetWithDetails[]);
+  useEffect(() => {
+    if (searchTerm.trim() === '') {
+      setFilteredAssets(assets);
+    } else {
+      const filtered = assets.filter(asset => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          asset.brand?.toLowerCase().includes(searchLower) ||
+          asset.model?.toLowerCase().includes(searchLower) ||
+          asset.serial_number?.toLowerCase().includes(searchLower) ||
+          asset.asset_types?.name?.toLowerCase().includes(searchLower) ||
+          asset.locations?.name?.toLowerCase().includes(searchLower)
+        );
+      });
+      setFilteredAssets(filtered);
+    }
+  }, [searchTerm, assets]);
+
+  const validateDateRange = (startDate: string, endDate: string) => {
+    if (!startDate || !endDate) return true;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return end >= start;
   };
 
-  // Funciones de validación
-  const validateDate = (date: string): boolean => {
-    if (!date) return true; // Campo opcional
-    const dateObj = new Date(date);
-    return dateObj instanceof Date && !isNaN(dateObj.getTime());
-  };
-
-  const validateDateRange = (scheduledDate: string, completedDate: string): boolean => {
-    if (!scheduledDate || !completedDate) return true; // Ambos opcionales
-    const scheduled = new Date(scheduledDate);
-    const completed = new Date(completedDate);
-    return completed >= scheduled;
+  const validateDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return !isNaN(date.getTime());
   };
 
   const validateField = async (fieldName: string, value: string) => {
@@ -164,6 +262,12 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
       newErrors.completed_date = 'La fecha de completado no puede ser anterior a la fecha programada';
     }
 
+    // Validar partes si es un mantenimiento correctivo o reparación
+    if ((formData.maintenance_type === 'corrective' || formData.maintenance_type === 'repair') && 
+        formData.parts_used && formData.parts_used.length === 0) {
+      newErrors.parts_used = 'Debe agregar al menos una parte o repuesto utilizado';
+    }
+
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
@@ -223,12 +327,18 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const target = e.target as HTMLInputElement;
+    const checked = type === 'checkbox' ? target.checked : undefined;
+    
+    const newValue = type === 'checkbox' ? checked : value;
     
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: newValue
     }));
+
+    setHasChanges(true);
 
     // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[name]) {
@@ -240,7 +350,7 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
     if (fieldsToValidate.includes(name)) {
       // Debounce para evitar muchas validaciones
       setTimeout(() => {
-        validateField(name, value);
+        validateField(name, String(newValue));
       }, 500);
     }
   };
@@ -306,26 +416,135 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
               Activo *
             </label>
             <div className="relative">
-              <select
-                name="asset_id"
-                value={formData.asset_id}
-                onChange={handleChange}
-                required
-                className={getFieldClasses('asset_id')}
-              >
-                <option value="">Seleccionar activo...</option>
-                {assets.map(asset => (
-                  <option key={asset.id} value={asset.id}>
-                    {asset.brand} {asset.model} - {asset.asset_types?.name} ({asset.locations?.name})
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    if (!isAssetDropdownOpen) setIsAssetDropdownOpen(true);
+                  }}
+                  onFocus={() => setIsAssetDropdownOpen(true)}
+                  placeholder="Buscar por marca, modelo o número de serie..."
+                  className={`w-full pl-10 pr-10 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm transition-all ${
+                    errors.asset_id 
+                      ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  <ChevronDown size={20} className={`transition-transform ${isAssetDropdownOpen ? 'transform rotate-180' : ''}`} />
+                </div>
+                <input
+                  type="hidden"
+                  name="asset_id"
+                  value={formData.asset_id}
+                  required
+                />
+              </div>
+
+              {isAssetDropdownOpen && (
+                <div className="absolute z-20 mt-1 w-full bg-white shadow-xl rounded-lg py-1 text-base ring-1 ring-black ring-opacity-5 overflow-hidden focus:outline-none sm:text-sm transition-all duration-200 transform origin-top">
+                  <div className="max-h-60 overflow-y-auto">
+                    {loading ? (
+                      <div className="px-4 py-3 text-gray-500 text-sm flex items-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Cargando activos...</span>
+                      </div>
+                    ) : filteredAssets.length === 0 ? (
+                      <div className="px-4 py-3 text-gray-500 text-sm">
+                        No se encontraron activos que coincidan con "{searchTerm}"
+                      </div>
+                    ) : (
+                      <>
+                        <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                          {filteredAssets.length} {filteredAssets.length === 1 ? 'activo encontrado' : 'activos encontrados'}
+                        </div>
+                        {filteredAssets.map((asset) => {
+                          const isSelected = formData.asset_id === asset.id;
+                          return (
+                            <div
+                              key={asset.id}
+                              className={`px-4 py-2.5 cursor-pointer transition-colors ${
+                                isSelected 
+                                  ? 'bg-blue-50 text-blue-800' 
+                                  : 'hover:bg-gray-50 text-gray-800'
+                              }`}
+                              onClick={() => handleAssetSelect(asset)}
+                            >
+                              <div className="flex items-start">
+                                <div className={`flex-shrink-0 h-5 w-5 rounded-full border flex items-center justify-center mt-0.5 mr-3 ${
+                                  isSelected ? 'bg-blue-100 border-blue-400' : 'border-gray-300'
+                                }`}>
+                                  {isSelected && <Check size={12} className="text-blue-600" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-baseline justify-between">
+                                    <p className="text-sm font-medium truncate">
+                                      {asset.brand} {asset.model}
+                                    </p>
+                                    {asset.serial_number && (
+                                      <span className="ml-2 text-xs text-gray-500 font-mono bg-gray-50 px-2 py-0.5 rounded">
+                                        {asset.serial_number}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-1 text-xs text-gray-500">
+                                    <span className="font-medium">Tipo:</span> {asset.asset_types?.name || 'No especificado'}
+                                    <span className="mx-2">•</span>
+                                    <span className="font-medium">Ubicación:</span> {asset.locations?.name || 'No especificada'}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 {renderValidationIcon('asset_id')}
               </div>
             </div>
             {errors.asset_id && (
               <p className="text-red-500 text-sm mt-1">{errors.asset_id}</p>
+            )}
+            {selectedAsset && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-gray-900">{selectedAsset.brand} {selectedAsset.model}</h4>
+                    <div className="mt-1 text-xs text-gray-600 space-y-1">
+                      <div className="flex items-center">
+                        <span className="w-20 font-medium">Tipo:</span>
+                        <span className="flex-1">{selectedAsset.asset_types?.name || 'No especificado'}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="w-20 font-medium">Ubicación:</span>
+                        <span className="flex-1">{selectedAsset.locations?.name || 'No especificada'}</span>
+                      </div>
+                      {selectedAsset.serial_number && (
+                        <div className="flex items-center">
+                          <span className="w-20 font-medium">N° de Serie:</span>
+                          <span className="flex-1 font-mono">{selectedAsset.serial_number}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 

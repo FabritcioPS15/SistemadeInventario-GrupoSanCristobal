@@ -10,10 +10,10 @@ interface DonutChartProps {
 }
 
 export default function DonutChart({
-    size = 120,
+    size = 100,
     strokeWidth = 10,
     percentage,
-    color = 'text-blue-600',
+    color = 'text-orange-600',
     label,
     subLabel
 }: DonutChartProps) {

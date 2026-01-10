@@ -191,12 +191,12 @@ export default function MTCAccesos() {
 
   return (
     <div className="p-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-8 flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">MTC Accesos</h2>
-          <p className="text-gray-600">Gestión de credenciales y accesos del MTC</p>
+          <p className="text-gray-600">Gestión de credenciales y accesos operativos del MTC</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
           <button
             onClick={async () => {
               console.log('🔍 Probando conexión con Supabase...');
@@ -218,18 +218,18 @@ export default function MTCAccesos() {
                 alert('Error inesperado: ' + err);
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium shadow-sm active:transform active:scale-95"
           >
-            🔍 Probar Conexión
+            Probar Conexión
           </button>
           <button
             onClick={() => {
               setEditingAcceso(undefined);
               setShowForm(true);
             }}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-md shadow-blue-100 active:transform active:scale-95"
           >
-            <Plus size={20} />
+            <Plus size={18} />
             Nuevo Acceso
           </button>
         </div>
@@ -287,58 +287,58 @@ export default function MTCAccesos() {
       </div>
 
       {/* Filtros avanzados */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
               placeholder="Buscar por nombre, tipo o URL..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 border border-blue-100/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
           </div>
-          <div className="md:w-48">
+          <div>
             <select
               value={accessTypeFilter}
               onChange={(e) => setAccessTypeFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
-              <option value="">Todos los tipos</option>
-              <option value="web">Web</option>
-              <option value="api">API</option>
-              <option value="database">Base de Datos</option>
-              <option value="ssh">SSH</option>
-              <option value="ftp">FTP</option>
-              <option value="other">Otro</option>
+              <option value="">Todos los tipos de acceso</option>
+              <option value="web">Web Services</option>
+              <option value="api">APIs & Endpoints</option>
+              <option value="database">Bases de Datos</option>
+              <option value="ssh">Terminal SSH</option>
+              <option value="ftp">Servidores FTP</option>
+              <option value="other">Otros Accesos</option>
             </select>
           </div>
         </div>
 
         {/* Resumen de filtros activos */}
         {(searchTerm || accessTypeFilter) && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
-            <Filter className="h-4 w-4" />
-            <span>Filtros activos:</span>
-            {searchTerm && (
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                "{searchTerm}"
-              </span>
-            )}
-            {accessTypeFilter && (
-              <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                {accessTypeFilter}
-              </span>
-            )}
+          <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
+            <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-widest">
+              {searchTerm && (
+                <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100">
+                  "{searchTerm}"
+                </span>
+              )}
+              {accessTypeFilter && (
+                <span className="bg-gray-50 text-gray-700 px-2 py-0.5 rounded border border-gray-100">
+                  {accessTypeFilter}
+                </span>
+              )}
+            </div>
             <button
               onClick={() => {
                 setSearchTerm('');
                 setAccessTypeFilter('');
               }}
-              className="text-red-600 hover:text-red-800 text-xs underline"
+              className="flex items-center gap-1 text-[10px] font-black text-gray-400 hover:text-rose-600 transition-colors uppercase tracking-widest"
             >
-              Limpiar filtros
+              <X size={14} /> Limpiar filtros
             </button>
           </div>
         )}
@@ -349,15 +349,17 @@ export default function MTCAccesos() {
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredAccesos.map(acceso => (
-            <div key={acceso.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
+            <div key={acceso.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400/50 transition-all duration-300 flex flex-col group overflow-hidden">
+              <div className="p-6 flex-1">
+                <div className="flex items-start justify-between mb-6">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 text-lg mb-1">{acceso.name}</h3>
+                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors uppercase tracking-tight mb-2">
+                      {acceso.name}
+                    </h3>
                     <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getAccessTypeColor(acceso.access_type)}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${getAccessTypeColor(acceso.access_type)}`}>
                         {getAccessTypeIcon(acceso.access_type)}
                         {acceso.access_type}
                       </span>
@@ -365,66 +367,66 @@ export default function MTCAccesos() {
                   </div>
                 </div>
 
-                <div className="space-y-3 mb-4">
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-gray-500">URL de Acceso</label>
+                <div className="space-y-4 mb-6">
+                  <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Enlace Directo</label>
                       <button
                         onClick={() => copyToClipboard(acceso.url, `url-${acceso.id}`)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        className="p-1.5 hover:bg-white rounded-lg transition-colors text-gray-400 hover:text-blue-600 active:scale-90"
                         title="Copiar URL"
                       >
-                        {copiedItems[`url-${acceso.id}`] ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+                        {copiedItems[`url-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                       </button>
                     </div>
                     <a
                       href={acceso.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 break-all"
+                      className="text-sm text-blue-600 font-bold hover:text-blue-800 flex items-center gap-2 break-all group/link"
                     >
-                      {acceso.url}
-                      <ExternalLink size={14} className="flex-shrink-0" />
+                      <span className="truncate">{acceso.url}</span>
+                      <ExternalLink size={14} className="flex-shrink-0 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
                     </a>
                   </div>
 
                   {acceso.username && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-blue-50 p-3 rounded-lg">
-                        <div className="flex items-center justify-between mb-1">
-                          <label className="text-xs font-medium text-blue-700">Usuario</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/30">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest">Identidad</label>
                           <button
                             onClick={() => copyToClipboard(acceso.username!, `username-${acceso.id}`)}
-                            className="text-blue-400 hover:text-blue-600 transition-colors"
+                            className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-400 hover:text-blue-600 active:scale-90"
                             title="Copiar usuario"
                           >
-                            {copiedItems[`username-${acceso.id}`] ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+                            {copiedItems[`username-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                           </button>
                         </div>
-                        <p className="text-sm text-blue-900 font-mono">{acceso.username}</p>
+                        <p className="text-sm text-blue-900 font-black tracking-tight font-mono">{acceso.username}</p>
                       </div>
                       {acceso.password && (
-                        <div className="bg-blue-50 p-3 rounded-lg">
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="text-xs font-medium text-blue-700">Contraseña</label>
+                        <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/30">
+                          <div className="flex items-center justify-between mb-2">
+                            <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest">Token / Pass</label>
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => copyToClipboard(acceso.password!, `password-${acceso.id}`)}
-                                className="text-blue-400 hover:text-blue-600 transition-colors"
+                                className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-400 hover:text-blue-600 active:scale-90"
                                 title="Copiar contraseña"
                               >
-                                {copiedItems[`password-${acceso.id}`] ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
+                                {copiedItems[`password-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                               </button>
                               <button
                                 onClick={() => togglePasswordVisibility(acceso.id)}
-                                className="text-blue-600 hover:text-blue-800"
-                                title={showPasswords[acceso.id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-600 hover:text-blue-800 active:scale-90"
+                                title={showPasswords[acceso.id] ? 'Ocultar' : 'Mostrar'}
                               >
                                 {showPasswords[acceso.id] ? <EyeOff size={16} /> : <Eye size={16} />}
                               </button>
                             </div>
                           </div>
-                          <p className="text-sm text-blue-900 font-mono">
+                          <p className="text-sm text-blue-900 font-black tracking-widest font-mono">
                             {showPasswords[acceso.id] ? acceso.password : '••••••••'}
                           </p>
                         </div>
@@ -433,30 +435,34 @@ export default function MTCAccesos() {
                   )}
 
                   {acceso.notes && (
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <label className="text-xs font-medium text-gray-500 block mb-1">Notas</label>
-                      <p className="text-sm text-gray-900 whitespace-pre-wrap">{acceso.notes}</p>
+                    <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
+                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Observaciones de Acceso</label>
+                      <p className="text-xs text-gray-600 italic leading-relaxed whitespace-pre-wrap">{acceso.notes}</p>
                     </div>
                   )}
                 </div>
+              </div>
 
-                <div className="flex gap-2 pt-3 border-t">
-                  <button
-                    onClick={() => handleViewAcceso(acceso)}
-                    className="flex-1 flex items-center justify-center gap-1 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-                  >
-                    <Eye size={16} />
-                    Ver
-                  </button>
+              <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-50 flex gap-2">
+                <button
+                  onClick={() => handleViewAcceso(acceso)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+                >
+                  <Eye size={14} />
+                  DETALLES
+                </button>
+                <div className="flex gap-2">
                   <button
                     onClick={() => handleEditAcceso(acceso)}
-                    className="flex items-center justify-center gap-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors"
+                    className="p-2 bg-white text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm"
+                    title="Modificar acceso"
                   >
                     <Edit size={16} />
                   </button>
                   <button
                     onClick={() => handleDeleteAcceso(acceso)}
-                    className="flex items-center justify-center gap-1 px-3 py-2 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100 transition-colors"
+                    className="p-2 bg-white text-rose-500 border border-rose-100 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"
+                    title="Eliminar acceso"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -482,83 +488,120 @@ export default function MTCAccesos() {
       )}
 
       {viewingAcceso && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-800">Detalles de Acceso MTC</h2>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className={`px-8 py-6 flex items-center justify-between border-b border-gray-100 ${getAccessTypeColor(viewingAcceso.access_type).split(' ')[0]} bg-opacity-30`}>
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-2xl bg-white shadow-sm border border-gray-100">
+                  {getAccessTypeIcon(viewingAcceso.access_type)}
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Acceso Detallado</h2>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none mt-1">{viewingAcceso.access_type}</p>
+                </div>
+              </div>
               <button
                 onClick={() => setViewingAcceso(undefined)}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-2 hover:bg-white/50 rounded-full transition-colors text-gray-400 hover:text-gray-600"
               >
                 <X size={24} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Nombre</label>
-                <p className="text-gray-900 font-medium">{viewingAcceso.name}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Tipo de Acceso</label>
-                <p className="text-gray-900">{viewingAcceso.access_type}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">URL</label>
-                <a
-                  href={viewingAcceso.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 flex items-center gap-1 break-all"
-                >
-                  {viewingAcceso.url}
-                  <ExternalLink size={14} />
-                </a>
-              </div>
-              {viewingAcceso.username && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Usuario</label>
-                  <p className="text-gray-900 font-mono">{viewingAcceso.username}</p>
+
+            <div className="p-8 overflow-y-auto space-y-8">
+              {/* Información básica */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Identificación del Recurso</h3>
                 </div>
-              )}
-              {viewingAcceso.password && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Contraseña</label>
-                  <div className="flex items-center gap-2">
-                    <p className="text-gray-900 font-mono">
-                      {showPasswords[viewingAcceso.id] ? viewingAcceso.password : '••••••••'}
-                    </p>
-                    <button
-                      onClick={() => togglePasswordVisibility(viewingAcceso.id)}
-                      className="text-gray-600 hover:text-gray-800"
+                <div className="grid grid-cols-1 gap-6 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50">
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nombre del Acceso</label>
+                    <p className="text-gray-900 font-bold text-lg leading-tight uppercase">{viewingAcceso.name}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">URL / Endpoint</label>
+                    <a
+                      href={viewingAcceso.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 font-medium hover:text-blue-800 flex items-center gap-2 break-all italic underline decoration-blue-200"
                     >
-                      {showPasswords[viewingAcceso.id] ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+                      {viewingAcceso.url}
+                      <ExternalLink size={14} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Credenciales */}
+              {(viewingAcceso.username || viewingAcceso.password) && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1 h-4 bg-purple-500 rounded-full" />
+                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Seguridad & Credenciales</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {viewingAcceso.username && (
+                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Usuario</label>
+                        <p className="text-gray-900 font-black font-mono break-all">{viewingAcceso.username}</p>
+                      </div>
+                    )}
+                    {viewingAcceso.password && (
+                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contraseña</label>
+                        <div className="flex items-center gap-2">
+                          <p className="text-gray-900 font-black font-mono tracking-widest">
+                            {showPasswords[viewingAcceso.id] ? viewingAcceso.password : '••••••••'}
+                          </p>
+                          <button
+                            onClick={() => togglePasswordVisibility(viewingAcceso.id)}
+                            className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 ml-auto"
+                          >
+                            {showPasswords[viewingAcceso.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
+
+              {/* Notas */}
               {viewingAcceso.notes && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Notas</label>
-                  <p className="text-gray-900 whitespace-pre-wrap">{viewingAcceso.notes}</p>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Observaciones Técnicas</h3>
+                  </div>
+                  <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100">
+                    <p className="text-sm text-amber-950 font-medium italic leading-relaxed whitespace-pre-wrap">{viewingAcceso.notes}</p>
+                  </div>
                 </div>
               )}
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setViewingAcceso(undefined)}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Cerrar
-                </button>
-                <button
-                  onClick={() => {
-                    setViewingAcceso(undefined);
-                    handleEditAcceso(viewingAcceso);
-                  }}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Editar
-                </button>
-              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
+              <button
+                onClick={() => setViewingAcceso(undefined)}
+                className="flex-1 px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-widest bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+              >
+                Cerrar
+              </button>
+              <button
+                onClick={() => {
+                  setViewingAcceso(undefined);
+                  handleEditAcceso(viewingAcceso);
+                }}
+                className="flex-1 px-4 py-3 text-xs font-black text-white uppercase tracking-widest bg-blue-600 rounded-xl hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-100"
+              >
+                Editar Acceso
+              </button>
             </div>
           </div>
         </div>

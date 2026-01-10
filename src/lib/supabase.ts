@@ -95,11 +95,14 @@ supabase.from('cameras').insert([{
 export type Location = {
   id: string;
   name: string;
-  type: 'revision' | 'policlinico' | 'escuela_conductores' | 'central';
+  type: 'revision' | 'policlinico' | 'escuela_conductores' | 'central' | 'circuito';
   address?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
+  region?: 'lima' | 'provincia';
+  checklist_url?: string;
+  history_url?: string;
 };
 
 export type AssetType = {
