@@ -30,7 +30,7 @@ function ProtectedRoute({ children, permission }: { children: React.ReactNode, p
   const location = useLocation();
 
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location }} />;
   }
 
   if (permission && !hasPermission(permission)) {
@@ -54,7 +54,7 @@ function InventoryWrapper() {
   const { category } = useParams();
   const { hasPermission } = useAuth();
   const viewId = `inventory-${category}`;
-  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
+  if (!hasPermission(viewId)) return <Navigate to="/" />;
   return <Inventory categoryFilter={viewId} />;
 }
 
@@ -62,7 +62,7 @@ function CamerasWrapper() {
   const { subview } = useParams();
   const { hasPermission } = useAuth();
   const viewId = `cameras-${subview}`;
-  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
+  if (!hasPermission(viewId)) return <Navigate to="/" />;
   return <Cameras subview={viewId} />;
 }
 
@@ -70,7 +70,7 @@ function MaintenanceWrapper() {
   const { category } = useParams();
   const { hasPermission } = useAuth();
   const viewId = `maintenance-${category}`;
-  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
+  if (!hasPermission(viewId)) return <Navigate to="/" />;
   return <Maintenance categoryFilter={viewId} />;
 }
 
@@ -78,7 +78,7 @@ function EnviadosWrapper() {
   const { location } = useParams();
   const { hasPermission } = useAuth();
   const viewId = `sent-${location}`;
-  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
+  if (!hasPermission(viewId)) return <Navigate to="/" />;
   return <Enviados locationFilter={viewId} />;
 }
 
@@ -86,7 +86,7 @@ function ChecklistWrapper() {
   const { type } = useParams();
   const { hasPermission } = useAuth();
   const viewId = `checklist-${type}`;
-  if (!hasPermission(viewId)) return <Navigate to="/" replace />;
+  if (!hasPermission(viewId)) return <Navigate to="/" />;
   return <Checklist type={type} />;
 }
 
@@ -114,12 +114,12 @@ function AppContent() {
 
   // Si no hay usuario y no estamos en login, redirigir a login
   if (!user && location.pathname !== '/login') {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" />;
   }
 
   // Si hay usuario y estamos en login, redirigir a dashboard
   if (user && location.pathname === '/login') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/" />;
   }
 
   // Si no hay usuario y estamos en login, mostrar Login

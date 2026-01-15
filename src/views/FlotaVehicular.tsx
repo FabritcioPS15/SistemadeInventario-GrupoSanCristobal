@@ -214,8 +214,6 @@ export default function FlotaVehicular() {
       modelo: vehiculo.modelo,
       color: vehiculo.color || '',
       año: vehiculo.año,
-      color: vehiculo.color || '',
-      año: vehiculo.año,
       estado: vehiculo.estado,
       ubicacion_actual: vehiculo.ubicacion_actual,
       imagen_url: vehiculo.imagen_url || '',
@@ -618,40 +616,6 @@ export default function FlotaVehicular() {
                 </button>
               </>
             )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div
-          onClick={() => setFilterDashboard(prev => prev === 'expired' ? 'all' : 'expired')}
-          className={`bg-white p-4 rounded-xl shadow-sm border cursor-pointer transition-all ${filterDashboard === 'expired' ? 'ring-2 ring-red-500 border-red-500 bg-red-50' : 'border-gray-200 hover:border-red-300'}`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Documentos Vencidos</p>
-              <h3 className="text-2xl font-bold text-red-600">{stats.expired}</h3>
-              <p className="text-xs text-gray-400 mt-1">Vehículos con documentación caducada</p>
-            </div>
-            <div className={`p-3 rounded-lg ${filterDashboard === 'expired' ? 'bg-white text-red-600' : 'bg-red-100 text-red-600'}`}>
-              <CheckSquare size={24} />
-            </div>
-          </div>
-        </div>
-
-        <div
-          onClick={() => setFilterDashboard(prev => prev === 'expiring' ? 'all' : 'expiring')}
-          className={`bg-white p-4 rounded-xl shadow-sm border cursor-pointer transition-all ${filterDashboard === 'expiring' ? ' ring-2 ring-yellow-500 border-yellow-500 bg-yellow-50' : 'border-gray-200 hover:border-yellow-300'}`}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Por Vencer (30 días)</p>
-              <h3 className="text-2xl font-bold text-yellow-600">{stats.expiring}</h3>
-              <p className="text-xs text-gray-400 mt-1">Vehículos que requieren atención pronto</p>
-            </div>
-            <div className={`p-3 rounded-lg ${filterDashboard === 'expiring' ? 'bg-white text-yellow-600' : 'bg-yellow-100 text-yellow-600'}`}>
-              <CheckSquare size={24} />
-            </div>
           </div>
         </div>
       </div>

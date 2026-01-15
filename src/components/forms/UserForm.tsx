@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, CheckCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { X, AlertCircle, CheckCircle, Loader2, Eye, EyeOff, User, Mail, Phone, Shield, MapPin, FileText, Lock } from 'lucide-react';
 import { supabase, Location } from '../../lib/supabase';
 
 type User = {
@@ -307,263 +307,361 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              {editUser ? 'Editar Usuario' : 'Nuevo Usuario'}
-            </h2>
-            {editUser && hasChanges && (
-              <p className="text-sm text-orange-600 mt-1">
-                ⚠️ Tienes cambios sin guardar
-              </p>
-            )}
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header mejorado en blanco y negro */}
+        <div className="sticky top-0 bg-gradient-to-r from-gray-800 to-gray-900 text-white px-8 py-6 rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+                <User size={24} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  {editUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+                </h2>
+                <p className="text-gray-300 text-sm mt-1">
+                  {editUser ? 'Modifica la información del usuario' : 'Completa los datos para crear un nuevo usuario'}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={onClose} 
+              className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all duration-200"
+            >
+              <X size={20} />
+            </button>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={24} />
-          </button>
+          {editUser && hasChanges && (
+            <div className="mt-4 bg-yellow-600/20 backdrop-blur-sm border border-yellow-500/30 rounded-lg px-4 py-2">
+              <p className="text-yellow-200 text-sm font-medium flex items-center gap-2">
+                <AlertCircle size={16} />
+                Tienes cambios sin guardar
+              </p>
+            </div>
+          )}
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Mensaje de error general */}
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          {/* Mensaje de error general mejorado */}
           {errors.submit && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-              <div className="flex items-center">
-                <AlertCircle size={20} className="text-red-500 mr-2" />
-                <p className="text-red-700">{errors.submit}</p>
+            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-5">
+              <div className="flex items-center gap-3">
+                <div className="bg-red-100 rounded-full p-2">
+                  <AlertCircle size={20} className="text-red-600" />
+                </div>
+                <div>
+                  <p className="text-red-800 font-semibold">Error al procesar</p>
+                  <p className="text-red-600 text-sm mt-1">{errors.submit}</p>
+                </div>
               </div>
             </div>
           )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre Completo *
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleChange}
-                required
-                className={getFieldClasses('full_name')}
-                placeholder="Ej: Juan Pérez"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {renderValidationIcon('full_name')}
+
+          {/* Sección: Información Personal */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 pb-3 border-b border-gray-300">
+              <div className="bg-gray-100 rounded-lg p-2">
+                <User size={18} className="text-gray-700" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Información Personal</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  Nombre Completo <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="full_name"
+                    value={formData.full_name}
+                    onChange={handleChange}
+                    required
+                    className={getFieldClasses('full_name')}
+                    placeholder="Ej: Juan Pérez García"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {renderValidationIcon('full_name')}
+                  </div>
+                </div>
+                {errors.full_name && (
+                  <p className="text-red-500 text-sm font-medium flex items-center gap-1 mt-2">
+                    <AlertCircle size={14} />
+                    {errors.full_name}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Mail size={16} className="text-gray-500" />
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    className={getFieldClasses('email')}
+                    placeholder="Ej: juan@ejemplo.com"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {renderValidationIcon('email')}
+                  </div>
+                </div>
+                {errors.email && (
+                  <p className="text-red-500 text-sm font-medium flex items-center gap-1 mt-2">
+                    <AlertCircle size={14} />
+                    {errors.email}
+                  </p>
+                )}
               </div>
             </div>
-            {errors.full_name && (
-              <p className="text-red-500 text-sm mt-1">{errors.full_name}</p>
-            )}
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email *
-            </label>
-            <div className="relative">
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className={getFieldClasses('email')}
-                placeholder="Ej: juan@ejemplo.com"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {renderValidationIcon('email')}
-              </div>
-            </div>
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              DNI
-            </label>
-            <input
-              type="text"
-              name="dni"
-              value={formData.dni}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Ej: 12345678"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contraseña {editUser ? '(dejar vacío para no cambiar)' : '*'}
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={getFieldClasses('password')}
-                placeholder={editUser ? 'Nueva contraseña (opcional)' : 'Contraseña'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-            )}
-          </div>
-
-          {formData.password && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Confirmar Contraseña
-              </label>
-              <div className="relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <FileText size={16} className="text-gray-500" />
+                  DNI
+                </label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${confirmPassword && formData.password !== confirmPassword
-                    ? 'border-red-300 focus:ring-red-500'
-                    : 'border-gray-300'
-                    }`}
-                  placeholder="Confirmar contraseña"
+                  type="text"
+                  name="dni"
+                  value={formData.dni}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                  placeholder="Ej: 12345678"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Phone size={16} className="text-gray-500" />
+                  Teléfono
+                </label>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className={getFieldClasses('phone')}
+                    placeholder="Ej: +51 999 999 999"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {renderValidationIcon('phone')}
+                  </div>
+                </div>
+                {errors.phone && (
+                  <p className="text-red-500 text-sm font-medium flex items-center gap-1 mt-2">
+                    <AlertCircle size={14} />
+                    {errors.phone}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Sección: Seguridad */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 pb-3 border-b border-gray-300">
+              <div className="bg-gray-100 rounded-lg p-2">
+                <Lock size={18} className="text-gray-700" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Seguridad</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Lock size={16} className="text-gray-500" />
+                  Contraseña {editUser ? <span className="text-gray-500 font-normal">(dejar vacío para no cambiar)</span> : <span className="text-red-500">*</span>}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className={getFieldClasses('password')}
+                    placeholder={editUser ? 'Nueva contraseña (opcional)' : 'Contraseña segura'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-lg p-1.5 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-red-500 text-sm font-medium flex items-center gap-1 mt-2">
+                    <AlertCircle size={14} />
+                    {errors.password}
+                  </p>
+                )}
+              </div>
+
+              {formData.password && (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                    <Lock size={16} className="text-gray-500" />
+                    Confirmar Contraseña <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${confirmPassword && formData.password !== confirmPassword
+                        ? 'border-red-300 focus:ring-red-500'
+                        : 'border-gray-300'
+                        }`}
+                      placeholder="Repetir contraseña"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-lg p-1.5 transition-colors"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-red-500 text-sm font-medium flex items-center gap-1 mt-2">
+                      <AlertCircle size={14} />
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sección: Rol y Permisos */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 pb-3 border-b border-gray-300">
+              <div className="bg-gray-100 rounded-lg p-2">
+                <Shield size={18} className="text-gray-700" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Rol y Permisos</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Shield size={16} className="text-gray-500" />
+                  Rol <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
+                  <option value="admin">👑 Administrador</option>
+                  <option value="supervisor">👨‍💼 Supervisor</option>
+                  <option value="technician">🔧 Técnico</option>
+                  <option value="user">👤 Usuario</option>
+                </select>
               </div>
-              {errors.confirmPassword && (
-                <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
-              )}
-            </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Rol *
-            </label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="admin">Administrador</option>
-              <option value="user">Usuario</option>
-              <option value="technician">Técnico</option>
-              <option value="supervisor">Supervisor</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ubicación
-            </label>
-            <select
-              name="location_id"
-              value={formData.location_id}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Sin ubicación específica</option>
-              {locations.map(location => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Teléfono
-            </label>
-            <div className="relative">
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className={getFieldClasses('phone')}
-                placeholder="Ej: +51 999 999 999"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {renderValidationIcon('phone')}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  Estado <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                >
+                  <option value="active">✅ Activo</option>
+                  <option value="inactive">❌ Inactivo</option>
+                </select>
               </div>
             </div>
-            {errors.phone && (
-              <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estado *
-            </label>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
-            </select>
+          {/* Sección: Ubicación y Notas */}
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 pb-3 border-b border-gray-300">
+              <div className="bg-gray-100 rounded-lg p-2">
+                <MapPin size={18} className="text-gray-700" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Información Adicional</h3>
+            </div>
+            
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <MapPin size={16} className="text-gray-500" />
+                  Ubicación Asignada
+                </label>
+                <select
+                  name="location_id"
+                  value={formData.location_id}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                >
+                  <option value="">🌍 Sin ubicación específica</option>
+                  {locations.map(location => (
+                    <option key={location.id} value={location.id}>
+                      📍 {location.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <FileText size={16} className="text-gray-500" />
+                  Notas Adicionales
+                </label>
+                <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
+                  placeholder="Información adicional, observaciones o comentarios importantes..."
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notas
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Información adicional..."
-            />
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
-            <button
-              type="submit"
-              disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-              className="bg-slate-800 text-white py-3 px-4 rounded-lg hover:bg-slate-900 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 order-1 sm:order-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle size={14} />
-                  {editUser ? 'Actualizar' : 'Crear'} Usuario
-                </>
-              )}
-            </button>
+          {/* Botones de acción mejorados */}
+          <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t-2 border-gray-100">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="bg-white text-slate-700 py-3 px-4 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm order-2 sm:order-1"
+              className="flex-1 bg-gray-100 text-gray-700 py-4 px-6 rounded-xl hover:bg-gray-200 disabled:opacity-50 font-semibold text-base transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-3 order-2 sm:order-1"
             >
+              <X size={20} />
               Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
+              className="flex-1 bg-gradient-to-r from-gray-700 to-gray-900 text-white py-4 px-6 rounded-xl hover:from-gray-800 hover:to-black disabled:opacity-50 font-semibold text-base transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 order-1 sm:order-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={20} />
+                  {editUser ? 'Actualizar Usuario' : 'Crear Usuario'}
+                </>
+              )}
             </button>
           </div>
         </form>
