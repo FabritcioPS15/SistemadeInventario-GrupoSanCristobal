@@ -34,7 +34,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'checking' | null>>({});
   const [hasChanges, setHasChanges] = useState(false);
-  const [cameraDisks, setCameraDisks] = useState<CameraDisk[]>([]);
+  const [, setCameraDisks] = useState<CameraDisk[]>([]);
   const [showDiskManager, setShowDiskManager] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -246,7 +246,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
     console.log('🔍 Errores de validación:', currentErrors);
 
     // Filtrar errores vacíos o nulos
-    const validErrors = Object.entries(currentErrors).filter(([key, value]) =>
+    const validErrors = Object.entries(currentErrors).filter(([, value]) =>
       value && value.trim() !== ''
     );
 
@@ -790,20 +790,20 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
             )}
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
             <button
               type="submit"
               disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+              className="flex-1 bg-slate-800 text-white py-3 px-4 rounded-lg hover:bg-slate-900 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 order-1 sm:order-2"
             >
               {loading ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={14} className="animate-spin" />
                   Guardando...
                 </>
               ) : (
                 <>
-                  <CheckCircle size={16} />
+                  <CheckCircle size={14} />
                   {editCamera ? 'Actualizar' : 'Crear'} Cámara
                 </>
               )}
@@ -812,7 +812,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-medium"
+              className="flex-1 bg-white text-slate-700 py-3 px-4 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm order-2 sm:order-1"
             >
               Cancelar
             </button>

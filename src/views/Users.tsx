@@ -250,13 +250,14 @@ export default function Users() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="w-full px-4 py-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Usuarios</h2>
-          <p className="text-gray-600">Gestión de personal corporativo y permisos del sistema</p>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">Usuarios</h2>
+          <p className="text-slate-500 text-sm font-medium">Gestión de personal corporativo y permisos institucionales del sistema</p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           <button
             onClick={async () => {
               try {
@@ -267,7 +268,7 @@ export default function Users() {
                 alert('Error de conexión: ' + err.message);
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-200 transition-all text-sm font-medium active:scale-95"
+            className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
           >
             Probar Conexión
           </button>
@@ -277,17 +278,18 @@ export default function Users() {
                 setEditingUser(undefined);
                 setShowForm(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-md shadow-blue-100 active:transform active:scale-95"
+              className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
             >
-              <Plus size={18} />
+              <Plus size={14} />
               Nuevo Usuario
             </button>
           )}
         </div>
       </div>
+
       {/* Dashboard de estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between col-span-2 sm:col-span-1">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Total Usuarios</div>
           <div className="flex items-end justify-between">
             <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
@@ -304,7 +306,7 @@ export default function Users() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Administradores</div>
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Admins</div>
           <div className="flex items-end justify-between">
             <div className="text-2xl font-bold text-gray-900">{stats.byRole.admin || 0}</div>
             <Crown className="h-5 w-5 text-amber-300" />
@@ -319,7 +321,7 @@ export default function Users() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between col-span-2 md:col-span-1">
           <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Recientes (7d)</div>
           <div className="flex items-end justify-between">
             <div className="text-2xl font-bold text-blue-500">{stats.recentlyAdded}</div>
@@ -327,6 +329,7 @@ export default function Users() {
           </div>
         </div>
       </div>
+
 
       {/* Filtros avanzados */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-8">

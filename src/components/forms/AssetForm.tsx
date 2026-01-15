@@ -56,7 +56,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
         status: editAsset.status,
         notes: editAsset.notes || '',
       };
-      
+
       const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
       setHasChanges(hasFormChanges);
     }
@@ -126,43 +126,43 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
 
   const checkDuplicateSerialNumber = async (serialNumber: string, currentAssetId?: string): Promise<boolean> => {
     if (!serialNumber) return true; // Campo opcional
-    
+
     const { data, error } = await supabase
       .from('assets')
       .select('id')
       .eq('serial_number', serialNumber);
-    
+
     if (error) return false;
-    
+
     // Si estamos editando, excluir el activo actual
     if (currentAssetId && data) {
       return !data.some(asset => asset.id !== currentAssetId);
     }
-    
+
     return data?.length === 0;
   };
 
   const checkDuplicateAnyDeskId = async (anydeskId: string, currentAssetId?: string): Promise<boolean> => {
     if (!anydeskId) return true; // Campo opcional
-    
+
     const { data, error } = await supabase
       .from('assets')
       .select('id')
       .eq('anydesk_id', anydeskId);
-    
+
     if (error) return false;
-    
+
     // Si estamos editando, excluir el activo actual
     if (currentAssetId && data) {
       return !data.some(asset => asset.id !== currentAssetId);
     }
-    
+
     return data?.length === 0;
   };
 
   const validateField = async (fieldName: string, value: string) => {
     setValidationStatus(prev => ({ ...prev, [fieldName]: 'checking' }));
-    
+
     let isValid = true;
     let errorMessage = '';
 
@@ -173,14 +173,14 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
           errorMessage = 'Formato de IP inválido (ej: 192.168.1.1)';
         }
         break;
-      
+
       case 'phone_number':
         if (value && !validatePhoneNumber(value)) {
           isValid = false;
           errorMessage = 'Formato de teléfono inválido';
         }
         break;
-      
+
       case 'anydesk_id':
         if (value && !validateAnyDeskId(value)) {
           isValid = false;
@@ -193,7 +193,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
           }
         }
         break;
-      
+
       case 'serial_number':
         if (value) {
           const isUnique = await checkDuplicateSerialNumber(value, editAsset?.id);
@@ -203,8 +203,8 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
           }
         }
         break;
-      
-      
+
+
     }
 
     setValidationStatus(prev => ({ ...prev, [fieldName]: isValid ? 'valid' : 'invalid' }));
@@ -213,11 +213,11 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validar campos requeridos
     const requiredFields = ['asset_type_id', 'status'];
     const newErrors: Record<string, string> = {};
-    
+
     requiredFields.forEach(field => {
       if (!formData[field as keyof typeof formData]) {
         newErrors[field] = 'Este campo es requerido';
@@ -228,16 +228,16 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     if (formData.ip_address && !validateIPAddress(formData.ip_address)) {
       newErrors.ip_address = 'Formato de IP inválido';
     }
-    
+
     if (formData.phone_number && !validatePhoneNumber(formData.phone_number)) {
       newErrors.phone_number = 'Formato de teléfono inválido';
     }
-    
+
     if (formData.anydesk_id && !validateAnyDeskId(formData.anydesk_id)) {
       newErrors.anydesk_id = 'AnyDesk ID debe tener 9 dígitos';
     }
-    
-    
+
+
 
     setErrors(newErrors);
 
@@ -343,7 +343,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -381,13 +381,13 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
   const getFieldClasses = (fieldName: string) => {
     const baseClasses = "w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2";
     const status = validationStatus[fieldName];
-    
+
     if (status === 'invalid' || errors[fieldName]) {
       return `${baseClasses} border-red-300 focus:ring-red-500`;
     } else if (status === 'valid') {
       return `${baseClasses} border-green-300 focus:ring-green-500`;
     }
-    
+
     return `${baseClasses} border-gray-300 focus:ring-blue-500`;
   };
 
@@ -428,7 +428,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
               </div>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tipo de Activo *
@@ -570,27 +570,27 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
             )}
 
             {!isTinte && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Número de Serie
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="serial_number"
-                  value={formData.serial_number}
-                  onChange={handleChange}
-                  placeholder="ABC123456789"
-                  className={getFieldClasses('serial_number')}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {renderValidationIcon('serial_number')}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Número de Serie
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="serial_number"
+                    value={formData.serial_number}
+                    onChange={handleChange}
+                    placeholder="ABC123456789"
+                    className={getFieldClasses('serial_number')}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {renderValidationIcon('serial_number')}
+                  </div>
                 </div>
+                {errors.serial_number && (
+                  <p className="text-red-500 text-sm mt-1">{errors.serial_number}</p>
+                )}
               </div>
-              {errors.serial_number && (
-                <p className="text-red-500 text-sm mt-1">{errors.serial_number}</p>
-              )}
-            </div>
             )}
 
             {isPCOrLaptop && (
@@ -619,27 +619,27 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
             )}
 
             {!isTinte && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dirección IP
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="ip_address"
-                  value={formData.ip_address}
-                  onChange={handleChange}
-                  placeholder="192.168.1.1"
-                  className={getFieldClasses('ip_address')}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {renderValidationIcon('ip_address')}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Dirección IP
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="ip_address"
+                    value={formData.ip_address}
+                    onChange={handleChange}
+                    placeholder="192.168.1.1"
+                    className={getFieldClasses('ip_address')}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {renderValidationIcon('ip_address')}
+                  </div>
                 </div>
+                {errors.ip_address && (
+                  <p className="text-red-500 text-sm mt-1">{errors.ip_address}</p>
+                )}
               </div>
-              {errors.ip_address && (
-                <p className="text-red-500 text-sm mt-1">{errors.ip_address}</p>
-              )}
-            </div>
             )}
 
             {isChip && (
@@ -697,20 +697,20 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
             <button
               type="submit"
               disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+              className="bg-slate-800 text-white py-3 px-4 rounded-lg hover:bg-slate-900 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 order-1 sm:order-2"
             >
               {loading ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={14} className="animate-spin" />
                   Guardando...
                 </>
               ) : (
                 <>
-                  <CheckCircle size={16} />
+                  <CheckCircle size={14} />
                   {editAsset ? 'Actualizar' : 'Crear'} Activo
                 </>
               )}
@@ -719,7 +719,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 disabled:opacity-50 font-medium"
+              className="bg-white text-slate-700 py-3 px-4 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm order-2 sm:order-1"
             >
               Cancelar
             </button>

@@ -87,7 +87,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       admin: [
         // Menús principales
         'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-        'locations', 'mtc', 'users', 'servers', 'audit', 'integrity', 'flota-vehicular',
+        'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular',
         // Submenús de inventario
         'inventory-pc', 'inventory-celular', 'inventory-dvr',
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
@@ -107,7 +107,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       supervisor: [
         // Menús principales
         'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-        'locations', 'users', 'flota-vehicular',
+        'locations', 'users', 'vacations', 'flota-vehicular',
         // Submenús de inventario
         'inventory-pc', 'inventory-celular', 'inventory-dvr',
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       technician: [
         // Menús principales
         'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-        'locations', 'users', 'flota-vehicular',
+        'locations', 'users', 'vacations', 'flota-vehicular',
         // Submenús de inventario
         'inventory-pc', 'inventory-celular', 'inventory-dvr',
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',

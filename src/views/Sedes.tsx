@@ -182,36 +182,27 @@ export default function Sedes() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="w-full px-4 py-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Sedes</h2>
-          <p className="text-gray-600">Gestión de ubicaciones y sedes operativas</p>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">Sedes</h2>
+          <p className="text-slate-500 text-sm font-medium">Gestión de ubicaciones y sedes operativas del Grupo San Cristóbal</p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           <button
             onClick={async () => {
-              console.log('🔍 Probando conexión con Supabase...');
               try {
-                const { data, error } = await supabase
-                  .from('locations')
-                  .select('count')
-                  .limit(1);
-
-                if (error) {
-                  console.error('❌ Error de conexión:', error);
-                  alert(`Error de conexión: ${error.message}`);
-                } else {
-                  console.log('✅ Conexión exitosa:', data);
-                  alert('Conexión con Supabase exitosa');
-                }
-              } catch (err) {
-                console.error('❌ Error inesperado:', err);
-                alert('Error inesperado: ' + err);
+                const { error } = await supabase.from('locations').select('id').limit(1);
+                if (error) throw error;
+                alert('Conexión con Supabase exitosa');
+              } catch (err: any) {
+                alert(`Error de conexión: ${err.message}`);
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium shadow-sm active:transform active:scale-95"
+            className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
           >
+            <Building size={14} />
             Probar Conexión
           </button>
           {canEdit() && (
@@ -220,9 +211,9 @@ export default function Sedes() {
                 setEditingLocation(undefined);
                 setShowForm(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-md shadow-blue-100 active:transform active:scale-95"
+              className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
             >
-              <Plus size={18} />
+              <Plus size={14} />
               Nueva Sede
             </button>
           )}
@@ -230,78 +221,58 @@ export default function Sedes() {
       </div>
 
       {/* Resumen de estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-100 p-2 rounded-lg">
-              <Building className="h-6 w-6 text-blue-600" />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-full">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Total Sedes</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-gray-900">
+              {locations.filter(loc => loc.type !== 'circuito').length}
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Sedes</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {locations.filter(loc => loc.type !== 'circuito').length}
-              </p>
-            </div>
+            <Building className="h-5 w-5 text-blue-300" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-red-100 p-2 rounded-lg">
-              <MapPin className="h-6 w-6 text-red-600" />
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-full">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Circuitos</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-gray-900">
+              {locations.filter(loc => loc.type === 'circuito').length}
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Circuitos</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {locations.filter(loc => loc.type === 'circuito').length}
-              </p>
-            </div>
+            <MapPin className="h-5 w-5 text-rose-300" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-green-100 p-2 rounded-lg">
-              <Package className="h-6 w-6 text-green-600" />
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-full">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Cámaras</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-gray-900">
+              {Object.values(cameraCounts).reduce((sum, count) => sum + count, 0)}
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Cámaras</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {Object.values(cameraCounts).reduce((sum, count) => sum + count, 0)}
-              </p>
-            </div>
+            <Package className="h-5 w-5 text-emerald-300" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-purple-100 p-2 rounded-lg">
-              <Users className="h-6 w-6 text-purple-600" />
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-full">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Promedio</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-gray-900">
+              {locations.filter(loc => loc.type !== 'circuito').length > 0
+                ? Math.round(Object.values(cameraCounts).reduce((sum, count) => sum + count, 0) / locations.filter(loc => loc.type !== 'circuito').length)
+                : 0}
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Promedio por Sede</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {locations.filter(loc => loc.type !== 'circuito').length > 0
-                  ? Math.round(Object.values(cameraCounts).reduce((sum, count) => sum + count, 0) / locations.filter(loc => loc.type !== 'circuito').length)
-                  : 0}
-              </p>
-            </div>
+            <Users className="h-5 w-5 text-purple-300" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-orange-100 p-2 rounded-lg">
-              <MapPin className="h-6 w-6 text-orange-600" />
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-full col-span-2 lg:col-span-1">
+          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Cobertura</div>
+          <div className="flex items-end justify-between">
+            <div className="text-2xl font-bold text-orange-500">
+              {locations.filter(loc => loc.type !== 'circuito').length > 0
+                ? Math.round((Object.keys(cameraCounts).length / locations.filter(loc => loc.type !== 'circuito').length) * 100)
+                : 0}%
             </div>
-            <div>
-              <p className="text-sm text-gray-600">Cobertura</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {locations.filter(loc => loc.type !== 'circuito').length > 0
-                  ? Math.round((Object.keys(cameraCounts).length / locations.filter(loc => loc.type !== 'circuito').length) * 100)
-                  : 0}%
-              </p>
-            </div>
+            <MapPin className="h-5 w-5 text-orange-500/20" />
           </div>
         </div>
       </div>

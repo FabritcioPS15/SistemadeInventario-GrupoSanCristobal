@@ -15,83 +15,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Debug: verificar autenticación
-supabase.auth.getSession()
-  .then(({ data: { session }, error }) => {
-    if (error) {
-      console.error('❌ Error de autenticación:', error);
-    } else if (session) {
-      console.log('✅ Usuario autenticado:', session.user.email);
-    } else {
-      console.log('⚠️ Usuario no autenticado - usando acceso anónimo');
-    }
-  })
-  .catch(err => {
-    console.error('❌ Error crítico de autenticación:', err);
-  });
-
-// Debug: verificar conexión y datos
-supabase.from('locations').select('count', { count: 'exact', head: true })
-  .then(({ data, error }) => {
-    if (error) {
-      console.error('❌ Error de conexión a Supabase:', error);
-    } else {
-      console.log('✅ Conexión a Supabase exitosa');
-      console.log('📊 Ubicaciones disponibles:', data);
-    }
-  })
-  .catch(err => {
-    console.error('❌ Error crítico de conexión:', err);
-  });
-
-// Debug: verificar datos de activos
-supabase.from('assets').select('count', { count: 'exact', head: true })
-  .then(({ data, error }) => {
-    if (error) {
-      console.error('❌ Error al obtener activos:', error);
-    } else {
-      console.log('📊 Activos disponibles:', data);
-    }
-  })
-  .catch(err => {
-    console.error('❌ Error crítico con activos:', err);
-  });
-
-// Debug: verificar datos de cámaras
-supabase.from('cameras').select('count', { count: 'exact', head: true })
-  .then(({ data, error }) => {
-    if (error) {
-      console.error('❌ Error al obtener cámaras:', error);
-    } else {
-      console.log('📊 Cámaras disponibles:', data);
-    }
-  })
-  .catch(err => {
-    console.error('❌ Error crítico con cámaras:', err);
-  });
-
-// Debug: probar operación de inserción
-supabase.from('cameras').insert([{
-  name: 'Test Connection ' + Date.now(),
-  url: 'http://test.com',
-  status: 'active'
-}]).select()
-  .then(({ data, error }) => {
-    if (error) {
-      console.error('❌ Error al insertar cámara de prueba:', error);
-    } else {
-      console.log('✅ Inserción de prueba exitosa:', data);
-      // Limpiar datos de prueba
-      if (data && data[0]) {
-        supabase.from('cameras').delete().eq('id', data[0].id)
-          .then(() => console.log('🧹 Datos de prueba limpiados'));
-      }
-    }
-  })
-  .catch(err => {
-    console.error('❌ Error crítico con inserción de prueba:', err);
-  });
-
 export type Location = {
   id: string;
   name: string;
@@ -202,6 +125,20 @@ export type SutranVisit = {
   recommendations?: string;
   documents: string[];
   created_by?: string;
+  created_at: string;
+  updated_at: string;
+  locations?: Location;
+};
+
+export type BranchAudit = {
+  id: string;
+  location_id: string;
+  auditor_name: string;
+  administrator_name?: string;
+  audit_date: string;
+  status: 'excellent' | 'good' | 'regular' | 'critical';
+  score: number;
+  observations?: string;
   created_at: string;
   updated_at: string;
   locations?: Location;

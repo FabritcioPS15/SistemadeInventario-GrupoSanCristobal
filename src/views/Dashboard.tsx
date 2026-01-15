@@ -427,26 +427,28 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="w-full md:w-auto text-center md:text-left">
           <h2 className="text-2xl font-bold text-gray-900">Dashboard General</h2>
           <p className="text-gray-600">Resumen de operaciones y estado del sistema</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex w-full md:w-auto gap-3 justify-center md:justify-end">
           <button
             onClick={() => navigate('/inventory')}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            className="flex-1 md:flex-none justify-center items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all shadow-lg shadow-slate-200 font-bold text-[11px] uppercase tracking-wider"
           >
-            <Plus size={18} />
-            Nuevo Activo
+            <Plus size={16} />
+            <span className="md:hidden lg:inline">Nuevo Activo</span>
+            <span className="hidden md:inline lg:hidden">Activo</span>
           </button>
           <button
             onClick={() => navigate('/enviados')}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+            className="flex-1 md:flex-none justify-center items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm font-bold text-[11px] uppercase tracking-wider"
           >
-            <Truck size={18} />
-            Nuevo Envío
+            <Truck size={16} />
+            <span className="md:hidden lg:inline">Nuevo Envío</span>
+            <span className="hidden md:inline lg:hidden">Envío</span>
           </button>
         </div>
       </div>
@@ -457,15 +459,15 @@ export default function Dashboard() {
           sutranAlerts[activeSutranIndex].status === 'warning' ? 'bg-gradient-to-r from-yellow-50 to-white border-yellow-200' :
             'bg-gradient-to-r from-blue-50 to-white border-blue-200'
           }`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-full shadow-sm ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'bg-white text-red-600' :
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto text-center sm:text-left">
+              <div className={`p-3 rounded-full shadow-sm mx-auto sm:mx-0 ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'bg-white text-red-600' :
                 sutranAlerts[activeSutranIndex].status === 'warning' ? 'bg-white text-yellow-600' :
                   'bg-white text-blue-600'
                 }`}>
                 <Activity size={28} />
               </div>
-              <div>
+              <div className="flex-1">
                 <h3 className={`text-lg font-bold ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'text-red-900' :
                   sutranAlerts[activeSutranIndex].status === 'warning' ? 'text-yellow-900' :
                     'text-blue-900'
@@ -490,10 +492,10 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
               {/* Controles del carrusel */}
               {sutranAlerts.length > 1 && (
-                <div className="flex items-center gap-2 bg-white/60 backdrop-blur px-3 py-1.5 rounded-lg">
+                <div className="flex items-center justify-center gap-2 bg-white/60 backdrop-blur px-3 py-1.5 rounded-lg w-full sm:w-auto">
                   <button
                     onClick={() => setActiveSutranIndex((prev) => (prev - 1 + sutranAlerts.length) % sutranAlerts.length)}
                     className="p-1 hover:bg-black/10 rounded transition-colors"
@@ -515,12 +517,12 @@ export default function Dashboard() {
               )}
               <button
                 onClick={() => setShowSutranDetails(true)}
-                className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-sm flex items-center gap-2 ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'bg-red-600 text-white hover:bg-red-700 hover:shadow-red-200' :
-                  sutranAlerts[activeSutranIndex].status === 'warning' ? 'bg-yellow-500 text-white hover:bg-yellow-600 hover:shadow-yellow-200' :
-                    'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-200'
+                className={`w-full sm:w-auto px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2 ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'bg-red-600 text-white hover:bg-red-700 hover:shadow-red-200' :
+                  sutranAlerts[activeSutranIndex].status === 'warning' ? 'bg-amber-500 text-white hover:bg-amber-600 hover:shadow-amber-200' :
+                    'bg-slate-800 text-white hover:bg-slate-700 hover:shadow-slate-300'
                   }`}
               >
-                <Info size={18} />
+                <Info size={16} />
                 Ver Detalles
               </button>
             </div>
@@ -563,7 +565,7 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div className="flex justify-around items-center py-4">
+            <div className="flex flex-col sm:flex-row justify-around items-center gap-6 py-4">
               <DonutChart
                 percentage={stats.totalAssets > 0 ? (stats.activeAssets / stats.totalAssets) * 100 : 0}
                 color="text-blue-600"
@@ -652,25 +654,25 @@ export default function Dashboard() {
 
           <button
             onClick={() => navigate('/audit')}
-            className="w-full mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium py-2 rounded-lg hover:bg-blue-50 transition-colors"
+            className="w-full mt-4 text-[11px] font-bold text-slate-600 uppercase tracking-widest hover:text-slate-800 py-3 rounded-lg hover:bg-slate-50 transition-colors border border-dashed border-slate-200 hover:border-slate-300"
           >
-            Ver todo el historial
+            Ver historial completo
           </button>
         </div>
       </div>
 
       {/* Fleet Status Section - Replaces Diagnostic Tools */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
           <div className="flex items-center gap-2">
             <Truck className="text-indigo-600" size={20} />
             <h3 className="text-lg font-semibold text-gray-900">Estado de la Flota</h3>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
             <select
               value={vehicleLocationFilter}
               onChange={(e) => setVehicleLocationFilter(e.target.value)}
-              className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+              className="w-full sm:w-auto px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
             >
               <option value="todos">Todas las sedes</option>
               {vehicleLocations.map((loc) => (
@@ -679,9 +681,9 @@ export default function Dashboard() {
             </select>
             <button
               onClick={() => navigate('/flota-vehicular')}
-              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
+              className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-colors whitespace-nowrap"
             >
-              Ver catálogo completo
+              Catálogo
             </button>
           </div>
         </div>

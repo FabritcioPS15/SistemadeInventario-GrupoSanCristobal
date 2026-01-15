@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download } from 'lucide-react';
+import { Plus, Search, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download, Upload } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { supabase, AssetWithDetails, Location, AssetType } from '../lib/supabase';
 import AssetForm from '../components/forms/AssetForm';
 import AssetDetails from '../components/AssetDetails';
 import PCForm from '../components/forms/PCForm';
+import ExcelImportModal from '../components/ExcelImportModal';
 import { useAuth } from '../contexts/AuthContext';
 
 type InventoryProps = {
@@ -26,6 +27,8 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   const [selectedAsset, setSelectedAsset] = useState<AssetWithDetails | undefined>();
   const [editingAsset, setEditingAsset] = useState<AssetWithDetails | undefined>();
   const [editingPC, setEditingPC] = useState<AssetWithDetails | undefined>();
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
@@ -64,6 +67,48 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
     } else {
       setEditingAsset(asset);
       setShowAssetForm(true);
+    }
+  };
+
+  const handleToggleSelectConnect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(new Set(filteredAssets.map(a => a.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    if (window.confirm(`¿Estás seguro de que quieres eliminar ${selectedIds.size} activos seleccionados? Esta acción no se puede deshacer.`)) {
+      setLoading(true);
+      try {
+        const { error } = await supabase
+          .from('assets')
+          .delete()
+          .in('id', Array.from(selectedIds));
+
+        if (error) throw error;
+
+        setSelectedIds(new Set());
+        await fetchAssets();
+      } catch (error: any) {
+        console.error('Error deleting assets:', error);
+        alert('Error al eliminar activos: ' + error.message);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -538,49 +583,66 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   };
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-orange-100 border border-orange-200 rounded-lg p-2">
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">
-                Inventario{categoryFromFilter ? ` - ${categoryFromFilter}` : ''}
-              </h2>
-              <p className="text-slate-500 mt-1">
-                {categoryFromFilter ? `Gestión de activos ${categoryFromFilter.toLowerCase()}` : 'Gestión integral de activos tecnológicos'}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
+    <div className="w-full px-4 py-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">
+            Inventario{categoryFromFilter ? ` - ${categoryFromFilter}` : ''}
+          </h2>
+          <p className="text-slate-500 text-sm font-medium">
+            {categoryFromFilter ? `Gestión de activos ${categoryFromFilter.toLowerCase()}` : 'Gestión integral de activos tecnológicos'}
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          {selectedIds.size > 0 && canEdit() && (
             <button
-              onClick={handleExportExcel}
-              disabled={exporting}
-              className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-all shadow-sm hover:shadow-md active:transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Descargar inventario en Excel"
+              onClick={handleBulkDelete}
+              className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-red-50 text-red-600 border border-red-200 rounded-md hover:bg-red-100 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
+              title="Eliminar seleccionados"
             >
-              <Download size={20} />
-              {exporting ? 'Exportando...' : 'Excel'}
+              <Trash2 size={14} />
+              Eliminar ({selectedIds.size})
             </button>
-            {canEdit() && (
-              <button
-                onClick={() => {
-                  setSelectedAsset(undefined);
-                  if (categoryFilter === 'inventory-pc') {
-                    setEditingPC(undefined);
-                    setShowPCForm(true);
-                  } else {
-                    setShowAssetForm(true);
-                  }
-                }}
-                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-all shadow-sm hover:shadow-md active:transform active:scale-95"
-              >
-                <Plus size={20} />
-                {categoryFilter === 'inventory-pc' ? 'Nueva PC/Laptop' : 'Nuevo Activo'}
-              </button>
-            )}
-          </div>
+          )}
+          <button
+            onClick={handleExportExcel}
+            disabled={exporting}
+            className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 disabled:opacity-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
+            title="Descargar inventario en Excel"
+          >
+            <Download size={14} />
+            {exporting ? 'Exportando...' : 'Exportar Excel'}
+          </button>
+
+          {canEdit() && (
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
+              title="Importar inventario desde Excel"
+            >
+              <Upload size={14} />
+              Importar
+            </button>
+          )}
+
+          {canEdit() && (
+            <button
+              onClick={() => {
+                setSelectedAsset(undefined);
+                if (categoryFilter === 'inventory-pc') {
+                  setEditingPC(undefined);
+                  setShowPCForm(true);
+                } else {
+                  setShowAssetForm(true);
+                }
+              }}
+              className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
+            >
+              <Plus size={14} />
+              {categoryFilter === 'inventory-pc' ? 'Nueva PC/Laptop' : 'Nuevo Activo'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -624,23 +686,23 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
 
       {/* Control Bar */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
               placeholder="Buscar por marca, modelo, serie..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 transition-all text-sm"
             />
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3">
             <select
               value={filterLocation}
               onChange={(e) => setFilterLocation(e.target.value)}
-              className="px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[200px]"
+              className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white sm:min-w-[180px] text-sm font-medium"
             >
               <option value="">Todas las sedes</option>
               {locations.map(location => (
@@ -651,7 +713,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[180px]"
+              className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white sm:min-w-[150px] text-sm font-medium"
             >
               <option value="">Todos los estados</option>
               <option value="active">Activo</option>
@@ -667,109 +729,206 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-blue-600"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800"></div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Tipo</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Dispositivo</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Detalles</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Ubicación</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {filteredAssets.length > 0 ? (
-                  filteredAssets.map((asset) => {
-                    const Icon = getIconForType(asset.asset_types?.name || '');
-                    return (
-                      <tr key={asset.id} className="hover:bg-slate-50 transition-colors group">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="bg-slate-100 p-2 rounded-lg w-fit text-slate-600">
-                            <Icon size={20} />
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-col">
-                            <span className="font-medium text-slate-900">{asset.asset_types?.name}</span>
-                            <span className="text-sm text-slate-500">{asset.brand}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex flex-col">
-                            <span className="text-sm text-slate-900 font-medium">{asset.model}</span>
-                            {asset.serial_number && (
-                              <span className="text-xs text-slate-500 font-mono">S/N: {asset.serial_number}</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {asset.locations ? (
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <MapPin size={16} className="text-slate-400" />
-                              {asset.locations.name}
-                            </div>
-                          ) : (
-                            <span className="text-sm text-slate-400 italic">Sin ubicación</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[asset.status as keyof typeof statusColors]}`}>
-                            {statusLabels[asset.status as keyof typeof statusLabels]}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => handleViewAsset(asset)}
-                              className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Ver detalles"
-                            >
-                              <Eye size={18} />
-                            </button>
-                            {canEdit() && (
-                              <>
-                                <button
-                                  onClick={() => handleEditAsset(asset)}
-                                  className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                                  title="Editar"
-                                >
-                                  <Edit size={18} />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteAsset(asset)}
-                                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center justify-center text-slate-400">
-                        <div className="bg-slate-50 p-4 rounded-full mb-3">
-                          <Search size={32} className="opacity-50" />
-                        </div>
-                        <p className="text-lg font-medium text-slate-600">No se encontraron activos</p>
-                        <p className="text-sm">Intenta ajustar los filtros o tu búsqueda</p>
-                      </div>
-                    </td>
+          <>
+            {/* Desktop Table */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-6 py-4 w-4">
+                      <input
+                        type="checkbox"
+                        className="w-5 h-5 rounded border-2 border-slate-300 cursor-pointer text-blue-600 focus:ring-blue-500"
+                        onChange={handleSelectAll}
+                        checked={filteredAssets.length > 0 && selectedIds.size === filteredAssets.length}
+                      />
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Tipo</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Dispositivo</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Detalles</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Ubicación</th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Acciones</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {filteredAssets.length > 0 ? (
+                    filteredAssets.map((asset) => {
+                      const Icon = getIconForType(asset.asset_types?.name || '');
+                      const isSelected = selectedIds.has(asset.id);
+                      return (
+                        <tr
+                          key={asset.id}
+                          onClick={() => handleToggleSelectConnect(asset.id)}
+                          className={`
+                            transition-colors group cursor-pointer
+                            ${isSelected ? 'bg-blue-50/80 hover:bg-blue-100/80 border-l-4 border-l-blue-500' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}
+                          `}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center">
+                              <input
+                                type="checkbox"
+                                className={`
+                                    w-5 h-5 rounded border-2 transition-colors cursor-pointer
+                                    ${isSelected ? 'border-blue-500 bg-blue-500 text-white' : 'border-slate-300 bg-white'}
+                                    focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                                  `}
+                                checked={isSelected}
+                                onChange={() => handleToggleSelectConnect(asset.id)}
+                              />
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className={`p-2 rounded-lg w-fit transition-colors ${isSelected ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'}`}>
+                              <Icon size={20} />
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-slate-900">{asset.asset_types?.name}</span>
+                              <span className="text-sm text-slate-500">{asset.brand}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <span className="text-sm text-slate-900 font-medium">{asset.model}</span>
+                              {asset.serial_number && (
+                                <span className="text-xs text-slate-500 font-mono">S/N: {asset.serial_number}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {asset.locations ? (
+                              <div className="flex items-center gap-2 text-sm text-slate-600">
+                                <MapPin size={16} className="text-slate-400" />
+                                {asset.locations.name}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-slate-400 italic">Sin ubicación</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[asset.status as keyof typeof statusColors]}`}>
+                              {statusLabels[asset.status as keyof typeof statusLabels]}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleViewAsset(asset)}
+                                className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                                title="Ver detalles"
+                              >
+                                <Eye size={18} />
+                              </button>
+                              {canEdit() && (
+                                <>
+                                  <button
+                                    onClick={() => handleEditAsset(asset)}
+                                    className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                                    title="Editar"
+                                  >
+                                    <Edit size={18} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteAsset(asset)}
+                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Eliminar"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden divide-y divide-slate-100">
+              {filteredAssets.length > 0 ? (
+                filteredAssets.map((asset) => {
+                  const Icon = getIconForType(asset.asset_types?.name || '');
+                  return (
+                    <div key={asset.id} className="p-5 hover:bg-slate-50 transition-colors">
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-slate-100 p-2.5 rounded-lg text-slate-600">
+                            <Icon size={24} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-900 uppercase tracking-tight">{asset.asset_types?.name}</h4>
+                            <p className="text-xs text-slate-500 font-medium">{asset.brand} - {asset.model}</p>
+                          </div>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border whitespace-nowrap ${statusColors[asset.status as keyof typeof statusColors]}`}>
+                          {statusLabels[asset.status as keyof typeof statusLabels]}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mb-4 text-[11px]">
+                        <div>
+                          <p className="text-slate-400 font-bold uppercase tracking-widest mb-1 text-[9px]">Serie</p>
+                          <p className="font-mono text-slate-700">{asset.serial_number || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-slate-400 font-bold uppercase tracking-widest mb-1 text-[9px]">Ubicación</p>
+                          <p className="text-slate-700">{asset.locations?.name || 'Sede no especificada'}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-4 border-t border-slate-50">
+                        <button
+                          onClick={() => handleViewAsset(asset)}
+                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-md hover:bg-slate-100 transition-all font-bold text-[10px] uppercase tracking-widest"
+                        >
+                          <Eye size={14} /> Detalle
+                        </button>
+                        {canEdit() && (
+                          <>
+                            <button
+                              onClick={() => handleEditAsset(asset)}
+                              className="p-2 text-slate-400 hover:text-slate-900 bg-slate-50 rounded-md transition-all"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteAsset(asset)}
+                              className="p-2 text-slate-400 hover:text-red-600 bg-red-50 rounded-md transition-all"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : null}
+            </div>
+
+            {/* Empty State */}
+            {filteredAssets.length === 0 && (
+              <div className="px-6 py-16 text-center">
+                <div className="flex flex-col items-center justify-center text-slate-400">
+                  <div className="bg-slate-50 p-6 rounded-full mb-4">
+                    <Search size={40} className="opacity-50" />
+                  </div>
+                  <p className="text-lg font-bold text-slate-700 uppercase tracking-tight">Sin resultados</p>
+                  <p className="text-sm mt-1">Intenta ajustar los filtros de búsqueda</p>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -800,6 +959,17 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
           }}
         />
       )}
+      {/* Modal de Importación Excel */}
+      <ExcelImportModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onSuccess={() => {
+          fetchAssets();
+          alert('Importación completada exitosamente');
+        }}
+        assetTypes={assetTypes}
+        locations={locations}
+      />
     </div>
   );
 }

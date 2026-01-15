@@ -347,7 +347,8 @@ export default function Checklist({ type }: { type?: string }) {
 
     const renderListView = (filteredLocations: Location[]) => (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="overflow-x-auto">
+            {/* Desktop Table */}
+            <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full">
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-100">
@@ -425,6 +426,66 @@ export default function Checklist({ type }: { type?: string }) {
                         ))}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="lg:hidden divide-y divide-gray-100">
+                {filteredLocations.map((location) => (
+                    <div key={location.id} className="p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-lg ${location.type === 'escuela_conductores' ? 'bg-blue-50 text-blue-600' :
+                                    location.type === 'policlinico' ? 'bg-emerald-50 text-emerald-600' :
+                                        'bg-orange-50 text-orange-600'
+                                    }`}>
+                                    {location.type === 'escuela_conductores' ? <GraduationCap size={16} /> :
+                                        location.type === 'policlinico' ? <Stethoscope size={16} /> :
+                                            <Car size={16} />}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-900">{location.name}</p>
+                                    <p className="text-[10px] text-gray-400 uppercase tracking-tighter truncate max-w-[150px]">{location.address || 'Sin dirección registrada'}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                <span className="text-[10px] font-bold text-gray-600 uppercase">Activo</span>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <a
+                                href={location.checklist_url || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex items-center justify-center gap-2 py-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all ${location.checklist_url
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'bg-gray-100 text-gray-400 pointer-events-none'
+                                    }`}
+                            >
+                                <ClipboardCheck size={14} /> Iniciar
+                            </a>
+                            <a
+                                href={location.history_url || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`flex items-center justify-center gap-2 py-3 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all ${location.history_url
+                                    ? 'bg-white border border-gray-200 text-gray-700 shadow-sm'
+                                    : 'bg-gray-50 text-gray-300 pointer-events-none'
+                                    }`}
+                            >
+                                <ExternalLink size={14} /> Ver
+                            </a>
+                        </div>
+                        {canEdit() && (
+                            <button
+                                onClick={() => handleEditLinks(location)}
+                                className="w-full py-2 text-[10px] font-black text-gray-500 uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center gap-2"
+                            >
+                                <Edit size={14} /> Editar Links
+                            </button>
+                        )}
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -675,53 +736,50 @@ export default function Checklist({ type }: { type?: string }) {
     );
 
     return (
-        <div className="p-8">
-            <div className="mb-8 flex items-center justify-between">
+        <div className="w-full px-4 py-8">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">
                         Checklists{type ? ` - ${getSubtitle(type)}` : ''}
                     </h2>
-                    <p className="text-gray-600">
+                    <p className="text-slate-500 text-sm font-medium">
                         {type ? 'Gestión de checklists por unidad de negocio' : 'Panel general de seguimiento de checklists operativos'}
                     </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
                     {type && driveLinks[type] && (
                         <a
                             href={driveLinks[type]}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`flex items-center gap-2 px-4 py-2 border rounded-lg transition-all text-sm font-medium shadow-sm active:transform active:scale-95 ${type === 'escon' ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100' :
-                                type === 'ecsal' ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' :
-                                    'bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100'
-                                }`}
+                            className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
                         >
-                            <ExternalLink size={16} />
+                            <ExternalLink size={14} />
                             Carpeta Drive {type.toUpperCase()}
                         </a>
                     )}
                     {type && (
-                        <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200 mr-2">
+                        <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
                             <button
                                 onClick={() => setViewMode('grid')}
-                                className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`flex-1 sm:flex-none p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                 title="Vista Cuadrícula"
                             >
-                                <LayoutGrid size={18} />
+                                <LayoutGrid size={16} />
                             </button>
                             <button
                                 onClick={() => setViewMode('list')}
-                                className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`flex-1 sm:flex-none p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                 title="Vista Listado"
                             >
-                                <List size={18} />
+                                <List size={16} />
                             </button>
                         </div>
                     )}
                     {type && (
                         <button
                             onClick={() => navigate('/checklist')}
-                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium shadow-sm active:transform active:scale-95"
+                            className="px-6 py-3 sm:py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
                         >
                             Volver al menú
                         </button>

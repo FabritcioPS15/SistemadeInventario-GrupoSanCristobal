@@ -22,6 +22,7 @@ import { useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import PasswordSetup from './components/PasswordSetup';
 import Checklist from './views/Checklist';
+import Vacations from './views/Vacations';
 
 // Componente para proteger rutas basadas en permisos
 function ProtectedRoute({ children, permission }: { children: React.ReactNode, permission?: string }) {
@@ -160,6 +161,9 @@ function AppContent() {
           {/* Checklist */}
           <Route path="/checklist" element={<ProtectedRoute permission="checklist"><Checklist /></ProtectedRoute>} />
           <Route path="/checklist/:type" element={<ProtectedRoute><ChecklistWrapper /></ProtectedRoute>} />
+
+          {/* Vacaciones */}
+          <Route path="/vacations" element={<ProtectedRoute permission="vacations"><Vacations /></ProtectedRoute>} />
 
           {/* Otras Rutas */}
           <Route path="/sutran" element={<ProtectedRoute permission="sutran"><Sutran /></ProtectedRoute>} />

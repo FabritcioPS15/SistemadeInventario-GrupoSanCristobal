@@ -159,9 +159,9 @@ export default function Servers() {
           {canEdit() && (
             <button
               onClick={openCreate}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-md shadow-blue-100 active:transform active:scale-95"
+              className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all font-bold text-[11px] uppercase tracking-wider shadow-lg shadow-slate-200 active:transform active:scale-95"
             >
-              <Plus size={18} />
+              <Plus size={16} />
               Nuevo Servidor
             </button>
           )}
@@ -271,10 +271,10 @@ export default function Servers() {
                 </div>
               </div>
 
-              <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-50 flex gap-2">
+              <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex gap-2">
                 <button
                   onClick={() => setViewingServer(srv)}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-widest bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-95 shadow-sm"
                 >
                   <Eye size={14} />
                   DETALLES
@@ -283,17 +283,17 @@ export default function Servers() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => openEdit(srv)}
-                      className="p-2 bg-white text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm"
+                      className="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-sm"
                       title="Modificar servidor"
                     >
-                      <Edit size={16} />
+                      <Edit size={14} />
                     </button>
                     <button
                       onClick={() => del(srv)}
-                      className="p-2 bg-white text-rose-500 border border-rose-100 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"
+                      className="p-2 bg-white text-rose-500 border border-rose-200 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"
                       title="Eliminar servidor"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 )}
@@ -426,16 +426,18 @@ export default function Servers() {
                 Cerrar
               </button>
               {canEdit() && (
-                <button
-                  onClick={() => {
-                    const srv = viewingServer;
-                    setViewingServer(undefined);
-                    openEdit(srv);
-                  }}
-                  className="flex-1 px-4 py-3 text-xs font-black text-white uppercase tracking-widest bg-blue-600 rounded-xl hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-100"
-                >
-                  Editar Servidor
-                </button>
+                <div className="flex-1 flex gap-3">
+                  <button
+                    onClick={() => {
+                      const srv = viewingServer;
+                      setViewingServer(undefined);
+                      openEdit(srv);
+                    }}
+                    className="flex-1 px-4 py-3 text-[10px] font-bold text-white uppercase tracking-widest bg-slate-800 rounded-xl hover:bg-slate-900 transition-all active:scale-95 shadow-lg shadow-slate-200"
+                  >
+                    Editar Servidor
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -532,9 +534,9 @@ export default function Servers() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <button type="submit" className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 font-medium">Guardar</button>
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 font-medium">Cancelar</button>
+              <div className="flex gap-3 pt-4 border-t border-gray-100 mt-6">
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 px-4 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-slate-700 transition-colors">Cancelar</button>
+                <button type="submit" className="flex-1 px-4 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 font-bold text-[11px] uppercase tracking-widest shadow-md">Guardar</button>
               </div>
             </form>
           </div>

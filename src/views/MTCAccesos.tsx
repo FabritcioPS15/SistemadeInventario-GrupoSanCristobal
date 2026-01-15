@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, Filter } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, List, Key } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import MTCAccesoForm from '../components/forms/MTCAccesoForm';
 
@@ -15,10 +15,12 @@ type MTCAcceso = {
   updated_at: string;
 };
 
+type ViewType = 'list' | 'form';
+
 export default function MTCAccesos() {
+  const [view, setView] = useState<ViewType>('list');
   const [accesos, setAccesos] = useState<MTCAcceso[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
   const [editingAcceso, setEditingAcceso] = useState<MTCAcceso | undefined>();
   const [viewingAcceso, setViewingAcceso] = useState<MTCAcceso | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,7 +84,7 @@ export default function MTCAccesos() {
   const handleEditAcceso = (acceso: MTCAcceso) => {
     console.log('✏️ Editando acceso MTC:', acceso);
     setEditingAcceso(acceso);
-    setShowForm(true);
+    setView('form');
   };
 
   const handleViewAcceso = (acceso: MTCAcceso) => {
@@ -120,14 +122,14 @@ export default function MTCAccesos() {
 
   const handleSaveAcceso = async () => {
     console.log('💾 Guardando acceso MTC...');
-    setShowForm(false);
+    setView('list');
     setEditingAcceso(undefined);
     await fetchAccesos();
     console.log('✅ Acceso MTC guardado y datos actualizados');
   };
 
   const handleCloseForm = () => {
-    setShowForm(false);
+    setView('list');
     setEditingAcceso(undefined);
   };
 
@@ -190,13 +192,13 @@ export default function MTCAccesos() {
   });
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="w-full px-4 py-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">MTC Accesos</h2>
-          <p className="text-gray-600">Gestión de credenciales y accesos operativos del MTC</p>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">MTC Accesos</h2>
+          <p className="text-slate-500 text-sm font-medium">Gestión de credenciales y accesos operativos del MTC</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           <button
             onClick={async () => {
               console.log('🔍 Probando conexión con Supabase...');
@@ -218,392 +220,412 @@ export default function MTCAccesos() {
                 alert('Error inesperado: ' + err);
               }
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium shadow-sm active:transform active:scale-95"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-[10px] font-bold uppercase tracking-widest shadow-sm"
           >
             Probar Conexión
           </button>
-          <button
-            onClick={() => {
-              setEditingAcceso(undefined);
-              setShowForm(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-md shadow-blue-100 active:transform active:scale-95"
-          >
-            <Plus size={18} />
-            Nuevo Acceso
-          </button>
-        </div>
-      </div>
-
-      {/* Dashboard de estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-100 p-2 rounded-lg">
-              <Shield className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Total Accesos</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-green-100 p-2 rounded-lg">
-              <Check className="h-6 w-6 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Con Credenciales</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.withCredentials}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-purple-100 p-2 rounded-lg">
-              <Globe className="h-6 w-6 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Accesos Web</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.byType.web || 0}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="bg-orange-100 p-2 rounded-lg">
-              <Plus className="h-6 w-6 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Recientes (7 días)</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.recentlyAdded}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filtros avanzados */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, tipo o URL..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-blue-100/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            />
-          </div>
-          <div>
-            <select
-              value={accessTypeFilter}
-              onChange={(e) => setAccessTypeFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            >
-              <option value="">Todos los tipos de acceso</option>
-              <option value="web">Web Services</option>
-              <option value="api">APIs & Endpoints</option>
-              <option value="database">Bases de Datos</option>
-              <option value="ssh">Terminal SSH</option>
-              <option value="ftp">Servidores FTP</option>
-              <option value="other">Otros Accesos</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Resumen de filtros activos */}
-        {(searchTerm || accessTypeFilter) && (
-          <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
-            <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-widest">
-              {searchTerm && (
-                <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100">
-                  "{searchTerm}"
-                </span>
-              )}
-              {accessTypeFilter && (
-                <span className="bg-gray-50 text-gray-700 px-2 py-0.5 rounded border border-gray-100">
-                  {accessTypeFilter}
-                </span>
-              )}
-            </div>
+          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
             <button
-              onClick={() => {
-                setSearchTerm('');
-                setAccessTypeFilter('');
-              }}
-              className="flex items-center gap-1 text-[10px] font-black text-gray-400 hover:text-rose-600 transition-colors uppercase tracking-widest"
+              onClick={() => { setView('list'); setEditingAcceso(undefined); }}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2 rounded-md transition-all font-bold text-[11px] uppercase tracking-wider ${view === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              <X size={14} /> Limpiar filtros
+              <List size={16} />
+              <span className="hidden sm:inline">Listado</span>
+              <span className="sm:hidden">Lista</span>
+            </button>
+            <button
+              onClick={() => { setView('form'); }}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2 rounded-md transition-all font-bold text-[11px] uppercase tracking-wider ${view === 'form' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              <Key size={16} />
+              <span className="hidden sm:inline">Nuevo Acceso</span>
+              <span className="sm:hidden">Nuevo</span>
             </button>
           </div>
-        )}
+        </div>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
+      {view === 'form' ? (
+        <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-8">
+            <div className="mb-8 border-b border-gray-100 pb-6">
+              <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">
+                {editingAcceso ? 'Actualización de Credenciales' : 'Registro de Nuevo Acceso'}
+              </h3>
+              <p className="text-sm text-slate-500 mt-1 font-medium italic">Gestione de forma segura los accesos a plataformas del MTC.</p>
+            </div>
+            <MTCAccesoForm
+              editAcceso={editingAcceso}
+              onClose={handleCloseForm}
+              onSave={handleSaveAcceso}
+            />
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredAccesos.map(acceso => (
-            <div key={acceso.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400/50 transition-all duration-300 flex flex-col group overflow-hidden">
-              <div className="p-6 flex-1">
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors uppercase tracking-tight mb-2">
-                      {acceso.name}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${getAccessTypeColor(acceso.access_type)}`}>
-                        {getAccessTypeIcon(acceso.access_type)}
-                        {acceso.access_type}
-                      </span>
-                    </div>
-                  </div>
+        <div className="space-y-6 animate-in fade-in duration-500">
+          {/* Dashboard de estadísticas */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <Shield className="h-6 w-6 text-blue-600" />
                 </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Accesos</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                </div>
+              </div>
+            </div>
 
-                <div className="space-y-4 mb-6">
-                  <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Enlace Directo</label>
-                      <button
-                        onClick={() => copyToClipboard(acceso.url, `url-${acceso.id}`)}
-                        className="p-1.5 hover:bg-white rounded-lg transition-colors text-gray-400 hover:text-blue-600 active:scale-90"
-                        title="Copiar URL"
-                      >
-                        {copiedItems[`url-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                      </button>
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="bg-green-100 p-2 rounded-lg">
+                  <Check className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Con Credenciales</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.withCredentials}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="bg-purple-100 p-2 rounded-lg">
+                  <Globe className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Accesos Web</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.byType.web || 0}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="bg-orange-100 p-2 rounded-lg">
+                  <Plus className="h-6 w-6 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Recientes (7d)</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.recentlyAdded}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Filtros avanzados */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, tipo o URL..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition-all placeholder:text-gray-400"
+                />
+              </div>
+              <div>
+                <select
+                  value={accessTypeFilter}
+                  onChange={(e) => setAccessTypeFilter(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white text-slate-600 font-medium"
+                >
+                  <option value="">Todos los tipos de acceso</option>
+                  <option value="web">Web Services</option>
+                  <option value="api">APIs & Endpoints</option>
+                  <option value="database">Bases de Datos</option>
+                  <option value="ssh">Terminal SSH</option>
+                  <option value="ftp">Servidores FTP</option>
+                  <option value="other">Otros Accesos</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Resumen de filtros activos */}
+            {(searchTerm || accessTypeFilter) && (
+              <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
+                <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-widest">
+                  {searchTerm && (
+                    <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100">
+                      "{searchTerm}"
+                    </span>
+                  )}
+                  {accessTypeFilter && (
+                    <span className="bg-gray-50 text-gray-700 px-2 py-0.5 rounded border border-gray-100">
+                      {accessTypeFilter}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setAccessTypeFilter('');
+                  }}
+                  className="flex items-center gap-1 text-[10px] font-black text-gray-400 hover:text-rose-600 transition-colors uppercase tracking-widest"
+                >
+                  <X size={14} /> Limpiar filtros
+                </button>
+              </div>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[40vh]">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {filteredAccesos.map(acceso => (
+                <div key={acceso.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-slate-300 transition-all duration-300 flex flex-col group overflow-hidden">
+                  <div className="p-6 flex-1">
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors uppercase tracking-tight mb-2">
+                          {acceso.name}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${getAccessTypeColor(acceso.access_type)}`}>
+                            {getAccessTypeIcon(acceso.access_type)}
+                            {acceso.access_type}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <a
-                      href={acceso.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 font-bold hover:text-blue-800 flex items-center gap-2 break-all group/link"
-                    >
-                      <span className="truncate">{acceso.url}</span>
-                      <ExternalLink size={14} className="flex-shrink-0 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
-                    </a>
-                  </div>
 
-                  {acceso.username && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/30">
+                    <div className="space-y-4 mb-6">
+                      <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
                         <div className="flex items-center justify-between mb-2">
-                          <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest">Identidad</label>
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Enlace Directo</label>
                           <button
-                            onClick={() => copyToClipboard(acceso.username!, `username-${acceso.id}`)}
-                            className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-400 hover:text-blue-600 active:scale-90"
-                            title="Copiar usuario"
+                            onClick={() => copyToClipboard(acceso.url, `url-${acceso.id}`)}
+                            className="p-1.5 hover:bg-white rounded-lg transition-colors text-gray-400 hover:text-blue-600 active:scale-90"
+                            title="Copiar URL"
                           >
-                            {copiedItems[`username-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                            {copiedItems[`url-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                           </button>
                         </div>
-                        <p className="text-sm text-blue-900 font-black tracking-tight font-mono">{acceso.username}</p>
+                        <a
+                          href={acceso.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 font-bold hover:text-blue-800 flex items-center gap-2 break-all group/link"
+                        >
+                          <span className="truncate">{acceso.url}</span>
+                          <ExternalLink size={14} className="flex-shrink-0 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 transition-transform" />
+                        </a>
                       </div>
-                      {acceso.password && (
-                        <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/30">
-                          <div className="flex items-center justify-between mb-2">
-                            <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest">Token / Pass</label>
-                            <div className="flex items-center gap-1">
+
+                      {acceso.username && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/30">
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest">Identidad</label>
                               <button
-                                onClick={() => copyToClipboard(acceso.password!, `password-${acceso.id}`)}
+                                onClick={() => copyToClipboard(acceso.username!, `username-${acceso.id}`)}
                                 className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-400 hover:text-blue-600 active:scale-90"
-                                title="Copiar contraseña"
+                                title="Copiar usuario"
                               >
-                                {copiedItems[`password-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                              </button>
-                              <button
-                                onClick={() => togglePasswordVisibility(acceso.id)}
-                                className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-600 hover:text-blue-800 active:scale-90"
-                                title={showPasswords[acceso.id] ? 'Ocultar' : 'Mostrar'}
-                              >
-                                {showPasswords[acceso.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                {copiedItems[`username-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                               </button>
                             </div>
+                            <p className="text-sm text-blue-900 font-black tracking-tight font-mono">{acceso.username}</p>
                           </div>
-                          <p className="text-sm text-blue-900 font-black tracking-widest font-mono">
-                            {showPasswords[acceso.id] ? acceso.password : '••••••••'}
-                          </p>
+                          {acceso.password && (
+                            <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/30">
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest">Token / Pass</label>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => copyToClipboard(acceso.password!, `password-${acceso.id}`)}
+                                    className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-400 hover:text-blue-600 active:scale-90"
+                                    title="Copiar contraseña"
+                                  >
+                                    {copiedItems[`password-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                                  </button>
+                                  <button
+                                    onClick={() => togglePasswordVisibility(acceso.id)}
+                                    className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-600 hover:text-blue-800 active:scale-90"
+                                    title={showPasswords[acceso.id] ? 'Ocultar' : 'Mostrar'}
+                                  >
+                                    {showPasswords[acceso.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                                  </button>
+                                </div>
+                              </div>
+                              <p className="text-sm text-blue-900 font-black tracking-widest font-mono">
+                                {showPasswords[acceso.id] ? acceso.password : '••••••••'}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {acceso.notes && (
+                        <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Observaciones</label>
+                          <p className="text-xs text-gray-600 italic leading-relaxed whitespace-pre-wrap">{acceso.notes}</p>
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-50 flex gap-2">
+                    <button
+                      onClick={() => handleViewAcceso(acceso)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
+                    >
+                      <Eye size={14} />
+                      DETALLES
+                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditAcceso(acceso)}
+                        className="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-sm"
+                        title="Modificar acceso"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAcceso(acceso)}
+                        className="p-2 bg-white text-rose-500 border border-rose-100 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"
+                        title="Eliminar acceso"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && filteredAccesos.length === 0 && (
+            <div className="text-left py-12">
+              <p className="text-gray-500 font-medium">No se encontraron accesos registrados.</p>
+            </div>
+          )}
+
+          {viewingAcceso && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+              <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
+                {/* Modal Header */}
+                <div className={`px-8 py-6 flex items-center justify-between border-b border-gray-100 ${getAccessTypeColor(viewingAcceso.access_type).split(' ')[0]} bg-opacity-30`}>
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-white shadow-sm border border-gray-100">
+                      {getAccessTypeIcon(viewingAcceso.access_type)}
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Acceso Detallado</h2>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none mt-1">{viewingAcceso.access_type}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setViewingAcceso(undefined)}
+                    className="p-2 hover:bg-white/50 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="p-8 overflow-y-auto space-y-8">
+                  {/* Información básica */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1 h-4 bg-blue-500 rounded-full" />
+                      <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Identificación del Recurso</h3>
+                    </div>
+                    <div className="grid grid-cols-1 gap-6 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50">
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nombre del Acceso</label>
+                        <p className="text-gray-900 font-bold text-lg leading-tight uppercase">{viewingAcceso.name}</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">URL / Endpoint</label>
+                        <a
+                          href={viewingAcceso.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 font-medium hover:text-blue-800 flex items-center gap-2 break-all italic underline decoration-blue-200"
+                        >
+                          {viewingAcceso.url}
+                          <ExternalLink size={14} />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Credenciales */}
+                  {(viewingAcceso.username || viewingAcceso.password) && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-1 h-4 bg-purple-500 rounded-full" />
+                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Seguridad & Credenciales</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {viewingAcceso.username && (
+                          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Usuario</label>
+                            <p className="text-gray-900 font-black font-mono break-all">{viewingAcceso.username}</p>
+                          </div>
+                        )}
+                        {viewingAcceso.password && (
+                          <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contraseña</label>
+                            <div className="flex items-center gap-2">
+                              <p className="text-gray-900 font-black font-mono tracking-widest">
+                                {showPasswords[viewingAcceso.id] ? viewingAcceso.password : '••••••••'}
+                              </p>
+                              <button
+                                onClick={() => togglePasswordVisibility(viewingAcceso.id)}
+                                className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 ml-auto"
+                              >
+                                {showPasswords[viewingAcceso.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
 
-                  {acceso.notes && (
-                    <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
-                      <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Observaciones de Acceso</label>
-                      <p className="text-xs text-gray-600 italic leading-relaxed whitespace-pre-wrap">{acceso.notes}</p>
+                  {/* Notas */}
+                  {viewingAcceso.notes && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-1 h-4 bg-amber-500 rounded-full" />
+                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Observaciones Técnicas</h3>
+                      </div>
+                      <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100">
+                        <p className="text-sm text-amber-950 font-medium italic leading-relaxed whitespace-pre-wrap">{viewingAcceso.notes}</p>
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
 
-              <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-50 flex gap-2">
-                <button
-                  onClick={() => handleViewAcceso(acceso)}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
-                >
-                  <Eye size={14} />
-                  DETALLES
-                </button>
-                <div className="flex gap-2">
+                {/* Modal Footer */}
+                <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
                   <button
-                    onClick={() => handleEditAcceso(acceso)}
-                    className="p-2 bg-white text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm"
-                    title="Modificar acceso"
+                    onClick={() => setViewingAcceso(undefined)}
+                    className="flex-1 px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-widest bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
                   >
-                    <Edit size={16} />
+                    Cerrar
                   </button>
                   <button
-                    onClick={() => handleDeleteAcceso(acceso)}
-                    className="p-2 bg-white text-rose-500 border border-rose-100 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"
-                    title="Eliminar acceso"
+                    onClick={() => {
+                      setViewingAcceso(undefined);
+                      handleEditAcceso(viewingAcceso);
+                    }}
+                    className="flex-1 px-4 py-3 text-xs font-black text-white uppercase tracking-widest bg-slate-800 rounded-xl hover:bg-slate-900 transition-all active:scale-95 shadow-lg"
                   >
-                    <Trash2 size={16} />
+                    Editar Acceso
                   </button>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {!loading && filteredAccesos.length === 0 && (
-        <div className="text-left py-12">
-          <p className="text-gray-500">No se encontraron accesos</p>
-        </div>
-      )}
-
-      {showForm && (
-        <MTCAccesoForm
-          editAcceso={editingAcceso}
-          onClose={handleCloseForm}
-          onSave={handleSaveAcceso}
-        />
-      )}
-
-      {viewingAcceso && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
-            {/* Modal Header */}
-            <div className={`px-8 py-6 flex items-center justify-between border-b border-gray-100 ${getAccessTypeColor(viewingAcceso.access_type).split(' ')[0]} bg-opacity-30`}>
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-2xl bg-white shadow-sm border border-gray-100">
-                  {getAccessTypeIcon(viewingAcceso.access_type)}
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Acceso Detallado</h2>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none mt-1">{viewingAcceso.access_type}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setViewingAcceso(undefined)}
-                className="p-2 hover:bg-white/50 rounded-full transition-colors text-gray-400 hover:text-gray-600"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="p-8 overflow-y-auto space-y-8">
-              {/* Información básica */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-4 bg-blue-500 rounded-full" />
-                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Identificación del Recurso</h3>
-                </div>
-                <div className="grid grid-cols-1 gap-6 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50">
-                  <div>
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nombre del Acceso</label>
-                    <p className="text-gray-900 font-bold text-lg leading-tight uppercase">{viewingAcceso.name}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">URL / Endpoint</label>
-                    <a
-                      href={viewingAcceso.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 font-medium hover:text-blue-800 flex items-center gap-2 break-all italic underline decoration-blue-200"
-                    >
-                      {viewingAcceso.url}
-                      <ExternalLink size={14} />
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              {/* Credenciales */}
-              {(viewingAcceso.username || viewingAcceso.password) && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-4 bg-purple-500 rounded-full" />
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Seguridad & Credenciales</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {viewingAcceso.username && (
-                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Usuario</label>
-                        <p className="text-gray-900 font-black font-mono break-all">{viewingAcceso.username}</p>
-                      </div>
-                    )}
-                    {viewingAcceso.password && (
-                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contraseña</label>
-                        <div className="flex items-center gap-2">
-                          <p className="text-gray-900 font-black font-mono tracking-widest">
-                            {showPasswords[viewingAcceso.id] ? viewingAcceso.password : '••••••••'}
-                          </p>
-                          <button
-                            onClick={() => togglePasswordVisibility(viewingAcceso.id)}
-                            className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 ml-auto"
-                          >
-                            {showPasswords[viewingAcceso.id] ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Notas */}
-              {viewingAcceso.notes && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-4 bg-amber-500 rounded-full" />
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Observaciones Técnicas</h3>
-                  </div>
-                  <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100">
-                    <p className="text-sm text-amber-950 font-medium italic leading-relaxed whitespace-pre-wrap">{viewingAcceso.notes}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
-              <button
-                onClick={() => setViewingAcceso(undefined)}
-                className="flex-1 px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-widest bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
-              >
-                Cerrar
-              </button>
-              <button
-                onClick={() => {
-                  setViewingAcceso(undefined);
-                  handleEditAcceso(viewingAcceso);
-                }}
-                className="flex-1 px-4 py-3 text-xs font-black text-white uppercase tracking-widest bg-blue-600 rounded-xl hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-100"
-              >
-                Editar Acceso
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>

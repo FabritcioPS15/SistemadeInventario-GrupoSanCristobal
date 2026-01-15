@@ -62,7 +62,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
         status: editUser.status,
         notes: editUser.notes || '',
       };
-      
+
       const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
       setHasChanges(hasFormChanges);
     }
@@ -96,25 +96,25 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
   const checkDuplicateEmail = async (email: string, currentUserId?: string): Promise<boolean> => {
     if (!email) return false; // Campo requerido
-    
+
     const { data, error } = await supabase
       .from('users')
       .select('id')
       .eq('email', email);
-    
+
     if (error) return false;
-    
+
     // Si estamos editando, excluir el usuario actual
     if (currentUserId && data) {
       return !data.some(user => user.id !== currentUserId);
     }
-    
+
     return data?.length === 0;
   };
 
   const validateField = async (fieldName: string, value: string) => {
     setValidationStatus(prev => ({ ...prev, [fieldName]: 'checking' }));
-    
+
     let isValid = true;
     let errorMessage = '';
 
@@ -128,7 +128,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
           errorMessage = 'El nombre debe tener al menos 2 caracteres';
         }
         break;
-      
+
       case 'email':
         if (!value.trim()) {
           isValid = false;
@@ -144,14 +144,14 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
           }
         }
         break;
-      
+
       case 'phone':
         if (value && !validatePhoneNumber(value)) {
           isValid = false;
           errorMessage = 'Formato de teléfono inválido';
         }
         break;
-      
+
       case 'password':
         if (value && !validatePassword(value)) {
           isValid = false;
@@ -166,11 +166,11 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validar campos requeridos
     const requiredFields = ['full_name', 'email', 'role', 'status'];
     const newErrors: Record<string, string> = {};
-    
+
     requiredFields.forEach(field => {
       if (!formData[field as keyof typeof formData]) {
         newErrors[field] = 'Este campo es requerido';
@@ -181,7 +181,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
     if (formData.email && !validateEmail(formData.email)) {
       newErrors.email = 'Formato de email inválido';
     }
-    
+
     if (formData.phone && !validatePhoneNumber(formData.phone)) {
       newErrors.phone = 'Formato de teléfono inválido';
     }
@@ -257,7 +257,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -295,13 +295,13 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
   const getFieldClasses = (fieldName: string) => {
     const baseClasses = "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2";
     const status = validationStatus[fieldName];
-    
+
     if (status === 'invalid' || errors[fieldName]) {
       return `${baseClasses} border-red-300 focus:ring-red-500`;
     } else if (status === 'valid') {
       return `${baseClasses} border-green-300 focus:ring-green-500`;
     }
-    
+
     return `${baseClasses} border-gray-300 focus:ring-blue-500`;
   };
 
@@ -430,11 +430,10 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    confirmPassword && formData.password !== confirmPassword
-                      ? 'border-red-300 focus:ring-red-500'
-                      : 'border-gray-300'
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${confirmPassword && formData.password !== confirmPassword
+                    ? 'border-red-300 focus:ring-red-500'
+                    : 'border-gray-300'
+                    }`}
                   placeholder="Confirmar contraseña"
                 />
                 <button
@@ -540,20 +539,20 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
             <button
               type="submit"
               disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex items-center justify-center gap-2"
+              className="bg-slate-800 text-white py-3 px-4 rounded-lg hover:bg-slate-900 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 order-1 sm:order-2"
             >
               {loading ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={14} className="animate-spin" />
                   Guardando...
                 </>
               ) : (
                 <>
-                  <CheckCircle size={16} />
+                  <CheckCircle size={14} />
                   {editUser ? 'Actualizar' : 'Crear'} Usuario
                 </>
               )}
@@ -562,7 +561,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 disabled:opacity-50 font-medium"
+              className="bg-white text-slate-700 py-3 px-4 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm order-2 sm:order-1"
             >
               Cancelar
             </button>

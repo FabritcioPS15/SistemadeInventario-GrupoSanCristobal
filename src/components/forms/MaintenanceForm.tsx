@@ -168,37 +168,30 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
   };
 
   const validateField = async (fieldName: string, value: string) => {
-    let isValid = true;
     let errorMessage = '';
 
     switch (fieldName) {
       case 'asset_id':
         if (!value) {
-          isValid = false;
           errorMessage = 'Debe seleccionar un activo';
         }
         break;
       case 'description':
         if (!value.trim()) {
-          isValid = false;
           errorMessage = 'La descripción es requerida';
         } else if (value.trim().length < 5) {
-          isValid = false;
           errorMessage = 'La descripción debe tener al menos 5 caracteres';
         }
         break;
       case 'scheduled_date':
         if (value && !validateDate(value)) {
-          isValid = false;
           errorMessage = 'Fecha programada inválida';
         }
         break;
       case 'completed_date':
         if (value && !validateDate(value)) {
-          isValid = false;
           errorMessage = 'Fecha de completado inválida';
         } else if (value && formData.scheduled_date && !validateDateRange(formData.scheduled_date, value)) {
-          isValid = false;
           errorMessage = 'La fecha de completado no puede ser anterior a la fecha programada';
         }
         break;
@@ -616,7 +609,7 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
+          <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -628,20 +621,20 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
               />
               <label htmlFor="warranty_claim" className="text-xs font-bold text-gray-700 uppercase cursor-pointer">Requerir Garantía</label>
             </div>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
+                className="px-6 py-3 sm:py-2.5 text-[10px] font-bold text-slate-600 uppercase tracking-widest bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm order-2 sm:order-1"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-8 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 disabled:opacity-50 flex items-center gap-2"
+                className="px-8 py-3 sm:py-2.5 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest order-1 sm:order-2"
               >
-                {loading ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                {loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
                 {editRecord ? 'Guardar Cambios' : 'Crear Registro'}
               </button>
             </div>

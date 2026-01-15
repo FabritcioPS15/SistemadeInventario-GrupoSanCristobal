@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, Download } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { supabase, Camera, Location } from '../lib/supabase';
@@ -273,34 +273,34 @@ export default function Cameras({ subview }: CamerasProps) {
 
 
   return (
-    <div className="p-8 relative">
-      <div className="flex items-center justify-between mb-8">
+    <div className="w-full px-4 py-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">
             Cámaras
             {subview && (
-              <span className="ml-2 text-sm font-normal text-blue-600">({getSubtitleFromSubview(subview)})</span>
+              <span className="ml-2 text-sm font-medium text-slate-500 lowercase italic">({getSubtitleFromSubview(subview)})</span>
             )}
           </h2>
-          <p className="text-gray-600">Gestión de cámaras y almacenamiento</p>
+          <p className="text-slate-500 text-sm font-medium">Gestión integral de sistemas de videovigilancia y almacenamiento digital</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           {canEdit() && (
             <>
               <button
                 onClick={handleExportExcel}
-                className="inline-flex items-center px-4 py-2 border border-blue-600 text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
                 title="Explora la lista en Excel"
               >
-                <RiFileExcel2Line className="-ml-1 mr-2 h-5 w-5" />
+                <RiFileExcel2Line size={14} className="text-emerald-600" />
                 Excel
               </button>
               <button
                 onClick={openCreate}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
               >
-                <Plus className="-ml-1 mr-2 h-5 w-5" />
+                <Plus size={14} />
                 Nueva Cámara
               </button>
             </>
@@ -308,66 +308,65 @@ export default function Cameras({ subview }: CamerasProps) {
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg mb-8">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Búsqueda */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
+      <div className="bg-white shadow-sm rounded-xl border border-gray-200 mb-8 p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Búsqueda */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 text-sm"
+              placeholder="Buscar cámara, modelo, IP..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Filtro Sede */}
+          <div>
+            <select
+              className="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 rounded-lg bg-white"
+              value={filterLocation}
+              onChange={(e) => setFilterLocation(e.target.value)}
+            >
+              <option value="todos">Todas las Sedes</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro Estado */}
+          <div>
+            <select
+              className="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 rounded-lg bg-white"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="todos">Todos los Estados</option>
+              <option value="active">Activo</option>
+              <option value="maintenance">Mantenimiento</option>
+              <option value="inactive">Inactivo</option>
+            </select>
+          </div>
+
+          {/* Filtro Crítico */}
+          <div className="flex items-center justify-between sm:justify-start px-2 py-2 sm:py-0 border sm:border-0 border-gray-100 rounded-lg">
+            <span className="text-sm font-medium text-gray-700 sm:hidden">Espacio Crítico</span>
+            <label className="inline-flex items-center cursor-pointer">
               <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Buscar nombre, modelo, IP..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                type="checkbox"
+                className="sr-only peer"
+                checked={filterStorage}
+                onChange={(e) => setFilterStorage(e.target.checked)}
               />
-            </div>
-
-            {/* Filtro Sede */}
-            <div>
-              <select
-                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                value={filterLocation}
-                onChange={(e) => setFilterLocation(e.target.value)}
-              >
-                <option value="todos">Todas las Sedes</option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filtro Estado */}
-            <div>
-              <select
-                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="todos">Todos los Estados</option>
-                <option value="active">Activo</option>
-                <option value="maintenance">Mantenimiento</option>
-                <option value="inactive">Inactivo</option>
-              </select>
-            </div>
-
-            {/* Filtro Crítico */}
-            <div className="flex items-center">
-              <label className="inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={filterStorage}
-                  onChange={(e) => setFilterStorage(e.target.checked)}
-                />
-                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                <span className="ms-3 text-sm font-medium text-gray-700">Espacio Crítico</span>
-              </label>
-            </div>
+              <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-slate-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-800"></div>
+              <span className="ms-3 text-sm font-medium text-gray-700 hidden sm:inline">Espacio Crítico</span>
+            </label>
           </div>
         </div>
       </div>
