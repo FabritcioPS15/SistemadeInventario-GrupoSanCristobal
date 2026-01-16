@@ -52,6 +52,8 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         { id: 'inventory-ram', label: 'Memorias RAM', icon: MemoryStick, path: '/inventory/ram' },
         { id: 'inventory-disco', label: 'Discos de Almacenamiento', icon: Database, path: '/inventory/disco' },
         { id: 'inventory-disco-extraido', label: 'Discos Extraídos', icon: HardDriveIcon, path: '/inventory/disco-extraido' },
+        { id: 'inventory-otros', label: 'Otros', icon: Package, path: '/inventory/otros' },
+        { id: 'inventory-maquinaria', label: 'Maquinarias', icon: HardDrive, path: '/inventory/maquinaria' },
       ]
     },
     {

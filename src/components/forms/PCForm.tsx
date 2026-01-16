@@ -24,6 +24,17 @@ type PCFormData = {
   model: string;
   serial_number: string;
   notes: string;
+  // Campos del Excel
+  item: string;
+  descripcion: string;
+  unidad_medida: string;
+  cantidad: string;
+  condicion: string;
+  color: string;
+  gama: string;
+  fecha_adquisicion: string;
+  valor_estimado: string;
+  estado_uso: string;
 };
 
 export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
@@ -42,7 +53,18 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
     brand: '',
     model: '',
     serial_number: '',
-    notes: ''
+    notes: '',
+    // Campos del Excel
+    item: '',
+    descripcion: '',
+    unidad_medida: '',
+    cantidad: '1',
+    condicion: '',
+    color: '',
+    gama: '',
+    fecha_adquisicion: '',
+    valor_estimado: '',
+    estado_uso: ''
   });
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
@@ -68,7 +90,18 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
         brand: editPC.brand || '',
         model: editPC.model || '',
         serial_number: editPC.serial_number || '',
-        notes: editPC.notes || ''
+        notes: editPC.notes || '',
+        // Campos del Excel
+        item: editPC.item || '',
+        descripcion: editPC.descripcion || '',
+        unidad_medida: editPC.unidad_medida || '',
+        cantidad: editPC.cantidad?.toString() || '1',
+        condicion: editPC.condicion || '',
+        color: editPC.color || '',
+        gama: editPC.gama || '',
+        fecha_adquisicion: editPC.fecha_adquisicion || '',
+        valor_estimado: editPC.valor_estimado || '',
+        estado_uso: editPC.estado_uso || ''
       });
     }
   }, [editPC]);
@@ -435,6 +468,159 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
                 placeholder="S/N del equipo"
               />
+            </div>
+
+            {/* Campos del Excel - Información General del Activo */}
+            <div className="col-span-2 border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Información General del Activo</h3>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                ITEM
+              </label>
+              <input
+                type="text"
+                name="item"
+                value={formData.item}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                DESCRIPCIÓN
+              </label>
+              <textarea
+                name="descripcion"
+                value={formData.descripcion}
+                onChange={handleChange}
+                rows={2}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                UNIDAD DE MEDIDA
+              </label>
+              <input
+                type="text"
+                name="unidad_medida"
+                value={formData.unidad_medida}
+                onChange={handleChange}
+                placeholder="ej: Unidad, Kit, Set, etc."
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                CANT.
+              </label>
+              <input
+                type="number"
+                name="cantidad"
+                value={formData.cantidad}
+                onChange={handleChange}
+                min={1}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                CONDICIÓN
+              </label>
+              <select
+                name="condicion"
+                value={formData.condicion}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              >
+                <option value="">Seleccionar...</option>
+                <option value="Nuevo">Nuevo</option>
+                <option value="Usado - Excelente">Usado - Excelente</option>
+                <option value="Usado - Bueno">Usado - Bueno</option>
+                <option value="Usado - Regular">Usado - Regular</option>
+                <option value="Para Reparación">Para Reparación</option>
+                <option value="Dañado">Dañado</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                COLOR
+              </label>
+              <input
+                type="text"
+                name="color"
+                value={formData.color}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                GAMA
+              </label>
+              <input
+                type="text"
+                name="gama"
+                value={formData.gama}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                FECHA ADQUISICIÓN
+              </label>
+              <input
+                type="date"
+                name="fecha_adquisicion"
+                value={formData.fecha_adquisicion}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                VALOR ESTIMADO
+              </label>
+              <input
+                type="number"
+                name="valor_estimado"
+                value={formData.valor_estimado}
+                onChange={handleChange}
+                step="0.01"
+                min={0}
+                placeholder="0.00"
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                ESTADO USO
+              </label>
+              <select
+                name="estado_uso"
+                value={formData.estado_uso}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+              >
+                <option value="">Seleccionar...</option>
+                <option value="Operativo">Operativo</option>
+                <option value="En Mantenimiento">En Mantenimiento</option>
+                <option value="Fuera de Servicio">Fuera de Servicio</option>
+                <option value="En Reparación">En Reparación</option>
+                <option value="Standby">Standby</option>
+              </select>
             </div>
           </div>
 

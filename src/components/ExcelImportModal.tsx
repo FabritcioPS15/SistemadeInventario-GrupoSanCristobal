@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { X, FileSpreadsheet, AlertCircle, CheckCircle, Loader2, RefreshCw } from 'lucide-react';
+import { useState, useRef, useMemo } from 'react';
+import { X, FileSpreadsheet, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase, AssetType, Location } from '../lib/supabase';
 
@@ -23,25 +23,54 @@ type SheetMapping = {
 };
 
 // Mapeo detallado de tipos de activos (variaciones comunes -> nombre exacto de BD)
-const ASSET_TYPE_MAPPING: Record<string, string> = {
+// Palabras clave que deben estar presentes (no usar coincidencias parciales para evitar falsos positivos)
+const ASSET_TYPE_KEYWORDS: Record<string, string> = {
+    // Monitor - debe estar ANTES que otras búsquedas para evitar conflictos
+    'MONITOR': 'Monitor',
+    'MONITORES': 'Monitor',
+    'MONITO': 'Monitor',
+    'PANTALLA': 'Monitor',
+    'PANTALLAS': 'Monitor',
+    'PANTALLAS PARA PC': 'Monitor',
+    'DISPLAY': 'Monitor',
     // PC variantes
-    'COMPUTADORA': 'PC', 'ORDENADOR': 'PC', 'DESKTOP': 'PC', 'CPU': 'PC',
+    'COMPUTADORA': 'PC',
+    'ORDENADOR': 'PC',
+    'DESKTOP': 'PC',
+    'PC ': 'PC',  // PC con espacio para evitar coincidencias con otros
+    'CPU ': 'PC', // CPU con espacio para evitar coincidencias
     // Laptop variantes
-    'PORTATIL': 'Laptop', 'NOTEBOOK': 'Laptop',
+    'PORTATIL': 'Laptop',
+    'NOTEBOOK': 'Laptop',
+    'LAPTOP': 'Laptop',
     // Celular variantes
-    'TELEFONO': 'Celular', 'SMARTPHONE': 'Celular', 'MOVIL': 'Celular',
+    'TELEFONO': 'Celular',
+    'SMARTPHONE': 'Celular',
+    'MOVIL': 'Celular',
+    'CELULAR': 'Celular',
     // Otros comunes
     'IMPRESORA': 'Impresora',
-    'SCANNER': 'Escáner', 'ESCANER': 'Escáner',
-    'MONITOR': 'Monitor', 'PANTALLA': 'Monitor',
-    'PROYECTOR': 'Proyector', 'DATA': 'Proyector',
+    'SCANNER': 'Escáner',
+    'ESCANER': 'Escáner',
+    'PROYECTOR': 'Proyector',
+    'DATA': 'Proyector',
     'CAMARA': 'Cámara',
-    'DVR': 'DVR', 'GRABADOR': 'DVR',
+    'CÁMARA': 'Cámara',
+    'DVR': 'DVR',
+    'GRABADOR': 'DVR',
     'SWITCH': 'Switch',
     'FUENTE': 'Fuente de Poder',
     'TECLADO': 'Periféricos',
     'MOUSE': 'Periféricos',
     'MOUSEPAD': 'Periféricos',
+    // Maquinaria - solo si es explícitamente maquinaria
+    'MAQUINARIA': 'Maquinaria',
+    'MÁQUINA': 'Maquinaria',
+    'EQUIPO PESADO': 'Maquinaria',
+    // Otros - por defecto
+    'OTROS': 'Otros',
+    'OTRO': 'Otros',
+    'VARIOS': 'Otros',
 };
 
 // Mapeo inicial de sedes (variaciones comunes -> nombre exacto de BD)
@@ -60,13 +89,47 @@ const INITIAL_LOCATION_MAPPING: Record<string, string> = {
     'SCP HYO': 'Huancayo',
 };
 
-export default function ExcelImportModal({ isOpen, onClose, onSuccess, assetTypes, locations }: ExcelImportModalProps) {
-    const [isDragging, setIsDragging] = useState(false);
+const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, onSuccess, assetTypes, locations }) => {
     const [file, setFile] = useState<File | null>(null);
     const [rawSheets, setRawSheets] = useState<RawSheet[]>([]);
     const [mappings, setMappings] = useState<SheetMapping[]>([]);
     const [importing, setImporting] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Función helper para convertir fechas vacías a null
+    const parseDateField = (value: any): string | null => {
+        if (!value || value === '' || value === null || value === undefined) return null;
+        // Si es un número de Excel (días desde 1900)
+        if (typeof value === 'number') {
+            try {
+                const excelEpoch = new Date(1899, 11, 30);
+                const date = new Date(excelEpoch.getTime() + value * 86400000);
+                return date.toISOString().split('T')[0];
+            } catch {
+                return null;
+            }
+        }
+        // Si es una cadena de fecha
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) return null;
+            // Intentar parsear como fecha
+            const parsed = new Date(trimmed);
+            if (!isNaN(parsed.getTime())) {
+                return parsed.toISOString().split('T')[0];
+            }
+            return null;
+        }
+        return null;
+    };
+
+    // Función helper para limpiar campos vacíos (convertir a null si es string vacío)
+    const cleanField = (value: any): string | null => {
+        if (value === null || value === undefined || value === '') return null;
+        const str = String(value).trim();
+        return str === '' ? null : str;
+    };
 
     // Cálculos derivados del estado actual de mappings y rawSheets
     const preview = useMemo(() => {
@@ -86,7 +149,7 @@ export default function ExcelImportModal({ isOpen, onClose, onSuccess, assetType
             // Si no tiene ubicación seleccionada, cuenta como inválido si queremos ser estrictos
             // O simplemente lo marcamos. Asumamos que para importar DEBE tener ID.
 
-            sheet.data.forEach((row, rowIndex) => {
+            sheet.data.forEach((row) => {
                 totalRecords++;
 
                 if (!locationId) {
@@ -100,19 +163,51 @@ export default function ExcelImportModal({ isOpen, onClose, onSuccess, assetType
                     normalizedRow[key.toUpperCase().trim()] = row[key];
                 });
 
-                // Detección de Tipo
+                // Detección de Tipo - Mejorada
                 const typeRaw = (normalizedRow['TIPO DE ACTIVO'] || '').toString().trim().toUpperCase();
                 let typeId = null;
-                let typeMatch = assetTypes.find(t => t.name.toUpperCase() === typeRaw);
+                let typeMatch = null;
+                
+                // 1. Búsqueda exacta en BD
+                typeMatch = assetTypes.find(t => t.name.toUpperCase() === typeRaw);
 
+                // 2. Búsqueda por palabras clave (orden de prioridad - buscar coincidencias más específicas primero)
+                if (!typeMatch && typeRaw) {
+                    // Primero buscar palabras clave específicas que deben evitar falsos positivos
+                    // Ordenar por longitud descendente para buscar coincidencias más específicas primero
+                    const sortedKeywords = Object.keys(ASSET_TYPE_KEYWORDS).sort((a, b) => {
+                        // Priorizar palabras más largas (más específicas)
+                        if (b.length !== a.length) return b.length - a.length;
+                        // Si tienen la misma longitud, priorizar Monitor, PC, Laptop antes que Maquinaria
+                        const priority: Record<string, number> = { 'MONITOR': 100, 'MONITORES': 99, 'MONITO': 98, 'PANTALLA': 97, 'PANTALLAS': 96, 'PC ': 95, 'CPU ': 94, 'MAQUINARIA': 1 };
+                        return (priority[b] || 50) - (priority[a] || 50);
+                    });
+                    
+                    for (const keyword of sortedKeywords) {
+                        // Buscar palabra clave completa (no parcial) para evitar falsos positivos
+                        // Usar regex para buscar como palabra completa o inicio de palabra
+                        const keywordEscaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(`\\b${keywordEscaped}\\b|^${keywordEscaped}`, 'i');
+                        
+                        if (regex.test(typeRaw) || typeRaw === keyword || typeRaw.startsWith(keyword + ' ')) {
+                            const targetTypeName = ASSET_TYPE_KEYWORDS[keyword];
+                            typeMatch = assetTypes.find(t => t.name.toUpperCase() === targetTypeName.toUpperCase());
+                            if (typeMatch) break;
+                        }
+                    }
+                }
+
+                // 3. Si no hay coincidencia, usar "Otros" como fallback
                 if (!typeMatch) {
-                    const mappedType = Object.keys(ASSET_TYPE_MAPPING).find(key => typeRaw.includes(key));
-                    if (mappedType) {
-                        typeMatch = assetTypes.find(t => t.name.toUpperCase() === ASSET_TYPE_MAPPING[mappedType].toUpperCase());
+                    typeMatch = assetTypes.find(t => t.name.toUpperCase() === 'OTROS');
+                    // Si "Otros" no existe, usar el primer tipo disponible (pero esto debería ser raro)
+                    if (!typeMatch && assetTypes.length > 0) {
+                        typeMatch = assetTypes[0];
                     }
                 }
 
                 if (typeMatch) typeId = typeMatch.id;
+                const typeName = typeMatch?.name || 'Otros';
 
                 // Estado
                 const condition = (normalizedRow['CONDICIÓN'] || normalizedRow['ESTADO USO'] || '').toString().toUpperCase();
@@ -127,22 +222,85 @@ export default function ExcelImportModal({ isOpen, onClose, onSuccess, assetType
 
                 if (isValid) {
                     validRecords++;
-                    // Construir notas
-                    const notesParts = [];
-                    if (normalizedRow['DESCRIPCIÓN']) notesParts.push(`Desc: ${normalizedRow['DESCRIPCIÓN']}`);
-                    if (normalizedRow['COLOR']) notesParts.push(`Color: ${normalizedRow['COLOR']}`);
-                    if (normalizedRow['GAMA']) notesParts.push(`Gama: ${normalizedRow['GAMA']}`);
-                    if (normalizedRow['FECHA ADQUISICION']) notesParts.push(`Adquirido: ${normalizedRow['FECHA ADQUISICION']}`);
+                    // Construir notas para campos que no existen en la BD (solo si hay notas adicionales)
+                    const notesParts: string[] = [];
 
-                    processedRecords.push({
+                    // Crear objeto base del activo
+                    const assetRecord: any = {
                         asset_type_id: typeId,
                         location_id: locationId,
                         brand: normalizedRow['MARCA'] || 'Genérico',
                         model: normalizedRow['MODELO'] || 'Genérico',
-                        serial_number: normalizedRow['SERIE'] || normalizedRow['N° DE SERIE'] || '',
+                        serial_number: cleanField(normalizedRow['SERIE'] || normalizedRow['N° DE SERIE']),
                         status: status,
-                        notes: notesParts.join(' | ')
-                    });
+                        notes: notesParts.join(' | ') || null
+                    };
+
+                    // Agregar campos del Excel para TODOS los tipos de activos
+                    assetRecord.item = cleanField(normalizedRow['ITEM']);
+                    assetRecord.descripcion = cleanField(normalizedRow['DESCRIPCIÓN']);
+                    assetRecord.unidad_medida = cleanField(normalizedRow['UNIDAD DE MEDIDA'] || normalizedRow['UNIDAD_MEDIDA']);
+                    assetRecord.cantidad = parseInt(normalizedRow['CANT.'] || normalizedRow['CANTIDAD'] || '1') || 1;
+                    assetRecord.condicion = cleanField(normalizedRow['CONDICIÓN'] || normalizedRow['CONDICION']);
+                    assetRecord.color = cleanField(normalizedRow['COLOR']);
+                    assetRecord.gama = cleanField(normalizedRow['GAMA']);
+                    // Convertir fecha vacía a null
+                    assetRecord.fecha_adquisicion = parseDateField(normalizedRow['FECHA ADQUISICION'] || normalizedRow['FECHA_ADQUISICION']);
+                    const valorEstimado = parseFloat(normalizedRow['VALOR ESTIMADO'] || normalizedRow['VALOR_ESTIMADO'] || '0') || 0;
+                    assetRecord.valor_estimado = valorEstimado > 0 ? valorEstimado : null;
+                    assetRecord.estado_uso = cleanField(normalizedRow['ESTADO USO'] || normalizedRow['ESTADO_USO']);
+
+                    // Agregar campos específicos para PC/Laptop
+                    if (typeName === 'PC' || typeName === 'Laptop') {
+                        assetRecord.processor = cleanField(normalizedRow['PROCESADOR']);
+                        assetRecord.ram = cleanField(normalizedRow['RAM'] || normalizedRow['MEMORIA RAM']);
+                        assetRecord.operating_system = cleanField(normalizedRow['SISTEMA OPERATIVO'] || normalizedRow['SO']);
+                        assetRecord.bios_mode = cleanField(normalizedRow['MODO BIOS'] || normalizedRow['BIOS']);
+                        assetRecord.area = cleanField(normalizedRow['AREA']);
+                        assetRecord.placa = cleanField(normalizedRow['PLACA'] || normalizedRow['CODIGO PLACA']);
+                    }
+
+                    // Agregar campos específicos para Cámaras/DVR
+                    if (typeName === 'Cámara' || typeName === 'DVR') {
+                        assetRecord.name = cleanField(normalizedRow['NOMBRE'] || normalizedRow['NOMBRE DISPOSITIVO']);
+                        assetRecord.url = cleanField(normalizedRow['URL'] || normalizedRow['URL ACCESO']);
+                        assetRecord.username = cleanField(normalizedRow['USUARIO'] || normalizedRow['USUARIO ACCESO']);
+                        assetRecord.password = cleanField(normalizedRow['CONTRASEÑA'] || normalizedRow['PASSWORD']);
+                        assetRecord.port = cleanField(normalizedRow['PUERTO'] || normalizedRow['PORT']);
+                        assetRecord.access_type = cleanField(normalizedRow['TIPO ACCESO'] || normalizedRow['ACCESS TYPE']) || 'url';
+                        assetRecord.auth_code = cleanField(normalizedRow['CODIGO AUTENTICACION'] || normalizedRow['AUTH CODE']);
+                    }
+
+                    // Agregar campos específicos para Celulares
+                    if (typeName === 'Celular') {
+                        assetRecord.imei = cleanField(normalizedRow['IMEI']);
+                        assetRecord.operator = cleanField(normalizedRow['OPERADOR'] || normalizedRow['COMPANIA']);
+                        assetRecord.data_plan = cleanField(normalizedRow['PLAN DATOS'] || normalizedRow['PLAN DE DATOS']);
+                        assetRecord.physical_condition = cleanField(normalizedRow['ESTADO FISICO'] || normalizedRow['CONDICION FISICA']);
+                        assetRecord.sistema_operativo = cleanField(normalizedRow['SISTEMA OPERATIVO'] || normalizedRow['SO MOVIL']);
+                        assetRecord.version_so = cleanField(normalizedRow['VERSION SO'] || normalizedRow['VERSION SISTEMA']);
+                        assetRecord.almacenamiento = cleanField(normalizedRow['ALMACENAMIENTO'] || normalizedRow['MEMORIA INTERNA']);
+                        assetRecord.bateria_estado = cleanField(normalizedRow['ESTADO BATERIA'] || normalizedRow['BATERIA']);
+                        assetRecord.accesorios = cleanField(normalizedRow['ACCESORIOS']);
+                    }
+
+                    // Agregar campos específicos para Impresoras/Escáneres
+                    if (typeName === 'Impresora' || typeName === 'Escáner') {
+                        assetRecord.tipo_impresion = cleanField(normalizedRow['TIPO IMPRESION'] || normalizedRow['TIPO']);
+                        assetRecord.tecnologia_impresion = cleanField(normalizedRow['TECNOLOGIA'] || normalizedRow['TECNOLOGIA IMPRESION']);
+                        assetRecord.velocidad_impresion = parseInt(normalizedRow['VELOCIDAD'] || normalizedRow['VELOCIDAD IMPRESION'] || normalizedRow['PPM'] || '0') || null;
+                        assetRecord.resolucion = cleanField(normalizedRow['RESOLUCION'] || normalizedRow['DPI']);
+                    }
+
+                    // Agregar campos específicos para Monitores/Proyectores
+                    if (typeName === 'Monitor' || typeName === 'Proyector') {
+                        assetRecord.tamaño_pantalla = cleanField(normalizedRow['TAMAÑO PANTALLA'] || normalizedRow['TAMAÑO'] || normalizedRow['PULGADAS']);
+                        assetRecord.resolucion_pantalla = cleanField(normalizedRow['RESOLUCION PANTALLA'] || normalizedRow['RESOLUCION']);
+                        assetRecord.tipo_conexion = cleanField(normalizedRow['TIPO CONEXION'] || normalizedRow['CONECTOR'] || normalizedRow['CONEXION']);
+                        assetRecord.luminosidad = parseInt(normalizedRow['LUMINOSIDAD'] || normalizedRow['LUMENES'] || '0') || null;
+                    }
+
+                    processedRecords.push(assetRecord);
                 } else {
                     invalidRecords++;
                     if (!typeId) {
@@ -270,11 +428,52 @@ export default function ExcelImportModal({ isOpen, onClose, onSuccess, assetType
         ));
     };
 
+    // Función para asegurar que "Otros" existe en la BD
+    const ensureOtrosType = async (): Promise<string | null> => {
+        try {
+            // Buscar si "Otros" ya existe
+            const { data: existing } = await supabase
+                .from('asset_types')
+                .select('id')
+                .eq('name', 'Otros')
+                .single();
+
+            if (existing) return existing.id;
+
+            // Crear "Otros" si no existe
+            const { data: newType, error } = await supabase
+                .from('asset_types')
+                .insert([{ name: 'Otros' }])
+                .select()
+                .single();
+
+            if (error) {
+                // Si falla, podría ser porque ya existe (race condition)
+                const { data: retry } = await supabase
+                    .from('asset_types')
+                    .select('id')
+                    .eq('name', 'Otros')
+                    .single();
+                if (retry) return retry.id;
+                console.error('Error al crear tipo Otros:', error);
+                return null;
+            }
+
+            return newType?.id || null;
+        } catch (error) {
+            console.error('Error al verificar/crear tipo Otros:', error);
+            return null;
+        }
+    };
+
     const handleImport = async () => {
         if (!preview || !preview.processedRecords.length) return;
         setImporting(true);
 
         try {
+            // Asegurar que "Otros" existe antes de importar
+            await ensureOtrosType();
+            
             const batchSize = 50;
             const records = preview.processedRecords;
             for (let i = 0; i < records.length; i += batchSize) {
@@ -338,44 +537,33 @@ export default function ExcelImportModal({ isOpen, onClose, onSuccess, assetType
                     ) : (
                         <div className="space-y-6">
                             {/* File Info & Summary */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div className="md:col-span-4 flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-green-100 p-2 rounded-lg">
-                                            <FileSpreadsheet className="text-green-600" size={20} />
-                                        </div>
-                                        <span className="font-medium text-slate-800">{file.name}</span>
-                                    </div>
-                                    <button
-                                        onClick={() => setFile(null)}
-                                        className="text-slate-400 hover:text-red-500 text-sm font-medium"
-                                    >
-                                        Cambiar
-                                    </button>
-                                </div>
-
-                                {/* Stats Cards */}
-                                {preview && (
-                                    <>
-                                        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                                            <div className="text-2xl font-bold text-slate-800">{preview.totalSheets}</div>
-                                            <div className="text-xs text-slate-500 uppercase font-bold">Hojas detectadas</div>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                                            <div className="text-2xl font-bold text-blue-600">{preview.totalRecords}</div>
-                                            <div className="text-xs text-slate-500 uppercase font-bold">Total Registros</div>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm border-l-4 border-l-green-500">
-                                            <div className="text-2xl font-bold text-green-600">{preview.validRecords}</div>
-                                            <div className="text-xs text-slate-500 uppercase font-bold">Listos para importar</div>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm border-l-4 border-l-red-500">
-                                            <div className="text-2xl font-bold text-red-600">{preview.invalidRecords}</div>
-                                            <div className="text-xs text-slate-500 uppercase font-bold">Inválidos / Sin Sede</div>
-                                        </div>
-                                    </>
-                                )}
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <p className="text-sm text-green-700 font-medium text-center">
+                                    ✅ Archivo seleccionado: {file.name}
+                                </p>
                             </div>
+
+                            {/* Stats Cards */}
+                            {preview && (
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                                        <div className="text-2xl font-bold text-slate-800">{preview.totalSheets}</div>
+                                        <div className="text-xs text-slate-500 uppercase font-bold">Hojas detectadas</div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                                        <div className="text-2xl font-bold text-blue-600">{preview.totalRecords}</div>
+                                        <div className="text-xs text-slate-500 uppercase font-bold">Total Registros</div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm border-l-4 border-l-green-500">
+                                        <div className="text-2xl font-bold text-green-600">{preview.validRecords}</div>
+                                        <div className="text-xs text-slate-500 uppercase font-bold">Listos para importar</div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm border-l-4 border-l-red-500">
+                                        <div className="text-2xl font-bold text-red-600">{preview.invalidRecords}</div>
+                                        <div className="text-xs text-slate-500 uppercase font-bold">Inválidos / Sin Sede</div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* MAPPING TABLE */}
                             <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
@@ -453,6 +641,64 @@ export default function ExcelImportModal({ isOpen, onClose, onSuccess, assetType
                                 </div>
                             </div>
 
+                            {/* Maquinaria Fields Help */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div className="flex items-start gap-3">
+                                    <AlertCircle size={20} className="text-blue-600 mt-0.5" />
+                                    <div>
+                                        <h5 className="font-bold text-blue-800 text-sm mb-2">Campos para Maquinaria</h5>
+                                        <p className="text-blue-700 text-xs mb-3">Para importar maquinarias, tu Excel debe incluir estas columnas:</p>
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">ITEM</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">DESCRIPCIÓN</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">UNIDAD DE MEDIDA</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">CANT.</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">CONDICIÓN</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">TIPO DE ACTIVO</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">UBICACIÓN DEL ACTIVO</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">COLOR</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">SERIE</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">GAMA</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">MODELO</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">MARCA</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">FECHA ADQUISICIÓN</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">VALOR ESTIMADO</span>
+                                            </div>
+                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
+                                                <span className="font-medium">ESTADO USO</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Validation Errors */}
                             {preview && preview.errors.length > 0 && (
                                 <div className="bg-red-50 border border-red-100 rounded-lg p-4">
@@ -512,4 +758,6 @@ export default function ExcelImportModal({ isOpen, onClose, onSuccess, assetType
             </div>
         </div>
     );
-}
+};
+
+export default ExcelImportModal;

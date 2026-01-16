@@ -93,6 +93,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
         'inventory-proyector', 'inventory-switch', 'inventory-chip', 'inventory-tinte',
         'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
+        'inventory-maquinaria', 'inventory-otros',
         'spare-parts',
         // Submenús de cámaras
         'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
@@ -113,6 +114,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
         'inventory-proyector', 'inventory-switch', 'inventory-chip', 'inventory-tinte',
         'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
+        'inventory-maquinaria', 'inventory-otros',
         // Submenús de cámaras
         'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
         // Submenús de mantenimiento
@@ -132,6 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
         'inventory-proyector', 'inventory-switch', 'inventory-chip', 'inventory-tinte',
         'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
+        'inventory-maquinaria', 'inventory-otros',
         // Submenús de cámaras
         'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
         // Submenús de mantenimiento

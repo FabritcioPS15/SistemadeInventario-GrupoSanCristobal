@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { supabase, Camera, Location } from '../lib/supabase';
@@ -26,6 +26,7 @@ export default function Cameras({ subview }: CamerasProps) {
   const [filterLocation, setFilterLocation] = useState('todos');
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterStorage, setFilterStorage] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     (async () => {
@@ -286,6 +287,22 @@ export default function Cameras({ subview }: CamerasProps) {
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex-1 sm:flex-none p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              title="Vista Cuadrícula"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex-1 sm:flex-none p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              title="Vista Listado"
+            >
+              <List size={16} />
+            </button>
+          </div>
           {canEdit() && (
             <>
               <button
@@ -376,7 +393,7 @@ export default function Cameras({ subview }: CamerasProps) {
           <div className="flex items-center justify-center min-h-[50vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
           </div>
-        ) : (
+        ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4">
             {filtered.map((cam) => (
               <div key={cam.id} className="group bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all duration-200 overflow-hidden">
@@ -629,6 +646,115 @@ export default function Cameras({ subview }: CamerasProps) {
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Nombre</th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Sede</th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Modelo</th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">IP</th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Estado</th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Acceso</th>
+                    <th scope="col" className="relative px-6 py-4">
+                      <span className="sr-only">Acciones</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {filtered.map((cam) => (
+                    <tr key={cam.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className={`${cam.status === 'active' ? 'bg-green-500 text-white' :
+                            cam.status === 'maintenance' ? 'bg-yellow-500 text-white' :
+                              'bg-gray-400 text-white'} rounded-lg p-2`}>
+                            <GiCctvCamera size={18} />
+                          </div>
+                          <div>
+                            <div className="text-sm font-bold text-gray-900 leading-tight">{cam.name}</div>
+                            {typeof cam.display_count !== 'undefined' && cam.display_count !== null && (
+                              <span className="text-xs text-gray-500">Cámaras: {cam.display_count}</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {(cam as any).locations ? (
+                          <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                            <MapPin size={14} className="text-red-500" />
+                            <span>{(cam as any).locations.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {(cam.brand || cam.model) ? (
+                          <span className="text-sm font-mono font-bold text-gray-800">{cam.brand || ''} {cam.model || ''}</span>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {cam.ip_address ? (
+                          <span className="text-sm font-mono font-bold text-blue-600">{cam.ip_address}</span>
+                        ) : (
+                          <span className="text-sm text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-3 py-1.5 text-xs rounded-full font-bold shadow-sm ${cam.status === 'active' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                          cam.status === 'maintenance' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                            'bg-slate-100 text-slate-800 border border-slate-200'
+                          }`}>
+                          {cam.status === 'active' ? '✓ Activo' : cam.status === 'maintenance' ? '⚠ Mantenimiento' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {cam.access_type && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold shadow-sm bg-gray-100 text-gray-600 border border-gray-200">
+                            {humanAccess(cam.access_type)}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleView(cam)}
+                            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+                            title="Ver detalles"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          {canEdit() && (
+                            <>
+                              <button
+                                onClick={() => openEdit(cam)}
+                                className="p-2 text-slate-600 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+                                title="Editar"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                onClick={() => del(cam)}
+                                className="p-2 text-rose-500 hover:text-white hover:bg-rose-500 rounded-lg transition-all"
+                                title="Eliminar"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )
       }

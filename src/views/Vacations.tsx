@@ -2,9 +2,9 @@ import { Calendar } from 'lucide-react';
 
 export default function Vacations() {
     return (
-        <div className="p-6">
+        <div className="w-full px-4 py-8">
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-slate-800">Vacaciones</h1>
+                <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">Vacaciones</h2>
                 <p className="text-slate-600">Gestión de vacaciones y ausencias del personal</p>
             </div>
 

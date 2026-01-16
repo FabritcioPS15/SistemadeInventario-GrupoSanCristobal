@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, Building, Users, Package, Eye, X, FileText, ExternalLink } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MapPin, Building, Users, Package, Eye, X, FileText, ExternalLink, LayoutGrid, List } from 'lucide-react';
 import { supabase, Location } from '../lib/supabase';
 import LocationForm from '../components/forms/LocationForm';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +14,7 @@ export default function Sedes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [cameraCounts, setCameraCounts] = useState<Record<string, number>>({});
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     fetchData();
@@ -205,6 +206,22 @@ export default function Sedes() {
             <Building size={14} />
             Probar Conexión
           </button>
+          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex-1 sm:flex-none p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              title="Vista Cuadrícula"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex-1 sm:flex-none p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              title="Vista Listado"
+            >
+              <List size={16} />
+            </button>
+          </div>
           {canEdit() && (
             <button
               onClick={() => {
@@ -327,7 +344,7 @@ export default function Sedes() {
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredLocations.map(location => (
             <div key={location.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400/50 transition-all duration-300 flex flex-col group overflow-hidden">
@@ -403,6 +420,94 @@ export default function Sedes() {
               </div>
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Nombre</th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Tipo</th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Dirección</th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Cámaras</th>
+                  <th scope="col" className="relative px-6 py-4">
+                    <span className="sr-only">Acciones</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {filteredLocations.map(location => (
+                  <tr key={location.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <MapPin className={`h-5 w-5 ${location.type === 'circuito' ? 'text-rose-500' : 'text-blue-500'}`} />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-900 leading-tight">{location.name}</div>
+                          {location.notes && (
+                            <div className="text-xs text-gray-500 line-clamp-1 mt-0.5 italic">{location.notes}</div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${typeColors[location.type as keyof typeof typeColors] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                        {typeLabels[location.type as keyof typeof typeLabels] || location.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {location.address ? (
+                        <div className="text-sm text-gray-700 max-w-xs truncate">{location.address}</div>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm font-bold text-gray-900">{cameraCounts[location.id] || 0}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleViewLocation(location)}
+                          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+                          title="Ver detalles"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {canEdit() && (
+                          <>
+                            <button
+                              onClick={() => handleEditLocation(location)}
+                              className="p-2 text-slate-600 hover:text-white hover:bg-blue-600 rounded-lg transition-all"
+                              title="Editar"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLocation(location)}
+                              className={`p-2 rounded-lg transition-all border ${
+                                cameraCounts[location.id] > 0
+                                  ? 'text-orange-500 border-orange-100 hover:bg-orange-500 hover:text-white'
+                                  : 'text-rose-500 border-rose-100 hover:bg-rose-500 hover:text-white'
+                              }`}
+                              title={cameraCounts[location.id] > 0 ? 'Eliminar sede y sus cámaras asociadas' : 'Eliminar sede'}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

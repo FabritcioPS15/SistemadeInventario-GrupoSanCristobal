@@ -53,6 +53,58 @@ export type Asset = {
   image_url?: string;
   created_at: string;
   updated_at: string;
+  
+  // Campos adicionales para maquinarias
+  item?: string;
+  descripcion?: string;
+  unidad_medida?: string;
+  cantidad?: number;
+  condicion?: string;
+  color?: string;
+  gama?: string;
+  fecha_adquisicion?: string;
+  valor_estimado?: number;
+  estado_uso?: string;
+  
+  // Campos adicionales para PC/Laptop
+  processor?: string;
+  ram?: string;
+  operating_system?: string;
+  bios_mode?: string;
+  area?: string;
+  placa?: string;
+  
+  // Campos adicionales para Cámaras
+  name?: string;
+  url?: string;
+  username?: string;
+  password?: string;
+  port?: string;
+  access_type?: 'url' | 'ivms' | 'esviz';
+  auth_code?: string;
+  
+  // Campos adicionales para Celulares
+  imei?: string;
+  operator?: string;
+  data_plan?: string;
+  physical_condition?: string;
+  sistema_operativo?: string;
+  version_so?: string;
+  almacenamiento?: string;
+  bateria_estado?: string;
+  accesorios?: string;
+  
+  // Campos adicionales para Impresoras/Escáneres
+  tipo_impresion?: string;
+  tecnologia_impresion?: string;
+  velocidad_impresion?: string;
+  resolucion?: string;
+  
+  // Campos adicionales para Monitores/Proyectores
+  tamaño_pantalla?: string;
+  resolucion_pantalla?: string;
+  tipo_conexion?: string;
+  luminosidad?: string;
 };
 
 export type AssetWithDetails = Asset & {

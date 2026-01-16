@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download, Upload } from 'lucide-react';
+import { Plus, Search, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download, Upload, Package } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { supabase, AssetWithDetails, Location, AssetType } from '../lib/supabase';
@@ -7,6 +7,7 @@ import AssetForm from '../components/forms/AssetForm';
 import AssetDetails from '../components/AssetDetails';
 import PCForm from '../components/forms/PCForm';
 import ExcelImportModal from '../components/ExcelImportModal';
+import Pagination from '../components/Pagination';
 import { useAuth } from '../contexts/AuthContext';
 
 type InventoryProps = {
@@ -33,6 +34,10 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+
+  // Estados para paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Calcular estadísticas
   const stats = useMemo(() => {
@@ -82,7 +87,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedIds(new Set(filteredAssets.map(a => a.id)));
+      setSelectedIds(new Set(paginatedAssets.map(a => a.id)));
     } else {
       setSelectedIds(new Set());
     }
@@ -275,6 +280,8 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       'inventory-ram': 'Memoria RAM',
       'inventory-disco': 'Disco de Almacenamiento',
       'inventory-disco-extraido': 'Disco Extraído',
+      'inventory-maquinaria': 'Maquinaria',
+      'inventory-otros': 'Otros',
     };
 
     return categoryMap[filter] || '';
@@ -309,6 +316,30 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
     });
   }, [assets, searchTerm, categoryFilter, filterLocation, filterStatus]);
 
+  // Lógica de paginación
+  const paginatedAssets = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredAssets.slice(startIndex, endIndex);
+  }, [filteredAssets, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterLocation, filterStatus, categoryFilter]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
   // Mapeo de iconos para cada tipo de activo
   const getIconForType = (typeName: string) => {
     const iconMap: Record<string, any> = {
@@ -328,6 +359,8 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       'Memoria RAM': MemoryStick,
       'Disco de Almacenamiento': Database,
       'Disco Extraído': HardDriveIcon,
+      'Maquinaria': HardDrive,
+      'Otros': Package,
     };
 
     return iconMap[typeName] || Monitor;
@@ -630,17 +663,13 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
             <button
               onClick={() => {
                 setSelectedAsset(undefined);
-                if (categoryFilter === 'inventory-pc') {
-                  setEditingPC(undefined);
-                  setShowPCForm(true);
-                } else {
-                  setShowAssetForm(true);
-                }
+                setEditingAsset(undefined);
+                setShowAssetForm(true);
               }}
               className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
             >
               <Plus size={14} />
-              {categoryFilter === 'inventory-pc' ? 'Nueva PC/Laptop' : 'Nuevo Activo'}
+              {categoryFilter ? `Nuevo ${getCategoryFromFilter(categoryFilter)}` : 'Nuevo Activo'}
             </button>
           )}
         </div>
@@ -720,10 +749,25 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
               <option value="inactive">Inactivo</option>
               <option value="maintenance">Mantenimiento</option>
               <option value="extracted">Extraído</option>
+              <option value="new">Nuevo</option>
+              <option value="pending">Pendiente</option>
+              <option value="disponible">Disponible</option>
             </select>
           </div>
         </div>
       </div>
+
+      {/* Pagination */}
+      {filteredAssets.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filteredAssets.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+        />
+      )}
 
       {/* Table View */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -743,7 +787,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
                         type="checkbox"
                         className="w-5 h-5 rounded border-2 border-slate-300 cursor-pointer text-blue-600 focus:ring-blue-500"
                         onChange={handleSelectAll}
-                        checked={filteredAssets.length > 0 && selectedIds.size === filteredAssets.length}
+                        checked={paginatedAssets.length > 0 && selectedIds.size === paginatedAssets.length}
                       />
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Tipo</th>
@@ -755,8 +799,8 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {filteredAssets.length > 0 ? (
-                    filteredAssets.map((asset) => {
+                  {paginatedAssets.length > 0 ? (
+                    paginatedAssets.map((asset) => {
                       const Icon = getIconForType(asset.asset_types?.name || '');
                       const isSelected = selectedIds.has(asset.id);
                       return (
@@ -855,8 +899,8 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
 
             {/* Mobile Card View */}
             <div className="lg:hidden divide-y divide-slate-100">
-              {filteredAssets.length > 0 ? (
-                filteredAssets.map((asset) => {
+              {paginatedAssets.length > 0 ? (
+                paginatedAssets.map((asset) => {
                   const Icon = getIconForType(asset.asset_types?.name || '');
                   return (
                     <div key={asset.id} className="p-5 hover:bg-slate-50 transition-colors">

@@ -30,6 +30,58 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     status: editAsset?.status || 'active',
     notes: editAsset?.notes || '',
     image_url: editAsset?.image_url || '',
+    
+    // Campos adicionales para maquinarias
+    item: editAsset?.item || '',
+    descripcion: editAsset?.descripcion || '',
+    unidad_medida: editAsset?.unidad_medida || '',
+    cantidad: editAsset?.cantidad?.toString() || '1',
+    condicion: editAsset?.condicion || '',
+    color: editAsset?.color || '',
+    gama: editAsset?.gama || '',
+    fecha_adquisicion: editAsset?.fecha_adquisicion || '',
+    valor_estimado: editAsset?.valor_estimado || '',
+    estado_uso: editAsset?.estado_uso || '',
+    
+    // Campos adicionales para PC/Laptop
+    processor: editAsset?.processor || '',
+    ram: editAsset?.ram || '',
+    operating_system: editAsset?.operating_system || '',
+    bios_mode: editAsset?.bios_mode || '',
+    area: editAsset?.area || '',
+    placa: editAsset?.placa || '',
+    
+    // Campos adicionales para Cámaras
+    name: editAsset?.name || '',
+    url: editAsset?.url || '',
+    username: editAsset?.username || '',
+    password: editAsset?.password || '',
+    port: editAsset?.port || '',
+    access_type: editAsset?.access_type || 'url',
+    auth_code: editAsset?.auth_code || '',
+    
+    // Campos adicionales para Celulares
+    imei: editAsset?.imei || '',
+    operator: editAsset?.operator || '',
+    data_plan: editAsset?.data_plan || '',
+    physical_condition: editAsset?.physical_condition || '',
+    sistema_operativo: editAsset?.sistema_operativo || '',
+    version_so: editAsset?.version_so || '',
+    almacenamiento: editAsset?.almacenamiento || '',
+    bateria_estado: editAsset?.bateria_estado || '',
+    accesorios: editAsset?.accesorios || '',
+    
+    // Campos adicionales para Impresoras/Escáneres
+    tipo_impresion: editAsset?.tipo_impresion || '',
+    tecnologia_impresion: editAsset?.tecnologia_impresion || '',
+    velocidad_impresion: editAsset?.velocidad_impresion || '',
+    resolucion: editAsset?.resolucion || '',
+    
+    // Campos adicionales para Monitores/Proyectores
+    tamaño_pantalla: editAsset?.tamaño_pantalla || '',
+    resolucion_pantalla: editAsset?.resolucion_pantalla || '',
+    tipo_conexion: editAsset?.tipo_conexion || '',
+    luminosidad: editAsset?.luminosidad || '',
   });
 
   const [tinteTipo, setTinteTipo] = useState<string>('');
@@ -94,7 +146,36 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
       .from('asset_types')
       .select('*')
       .order('name');
-    if (data) setAssetTypes(data);
+    
+    if (data) {
+      // Asegurar que 'Maquinaria' esté disponible
+      const hasMaquinaria = data.some(type => type.name === 'Maquinaria');
+      const hasOtros = data.some(type => type.name === 'Otros');
+      
+      let tempTypes = [...data];
+      
+      if (!hasMaquinaria) {
+        // Agregar 'Maquinaria' temporalmente si no existe en la BD
+        const maquinariaType = {
+          id: 'temp-maquinaria-id',
+          name: 'Maquinaria',
+          created_at: new Date().toISOString()
+        };
+        tempTypes.push(maquinariaType);
+      }
+      
+      if (!hasOtros) {
+        // Agregar 'Otros' temporalmente si no existe en la BD
+        const otrosType = {
+          id: 'temp-otros-id',
+          name: 'Otros',
+          created_at: new Date().toISOString()
+        };
+        tempTypes.push(otrosType);
+      }
+      
+      setAssetTypes(tempTypes);
+    }
   };
 
   const fetchLocations = async () => {
@@ -258,14 +339,75 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     console.log('Enviando formulario:', { editAsset, formData });
 
     let mergedNotes = formData.notes;
-    if ((assetTypes.find(t => t.id === formData.asset_type_id)?.name || '') === 'Tinte') {
+    const selectedAssetType = assetTypes.find(t => t.id === formData.asset_type_id);
+    const selectedTypeName = selectedAssetType?.name || '';
+    
+    if (selectedTypeName === 'Tinte') {
       if (tinteTipo && !mergedNotes.includes('Tipo:')) {
         mergedNotes = (mergedNotes ? mergedNotes + '\n' : '') + `Tipo: ${tinteTipo}`;
       }
     }
 
+    // Manejar el caso de Maquinaria con ID temporal
+    let finalAssetTypeId = formData.asset_type_id;
+    if (selectedTypeName === 'Maquinaria' && formData.asset_type_id === 'temp-maquinaria-id') {
+      // Buscar o crear el tipo de activo Maquinaria en la BD
+      try {
+        const { data: existingType } = await supabase
+          .from('asset_types')
+          .select('id')
+          .eq('name', 'Maquinaria')
+          .single();
+        
+        if (existingType) {
+          finalAssetTypeId = existingType.id;
+        } else {
+          // Crear el tipo de activo Maquinaria
+          const { data: newType } = await supabase
+            .from('asset_types')
+            .insert([{ name: 'Maquinaria' }])
+            .select()
+            .single();
+          if (newType) {
+            finalAssetTypeId = newType.id;
+          }
+        }
+      } catch (error) {
+        console.error('Error al manejar tipo Maquinaria:', error);
+      }
+    }
+
+    // Manejar el caso de Otros con ID temporal
+    if (selectedTypeName === 'Otros' && formData.asset_type_id === 'temp-otros-id') {
+      // Buscar o crear el tipo de activo Otros en la BD
+      try {
+        const { data: existingType } = await supabase
+          .from('asset_types')
+          .select('id')
+          .eq('name', 'Otros')
+          .single();
+        
+        if (existingType) {
+          finalAssetTypeId = existingType.id;
+        } else {
+          // Crear el tipo de activo Otros
+          const { data: newType } = await supabase
+            .from('asset_types')
+            .insert([{ name: 'Otros' }])
+            .select()
+            .single();
+          if (newType) {
+            finalAssetTypeId = newType.id;
+          }
+        }
+      } catch (error) {
+        console.error('Error al manejar tipo Otros:', error);
+      }
+    }
+
     const dataToSave = {
       ...formData,
+      asset_type_id: finalAssetTypeId,
       location_id: formData.location_id || null,
       notes: mergedNotes,
       updated_at: new Date().toISOString(),
@@ -397,6 +539,16 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
   const isRam = selectedTypeName === 'Memoria RAM';
   const isDisk = selectedTypeName === 'Disco de Almacenamiento' || selectedTypeName === 'Disco Extraído';
   const isTinte = selectedTypeName === 'Tinte';
+  const isMaquinaria = selectedTypeName === 'Maquinaria';
+  const isCamera = selectedTypeName === 'Cámara';
+  const isDVR = selectedTypeName === 'DVR';
+  const isCelular = selectedTypeName === 'Celular';
+  const isImpresora = selectedTypeName === 'Impresora';
+  const isScanner = selectedTypeName === 'Escáner';
+  const isMonitor = selectedTypeName === 'Monitor';
+  const isProyector = selectedTypeName === 'Proyector';
+  const isSwitch = selectedTypeName === 'Switch';
+  const isFuente = selectedTypeName === 'Fuente de Poder';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -681,8 +833,646 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
                 />
               </div>
             )}
-          </div>
 
+            {/* Campos del Excel - Disponibles para TODOS los tipos de activos */}
+            <div className="col-span-2 border-t pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Información General del Activo</h3>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ITEM
+              </label>
+              <input
+                type="text"
+                name="item"
+                value={formData.item}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                DESCRIPCIÓN
+              </label>
+              <textarea
+                name="descripcion"
+                value={formData.descripcion}
+                onChange={handleChange}
+                rows={2}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                UNIDAD DE MEDIDA
+              </label>
+              <input
+                type="text"
+                name="unidad_medida"
+                value={formData.unidad_medida}
+                onChange={handleChange}
+                placeholder="ej: Unidad, Kit, Set, etc."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                CANT.
+              </label>
+              <input
+                type="number"
+                name="cantidad"
+                value={formData.cantidad}
+                onChange={handleChange}
+                min={1}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                CONDICIÓN
+              </label>
+              <select
+                name="condicion"
+                value={formData.condicion}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Seleccionar...</option>
+                <option value="Nuevo">Nuevo</option>
+                <option value="Usado - Excelente">Usado - Excelente</option>
+                <option value="Usado - Bueno">Usado - Bueno</option>
+                <option value="Usado - Regular">Usado - Regular</option>
+                <option value="Para Reparación">Para Reparación</option>
+                <option value="Dañado">Dañado</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                COLOR
+              </label>
+              <input
+                type="text"
+                name="color"
+                value={formData.color}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                GAMA
+              </label>
+              <input
+                type="text"
+                name="gama"
+                value={formData.gama}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                FECHA ADQUISICIÓN
+              </label>
+              <input
+                type="date"
+                name="fecha_adquisicion"
+                value={formData.fecha_adquisicion}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                VALOR ESTIMADO
+              </label>
+              <input
+                type="number"
+                name="valor_estimado"
+                value={formData.valor_estimado}
+                onChange={handleChange}
+                step="0.01"
+                min={0}
+                placeholder="0.00"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                ESTADO USO
+              </label>
+              <select
+                name="estado_uso"
+                value={formData.estado_uso}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Seleccionar...</option>
+                <option value="Operativo">Operativo</option>
+                <option value="En Mantenimiento">En Mantenimiento</option>
+                <option value="Fuera de Servicio">Fuera de Servicio</option>
+                <option value="En Reparación">En Reparación</option>
+                <option value="Standby">Standby</option>
+              </select>
+            </div>
+
+            {/* Campos adicionales para PC/Laptop */}
+            {isPCOrLaptop && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Procesador
+                  </label>
+                  <input
+                    type="text"
+                    name="processor"
+                    value={formData.processor}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ej: Intel i5, AMD Ryzen 5"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Memoria RAM
+                  </label>
+                  <input
+                    type="text"
+                    name="ram"
+                    value={formData.ram}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ej: 8GB DDR4"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sistema Operativo
+                  </label>
+                  <select
+                    name="operating_system"
+                    value={formData.operating_system}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Windows 10">Windows 10</option>
+                    <option value="Windows 11">Windows 11</option>
+                    <option value="Windows Server">Windows Server</option>
+                    <option value="Linux">Linux</option>
+                    <option value="macOS">macOS</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Modo BIOS
+                  </label>
+                  <select
+                    name="bios_mode"
+                    value={formData.bios_mode}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="UEFI">UEFI</option>
+                    <option value="Legacy">Legacy</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Área
+                  </label>
+                  <input
+                    type="text"
+                    name="area"
+                    value={formData.area}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ej: Administración, Contabilidad"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Placa
+                  </label>
+                  <input
+                    type="text"
+                    name="placa"
+                    value={formData.placa}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Código de placa"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Campos adicionales para Cámaras */}
+            {(isCamera || isDVR) && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre del Dispositivo
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Nombre de la cámara/DVR"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    URL de Acceso
+                  </label>
+                  <input
+                    type="text"
+                    name="url"
+                    value={formData.url}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="http://192.168.1.100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Usuario
+                  </label>
+                  <input
+                    type="text"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Usuario de acceso"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Contraseña
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Contraseña de acceso"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Puerto
+                  </label>
+                  <input
+                    type="text"
+                    name="port"
+                    value={formData.port}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ej: 80, 554"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Acceso
+                  </label>
+                  <select
+                    name="access_type"
+                    value={formData.access_type}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="url">URL Directa</option>
+                    <option value="ivms">IVMS</option>
+                    <option value="esviz">ESVIZ</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Código de Autenticación
+                  </label>
+                  <input
+                    type="text"
+                    name="auth_code"
+                    value={formData.auth_code}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Código de autenticación"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Campos adicionales para Celulares */}
+            {isCelular && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    IMEI
+                  </label>
+                  <input
+                    type="text"
+                    name="imei"
+                    value={formData.imei}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="IMEI del dispositivo"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Operador
+                  </label>
+                  <select
+                    name="operator"
+                    value={formData.operator}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Claro">Claro</option>
+                    <option value="Movistar">Movistar</option>
+                    <option value="Entel">Entel</option>
+                    <option value="Bitel">Bitel</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Plan de Datos
+                  </label>
+                  <input
+                    type="text"
+                    name="data_plan"
+                    value={formData.data_plan}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ej: 10GB, Ilimitado"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Estado Físico
+                  </label>
+                  <select
+                    name="physical_condition"
+                    value={formData.physical_condition}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Excelente">Excelente</option>
+                    <option value="Bueno">Bueno</option>
+                    <option value="Regular">Regular</option>
+                    <option value="Dañado">Dañado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sistema Operativo
+                  </label>
+                  <select
+                    name="sistema_operativo"
+                    value={formData.sistema_operativo}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Android">Android</option>
+                    <option value="iOS">iOS</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Versión SO
+                  </label>
+                  <input
+                    type="text"
+                    name="version_so"
+                    value={formData.version_so}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ej: Android 13, iOS 16"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Almacenamiento
+                  </label>
+                  <input
+                    type="text"
+                    name="almacenamiento"
+                    value={formData.almacenamiento}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ej: 128GB, 256GB"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Estado Batería
+                  </label>
+                  <select
+                    name="bateria_estado"
+                    value={formData.bateria_estado}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Excelente">Excelente (&gt;80%)</option>
+                    <option value="Bueno">Bueno (60-80%)</option>
+                    <option value="Regular">Regular (40-60%)</option>
+                    <option value="Malo">Malo (&lt;40%)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Accesorios
+                  </label>
+                  <textarea
+                    name="accesorios"
+                    value={formData.accesorios}
+                    onChange={handleChange}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Cargador, audífonos, funda, etc."
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Campos adicionales para Impresoras/Escáneres */}
+            {(isImpresora || isScanner) && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Impresión
+                  </label>
+                  <select
+                    name="tipo_impresion"
+                    value={formData.tipo_impresion}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Láser">Láser</option>
+                    <option value="Inyección">Inyección de Tinta</option>
+                    <option value="Térmica">Térmica</option>
+                    <option value="Matricial">Matricial</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tecnología
+                  </label>
+                  <select
+                    name="tecnologia_impresion"
+                    value={formData.tecnologia_impresion}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="Monocromo">Monocromo</option>
+                    <option value="Color">Color</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Velocidad (ppm)
+                  </label>
+                  <input
+                    type="number"
+                    name="velocidad_impresion"
+                    value={formData.velocidad_impresion}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Páginas por minuto"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Resolución (dpi)
+                  </label>
+                  <input
+                    type="text"
+                    name="resolucion"
+                    value={formData.resolucion}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ej: 600x600, 1200x1200"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Campos adicionales para Monitores/Proyectores */}
+            {(isMonitor || isProyector) && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tamaño de Pantalla
+                  </label>
+                  <input
+                    type="text"
+                    name="tamaño_pantalla"
+                    value={formData.tamaño_pantalla}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ej: 24 pulgadas, 55 pulgadas"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Resolución de Pantalla
+                  </label>
+                  <select
+                    name="resolucion_pantalla"
+                    value={formData.resolucion_pantalla}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="HD (1366x768)">HD (1366x768)</option>
+                    <option value="Full HD (1920x1080)">Full HD (1920x1080)</option>
+                    <option value="2K (2560x1440)">2K (2560x1440)</option>
+                    <option value="4K (3840x2160)">4K (3840x2160)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Conexión
+                  </label>
+                  <select
+                    name="tipo_conexion"
+                    value={formData.tipo_conexion}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar...</option>
+                    <option value="VGA">VGA</option>
+                    <option value="HDMI">HDMI</option>
+                    <option value="DisplayPort">DisplayPort</option>
+                    <option value="USB-C">USB-C</option>
+                    <option value="Inalámbrico">Inalámbrico</option>
+                  </select>
+                </div>
+
+                {isProyector && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Luminosidad (lúmenes)
+                    </label>
+                    <input
+                      type="number"
+                      name="luminosidad"
+                      value={formData.luminosidad}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="ej: 3000, 5000"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">

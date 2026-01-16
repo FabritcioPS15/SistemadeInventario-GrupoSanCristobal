@@ -175,52 +175,44 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
   };
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-2">
-            Gestión de Envíos
-            {!locationFilter && <span className="ml-3 text-lg font-medium text-slate-400 normal-case">(General)</span>}
-            {locationFilter === 'sent-lima' && (
-              <span className="ml-3 text-lg font-medium text-orange-600 normal-case">(Lima)</span>
-            )}
-            {locationFilter === 'sent-provincias' && (
-              <span className="ml-3 text-lg font-medium text-orange-600 normal-case">(Provincias)</span>
-            )}
-          </h2>
-          <p className="text-slate-500 font-medium">Control y seguimiento de activos entre sedes</p>
+    <div className="w-full px-4 py-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
+        <div className="text-left">
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">Gestión de Envíos</h2>
+          <p className="text-slate-500 text-sm font-medium">Control y seguimiento de activos entre sedes</p>
         </div>
 
-        {canEdit() && (
-          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 self-start md:self-auto">
-            <button
-              onClick={() => {
-                setView('list');
-                setEditingShipment(undefined);
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all ${view === 'list'
-                ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5'
-                : 'text-slate-500 hover:text-slate-700'
-                }`}
-            >
-              <LayoutList size={16} />
-              LISTADO
-            </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          <button
+            onClick={() => {
+              setView('list');
+              setEditingShipment(undefined);
+            }}
+            className={`flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm ${view === 'list'
+              ? 'bg-slate-800 text-white hover:bg-slate-900'
+              : ''
+              }`}
+          >
+            <LayoutList size={14} />
+            Listado
+          </button>
+
+          {canEdit() && (
             <button
               onClick={() => {
                 setView('form');
                 setEditingShipment(undefined);
               }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md text-xs font-bold transition-all ${view === 'form'
-                ? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5'
-                : 'text-slate-500 hover:text-slate-700'
+              className={`flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm ${view === 'form'
+                ? 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                : ''
                 }`}
             >
-              <FileText size={16} />
+              <FileText size={14} />
               {editingShipment ? 'EDICIÓN' : 'NUEVO ENVÍO'}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {view === 'list' ? (

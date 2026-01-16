@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, X, Eye, EyeOff, Globe, Activity, Database, Server as ServerLucide } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MapPin, X, Eye, EyeOff, Globe, Activity, Database, Server as ServerLucide, LayoutGrid, List } from 'lucide-react';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 import { supabase, Server, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +30,7 @@ export default function Servers() {
   });
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [viewingServer, setViewingServer] = useState<Server | undefined>();
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -149,19 +150,36 @@ export default function Servers() {
   });
 
   return (
-    <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="w-full px-4 py-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Servidores</h2>
-          <p className="text-gray-600">Gestión de infraestructura, accesos remotos y servicios centrales</p>
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">Servidores</h2>
+          <p className="text-slate-500 text-sm font-medium">Gestión de infraestructura, accesos remotos y servicios centrales</p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex-1 sm:flex-none p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              title="Vista Cuadrícula"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex-1 sm:flex-none p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              title="Vista Listado"
+            >
+              <List size={16} />
+            </button>
+          </div>
           {canEdit() && (
             <button
               onClick={openCreate}
-              className="flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all font-bold text-[11px] uppercase tracking-wider shadow-lg shadow-slate-200 active:transform active:scale-95"
+              className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
             >
-              <Plus size={16} />
+              <Plus size={14} />
               Nuevo Servidor
             </button>
           )}
@@ -231,7 +249,7 @@ export default function Servers() {
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
         </div>
-      ) : (
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map(srv => (
             <div key={srv.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400/50 transition-all duration-300 flex flex-col group overflow-hidden">
@@ -300,6 +318,91 @@ export default function Servers() {
               </div>
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Nombre</th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Sede</th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">IP</th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">AnyDesk</th>
+                  <th scope="col" className="relative px-6 py-4">
+                    <span className="sr-only">Acciones</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {filtered.map(srv => (
+                  <tr key={srv.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-gray-50 rounded-lg p-2">
+                          <ServerIcon size={18} className="text-gray-600" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-bold text-gray-900 uppercase tracking-tight">{srv.name}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {srv.locations && (
+                        <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                          <MapPin size={14} className="text-blue-500" />
+                          <span>{srv.locations.name}</span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {srv.ip_address ? (
+                        <span className="text-sm font-mono font-bold text-blue-900">{srv.ip_address}</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {srv.anydesk_id ? (
+                        <span className="text-sm font-mono font-bold text-emerald-900">{srv.anydesk_id}</span>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setViewingServer(srv)}
+                          className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+                          title="Ver detalles"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {canEdit() && (
+                          <>
+                            <button
+                              onClick={() => openEdit(srv)}
+                              className="p-2 text-slate-600 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
+                              title="Editar"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => del(srv)}
+                              className="p-2 text-rose-500 hover:text-white hover:bg-rose-500 rounded-lg transition-all"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
