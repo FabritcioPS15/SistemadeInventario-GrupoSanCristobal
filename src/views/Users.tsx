@@ -33,7 +33,7 @@ export default function Users() {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [copiedItems, setCopiedItems] = useState<Record<string, boolean>>({});
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [stats, setStats] = useState({
     total: 0,
     active: 0,

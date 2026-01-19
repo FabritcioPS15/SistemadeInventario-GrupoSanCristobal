@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, Loader2, Save } from 'lucide-react';
 import { supabase, Location, BranchAudit } from '../../lib/supabase';
+import { AUDIT_QUESTIONS } from '../../lib/auditQuestions';
 
 type AuditFormProps = {
     onClose: () => void;
@@ -18,14 +19,39 @@ export default function AuditForm({ onClose, onSave, editAudit }: AuditFormProps
         auditor_name: editAudit?.auditor_name || '',
         administrator_name: editAudit?.administrator_name || '',
         audit_date: editAudit?.audit_date || new Date().toISOString().split('T')[0],
-        status: editAudit?.status || 'good',
-        score: editAudit?.score || 100,
+        status: editAudit?.status || 'good' as any,
+        score: editAudit?.score || 0,
         observations: editAudit?.observations || '',
+        responses: editAudit?.responses || {}
     });
+
+    const selectedLocation = locations.find(l => l.id === formData.location_id);
+    const questions = selectedLocation ? AUDIT_QUESTIONS[selectedLocation.type as keyof typeof AUDIT_QUESTIONS] : [];
 
     useEffect(() => {
         fetchLocations();
     }, []);
+
+    useEffect(() => {
+        if (questions.length > 0) {
+            const responseValues = Object.values(formData.responses) as number[];
+            const totalPoints = responseValues.reduce((sum, val) => sum + val, 0);
+            const maxPoints = questions.length * 5;
+            const calculatedScore = Math.round((totalPoints / maxPoints) * 100);
+
+            let calculatedStatus = 'good';
+            if (calculatedScore >= 90) calculatedStatus = 'excellent';
+            else if (calculatedScore >= 70) calculatedStatus = 'good';
+            else if (calculatedScore >= 50) calculatedStatus = 'regular';
+            else calculatedStatus = 'critical';
+
+            setFormData(prev => ({
+                ...prev,
+                score: calculatedScore,
+                status: calculatedStatus as any
+            }));
+        }
+    }, [formData.responses, formData.location_id]);
 
     const fetchLocations = async () => {
         const { data } = await supabase
@@ -171,16 +197,60 @@ export default function AuditForm({ onClose, onSave, editAudit }: AuditFormProps
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {questions.length > 0 && (
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                            <h3 className="text-[11px] font-bold text-slate-800 uppercase tracking-[0.2em] mb-4">Evaluación de Cumplimiento</h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                {questions.map(q => (
+                                    <div key={q.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                        <span className="text-sm font-medium text-slate-700">{q.text}</span>
+                                        <div className="flex items-center gap-1">
+                                            {[1, 2, 3, 4, 5].map(val => (
+                                                <button
+                                                    key={val}
+                                                    type="button"
+                                                    onClick={() => setFormData(prev => ({
+                                                        ...prev,
+                                                        responses: { ...prev.responses, [q.id]: val }
+                                                    }))}
+                                                    className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold transition-all ${formData.responses[q.id] === val
+                                                        ? 'bg-slate-800 text-white scale-110 shadow-md'
+                                                        : 'bg-white text-slate-400 hover:text-slate-600 border border-slate-200'
+                                                        }`}
+                                                >
+                                                    {val}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                        <div className="p-4 bg-slate-900 rounded-lg text-white">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+                                Puntaje Calculado
+                            </label>
+                            <div className="flex items-end gap-2">
+                                <span className="text-3xl font-black leading-none">{formData.score}%</span>
+                                <span className="text-[10px] font-bold uppercase text-slate-400 mb-1">
+                                    {formData.status === 'excellent' ? 'Excelente' :
+                                        formData.status === 'good' ? 'Satisfactorio' :
+                                            formData.status === 'regular' ? 'Regular' : 'Crítico'}
+                                </span>
+                            </div>
+                        </div>
+
                         <div>
                             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                                Calificación General *
+                                Calificación Manual (Opcional)
                             </label>
                             <select
                                 name="status"
                                 value={formData.status}
                                 onChange={handleChange}
-                                required
                                 className="w-full px-4 py-2 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-400 transition-all text-sm font-medium"
                             >
                                 <option value="excellent">Excelente</option>
@@ -188,22 +258,6 @@ export default function AuditForm({ onClose, onSave, editAudit }: AuditFormProps
                                 <option value="regular">Regular</option>
                                 <option value="critical">Crítico</option>
                             </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
-                                Puntaje Obtenido (0-100) *
-                            </label>
-                            <input
-                                type="number"
-                                name="score"
-                                value={formData.score}
-                                onChange={handleChange}
-                                min="0"
-                                max="100"
-                                required
-                                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-400 transition-all text-sm font-medium"
-                            />
                         </div>
                     </div>
 

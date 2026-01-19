@@ -306,13 +306,11 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       // Aplicar filtro de categoría desde el menú
       const categoryFromFilter = getCategoryFromFilter(categoryFilter);
       const matchesCategoryFilter = !categoryFromFilter || asset.asset_types?.name === categoryFromFilter;
-      // Excluir cámaras de la vista general de inventario
-      const isCamera = asset.asset_types?.name === 'Cámara';
 
       const matchesLocation = !filterLocation || asset.location_id === filterLocation;
       const matchesStatus = !filterStatus || asset.status === filterStatus;
 
-      return !isCamera && matchesSearch && matchesCategoryFilter && matchesLocation && matchesStatus;
+      return matchesSearch && matchesCategoryFilter && matchesLocation && matchesStatus;
     });
   }, [assets, searchTerm, categoryFilter, filterLocation, filterStatus]);
 

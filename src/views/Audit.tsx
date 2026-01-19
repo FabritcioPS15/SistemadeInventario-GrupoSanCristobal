@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Trash2, Edit, List, ClipboardCheck, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { supabase, BranchAudit } from '../lib/supabase';
+import { AUDIT_QUESTIONS } from '../lib/auditQuestions';
 import { useAuth } from '../contexts/AuthContext';
 import AuditForm from '../components/forms/AuditForm';
 
@@ -200,6 +201,29 @@ export default function Audit() {
                           {audit.observations && (
                             <div className="mt-3 p-3 bg-slate-50 rounded border-l-2 border-slate-300">
                               <p className="text-xs text-slate-600 leading-relaxed font-medium">"{audit.observations}"</p>
+                            </div>
+                          )}
+
+                          {audit.responses && Object.keys(audit.responses).length > 0 && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-3 text-center">Detalle de Evaluación</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {(() => {
+                                  const locType = audit.locations?.type as keyof typeof AUDIT_QUESTIONS;
+                                  const questions = locType ? AUDIT_QUESTIONS[locType] : [];
+                                  return questions.map(q => (
+                                    <div key={q.id} className="flex items-center justify-between p-2 bg-slate-50/50 rounded border border-slate-100/50">
+                                      <span className="text-[10px] text-slate-600 font-medium truncate pr-2">{q.text}</span>
+                                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${audit.responses[q.id] >= 4 ? 'bg-emerald-100 text-emerald-800' :
+                                        audit.responses[q.id] >= 3 ? 'bg-slate-200 text-slate-800' :
+                                          'bg-red-100 text-red-800'
+                                        }`}>
+                                        {audit.responses[q.id]}/5
+                                      </span>
+                                    </div>
+                                  ));
+                                })()}
+                              </div>
                             </div>
                           )}
                         </div>

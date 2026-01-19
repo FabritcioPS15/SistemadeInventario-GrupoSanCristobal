@@ -14,7 +14,7 @@ export default function Sedes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [cameraCounts, setCameraCounts] = useState<Record<string, number>>({});
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   useEffect(() => {
     fetchData();
@@ -490,11 +490,10 @@ export default function Sedes() {
                             </button>
                             <button
                               onClick={() => handleDeleteLocation(location)}
-                              className={`p-2 rounded-lg transition-all border ${
-                                cameraCounts[location.id] > 0
+                              className={`p-2 rounded-lg transition-all border ${cameraCounts[location.id] > 0
                                   ? 'text-orange-500 border-orange-100 hover:bg-orange-500 hover:text-white'
                                   : 'text-rose-500 border-rose-100 hover:bg-rose-500 hover:text-white'
-                              }`}
+                                }`}
                               title={cameraCounts[location.id] > 0 ? 'Eliminar sede y sus cámaras asociadas' : 'Eliminar sede'}
                             >
                               <Trash2 size={16} />

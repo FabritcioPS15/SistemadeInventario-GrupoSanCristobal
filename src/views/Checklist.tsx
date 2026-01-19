@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Car, ChevronRight, Building2, Stethoscope, GraduationCap, Users, FileText, TrendingUp, Clock, ExternalLink, Edit, LayoutGrid, List, Search, X } from 'lucide-react';
+import { Car, ChevronRight, Building2, Stethoscope, GraduationCap, FileText,  Clock, ExternalLink, Edit, LayoutGrid, List, Search} from 'lucide-react';
 import { supabase, Location } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -209,7 +209,7 @@ export default function Checklist({ type }: { type?: string }) {
 
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-4 mb-6">
-                                        <div className="bg-gray-50 w-14 h-14 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white shadow-sm transition-all duration-300">
+                                        <div className={`bg-gray-50 w-14 h-14 rounded-xl flex items-center justify-center group-hover:${unitColor} group-hover:text-white shadow-sm transition-all duration-300`}>
                                             {icon}
                                         </div>
                                         <div className="flex-1">

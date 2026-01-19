@@ -53,7 +53,7 @@ export type Asset = {
   image_url?: string;
   created_at: string;
   updated_at: string;
-  
+
   // Campos adicionales para maquinarias
   item?: string;
   descripcion?: string;
@@ -65,7 +65,7 @@ export type Asset = {
   fecha_adquisicion?: string;
   valor_estimado?: number;
   estado_uso?: string;
-  
+
   // Campos adicionales para PC/Laptop
   processor?: string;
   ram?: string;
@@ -73,7 +73,7 @@ export type Asset = {
   bios_mode?: string;
   area?: string;
   placa?: string;
-  
+
   // Campos adicionales para Cámaras
   name?: string;
   url?: string;
@@ -82,7 +82,7 @@ export type Asset = {
   port?: string;
   access_type?: 'url' | 'ivms' | 'esviz';
   auth_code?: string;
-  
+
   // Campos adicionales para Celulares
   imei?: string;
   operator?: string;
@@ -93,13 +93,13 @@ export type Asset = {
   almacenamiento?: string;
   bateria_estado?: string;
   accesorios?: string;
-  
+
   // Campos adicionales para Impresoras/Escáneres
   tipo_impresion?: string;
   tecnologia_impresion?: string;
   velocidad_impresion?: string;
   resolucion?: string;
-  
+
   // Campos adicionales para Monitores/Proyectores
   tamaño_pantalla?: string;
   resolucion_pantalla?: string;
@@ -190,6 +190,7 @@ export type BranchAudit = {
   audit_date: string;
   status: 'excellent' | 'good' | 'regular' | 'critical';
   score: number;
+  responses?: any;
   observations?: string;
   created_at: string;
   updated_at: string;

@@ -30,7 +30,7 @@ export default function Servers() {
   });
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [viewingServer, setViewingServer] = useState<Server | undefined>();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   useEffect(() => {
     (async () => {
       setLoading(true);

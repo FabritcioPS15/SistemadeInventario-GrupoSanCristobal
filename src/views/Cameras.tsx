@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List, ExternalLink } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { supabase, Camera, Location } from '../lib/supabase';
@@ -26,7 +26,7 @@ export default function Cameras({ subview }: CamerasProps) {
   const [filterLocation, setFilterLocation] = useState('todos');
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterStorage, setFilterStorage] = useState(false);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
   useEffect(() => {
     (async () => {
@@ -660,6 +660,9 @@ export default function Cameras({ subview }: CamerasProps) {
                     <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Estado</th>
                     <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Acceso</th>
                     <th scope="col" className="relative px-6 py-4">
+                      <span className="sr-only">Acceso Rápido</span>
+                    </th>
+                    <th scope="col" className="relative px-6 py-4">
                       <span className="sr-only">Acciones</span>
                     </th>
                   </tr>
@@ -719,6 +722,19 @@ export default function Cameras({ subview }: CamerasProps) {
                           <span className="px-2 py-0.5 rounded-full text-xs font-bold shadow-sm bg-gray-100 text-gray-600 border border-gray-200">
                             {humanAccess(cam.access_type)}
                           </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        {cam.url ? (
+                          <button
+                            onClick={() => window.open(cam.url, '_blank', 'noopener')}
+                            className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all shadow-sm border border-slate-100"
+                            title="Abrir enlace externo"
+                          >
+                            <ExternalLink size={18} />
+                          </button>
+                        ) : (
+                          <span className="text-sm text-gray-300">—</span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
