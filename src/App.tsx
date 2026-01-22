@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import TopHeader from './components/TopHeader';
 import Dashboard from './views/Dashboard';
 import Inventory from './views/Inventory';
 import Maintenance from './views/Maintenance';
@@ -23,6 +24,7 @@ import Login from './components/Login';
 import PasswordSetup from './components/PasswordSetup';
 import Checklist from './views/Checklist';
 import Vacations from './views/Vacations';
+import Tickets from './views/Tickets';
 
 // Componente para proteger rutas basadas en permisos
 function ProtectedRoute({ children, permission }: { children: React.ReactNode, permission?: string }) {
@@ -128,61 +130,65 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-[#f8f9fc] flex">
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
-      <main className={`overflow-y-auto transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'ml-16' : 'ml-80'}`}>
-        <Routes>
-          <Route path="/" element={<ProtectedRoute permission="dashboard"><Dashboard /></ProtectedRoute>} />
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'ml-16' : 'ml-72'}`}>
+        <TopHeader />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+          <Routes>
+            <Route path="/" element={<ProtectedRoute permission="dashboard"><Dashboard /></ProtectedRoute>} />
 
-          {/* Inventario */}
-          <Route path="/inventory" element={<ProtectedRoute permission="inventory"><Inventory /></ProtectedRoute>} />
-          <Route path="/inventory/all" element={<ProtectedRoute permission="inventory-all"><Inventory /></ProtectedRoute>} />
-          <Route path="/inventory/camara" element={<ProtectedRoute permission="inventory-camara"><Cameras /></ProtectedRoute>} />
-          <Route path="/inventory/:category" element={<ProtectedRoute><InventoryWrapper /></ProtectedRoute>} />
+            {/* Inventario */}
+            <Route path="/inventory" element={<ProtectedRoute permission="inventory"><Inventory /></ProtectedRoute>} />
+            <Route path="/inventory/all" element={<ProtectedRoute permission="inventory-all"><Inventory /></ProtectedRoute>} />
+            <Route path="/inventory/camara" element={<ProtectedRoute permission="inventory-camara"><Cameras /></ProtectedRoute>} />
+            <Route path="/inventory/:category" element={<ProtectedRoute><InventoryWrapper /></ProtectedRoute>} />
 
-          {/* Cámaras */}
-          <Route path="/cameras" element={<ProtectedRoute permission="cameras"><Cameras /></ProtectedRoute>} />
-          <Route path="/cameras/all" element={<ProtectedRoute permission="cameras-all"><Cameras /></ProtectedRoute>} />
-          <Route path="/cameras/:subview" element={<ProtectedRoute><CamerasWrapper /></ProtectedRoute>} />
+            {/* Cámaras */}
+            <Route path="/cameras" element={<ProtectedRoute permission="cameras"><Cameras /></ProtectedRoute>} />
+            <Route path="/cameras/all" element={<ProtectedRoute permission="cameras-all"><Cameras /></ProtectedRoute>} />
+            <Route path="/cameras/:subview" element={<ProtectedRoute><CamerasWrapper /></ProtectedRoute>} />
 
-          {/* Mantenimiento */}
-          <Route path="/maintenance" element={<ProtectedRoute permission="maintenance"><Maintenance /></ProtectedRoute>} />
-          <Route path="/maintenance/all" element={<ProtectedRoute permission="maintenance-all"><Maintenance /></ProtectedRoute>} />
-          <Route path="/maintenance/:category" element={<ProtectedRoute><MaintenanceWrapper /></ProtectedRoute>} />
+            {/* Mantenimiento */}
+            <Route path="/maintenance" element={<ProtectedRoute permission="maintenance"><Maintenance /></ProtectedRoute>} />
+            <Route path="/maintenance/all" element={<ProtectedRoute permission="maintenance-all"><Maintenance /></ProtectedRoute>} />
+            <Route path="/maintenance/:category" element={<ProtectedRoute><MaintenanceWrapper /></ProtectedRoute>} />
 
-          {/* Enviados */}
-          <Route path="/sent" element={<ProtectedRoute permission="sent"><Enviados /></ProtectedRoute>} />
-          <Route path="/sent/all" element={<ProtectedRoute permission="sent-all"><Enviados /></ProtectedRoute>} />
-          <Route path="/sent/:location" element={<ProtectedRoute><EnviadosWrapper /></ProtectedRoute>} />
+            {/* Enviados */}
+            <Route path="/sent" element={<ProtectedRoute permission="sent"><Enviados /></ProtectedRoute>} />
+            <Route path="/sent/all" element={<ProtectedRoute permission="sent-all"><Enviados /></ProtectedRoute>} />
+            <Route path="/sent/:location" element={<ProtectedRoute><EnviadosWrapper /></ProtectedRoute>} />
 
-          {/* Checklist */}
-          <Route path="/checklist" element={<ProtectedRoute permission="checklist"><Checklist /></ProtectedRoute>} />
-          <Route path="/checklist/:type" element={<ProtectedRoute><ChecklistWrapper /></ProtectedRoute>} />
+            {/* Checklist */}
+            <Route path="/checklist" element={<ProtectedRoute permission="checklist"><Checklist /></ProtectedRoute>} />
+            <Route path="/checklist/:type" element={<ProtectedRoute><ChecklistWrapper /></ProtectedRoute>} />
 
-          {/* Vacaciones */}
-          <Route path="/vacations" element={<ProtectedRoute permission="vacations"><Vacations /></ProtectedRoute>} />
+            {/* Vacaciones */}
+            <Route path="/vacations" element={<ProtectedRoute permission="vacations"><Vacations /></ProtectedRoute>} />
 
-          {/* Otras Rutas */}
-          <Route path="/sutran" element={<ProtectedRoute permission="sutran"><Sutran /></ProtectedRoute>} />
-          <Route path="/locations" element={<ProtectedRoute permission="locations"><Sedes /></ProtectedRoute>} />
-          <Route path="/mtc" element={<ProtectedRoute permission="mtc"><MTCAccesos /></ProtectedRoute>} />
-          <Route path="/users" element={<ProtectedRoute permission="users"><Users /></ProtectedRoute>} />
-          <Route path="/servers" element={<ProtectedRoute permission="servers"><Servers /></ProtectedRoute>} />
-          <Route path="/flota-vehicular" element={<ProtectedRoute permission="flota-vehicular"><FlotaVehicular /></ProtectedRoute>} />
-          <Route path="/spare-parts" element={<ProtectedRoute permission="spare-parts"><SpareParts /></ProtectedRoute>} />
-          <Route path="/audit" element={<ProtectedRoute permission="audit"><Audit /></ProtectedRoute>} />
-          <Route path="/integrity" element={<ProtectedRoute permission="integrity"><SystemIntegrity /></ProtectedRoute>} />
-          <Route path="/diagnostic" element={<ProtectedRoute permission="diagnostic"><DiagnosticPanel /></ProtectedRoute>} />
-          <Route path="/connection-test" element={<ProtectedRoute permission="connection-test"><ConnectionTest /></ProtectedRoute>} />
-          <Route path="/quick-diagnostic" element={<ProtectedRoute permission="quick-diagnostic"><QuickDiagnostic /></ProtectedRoute>} />
+            {/* Otras Rutas */}
+            <Route path="/sutran" element={<ProtectedRoute permission="sutran"><Sutran /></ProtectedRoute>} />
+            <Route path="/locations" element={<ProtectedRoute permission="locations"><Sedes /></ProtectedRoute>} />
+            <Route path="/mtc" element={<ProtectedRoute permission="mtc"><MTCAccesos /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute permission="users"><Users /></ProtectedRoute>} />
+            <Route path="/servers" element={<ProtectedRoute permission="servers"><Servers /></ProtectedRoute>} />
+            <Route path="/flota-vehicular" element={<ProtectedRoute permission="flota-vehicular"><FlotaVehicular /></ProtectedRoute>} />
+            <Route path="/spare-parts" element={<ProtectedRoute permission="spare-parts"><SpareParts /></ProtectedRoute>} />
+            <Route path="/audit" element={<ProtectedRoute permission="audit"><Audit /></ProtectedRoute>} />
+            <Route path="/integrity" element={<ProtectedRoute permission="integrity"><SystemIntegrity /></ProtectedRoute>} />
+            <Route path="/diagnostic" element={<ProtectedRoute permission="diagnostic"><DiagnosticPanel /></ProtectedRoute>} />
+            <Route path="/connection-test" element={<ProtectedRoute permission="connection-test"><ConnectionTest /></ProtectedRoute>} />
+            <Route path="/quick-diagnostic" element={<ProtectedRoute permission="quick-diagnostic"><QuickDiagnostic /></ProtectedRoute>} />
+            <Route path="/tickets" element={<ProtectedRoute permission="tickets"><Tickets /></ProtectedRoute>} />
 
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </main>
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+      </div>
     </div>
   );
 }

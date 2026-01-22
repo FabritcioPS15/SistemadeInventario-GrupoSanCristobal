@@ -13,6 +13,7 @@ type User = {
   phone?: string;
   status: 'active' | 'inactive';
   notes?: string;
+  permissions?: string[];
   created_at: string;
   updated_at: string;
 };
@@ -27,7 +28,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'checking' | null>>({});
+
   const [hasChanges, setHasChanges] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -42,7 +43,26 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
     phone: editUser?.phone || '',
     status: editUser?.status || 'active',
     notes: editUser?.notes || '',
+    permissions: editUser?.permissions || [] as string[],
   });
+
+  const availablePermissions = [
+    { id: 'dashboard', label: 'Dashboard', category: 'Principal' },
+    { id: 'inventory', label: 'Inventario', category: 'Principal' },
+    { id: 'cameras', label: 'Cámaras', category: 'Principal' },
+    { id: 'maintenance', label: 'Mantenimiento', category: 'Principal' },
+    { id: 'sent', label: 'Enviados', category: 'Principal' },
+    { id: 'sutran', label: 'Sutran', category: 'Operaciones' },
+    { id: 'checklist', label: 'Checklist', category: 'Operaciones' },
+    { id: 'locations', label: 'Sedes', category: 'Configuración' },
+    { id: 'users', label: 'Usuarios', category: 'Configuración' },
+    { id: 'vactions', label: 'Vacaciones', category: 'RRHH' },
+    { id: 'servers', label: 'Servidores', category: 'TI' },
+    { id: 'audit', label: 'Auditoría', category: 'TI' },
+    { id: 'integrity', label: 'Integridad', category: 'TI' },
+    { id: 'flota-vehicular', label: 'Flota Vehicular', category: 'Operaciones' },
+    { id: 'mtc', label: 'MTC', category: 'Operaciones' },
+  ];
 
   useEffect(() => {
     fetchLocations();
@@ -61,6 +81,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
         phone: editUser.phone || '',
         status: editUser.status,
         notes: editUser.notes || '',
+        permissions: editUser.permissions || [],
       };
 
       const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
@@ -113,33 +134,25 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
   };
 
   const validateField = async (fieldName: string, value: string) => {
-    setValidationStatus(prev => ({ ...prev, [fieldName]: 'checking' }));
-
-    let isValid = true;
     let errorMessage = '';
 
     switch (fieldName) {
       case 'full_name':
         if (!value.trim()) {
-          isValid = false;
           errorMessage = 'El nombre completo es requerido';
         } else if (value.trim().length < 2) {
-          isValid = false;
           errorMessage = 'El nombre debe tener al menos 2 caracteres';
         }
         break;
 
       case 'email':
         if (!value.trim()) {
-          isValid = false;
           errorMessage = 'El email es requerido';
         } else if (!validateEmail(value)) {
-          isValid = false;
           errorMessage = 'Formato de email inválido';
         } else {
           const isUnique = await checkDuplicateEmail(value, editUser?.id);
           if (!isUnique) {
-            isValid = false;
             errorMessage = 'Este email ya está en uso';
           }
         }
@@ -147,20 +160,17 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
       case 'phone':
         if (value && !validatePhoneNumber(value)) {
-          isValid = false;
           errorMessage = 'Formato de teléfono inválido';
         }
         break;
 
       case 'password':
         if (value && !validatePassword(value)) {
-          isValid = false;
           errorMessage = 'La contraseña debe tener al menos 6 caracteres';
         }
         break;
     }
 
-    setValidationStatus(prev => ({ ...prev, [fieldName]: isValid ? 'valid' : 'invalid' }));
     setErrors(prev => ({ ...prev, [fieldName]: errorMessage }));
   };
 
@@ -278,388 +288,313 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
     }
   };
 
-  // Función helper para renderizar el estado de validación
-  const renderValidationIcon = (fieldName: string) => {
-    const status = validationStatus[fieldName];
-    if (status === 'checking') {
-      return <Loader2 size={16} className="text-blue-500 animate-spin" />;
-    } else if (status === 'valid') {
-      return <CheckCircle size={16} className="text-green-500" />;
-    } else if (status === 'invalid') {
-      return <AlertCircle size={16} className="text-red-500" />;
-    }
-    return null;
-  };
 
-  // Función helper para obtener clases CSS del campo
-  const getFieldClasses = (fieldName: string) => {
-    const baseClasses = "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2";
-    const status = validationStatus[fieldName];
-
-    if (status === 'invalid' || errors[fieldName]) {
-      return `${baseClasses} border-red-300 focus:ring-red-500`;
-    } else if (status === 'valid') {
-      return `${baseClasses} border-green-300 focus:ring-green-500`;
-    }
-
-    return `${baseClasses} border-gray-300 focus:ring-blue-500`;
-  };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header mejorado en blanco y negro */}
-        <div className="sticky top-0 bg-gradient-to-r from-gray-800 to-gray-900 text-white px-8 py-6 rounded-t-2xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-                <User size={24} className="text-white" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">
-                  {editUser ? 'Editar Usuario' : 'Nuevo Usuario'}
-                </h2>
-                <p className="text-gray-300 text-sm mt-1">
-                  {editUser ? 'Modifica la información del usuario' : 'Completa los datos para crear un nuevo usuario'}
-                </p>
-              </div>
+    <div className="fixed inset-0 bg-[#001529]/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-all duration-300">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20">
+        {/* Header Estilo ERP */}
+        <div className="bg-[#002855] text-white px-8 py-5 flex items-center justify-between shadow-lg relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="bg-white/10 p-2.5 rounded-lg border border-white/10">
+              <User size={24} className="text-white" />
             </div>
-            <button 
-              onClick={onClose} 
-              className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all duration-200"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          {editUser && hasChanges && (
-            <div className="mt-4 bg-yellow-600/20 backdrop-blur-sm border border-yellow-500/30 rounded-lg px-4 py-2">
-              <p className="text-yellow-200 text-sm font-medium flex items-center gap-2">
-                <AlertCircle size={16} />
-                Tienes cambios sin guardar
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">
+                {editUser ? 'Editar Registro' : 'Nuevo Registro'}
+              </h2>
+              <p className="text-blue-100/70 text-[11px] font-medium uppercase tracking-[0.1em] mt-0.5">
+                Módulo de Gestión de Usuarios
               </p>
             </div>
-          )}
+          </div>
+          <button
+            onClick={onClose}
+            className="text-white/70 hover:text-white hover:bg-white/10 rounded-lg p-2 transition-all active:scale-95"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
-          {/* Mensaje de error general mejorado */}
-          {errors.submit && (
-            <div className="bg-red-50 border-2 border-red-200 rounded-xl p-5">
-              <div className="flex items-center gap-3">
-                <div className="bg-red-100 rounded-full p-2">
-                  <AlertCircle size={20} className="text-red-600" />
-                </div>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto bg-[#f8fafc] flex flex-col">
+          <div className="p-8 space-y-8 flex-1">
+            {/* General Error Message */}
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                <AlertCircle size={20} className="text-red-500 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-red-800 font-semibold">Error al procesar</p>
-                  <p className="text-red-600 text-sm mt-1">{errors.submit}</p>
+                  <p className="text-red-800 font-bold text-sm">Error en la operación</p>
+                  <p className="text-red-600 text-[13px] mt-1">{errors.submit}</p>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Sección: Información Personal */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 pb-3 border-b border-gray-300">
-              <div className="bg-gray-100 rounded-lg p-2">
-                <User size={18} className="text-gray-700" />
+            {/* Section: Datos Principales */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-2 pb-2 border-b border-[#e2e8f0]">
+                <div className="w-1 h-4 bg-[#002855] rounded-full" />
+                <h3 className="text-[12px] font-black text-[#64748b] uppercase tracking-widest">Información de Identidad</h3>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Información Personal</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  Nombre Completo <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="full_name"
-                    value={formData.full_name}
-                    onChange={handleChange}
-                    required
-                    className={getFieldClasses('full_name')}
-                    placeholder="Ej: Juan Pérez García"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {renderValidationIcon('full_name')}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">Nombre Completo <span className="text-red-500">*</span></label>
+                  <div className="relative group">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] group-focus-within:text-[#002855] transition-colors" size={16} />
+                    <input
+                      type="text"
+                      name="full_name"
+                      value={formData.full_name}
+                      onChange={handleChange}
+                      required
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-[#e2e8f0] rounded-lg focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855] outline-none transition-all text-[13px] font-medium text-[#1e293b] placeholder-gray-400"
+                      placeholder="Juan Pérez García"
+                    />
+                  </div>
+                  {errors.full_name && <p className="text-red-500 text-[11px] font-semibold mt-1">{errors.full_name}</p>}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">Email Corporativo <span className="text-red-500">*</span></label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] group-focus-within:text-[#002855] transition-colors" size={16} />
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-[#e2e8f0] rounded-lg focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855] outline-none transition-all text-[13px] font-medium text-[#1e293b]"
+                      placeholder="juan@corporativo.com"
+                    />
                   </div>
                 </div>
-                {errors.full_name && (
-                  <p className="text-red-500 text-sm font-medium flex items-center gap-1 mt-2">
-                    <AlertCircle size={14} />
-                    {errors.full_name}
-                  </p>
-                )}
               </div>
 
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Mail size={16} className="text-gray-500" />
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                    className={getFieldClasses('email')}
-                    placeholder="Ej: juan@ejemplo.com"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {renderValidationIcon('email')}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">DNI / Documento</label>
+                  <div className="relative group">
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] transition-colors" size={16} />
+                    <input
+                      type="text"
+                      name="dni"
+                      value={formData.dni}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-[#e2e8f0] rounded-lg focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855] outline-none transition-all text-[13px] font-medium text-[#1e293b]"
+                    />
                   </div>
                 </div>
-                {errors.email && (
-                  <p className="text-red-500 text-sm font-medium flex items-center gap-1 mt-2">
-                    <AlertCircle size={14} />
-                    {errors.email}
-                  </p>
-                )}
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <FileText size={16} className="text-gray-500" />
-                  DNI
-                </label>
-                <input
-                  type="text"
-                  name="dni"
-                  value={formData.dni}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="Ej: 12345678"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Phone size={16} className="text-gray-500" />
-                  Teléfono
-                </label>
-                <div className="relative">
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className={getFieldClasses('phone')}
-                    placeholder="Ej: +51 999 999 999"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {renderValidationIcon('phone')}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">Teléfono de Contacto</label>
+                  <div className="relative group">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] transition-colors" size={16} />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-[#e2e8f0] rounded-lg focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855] outline-none transition-all text-[13px] font-medium text-[#1e293b]"
+                    />
                   </div>
                 </div>
-                {errors.phone && (
-                  <p className="text-red-500 text-sm font-medium flex items-center gap-1 mt-2">
-                    <AlertCircle size={14} />
-                    {errors.phone}
-                  </p>
-                )}
               </div>
             </div>
-          </div>
 
-          {/* Sección: Seguridad */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 pb-3 border-b border-gray-300">
-              <div className="bg-gray-100 rounded-lg p-2">
-                <Lock size={18} className="text-gray-700" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">Seguridad</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Lock size={16} className="text-gray-500" />
-                  Contraseña {editUser ? <span className="text-gray-500 font-normal">(dejar vacío para no cambiar)</span> : <span className="text-red-500">*</span>}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    className={getFieldClasses('password')}
-                    placeholder={editUser ? 'Nueva contraseña (opcional)' : 'Contraseña segura'}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-lg p-1.5 transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-red-500 text-sm font-medium flex items-center gap-1 mt-2">
-                    <AlertCircle size={14} />
-                    {errors.password}
-                  </p>
-                )}
+            {/* Section: Seguridad */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-2 pb-2 border-b border-[#e2e8f0]">
+                <div className="w-1 h-4 bg-[#002855] rounded-full" />
+                <h3 className="text-[12px] font-black text-[#64748b] uppercase tracking-widest">Credenciales y Acceso</h3>
               </div>
 
-              {formData.password && (
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                    <Lock size={16} className="text-gray-500" />
-                    Confirmar Contraseña <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">Contraseña {editUser && '(Opcional)'}</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" size={16} />
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${confirmPassword && formData.password !== confirmPassword
-                        ? 'border-red-300 focus:ring-red-500'
-                        : 'border-gray-300'
-                        }`}
-                      placeholder="Repetir contraseña"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-10 py-2 bg-white border border-[#e2e8f0] rounded-lg focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855] outline-none transition-all text-[13px] font-medium"
+                      placeholder={editUser ? 'Ingresar para cambiar' : '********'}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-lg p-1.5 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#002855] p-1"
                     >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  {errors.confirmPassword && (
-                    <p className="text-red-500 text-sm font-medium flex items-center gap-1 mt-2">
-                      <AlertCircle size={14} />
-                      {errors.confirmPassword}
-                    </p>
-                  )}
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Sección: Rol y Permisos */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 pb-3 border-b border-gray-300">
-              <div className="bg-gray-100 rounded-lg p-2">
-                <Shield size={18} className="text-gray-700" />
+                {formData.password && (
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">Confirmar Contraseña</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8]" size={16} />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className={`w-full pl-10 pr-4 py-2 bg-white border rounded-lg outline-none transition-all text-[13px] font-medium ${confirmPassword && formData.password !== confirmPassword ? 'border-red-300 ring-4 ring-red-500/10' : 'border-[#e2e8f0] focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855]'}`}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Rol y Permisos</h3>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <Shield size={16} className="text-gray-500" />
-                  Rol <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                >
-                  <option value="admin">👑 Administrador</option>
-                  <option value="supervisor">👨‍💼 Supervisor</option>
-                  <option value="technician">🔧 Técnico</option>
-                  <option value="user">👤 Usuario</option>
-                </select>
+
+            {/* Section: Configuración del Sistema */}
+            <div className="space-y-5">
+              <div className="flex items-center gap-2 pb-2 border-b border-[#e2e8f0]">
+                <div className="w-1 h-4 bg-[#002855] rounded-full" />
+                <h3 className="text-[12px] font-black text-[#64748b] uppercase tracking-widest">Configuración de Cuenta</h3>
               </div>
 
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  Estado <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                >
-                  <option value="active">✅ Activo</option>
-                  <option value="inactive">❌ Inactivo</option>
-                </select>
-              </div>
-            </div>
-          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">Rol Organizacional</label>
+                  <div className="relative group">
+                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] transition-colors group-focus-within:text-[#002855]" size={16} />
+                    <select
+                      name="role"
+                      value={formData.role}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-[#e2e8f0] rounded-lg outline-none focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855] transition-all text-[13px] font-semibold text-[#1e293b] appearance-none cursor-pointer"
+                    >
+                      <option value="admin">Administrador (Master)</option>
+                      <option value="supervisor">Supervisor de Área</option>
+                      <option value="technician">Técnico Operativo</option>
+                      <option value="user">Usuario Estándar</option>
+                      <option value="custom">⚙️ Personalizado (Específico)</option>
+                    </select>
+                  </div>
+                </div>
 
-          {/* Sección: Ubicación y Notas */}
-          <div className="space-y-6">
-            <div className="flex items-center gap-3 pb-3 border-b border-gray-300">
-              <div className="bg-gray-100 rounded-lg p-2">
-                <MapPin size={18} className="text-gray-700" />
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">Sede de Operaciones</label>
+                  <div className="relative group">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94a3b8] transition-colors group-focus-within:text-[#002855]" size={16} />
+                    <select
+                      name="location_id"
+                      value={formData.location_id}
+                      onChange={handleChange}
+                      className="w-full pl-10 pr-4 py-2 bg-white border border-[#e2e8f0] rounded-lg outline-none focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855] transition-all text-[13px] font-semibold text-[#1e293b] appearance-none cursor-pointer"
+                    >
+                      <option value="">Gestión General / Todas</option>
+                      {locations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Información Adicional</h3>
-            </div>
-            
-            <div className="space-y-6">
+
               <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <MapPin size={16} className="text-gray-500" />
-                  Ubicación Asignada
-                </label>
-                <select
-                  name="location_id"
-                  value={formData.location_id}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                >
-                  <option value="">🌍 Sin ubicación específica</option>
-                  {locations.map(location => (
-                    <option key={location.id} value={location.id}>
-                      📍 {location.name}
-                    </option>
+                <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">Estado de la Cuenta</label>
+                <div className="flex gap-4">
+                  {['active', 'inactive'].map((status) => (
+                    <label key={status} className="flex-1 cursor-pointer group">
+                      <input
+                        type="radio"
+                        name="status"
+                        value={status}
+                        checked={formData.status === status}
+                        onChange={handleChange}
+                        className="sr-only"
+                      />
+                      <div className={`p-3 rounded-xl border-2 text-center transition-all ${formData.status === status ? (status === 'active' ? 'border-[#10b981] bg-emerald-50 text-[#065f46]' : 'border-[#ef4444] bg-red-50 text-[#991b1b]') : 'border-[#e2e8f0] bg-white text-[#64748b] hover:border-[#cbd5e1]'}`}>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em]">
+                          {status === 'active' ? '● Cuenta Activa' : '○ Cuenta Inactiva'}
+                        </p>
+                      </div>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                  <FileText size={16} className="text-gray-500" />
-                  Notas Adicionales
-                </label>
+              <div className="space-y-1.5 pt-2">
+                <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">Notas y Observaciones</label>
                 <textarea
                   name="notes"
                   value={formData.notes}
                   onChange={handleChange}
-                  rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
-                  placeholder="Información adicional, observaciones o comentarios importantes..."
+                  rows={3}
+                  className="w-full px-4 py-2.5 bg-white border border-[#e2e8f0] rounded-xl outline-none focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855] transition-all text-[13px] font-medium text-[#1e293b] resize-none"
+                  placeholder="Detalles adicionales sobre el perfil o restricciones..."
                 />
               </div>
             </div>
+
+            {/* Granular Permissions Section */}
+            {formData.role === 'custom' && (
+              <div className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-500">
+                <div className="flex items-center gap-2 pb-2 border-b border-[#e2e8f0]">
+                  <div className="w-1 h-4 bg-[#6366f1] rounded-full" />
+                  <h3 className="text-[12px] font-black text-[#64748b] uppercase tracking-widest">Permisos de Módulo</h3>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {['Principal', 'Operaciones', 'Configuración', 'RRHH', 'TI'].map(category => (
+                    <div key={category} className="space-y-3 bg-white p-4 rounded-xl border border-[#e2e8f0] shadow-sm">
+                      <h4 className="text-[10px] font-black text-[#94a3b8] uppercase tracking-[0.2em] mb-2">{category}</h4>
+                      <div className="space-y-2">
+                        {availablePermissions.filter(p => p.category === category).map(permission => (
+                          <label key={permission.id} className="flex items-center gap-3 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={formData.permissions.includes(permission.id)}
+                              onChange={(e) => {
+                                const newPermissions = e.target.checked
+                                  ? [...formData.permissions, permission.id]
+                                  : formData.permissions.filter(p => p !== permission.id);
+                                setFormData(prev => ({ ...prev, permissions: newPermissions }));
+                              }}
+                              className="w-4 h-4 rounded text-[#002855] border-[#cbd5e1] focus:ring-[#002855]/20 focus:ring-offset-0 transition-all"
+                            />
+                            <span className="text-[13px] font-medium text-[#475569] group-hover:text-[#1e293b] transition-colors">{permission.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Botones de acción mejorados */}
-          <div className="flex flex-col sm:flex-row gap-4 pt-8 border-t-2 border-gray-100">
+          {/* Footer Estilo ERP - Inside the scrollable box or outside? 
+              Actually, it's better sticky at the bottom of the content box */}
+          <div className="bg-[#f8fafc] border-t border-[#e2e8f0] px-8 py-5 flex items-center justify-between sticky bottom-0 z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
             <button
               type="button"
               onClick={onClose}
-              disabled={loading}
-              className="flex-1 bg-gray-100 text-gray-700 py-4 px-6 rounded-xl hover:bg-gray-200 disabled:opacity-50 font-semibold text-base transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-3 order-2 sm:order-1"
+              className="px-5 py-2 text-[12px] font-bold text-[#64748b] hover:text-[#1e293b] hover:bg-gray-100 rounded-lg uppercase tracking-wider transition-all"
             >
-              <X size={20} />
               Cancelar
             </button>
+
             <button
               type="submit"
-              disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-              className="flex-1 bg-gradient-to-r from-gray-700 to-gray-900 text-white py-4 px-6 rounded-xl hover:from-gray-800 hover:to-black disabled:opacity-50 font-semibold text-base transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 order-1 sm:order-2"
+              disabled={loading}
+              className="flex items-center gap-2 bg-[#002855] text-white px-8 py-2.5 rounded-lg hover:bg-[#003366] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-95 text-[12px] font-black uppercase tracking-widest"
             >
               {loading ? (
                 <>
-                  <Loader2 size={20} className="animate-spin" />
-                  Guardando...
+                  <Loader2 size={16} className="animate-spin" />
+                  Procesando
                 </>
               ) : (
                 <>
-                  <CheckCircle size={20} />
-                  {editUser ? 'Actualizar Usuario' : 'Crear Usuario'}
+                  <CheckCircle size={16} />
+                  {editUser ? 'Actualizar Registro' : 'Crear Registro'}
                 </>
               )}
             </button>

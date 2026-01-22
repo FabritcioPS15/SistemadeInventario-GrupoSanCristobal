@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download, Upload, Package } from 'lucide-react';
+import { Plus, Search, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download, Upload, Package, ChevronUp, ChevronDown, Star, X } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { supabase, AssetWithDetails, Location, AssetType } from '../lib/supabase';
@@ -9,6 +9,7 @@ import PCForm from '../components/forms/PCForm';
 import ExcelImportModal from '../components/ExcelImportModal';
 import Pagination from '../components/Pagination';
 import { useAuth } from '../contexts/AuthContext';
+import { div } from 'framer-motion/client';
 
 type InventoryProps = {
   categoryFilter?: string;
@@ -38,6 +39,15 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   // Estados para paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   // Calcular estadísticas
   const stats = useMemo(() => {
@@ -315,11 +325,45 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   }, [assets, searchTerm, categoryFilter, filterLocation, filterStatus]);
 
   // Lógica de paginación
+  const sortedAssets = useMemo(() => {
+    if (!sortConfig) return filteredAssets;
+
+    return [...filteredAssets].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortConfig.key) {
+        case 'type':
+          aValue = a.asset_types?.name || '';
+          bValue = b.asset_types?.name || '';
+          break;
+        case 'device':
+          aValue = `${a.brand || ''} ${a.model || ''}`.trim();
+          bValue = `${b.brand || ''} ${b.model || ''}`.trim();
+          break;
+        case 'location':
+          aValue = a.locations?.name || '';
+          bValue = b.locations?.name || '';
+          break;
+        default:
+          aValue = (a as any)[sortConfig.key];
+          bValue = (b as any)[sortConfig.key];
+      }
+
+      if (aValue === bValue) return 0;
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      const result = aValue < bValue ? -1 : 1;
+      return sortConfig.direction === 'asc' ? result : -result;
+    });
+  }, [filteredAssets, sortConfig]);
+
   const paginatedAssets = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return filteredAssets.slice(startIndex, endIndex);
-  }, [filteredAssets, currentPage, itemsPerPage]);
+    return sortedAssets.slice(startIndex, endIndex);
+  }, [sortedAssets, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
 
@@ -614,404 +658,486 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   };
 
   return (
-    <div className="w-full px-4 py-8">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">
-            Inventario{categoryFromFilter ? ` - ${categoryFromFilter}` : ''}
-          </h2>
-          <p className="text-slate-500 text-sm font-medium">
-            {categoryFromFilter ? `Gestión de activos ${categoryFromFilter.toLowerCase()}` : 'Gestión integral de activos tecnológicos'}
-          </p>
+    <div className="flex flex-col h-full bg-[#f8f9fc]">
+      {/* Title / Tab Bar - Minimalist Executive Style */}
+      <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
+            <Package size={20} />
+          </div>
+          <div>
+            <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">
+              Control de Inventario{categoryFromFilter ? ` - ${categoryFromFilter}` : ''}
+            </h2>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
+              <span>Gestión de Activos</span>
+              <div className="w-1 h-1 bg-gray-300 rounded-full" />
+              <span>{stats.totalAssets} Items</span>
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+        <div className="flex items-center gap-2">
           {selectedIds.size > 0 && canEdit() && (
             <button
               onClick={handleBulkDelete}
-              className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-red-50 text-red-600 border border-red-200 rounded-md hover:bg-red-100 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
+              className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-all font-bold text-[10px] uppercase tracking-widest mr-2"
               title="Eliminar seleccionados"
             >
-              <Trash2 size={14} />
+              <Trash2 size={12} />
               Eliminar ({selectedIds.size})
             </button>
           )}
-          <button
-            onClick={handleExportExcel}
-            disabled={exporting}
-            className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 disabled:opacity-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
-            title="Descargar inventario en Excel"
-          >
-            <Download size={14} />
-            {exporting ? 'Exportando...' : 'Exportar Excel'}
+
+          <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
+            <button
+              onClick={handleExportExcel}
+              disabled={exporting}
+              className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
+              title="Exportar Excel"
+            >
+              <Download size={18} />
+            </button>
+            {canEdit() && (
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
+                title="Importar Excel"
+              >
+                <Upload size={18} />
+              </button>
+            )}
+            {canEdit() && (
+              <button
+                onClick={() => {
+                  setSelectedAsset(undefined);
+                  setEditingAsset(undefined);
+                  setShowAssetForm(true);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
+                title="Nuevo Activo"
+              >
+                <Plus size={18} />
+              </button>
+            )}
+          </div>
+
+          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
+            <Star size={18} />
           </button>
-
-          {canEdit() && (
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
-              title="Importar inventario desde Excel"
-            >
-              <Upload size={14} />
-              Importar
-            </button>
-          )}
-
-          {canEdit() && (
-            <button
-              onClick={() => {
-                setSelectedAsset(undefined);
-                setEditingAsset(undefined);
-                setShowAssetForm(true);
-              }}
-              className="flex items-center justify-center gap-2 px-6 py-3 sm:py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
-            >
-              <Plus size={14} />
-              {categoryFilter ? `Nuevo ${getCategoryFromFilter(categoryFilter)}` : 'Nuevo Activo'}
-            </button>
-          )}
+          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors">
+            <X size={18} />
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Total de activos</div>
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="text-2xl font-bold text-slate-900">{stats.totalAssets}</div>
+      <div className="p-6 space-y-6">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Total de activos</div>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-2xl font-bold text-slate-900">{stats.totalAssets}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Activos activos</div>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-2xl font-bold text-emerald-600">{stats.activeCount}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">En mantenimiento</div>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-2xl font-bold text-amber-600">{stats.maintenanceCount}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Sin ubicación</div>
+            <div className="flex items-end justify-between">
+              <div>
+                <div className="text-2xl font-bold text-slate-700">{stats.withoutLocationCount}</div>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Activos activos</div>
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="text-2xl font-bold text-emerald-600">{stats.activeCount}</div>
+        {/* Control Bar */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input
+                type="text"
+                placeholder="Buscar por marca, modelo, serie..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 transition-all text-sm"
+              />
             </div>
-          </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">En mantenimiento</div>
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="text-2xl font-bold text-amber-600">{stats.maintenanceCount}</div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <select
+                value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : ''}
+                onChange={(e) => {
+                  const [key, direction] = e.target.value.split('-');
+                  if (key) {
+                    setSortConfig({ key, direction: direction as 'asc' | 'desc' });
+                  } else {
+                    setSortConfig(null);
+                  }
+                }}
+                className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white sm:min-w-[180px] text-sm font-medium text-slate-700"
+              >
+                <option value="">Ordenar por...</option>
+                <option value="type-asc">Tipo (A-Z)</option>
+                <option value="type-desc">Tipo (Z-A)</option>
+                <option value="device-asc">Dispositivo (A-Z)</option>
+                <option value="device-desc">Dispositivo (Z-A)</option>
+                <option value="location-asc">Ubicación (A-Z)</option>
+                <option value="location-desc">Ubicación (Z-A)</option>
+                <option value="status-asc">Estado (A-Z)</option>
+                <option value="status-desc">Estado (Z-A)</option>
+              </select>
+
+              <select
+                value={filterLocation}
+                onChange={(e) => setFilterLocation(e.target.value)}
+                className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white sm:min-w-[180px] text-sm font-medium"
+              >
+                <option value="">Todas las sedes</option>
+                {locations.map(location => (
+                  <option key={location.id} value={location.id}>{location.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white sm:min-w-[150px] text-sm font-medium"
+              >
+                <option value="">Todos los estados</option>
+                <option value="active">Activo</option>
+                <option value="inactive">Inactivo</option>
+                <option value="maintenance">Mantenimiento</option>
+                <option value="extracted">Extraído</option>
+                <option value="new">Nuevo</option>
+                <option value="pending">Pendiente</option>
+                <option value="disponible">Disponible</option>
+              </select>
             </div>
+
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Sin ubicación</div>
-          <div className="flex items-end justify-between">
-            <div>
-              <div className="text-2xl font-bold text-slate-700">{stats.withoutLocationCount}</div>
+        {/* Pagination */}
+        {filteredAssets.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredAssets.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
+        )}
+
+        {/* Table View */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[400px]">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800"></div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Control Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Buscar por marca, modelo, serie..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 transition-all text-sm"
-            />
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            <select
-              value={filterLocation}
-              onChange={(e) => setFilterLocation(e.target.value)}
-              className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white sm:min-w-[180px] text-sm font-medium"
-            >
-              <option value="">Todas las sedes</option>
-              {locations.map(location => (
-                <option key={location.id} value={location.id}>{location.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white sm:min-w-[150px] text-sm font-medium"
-            >
-              <option value="">Todos los estados</option>
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
-              <option value="maintenance">Mantenimiento</option>
-              <option value="extracted">Extraído</option>
-              <option value="new">Nuevo</option>
-              <option value="pending">Pendiente</option>
-              <option value="disponible">Disponible</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Pagination */}
-      {filteredAssets.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredAssets.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={handlePageChange}
-          onItemsPerPageChange={handleItemsPerPageChange}
-        />
-      )}
-
-      {/* Table View */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {loading ? (
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800"></div>
-          </div>
-        ) : (
-          <>
-            {/* Desktop Table */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-6 py-4 w-4">
-                      <input
-                        type="checkbox"
-                        className="w-5 h-5 rounded border-2 border-slate-300 cursor-pointer text-blue-600 focus:ring-blue-500"
-                        onChange={handleSelectAll}
-                        checked={paginatedAssets.length > 0 && selectedIds.size === paginatedAssets.length}
-                      />
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Tipo</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Dispositivo</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Detalles</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Ubicación</th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado</th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {paginatedAssets.length > 0 ? (
-                    paginatedAssets.map((asset) => {
-                      const Icon = getIconForType(asset.asset_types?.name || '');
-                      const isSelected = selectedIds.has(asset.id);
-                      return (
-                        <tr
-                          key={asset.id}
-                          onClick={() => handleToggleSelectConnect(asset.id)}
-                          className={`
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="px-6 py-4 w-4">
+                        <input
+                          type="checkbox"
+                          className="w-5 h-5 rounded border-2 border-slate-300 cursor-pointer text-blue-600 focus:ring-blue-500"
+                          onChange={handleSelectAll}
+                          checked={paginatedAssets.length > 0 && selectedIds.size === paginatedAssets.length}
+                        />
+                      </th>
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors"
+                        onClick={() => handleSort('type')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Tipo
+                          {sortConfig?.key === 'type' ? (
+                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                          ) : null}
+                        </div>
+                      </th>
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors"
+                        onClick={() => handleSort('device')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Dispositivo
+                          {sortConfig?.key === 'device' ? (
+                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                          ) : null}
+                        </div>
+                      </th>
+                      <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Detalles</th>
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors"
+                        onClick={() => handleSort('location')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Ubicación
+                          {sortConfig?.key === 'location' ? (
+                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                          ) : null}
+                        </div>
+                      </th>
+                      <th
+                        className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors"
+                        onClick={() => handleSort('status')}
+                      >
+                        <div className="flex items-center gap-1">
+                          Estado
+                          {sortConfig?.key === 'status' ? (
+                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                          ) : null}
+                        </div>
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {paginatedAssets.length > 0 ? (
+                      paginatedAssets.map((asset) => {
+                        const Icon = getIconForType(asset.asset_types?.name || '');
+                        const isSelected = selectedIds.has(asset.id);
+                        return (
+                          <tr
+                            key={asset.id}
+                            onClick={() => handleToggleSelectConnect(asset.id)}
+                            className={`
                             transition-colors group cursor-pointer
                             ${isSelected ? 'bg-blue-50/80 hover:bg-blue-100/80 border-l-4 border-l-blue-500' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}
                           `}
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center">
-                              <input
-                                type="checkbox"
-                                className={`
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  className={`
                                     w-5 h-5 rounded border-2 transition-colors cursor-pointer
                                     ${isSelected ? 'border-blue-500 bg-blue-500 text-white' : 'border-slate-300 bg-white'}
                                     focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
                                   `}
-                                checked={isSelected}
-                                onChange={() => handleToggleSelectConnect(asset.id)}
-                              />
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className={`p-2 rounded-lg w-fit transition-colors ${isSelected ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'}`}>
-                              <Icon size={20} />
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex flex-col">
-                              <span className="font-medium text-slate-900">{asset.asset_types?.name}</span>
-                              <span className="text-sm text-slate-500">{asset.brand}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex flex-col">
-                              <span className="text-sm text-slate-900 font-medium">{asset.model}</span>
-                              {asset.serial_number && (
-                                <span className="text-xs text-slate-500 font-mono">S/N: {asset.serial_number}</span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {asset.locations ? (
-                              <div className="flex items-center gap-2 text-sm text-slate-600">
-                                <MapPin size={16} className="text-slate-400" />
-                                {asset.locations.name}
+                                  checked={isSelected}
+                                  onChange={() => handleToggleSelectConnect(asset.id)}
+                                />
                               </div>
-                            ) : (
-                              <span className="text-sm text-slate-400 italic">Sin ubicación</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[asset.status as keyof typeof statusColors]}`}>
-                              {statusLabels[asset.status as keyof typeof statusLabels]}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => handleViewAsset(asset)}
-                                className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                                title="Ver detalles"
-                              >
-                                <Eye size={18} />
-                              </button>
-                              {canEdit() && (
-                                <>
-                                  <button
-                                    onClick={() => handleEditAsset(asset)}
-                                    className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                                    title="Editar"
-                                  >
-                                    <Edit size={18} />
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteAsset(asset)}
-                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    title="Eliminar"
-                                  >
-                                    <Trash2 size={18} />
-                                  </button>
-                                </>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className={`p-2 rounded-lg w-fit transition-colors ${isSelected ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'}`}>
+                                <Icon size={20} />
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex flex-col">
+                                <span className="font-medium text-slate-900">{asset.asset_types?.name}</span>
+                                <span className="text-sm text-slate-500">{asset.brand}</span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex flex-col">
+                                <span className="text-sm text-slate-900 font-medium">{asset.model}</span>
+                                {asset.serial_number && (
+                                  <span className="text-xs text-slate-500 font-mono">S/N: {asset.serial_number}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {asset.locations ? (
+                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                  <MapPin size={16} className="text-slate-400" />
+                                  {asset.locations.name}
+                                </div>
+                              ) : (
+                                <span className="text-sm text-slate-400 italic">Sin ubicación</span>
                               )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[asset.status as keyof typeof statusColors]}`}>
+                                {statusLabels[asset.status as keyof typeof statusLabels]}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={() => handleViewAsset(asset)}
+                                  className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                                  title="Ver detalles"
+                                >
+                                  <Eye size={18} />
+                                </button>
+                                {canEdit() && (
+                                  <>
+                                    <button
+                                      onClick={() => handleEditAsset(asset)}
+                                      className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                                      title="Editar"
+                                    >
+                                      <Edit size={18} />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteAsset(asset)}
+                                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Eliminar"
+                                    >
+                                      <Trash2 size={18} />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
 
-            {/* Mobile Card View */}
-            <div className="lg:hidden divide-y divide-slate-100">
-              {paginatedAssets.length > 0 ? (
-                paginatedAssets.map((asset) => {
-                  const Icon = getIconForType(asset.asset_types?.name || '');
-                  return (
-                    <div key={asset.id} className="p-5 hover:bg-slate-50 transition-colors">
-                      <div className="flex items-start justify-between gap-4 mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-slate-100 p-2.5 rounded-lg text-slate-600">
-                            <Icon size={24} />
+              {/* Mobile Card View */}
+              <div className="lg:hidden divide-y divide-slate-100">
+                {paginatedAssets.length > 0 ? (
+                  paginatedAssets.map((asset) => {
+                    const Icon = getIconForType(asset.asset_types?.name || '');
+                    return (
+                      <div key={asset.id} className="p-5 hover:bg-slate-50 transition-colors">
+                        <div className="flex items-start justify-between gap-4 mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-slate-100 p-2.5 rounded-lg text-slate-600">
+                              <Icon size={24} />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-900 uppercase tracking-tight">{asset.asset_types?.name}</h4>
+                              <p className="text-xs text-slate-500 font-medium">{asset.brand} - {asset.model}</p>
+                            </div>
+                          </div>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border whitespace-nowrap ${statusColors[asset.status as keyof typeof statusColors]}`}>
+                            {statusLabels[asset.status as keyof typeof statusLabels]}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-4 text-[11px]">
+                          <div>
+                            <p className="text-slate-400 font-bold uppercase tracking-widest mb-1 text-[9px]">Serie</p>
+                            <p className="font-mono text-slate-700">{asset.serial_number || 'N/A'}</p>
                           </div>
                           <div>
-                            <h4 className="font-bold text-slate-900 uppercase tracking-tight">{asset.asset_types?.name}</h4>
-                            <p className="text-xs text-slate-500 font-medium">{asset.brand} - {asset.model}</p>
+                            <p className="text-slate-400 font-bold uppercase tracking-widest mb-1 text-[9px]">Ubicación</p>
+                            <p className="text-slate-700">{asset.locations?.name || 'Sede no especificada'}</p>
                           </div>
                         </div>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border whitespace-nowrap ${statusColors[asset.status as keyof typeof statusColors]}`}>
-                          {statusLabels[asset.status as keyof typeof statusLabels]}
-                        </span>
-                      </div>
 
-                      <div className="grid grid-cols-2 gap-4 mb-4 text-[11px]">
-                        <div>
-                          <p className="text-slate-400 font-bold uppercase tracking-widest mb-1 text-[9px]">Serie</p>
-                          <p className="font-mono text-slate-700">{asset.serial_number || 'N/A'}</p>
+                        <div className="flex items-center gap-2 pt-4 border-t border-slate-50">
+                          <button
+                            onClick={() => handleViewAsset(asset)}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-md hover:bg-slate-100 transition-all font-bold text-[10px] uppercase tracking-widest"
+                          >
+                            <Eye size={14} /> Detalle
+                          </button>
+                          {canEdit() && (
+                            <>
+                              <button
+                                onClick={() => handleEditAsset(asset)}
+                                className="p-2 text-slate-400 hover:text-slate-900 bg-slate-50 rounded-md transition-all"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteAsset(asset)}
+                                className="p-2 text-slate-400 hover:text-red-600 bg-red-50 rounded-md transition-all"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
                         </div>
-                        <div>
-                          <p className="text-slate-400 font-bold uppercase tracking-widest mb-1 text-[9px]">Ubicación</p>
-                          <p className="text-slate-700">{asset.locations?.name || 'Sede no especificada'}</p>
-                        </div>
                       </div>
-
-                      <div className="flex items-center gap-2 pt-4 border-t border-slate-50">
-                        <button
-                          onClick={() => handleViewAsset(asset)}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-md hover:bg-slate-100 transition-all font-bold text-[10px] uppercase tracking-widest"
-                        >
-                          <Eye size={14} /> Detalle
-                        </button>
-                        {canEdit() && (
-                          <>
-                            <button
-                              onClick={() => handleEditAsset(asset)}
-                              className="p-2 text-slate-400 hover:text-slate-900 bg-slate-50 rounded-md transition-all"
-                            >
-                              <Edit size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteAsset(asset)}
-                              className="p-2 text-slate-400 hover:text-red-600 bg-red-50 rounded-md transition-all"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : null}
-            </div>
-
-            {/* Empty State */}
-            {filteredAssets.length === 0 && (
-              <div className="px-6 py-16 text-center">
-                <div className="flex flex-col items-center justify-center text-slate-400">
-                  <div className="bg-slate-50 p-6 rounded-full mb-4">
-                    <Search size={40} className="opacity-50" />
-                  </div>
-                  <p className="text-lg font-bold text-slate-700 uppercase tracking-tight">Sin resultados</p>
-                  <p className="text-sm mt-1">Intenta ajustar los filtros de búsqueda</p>
-                </div>
+                    );
+                  })
+                ) : null}
               </div>
-            )}
-          </>
+
+              {/* Empty State */}
+              {filteredAssets.length === 0 && (
+                <div className="px-6 py-16 text-center">
+                  <div className="flex flex-col items-center justify-center text-slate-400">
+                    <div className="bg-slate-50 p-6 rounded-full mb-4">
+                      <Search size={40} className="opacity-50" />
+                    </div>
+                    <p className="text-lg font-bold text-slate-700 uppercase tracking-tight">Sin resultados</p>
+                    <p className="text-sm mt-1">Intenta ajustar los filtros de búsqueda</p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Forms and Modals */}
+        {showAssetForm && (
+          <AssetForm
+            onClose={handleCloseForm}
+            onSave={handleSaveAsset}
+            editAsset={editingAsset}
+            preselectedAssetTypeId={getAssetTypeIdFromFilter(categoryFilter)}
+          />
         )}
-      </div>
 
-      {/* Forms and Modals */}
-      {showAssetForm && (
-        <AssetForm
-          onClose={handleCloseForm}
-          onSave={handleSaveAsset}
-          editAsset={editingAsset}
-          preselectedAssetTypeId={getAssetTypeIdFromFilter(categoryFilter)}
-        />
-      )}
+        {showPCForm && (
+          <PCForm
+            editPC={editingPC}
+            onClose={handleClosePCForm}
+            onSave={handleSavePC}
+          />
+        )}
 
-      {showPCForm && (
-        <PCForm
-          editPC={editingPC}
-          onClose={handleClosePCForm}
-          onSave={handleSavePC}
-        />
-      )}
-
-      {showAssetDetails && selectedAsset && (
-        <AssetDetails
-          asset={selectedAsset}
-          onClose={() => {
-            setShowAssetDetails(false);
-            setSelectedAsset(undefined);
+        {showAssetDetails && selectedAsset && (
+          <AssetDetails
+            asset={selectedAsset}
+            onClose={() => {
+              setShowAssetDetails(false);
+              setSelectedAsset(undefined);
+            }}
+          />
+        )}
+        {/* Modal de Importación Excel */}
+        <ExcelImportModal
+          isOpen={showUploadModal}
+          onClose={() => setShowUploadModal(false)}
+          onSuccess={() => {
+            fetchAssets();
+            alert('Importación completada exitosamente');
           }}
+          assetTypes={assetTypes}
+          locations={locations}
         />
-      )}
-      {/* Modal de Importación Excel */}
-      <ExcelImportModal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        onSuccess={() => {
-          fetchAssets();
-          alert('Importación completada exitosamente');
-        }}
-        assetTypes={assetTypes}
-        locations={locations}
-      />
+      </div>
     </div>
+
   );
 }

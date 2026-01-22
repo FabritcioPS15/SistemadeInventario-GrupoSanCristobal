@@ -11,6 +11,7 @@ type User = {
   phone?: string;
   status: 'active' | 'inactive';
   notes?: string;
+  permissions?: string[];
   created_at: string;
   updated_at: string;
 };
@@ -83,11 +84,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
 
-    const rolePermissions = {
+    // Si el usuario tiene permisos específicos definidos, usarlos con prioridad
+    if (user.permissions && user.permissions.length > 0) {
+      return user.permissions.includes(permission);
+    }
+
+    const rolePermissions: Record<string, string[]> = {
       admin: [
         // Menús principales
         'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-        'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular',
+        'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular', 'tickets',
         // Submenús de inventario
         'inventory-pc', 'inventory-celular', 'inventory-dvr',
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
@@ -108,7 +114,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       supervisor: [
         // Menús principales
         'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-        'locations', 'users', 'vacations', 'flota-vehicular',
+        'locations', 'users', 'vacations', 'flota-vehicular', 'tickets',
         // Submenús de inventario
         'inventory-pc', 'inventory-celular', 'inventory-dvr',
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
@@ -128,7 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       technician: [
         // Menús principales
         'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-        'locations', 'users', 'vacations', 'flota-vehicular',
+        'locations', 'users', 'vacations', 'flota-vehicular', 'tickets',
         // Submenús de inventario
         'inventory-pc', 'inventory-celular', 'inventory-dvr',
         'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
@@ -149,11 +155,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'dashboard', 'cameras',
         // Submenús de cámaras
         'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito'
-      ]
+      ],
+      custom: [] // Para roles personalizados se usan user.permissions prioritariamente
     };
 
     return rolePermissions[user.role as keyof typeof rolePermissions]?.includes(permission) || false;
   };
+
 
   const canEdit = (): boolean => {
     if (!user) return false;

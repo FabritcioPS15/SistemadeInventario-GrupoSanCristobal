@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Key, Users, FileText, ChevronDown, ChevronUp, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Wrench, AlertTriangle, Clock, CheckCircle, Send, MapPin, Building2, Menu, X, Shield, Car, ClipboardList, Calendar } from 'lucide-react';
+import { LayoutDashboard, Package, Key, Users, FileText, ChevronRight, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Wrench, AlertTriangle, Clock, CheckCircle, Send, MapPin, Building2, Menu, X, Shield, Car, ClipboardList, Calendar, LogOut, Info, Ticket } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { GrServerCluster } from 'react-icons/gr';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,18 +11,29 @@ type SidebarProps = {
 };
 
 export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
-  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [menuTop, setMenuTop] = useState<number>(0);
   const { user, hasPermission, logout } = useAuth();
   const location = useLocation();
+  const closeTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const toggleMenu = (menuId: string) => {
-    const newExpanded = new Set(expandedMenus);
-    if (newExpanded.has(menuId)) {
-      newExpanded.delete(menuId);
-    } else {
-      newExpanded.add(menuId);
+  const handleMouseEnter = (itemId: string, e: React.MouseEvent) => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
     }
-    setExpandedMenus(newExpanded);
+
+    const item = menuItems.find((i) => i.id === itemId);
+
+    // Calculate position
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setMenuTop(rect.top);
+    setHoveredItem(itemId);
+  };
+
+  const handleMouseLeave = () => {
+    closeTimeoutRef.current = setTimeout(() => {
+      setHoveredItem(null);
+    }, 300);
   };
 
   const menuItems = [
@@ -94,7 +105,8 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         { id: 'sent-provincias', label: 'Provincias', icon: Send, path: '/sent/provincias' },
       ]
     },
-    { id: 'sutran', label: 'Visitas de Sutran', icon: Building2, path: '/sutran' },
+    { id: 'sutran', label: 'Sutran', icon: Building2, path: '/sutran' },
+    { id: 'tickets', label: 'Mesa de Ayuda', icon: Ticket, path: '/tickets' },
     {
       id: 'checklist',
       label: 'Checklist',
@@ -135,174 +147,182 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     return location.pathname.startsWith(path);
   };
 
+  const activeSubmenuItems = hoveredItem ? filteredMenuItems.find(i => i.id === hoveredItem)?.submenu : null;
+
   return (
     <>
       <style>
         {`
           .sidebar-scroll::-webkit-scrollbar {
-            width: 8px;
+            width: 4px;
           }
           .sidebar-scroll::-webkit-scrollbar-track {
-            background: #1e293b;
+            background: #f4f7fa;
           }
           .sidebar-scroll::-webkit-scrollbar-thumb {
-            background: #475569;
+            background: #cbd5e1;
             border-radius: 4px;
           }
           .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
+            background: #94a3b8;
           }
         `}
       </style>
       <aside
-        className={`${collapsed ? 'w-16' : 'w-80'} bg-slate-800 border-r border-slate-700 h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-10 flex flex-col overflow-y-auto sidebar-scroll`}
-        style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#475569 #1e293b'
-        }}
+        className={`${collapsed ? 'w-16' : 'w-72'} bg-[#f4f7fa] border-r border-[#e2e8f0] h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-30 flex flex-col overflow-y-auto sidebar-scroll`}
       >
-        <div className={`${collapsed ? 'p-3' : 'p-6'} border-b border-slate-700`}>
-          <div className="flex items-center justify-center">
-            {!collapsed ? (
-              <>
-                <div className="flex-1">
-                  <h1 className="text-xl font-bold text-white">Sistema GSC</h1>
-                  <p className="text-sm text-slate-300">Gestión y Control</p>
-                </div>
-                <button
-                  onClick={onToggleCollapse}
-                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={onToggleCollapse}
-                className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <Menu size={20} />
-              </button>
-            )}
-          </div>
+        {/* Logo Section */}
+        <div className={`h-14 bg-[#002855] text-white flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} sticky top-0 z-40`}>
+          {!collapsed && (
+            <div className="flex items-center gap-2">
+              <div className="bg-white p-1 rounded-md">
+                <LayoutDashboard size={18} className="text-[#002855]" />
+              </div>
+              <span className="font-black tracking-tighter text-lg uppercase">Sistema G.S.C.</span>
+            </div>
+          )}
+          <button
+            onClick={onToggleCollapse}
+            className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
+          >
+            {collapsed ? <Menu size={18} /> : <X size={20} />}
+          </button>
         </div>
 
-        <nav className={`${collapsed ? 'p-2' : 'p-4 pl-4'} flex-1`}>
+        {/* User Profile Section (Executive Look) */}
+        {!collapsed && user && (
+          <div className="p-6 pb-2 text-center border-b border-[#e2e8f0] mb-2">
+            <div className="relative mx-auto w-20 h-20 mb-4 group">
+              <div className="w-full h-full rounded-2xl bg-white shadow-md border border-[#e2e8f0] flex items-center justify-center overflow-hidden">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#002855] to-[#004e92] flex items-center justify-center text-white text-2xl font-black">
+                  {user.full_name?.charAt(0)}
+                </div>
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-2 border-[#f4f7fa] rounded-full shadow-sm" />
+            </div>
+            <h3 className="text-[#002855] font-black text-sm uppercase tracking-tight">{user.full_name}</h3>
+            <p className="text-[#64748b] text-[10px] font-bold uppercase tracking-[0.15em] mt-0.5">Grupo San Cristobal</p>
+          </div>
+        )}
+
+        <nav className={`${collapsed ? 'p-2' : 'p-3'} flex-1 space-y-0.5`}>
           {filteredMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = isPathActive(item.path || '');
-            const isExpanded = expandedMenus.has(item.id);
+            const isHovered = hoveredItem === item.id;
 
             return (
-              <div key={item.id} className="mb-1">
-                <div className={`${collapsed ? 'flex justify-center' : 'flex items-center'} rounded-lg transition-colors ${isActive
-                  ? 'bg-slate-700 text-white font-medium'
-                  : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+              <div key={item.id}
+                onMouseEnter={(e) => handleMouseEnter(item.id, e)}
+                onMouseLeave={handleMouseLeave}
+              >
+                <div className={`group relative flex items-center rounded-md transition-all duration-200 ${isActive || isHovered
+                  ? 'bg-white shadow-sm ring-1 ring-[#e2e8f0]'
+                  : 'hover:bg-[#e2e8f2]'
                   }`}>
+
+                  {(isActive || isHovered) && (
+                    <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-[#002855] rounded-r-full" />
+                  )}
+
                   <NavLink
                     to={item.path || '#'}
-                    className={({ isActive: linkActive }) => `
-                      ${collapsed ? 'p-3 w-full flex justify-center h-12' : 'flex items-center gap-3 px-4 py-3 flex-1 text-left h-12'}
-                      ${linkActive || isActive ? 'bg-slate-700 text-white font-medium' : 'text-slate-300 hover:bg-slate-700 hover:text-white'}
+                    className={`
+                      flex items-center gap-3 px-3.5 py-2.5 flex-1 text-left h-11
+                      ${isActive || isHovered ? 'text-[#002855] font-black' : 'text-[#4e5d78] font-bold'}
                     `}
-                    title={collapsed ? item.label : undefined}
-                    onClick={() => {
-                      if (item.hasSubmenu && !collapsed) {
-                        // Opcional: Expandir al hacer clic si colapsado
-                      }
-                    }}
                   >
-                    <Icon size={24} />
-                    {!collapsed && <span>{item.label}</span>}
+                    <Icon size={20} strokeWidth={isActive || isHovered ? 2.5 : 2} className={isActive || isHovered ? 'text-[#002855]' : 'text-[#64748b] group-hover:text-[#4e5d78]'} />
+                    {!collapsed && <span className="text-[13px] uppercase tracking-tight truncate">{item.label}</span>}
+
+                    {item.hasSubmenu && !collapsed && (
+                      <div className="ml-auto">
+                        <ChevronRight size={14} className={`text-[#64748b] transition-transform duration-200 ${isHovered ? 'rotate-0' : ''}`} />
+                      </div>
+                    )}
                   </NavLink>
-                  {item.hasSubmenu && !collapsed && (
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        toggleMenu(item.id);
-                      }}
-                      className="px-2 py-3 hover:bg-slate-600 rounded-r-lg transition-colors h-12"
-                    >
-                      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </button>
-                  )}
                 </div>
-
-                {item.hasSubmenu && isExpanded && !collapsed && (
-                  <div className="ml-4 mt-1 space-y-1">
-                    {item.submenu?.map((subItem) => {
-                      const SubIcon = subItem.icon;
-
-                      return (
-                        <NavLink
-                          key={subItem.id}
-                          to={subItem.path || '#'}
-                          className={({ isActive: subActive }) => `
-                            w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors
-                            ${subActive ? 'bg-slate-600 text-white font-medium' : 'text-slate-400 hover:bg-slate-700 hover:text-white'}
-                          `}
-                        >
-                          <SubIcon size={18} />
-                          <span>{subItem.label}</span>
-                        </NavLink>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             );
           })}
         </nav>
 
-        {user && (
-          <div className={`${collapsed ? 'p-2' : 'p-4'} border-t border-slate-700`}>
-            {!collapsed ? (
-              <div className="space-y-3">
-                <div className="bg-slate-700 rounded-lg p-3">
-                  <div className="text-sm text-slate-300">
-                    <div className="font-medium text-white">{user.full_name}</div>
-                    <div className="text-xs">{user.email}</div>
-                    <div className="text-xs mt-1">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${user.role === 'admin' ? 'bg-red-100 text-red-800' :
-                        user.role === 'supervisor' ? 'bg-blue-100 text-blue-800' :
-                          user.role === 'technician' ? 'bg-green-100 text-green-800' :
-                            'bg-gray-100 text-gray-800'
-                        }`}>
-                        {user.role === 'admin' ? 'Administrador' :
-                          user.role === 'supervisor' ? 'Supervisor' :
-                            user.role === 'technician' ? 'Técnico' :
-                              'Usuario'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={logout}
-                  className="w-full bg-red-600 text-white py-2 px-3 rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center justify-center gap-2"
-                >
-                  <X size={16} />
-                  Cerrar Sesión
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center space-y-2">
-                <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">
-                    {user.full_name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <button
-                  onClick={logout}
-                  className="p-2 text-slate-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-                  title="Cerrar Sesión"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )}
+        {/* Bottom Actions */}
+        <div className="p-3 bg-white/50 border-t border-[#e2e8f0]">
+          <div className="space-y-1">
+            <button className="w-full flex items-center gap-3 px-3.5 py-2 text-[#64748b] hover:text-[#002855] hover:bg-[#e2e8f2] rounded-md transition-all text-sm font-bold uppercase tracking-tight">
+              <Info size={18} />
+              {!collapsed && <span>Ayuda</span>}
+            </button>
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-3 px-3.5 py-2 text-rose-600 hover:bg-rose-50 rounded-md transition-all text-sm font-bold uppercase tracking-tight"
+            >
+              <LogOut size={18} />
+              {!collapsed && <span>Cerrar Sesión</span>}
+            </button>
           </div>
-        )}
+        </div>
       </aside>
+
+      {/* Flyout Submenu (for items WITH submenu) */}
+      {hoveredItem && activeSubmenuItems && activeSubmenuItems.length > 0 && (
+        <div
+          className="fixed z-50 bg-white border border-[#e2e8f0] shadow-xl rounded-md py-1 min-w-[200px] animate-in fade-in zoom-in-95 duration-100"
+          style={{
+            top: menuTop,
+            left: collapsed ? '4.5rem' : '18.5rem',
+          }}
+          onMouseEnter={() => {
+            if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+          }}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
+            <h4 className="text-xs font-black text-[#002855] uppercase tracking-wider">
+              {filteredMenuItems.find(i => i.id === hoveredItem)?.label}
+            </h4>
+          </div>
+          <div className="py-1 max-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar">
+            {activeSubmenuItems.map((subItem) => {
+              const SubIcon = subItem.icon;
+              const isSubActive = isPathActive(subItem.path || '', true);
+
+              return (
+                <NavLink
+                  key={subItem.id}
+                  to={subItem.path || '#'}
+                  className={`
+                        flex items-center gap-3 px-4 py-2.5 text-[12px] font-bold uppercase tracking-tight transition-colors
+                        ${isSubActive
+                      ? 'text-[#002855] bg-blue-50 border-l-2 border-[#002855]'
+                      : 'text-[#64748b] hover:text-[#002855] hover:bg-gray-50'
+                    }
+                        `}
+                >
+                  <SubIcon size={16} className={isSubActive ? 'text-[#002855]' : 'text-[#94a3b8]'} />
+                  <span className="truncate">{subItem.label}</span>
+                </NavLink>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Custom Tooltip (for items WITHOUT submenu when collapsed) */}
+      {collapsed && hoveredItem && (!activeSubmenuItems || activeSubmenuItems.length === 0) && (
+        <div
+          className="fixed z-50 bg-white border border-[#e2e8f0] shadow-xl rounded-md py-2 px-4 min-w-[120px] animate-in fade-in zoom-in-95 duration-100 pointer-events-none"
+          style={{
+            top: menuTop + 6, // Slight offset to align with link center
+            left: '4.5rem',
+          }}
+        >
+          <span className="text-xs font-black text-[#002855] uppercase tracking-wider">
+            {filteredMenuItems.find(i => i.id === hoveredItem)?.label}
+          </span>
+        </div>
+      )}
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Car, ChevronRight, Building2, Stethoscope, GraduationCap, FileText,  Clock, ExternalLink, Edit, LayoutGrid, List, Search} from 'lucide-react';
+import { Car, ChevronRight, Building2, Stethoscope, GraduationCap, FileText, Clock, ExternalLink, Edit, LayoutGrid, List, Search, Star, ChevronDown, Plus, X } from 'lucide-react';
 import { supabase, Location } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,7 +32,7 @@ export default function Checklist({ type }: { type?: string }) {
             if (error) {
                 throw error;
             }
-            
+
             setLocations(data as Location[]);
         } catch (err) {
             console.error('Error fetching locations:', err);
@@ -58,7 +58,7 @@ export default function Checklist({ type }: { type?: string }) {
 
     const getFilteredLocations = () => {
         if (!type) return locations;
-        
+
         return locations.filter(loc => {
             if (type === 'escon') return loc.type === 'escuela_conductores';
             if (type === 'ecsal') return loc.type === 'policlinico';
@@ -169,7 +169,7 @@ export default function Checklist({ type }: { type?: string }) {
                         <h3 className="text-lg font-bold text-slate-900">Actualización en Tiempo Real</h3>
                     </div>
                     <p className="text-slate-600 text-sm max-w-2xl mx-auto">
-                        Todos los checklists se actualizan automáticamente en tiempo real. 
+                        Todos los checklists se actualizan automáticamente en tiempo real.
                         Los datos se sincronizan instantáneamente entre todas las sedes y el panel central.
                     </p>
                 </div>
@@ -237,8 +237,8 @@ export default function Checklist({ type }: { type?: string }) {
                                             href={location.checklist_url || '#'}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className={`w-full inline-flex items-center justify-between px-4 py-3 text-[11px] font-bold text-white rounded-xl transition-all shadow-md group/btn ${!location.checklist_url 
-                                                ? 'bg-gray-300 cursor-not-allowed opacity-50' 
+                                            className={`w-full inline-flex items-center justify-between px-4 py-3 text-[11px] font-bold text-white rounded-xl transition-all shadow-md group/btn ${!location.checklist_url
+                                                ? 'bg-gray-300 cursor-not-allowed opacity-50'
                                                 : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'
                                                 }`}
                                         >
@@ -252,8 +252,8 @@ export default function Checklist({ type }: { type?: string }) {
                                             href={location.history_url || '#'}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className={`w-full inline-flex items-center justify-between px-4 py-3 text-[11px] font-bold rounded-xl transition-all shadow-sm group/btn ${!location.history_url 
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50' 
+                                            className={`w-full inline-flex items-center justify-between px-4 py-3 text-[11px] font-bold rounded-xl transition-all shadow-sm group/btn ${!location.history_url
+                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
                                                 : 'text-blue-600 bg-white border border-blue-100 hover:bg-blue-50 hover:border-blue-300 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]'
                                                 }`}
                                         >
@@ -376,72 +376,101 @@ export default function Checklist({ type }: { type?: string }) {
     }
 
     return (
-        <div className="w-full px-4 py-8">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-200">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-1 uppercase">
-                        Sistema de Checklists{type ? ` - ${type.toUpperCase()}` : ''}
-                    </h2>
-                    <p className="text-slate-500 text-sm font-medium">
-                        {type ? `Gestión de checklists ${type.toUpperCase()}` : 'Gestión operativa de checklists por unidad de negocio'}
-                    </p>
-                </div>
-                
-                {type && (
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                        {driveLinks[type] && (
-                            <a
-                                href={driveLinks[type]}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
-                            >
-                                <ExternalLink size={14} />
-                                Carpeta Drive {type.toUpperCase()}
-                            </a>
-                        )}
-                        
-                        <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-                            <button
-                                onClick={() => setViewMode('grid')}
-                                className={`flex-1 sm:flex-none p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                title="Vista Cuadrícula"
-                            >
-                                <LayoutGrid size={16} />
-                            </button>
-                            <button
-                                onClick={() => setViewMode('list')}
-                                className={`flex-1 sm:flex-none p-2 rounded-md transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                title="Vista Listado"
-                            >
-                                <List size={16} />
-                            </button>
+        <div className="flex flex-col h-full bg-[#f8f9fc]">
+            {/* Title / Tab Bar - Minimalist Executive Style */}
+            <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-4">
+                    <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
+                        {type === 'escon' ? <GraduationCap size={20} /> :
+                            type === 'ecsal' ? <Stethoscope size={20} /> :
+                                type === 'citv' ? <Car size={20} /> :
+                                    <FileText size={20} />}
+                    </div>
+                    <div>
+                        <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">
+                            {type ? `Checklists ${type.toUpperCase()}` : 'Checklists Operativos'}
+                        </h2>
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
+                            <span>{type ? 'Gestión de Sedes' : 'Supervisión y Control'}</span>
+                            {type && (
+                                <>
+                                    <div className="w-1 h-1 bg-gray-300 rounded-full" />
+                                    <span>{getFilteredLocations().length} Sedes</span>
+                                </>
+                            )}
                         </div>
-                        
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    {type && driveLinks[type] && (
+                        <a
+                            href={driveLinks[type]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition-all font-bold text-[9px] uppercase tracking-widest mr-2"
+                        >
+                            <ExternalLink size={12} />
+                            Drive {type.toUpperCase()}
+                        </a>
+                    )}
+
+                    {type && (
+                        <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
+                            <div className="flex bg-[#f1f5f9] p-1 rounded-lg">
+                                <button
+                                    onClick={() => setViewMode('grid')}
+                                    className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                    title="Vista Cuadrícula"
+                                >
+                                    <LayoutGrid size={16} />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                                    title="Vista Lista"
+                                >
+                                    <List size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {type && (
                         <button
                             onClick={() => navigate('/checklist')}
-                            className="px-6 py-3 sm:py-2 bg-slate-800 text-white rounded-md hover:bg-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm"
+                            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all font-bold text-[9px] uppercase tracking-widest mr-1 shadow-sm"
                         >
-                            Volver al menú
+                            Volver
                         </button>
-                    </div>
+                    )}
+
+                    <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
+                        <Star size={18} />
+                    </button>
+                    <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors">
+                        <X size={18} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+
+                <div className="max-w-7xl mx-auto">
+                    {!type && renderGeneralView()}
+                    {type === 'escon' && renderSpecificView('escuela_conductores', 'ESCON', 'bg-blue-500', <GraduationCap size={16} />)}
+                    {type === 'ecsal' && renderSpecificView('policlinico', 'ECSAL', 'bg-emerald-500', <Stethoscope size={16} />)}
+                    {type === 'citv' && renderSpecificView('revision', 'CITV', 'bg-orange-500', <Car size={16} />)}
+                </div>
+
+                {showForm && (
+                    <LocationForm
+                        editLocation={editingLocation}
+                        onClose={() => { setShowForm(false); setEditingLocation(undefined); }}
+                        onSave={handleSaveLinks}
+                    />
                 )}
             </div>
-
-            <div className="max-w-7xl mx-auto">
-                {!type && renderGeneralView()}
-                {type === 'escon' && renderSpecificView('escuela_conductores', 'ESCON', 'bg-blue-500', <GraduationCap size={16} />)}
-                {type === 'ecsal' && renderSpecificView('policlinico', 'ECSAL', 'bg-emerald-500', <Stethoscope size={16} />)}
-                {type === 'citv' && renderSpecificView('revision', 'CITV', 'bg-orange-500', <Car size={16} />)}
-            </div>
-
-            {showForm && (
-                <LocationForm
-                    editLocation={editingLocation}
-                    onClose={() => { setShowForm(false); setEditingLocation(undefined); }}
-                    onSave={handleSaveLinks}
-                />
-            )}
         </div>
     );
 }
