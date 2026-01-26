@@ -50,6 +50,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkSession();
   }, []);
 
+  // Subscribe to realtime changes for the current user
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const userSubscription = supabase
+      .channel(`user-${user.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'users',
+        filter: `id=eq.${user.id}`
+      }, async (payload) => {
+        console.log('User data updated in realtime:', payload);
+
+        // Fetch the complete updated user data
+        const { data: updatedUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (updatedUser) {
+          setUser(updatedUser as User);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(userSubscription);
+    };
+  }, [user?.id]);
+
   const checkSession = async () => {
     try {
       // Verificar si hay usuarios sin contraseñas configuradas
@@ -89,74 +121,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return user.permissions.includes(permission);
     }
 
+    const fullAccess = [
+      'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
+      'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular', 'tickets', 'painpoint',
+      'inventory-pc', 'inventory-celular', 'inventory-dvr', 'inventory-impresora', 'inventory-escaner',
+      'inventory-monitor', 'inventory-laptop', 'inventory-proyector', 'inventory-switch', 'inventory-chip',
+      'inventory-tinte', 'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
+      'inventory-maquinaria', 'inventory-otros', 'spare-parts',
+      'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
+      'maintenance-pending', 'maintenance-in-progress', 'maintenance-completed',
+      'maintenance-preventive', 'maintenance-corrective',
+      'sent-lima', 'sent-provincias',
+      'checklist-escon', 'checklist-ecsal', 'checklist-citv'
+    ];
+
     const rolePermissions: Record<string, string[]> = {
-      admin: [
-        // Menús principales
-        'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-        'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular', 'tickets',
-        // Submenús de inventario
-        'inventory-pc', 'inventory-celular', 'inventory-dvr',
-        'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
-        'inventory-proyector', 'inventory-switch', 'inventory-chip', 'inventory-tinte',
-        'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
-        'inventory-maquinaria', 'inventory-otros',
-        'spare-parts',
-        // Submenús de cámaras
-        'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
-        // Submenús de mantenimiento
-        'maintenance-pending', 'maintenance-in-progress', 'maintenance-completed',
-        'maintenance-preventive', 'maintenance-corrective',
-        // Submenús de enviados
-        'sent-lima', 'sent-provincias',
-        // Submenús de checklist
-        'checklist-escon', 'checklist-ecsal', 'checklist-citv'
-      ],
-      supervisor: [
-        // Menús principales
-        'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-        'locations', 'users', 'vacations', 'flota-vehicular', 'tickets',
-        // Submenús de inventario
-        'inventory-pc', 'inventory-celular', 'inventory-dvr',
-        'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
-        'inventory-proyector', 'inventory-switch', 'inventory-chip', 'inventory-tinte',
-        'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
-        'inventory-maquinaria', 'inventory-otros',
-        // Submenús de cámaras
-        'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
-        // Submenús de mantenimiento
-        'maintenance-pending', 'maintenance-in-progress', 'maintenance-completed',
-        'maintenance-preventive', 'maintenance-corrective',
-        // Submenús de enviados
-        'sent-lima', 'sent-provincias',
-        // Submenús de checklist
-        'checklist-escon', 'checklist-ecsal', 'checklist-citv'
-      ],
-      technician: [
-        // Menús principales
-        'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-        'locations', 'users', 'vacations', 'flota-vehicular', 'tickets',
-        // Submenús de inventario
-        'inventory-pc', 'inventory-celular', 'inventory-dvr',
-        'inventory-impresora', 'inventory-escaner', 'inventory-monitor', 'inventory-laptop',
-        'inventory-proyector', 'inventory-switch', 'inventory-chip', 'inventory-tinte',
-        'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
-        'inventory-maquinaria', 'inventory-otros',
-        // Submenús de cámaras
-        'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
-        // Submenús de mantenimiento
-        'maintenance-pending', 'maintenance-in-progress', 'maintenance-completed',
-        'maintenance-preventive', 'maintenance-corrective',
-        // Submenús de enviados
-        'sent-lima', 'sent-provincias',
-        // Submenús de checklist
-        'checklist-escon', 'checklist-ecsal', 'checklist-citv'
-      ],
-      user: [
-        'dashboard', 'cameras',
-        // Submenús de cámaras
-        'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito'
-      ],
-      custom: [] // Para roles personalizados se usan user.permissions prioritariamente
+      systems: fullAccess,
+      management: fullAccess,
+      admin: fullAccess,
+      supervisor: fullAccess,
+      user: fullAccess,
+      custom: []
     };
 
     return rolePermissions[user.role as keyof typeof rolePermissions]?.includes(permission) || false;
@@ -165,7 +150,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const canEdit = (): boolean => {
     if (!user) return false;
-    return user.role === 'admin' || user.role === 'technician';
+    const allowedRoles = ['systems', 'management', 'admin', 'technician'];
+    return allowedRoles.includes(user.role);
   };
 
   const value = {

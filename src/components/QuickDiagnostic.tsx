@@ -24,7 +24,7 @@ export default function QuickDiagnostic() {
         .from('locations')
         .select('*', { count: 'exact' })
         .limit(5);
-      
+
       newResults.push({
         test: 'Ubicaciones',
         status: error ? 'error' : count === 0 ? 'warning' : 'success',
@@ -47,7 +47,7 @@ export default function QuickDiagnostic() {
         .from('assets')
         .select('*', { count: 'exact' })
         .limit(5);
-      
+
       newResults.push({
         test: 'Activos',
         status: error ? 'error' : count === 0 ? 'warning' : 'success',
@@ -70,7 +70,7 @@ export default function QuickDiagnostic() {
         .from('users')
         .select('*', { count: 'exact' })
         .limit(5);
-      
+
       newResults.push({
         test: 'Usuarios',
         status: error ? 'error' : count === 0 ? 'warning' : 'success',
@@ -93,7 +93,7 @@ export default function QuickDiagnostic() {
         .from('cameras')
         .select('*', { count: 'exact' })
         .limit(5);
-      
+
       newResults.push({
         test: 'Cámaras',
         status: error ? 'error' : count === 0 ? 'warning' : 'success',
@@ -115,7 +115,7 @@ export default function QuickDiagnostic() {
       const { data, error, count } = await supabase
         .from('asset_types')
         .select('*', { count: 'exact' });
-      
+
       newResults.push({
         test: 'Tipos de Activos',
         status: error ? 'error' : count === 0 ? 'warning' : 'success',
@@ -193,7 +193,7 @@ export default function QuickDiagnostic() {
           <h3 className="font-semibold text-blue-900">Resumen</h3>
         </div>
         <p className="text-blue-800">
-          {hasData 
+          {hasData
             ? `Total de registros encontrados: ${totalData}`
             : 'No se encontraron datos. Ejecuta fixed_test_data.sql en Supabase.'
           }

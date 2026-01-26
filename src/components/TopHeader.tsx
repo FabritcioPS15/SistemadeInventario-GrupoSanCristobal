@@ -1,30 +1,96 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, Star, Plus, Settings, HelpCircle, Globe, LayoutGrid, Trash2 } from 'lucide-react';
+import { Search, Bell, Settings, HelpCircle, LayoutGrid, Menu, Pin, PinOff } from 'lucide-react';
 import { supabase, SutranVisit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useHeaderVisible } from '../hooks/useHeaderVisible';
 
-export default function TopHeader() {
+type TopHeaderProps = {
+    onMobileMenuClick?: () => void;
+};
+
+export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
     const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
     const [sutranNotifications, setSutranNotifications] = useState<SutranVisit[]>([]);
+    const [userLocation, setUserLocation] = useState<string>('');
     const notificationRef = useRef<HTMLDivElement>(null);
 
-    // Favorites State
-    const [favorites, setFavorites] = useState<{ path: string; title: string }[]>([]);
-    const [showFavorites, setShowFavorites] = useState(false);
-    const favoriteRef = useRef<HTMLDivElement>(null);
+    // Pinning State
+    const [isPinned, setIsPinned] = useState(() => {
+        return localStorage.getItem('header_pinned') === 'true';
+    });
 
-    // Load favorites from local storage
+    const isVisible = useHeaderVisible(isPinned);
+
+    const togglePin = () => {
+        const newValue = !isPinned;
+        setIsPinned(newValue);
+        localStorage.setItem('header_pinned', String(newValue));
+    };
+
+
+    // Fetch user's location name with Realtime updates
     useEffect(() => {
-        const saved = localStorage.getItem('gsc_favorites');
-        if (saved) {
-            setFavorites(JSON.parse(saved));
-        }
-    }, []);
+        const fetchUserLocation = async () => {
+            if (user?.location_id) {
+                const { data } = await supabase
+                    .from('locations')
+                    .select('name')
+                    .eq('id', user.location_id)
+                    .single();
+
+                if (data) {
+                    setUserLocation(data.name);
+                }
+            } else {
+                setUserLocation('');
+            }
+        };
+
+        fetchUserLocation();
+
+        // Subscribe to location changes
+        const locationSubscription = supabase
+            .channel('location-changes')
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'locations',
+                filter: `id=eq.${user?.location_id}`
+            }, (payload) => {
+                console.log('Location updated:', payload);
+                if (payload.new && 'name' in payload.new) {
+                    setUserLocation(payload.new.name as string);
+                }
+            })
+            .subscribe();
+
+        // Subscribe to user changes (in case location_id changes)
+        const userSubscription = supabase
+            .channel('user-changes')
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'users',
+                filter: `id=eq.${user?.id}`
+            }, (payload) => {
+                console.log('User updated:', payload);
+                // Refetch location if location_id changed
+                if (payload.new && 'location_id' in payload.new) {
+                    fetchUserLocation();
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(locationSubscription);
+            supabase.removeChannel(userSubscription);
+        };
+    }, [user?.location_id, user?.id]);
 
     // Helper to get readable title from path
     const getPageTitle = (path: string) => {
@@ -41,22 +107,6 @@ export default function TopHeader() {
         return 'Página del Sistema';
     };
 
-    const toggleFavorite = () => {
-        const currentPath = location.pathname;
-        const isFavorite = favorites.some(fav => fav.path === currentPath);
-        let newFavorites;
-
-        if (isFavorite) {
-            newFavorites = favorites.filter(fav => fav.path !== currentPath);
-        } else {
-            newFavorites = [...favorites, { path: currentPath, title: getPageTitle(currentPath) }];
-        }
-
-        setFavorites(newFavorites);
-        localStorage.setItem('gsc_favorites', JSON.stringify(newFavorites));
-    };
-
-    const isCurrentPageFavorite = favorites.some(fav => fav.path === location.pathname);
 
     // Fetch Sutran notifications
     useEffect(() => {
@@ -95,9 +145,6 @@ export default function TopHeader() {
             if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
                 setShowNotifications(false);
             }
-            if (favoriteRef.current && !favoriteRef.current.contains(event.target as Node)) {
-                setShowFavorites(false);
-            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
@@ -110,16 +157,6 @@ export default function TopHeader() {
             // In a real app, this might open a command palette or search across multiple tables
             if (searchTerm.trim()) {
                 navigate(`/inventory?search=${encodeURIComponent(searchTerm)}`);
-            }
-        }
-    };
-
-    const toggleFullscreen = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
             }
         }
     };
@@ -139,201 +176,148 @@ export default function TopHeader() {
     };
 
     return (
-        <header className="h-14 bg-[#002855] text-white flex items-center justify-between px-6 sticky top-0 z-20 shadow-lg">
-            <div className="flex items-center gap-6">
-                <button className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-                    <LayoutGrid size={20} />
-                </button>
+        <>
+            <header className={`h-14 bg-[#002855] text-white flex items-center justify-between px-6 sticky top-0 z-50 shadow-lg transition-transform duration-500 ease-in-out ${isVisible || isPinned ? 'translate-y-0' : '-translate-y-full'}`}>
+                <div className="flex items-center gap-4 lg:gap-6">
+                    <button
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors lg:hidden"
+                        onClick={onMobileMenuClick}
+                    >
+                        <Menu size={20} />
+                    </button>
+                    <button className="p-1.5 hover:bg-white/10 rounded-lg transition-colors hidden lg:block">
+                        <LayoutGrid size={20} />
+                    </button>
 
-                <div className="h-8 w-[1px] bg-white/20" />
+                    <div className="h-8 w-[1px] bg-white/20" />
 
-                <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 group-hover:text-white transition-colors" size={16} />
-                    <input
-                        type="text"
-                        placeholder="Buscar en el sistema..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        onKeyDown={handleSearch}
-                        className="bg-white/10 border-none rounded-md pl-10 pr-4 py-1.5 text-sm w-48 lg:w-80 focus:ring-1 focus:ring-white/30 focus:bg-white/20 transition-all placeholder:text-white/40"
-                    />
-                </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-                {/* Mock currency info from the image */}
-                <div className="hidden xl:flex items-center gap-4 text-[11px] font-bold text-white/70 mr-4">
-                    <div className="flex items-center gap-1.5">
-                        <span className="text-white/40"></span>
-                        <span>GRUPO SAN CRISTOBAL</span>
+                    <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 group-hover:text-white transition-colors" size={16} />
+                        <input
+                            type="text"
+                            placeholder="Buscar..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onKeyDown={handleSearch}
+                            className="bg-white/10 border-none rounded-md pl-10 pr-4 py-1.5 text-sm w-32 sm:w-48 lg:w-80 focus:ring-1 focus:ring-white/30 focus:bg-white/20 transition-all placeholder:text-white/40"
+                        />
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1">
-                    <button
-                        title="Nuevo"
-                        onClick={() => alert('Función de creación rápida próximamente')}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-                    >
-                        <Plus size={18} />
-                    </button>
-
-                    {/* Favorites */}
-                    <div className="relative" ref={favoriteRef}>
-                        <button
-                            title="Favoritos"
-                            onClick={() => setShowFavorites(!showFavorites)}
-                            className={`p-2 hover:bg-white/10 rounded-lg transition-colors ${showFavorites ? 'bg-white/10' : ''}`}
-                        >
-                            <Star size={18} className={isCurrentPageFavorite ? "fill-yellow-400 text-yellow-400" : ""} />
-                        </button>
-
-                        {showFavorites && (
-                            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right z-50">
-                                <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                                    <h3 className="text-xs font-black text-[#002855] uppercase tracking-wider">Favoritos</h3>
-                                </div>
-                                <div className="max-h-[300px] overflow-y-auto">
-                                    <button
-                                        onClick={toggleFavorite}
-                                        className="w-full text-left p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 transition-colors flex items-center gap-2 text-xs font-bold text-blue-600"
-                                    >
-                                        <Star size={14} className={isCurrentPageFavorite ? "fill-blue-600" : ""} />
-                                        {isCurrentPageFavorite ? 'Quitar página actual' : 'Agendar esta página'}
-                                    </button>
-
-                                    {favorites.map((fav) => (
-                                        <div
-                                            key={fav.path}
-                                            className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-50 transition-colors flex items-center justify-between group"
-                                            onClick={() => {
-                                                navigate(fav.path);
-                                                setShowFavorites(false);
-                                            }}
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <Star size={14} className="text-yellow-400 fill-yellow-400" />
-                                                <span className="text-xs font-medium text-gray-700">{fav.title}</span>
-                                            </div>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const newFavs = favorites.filter(f => f.path !== fav.path);
-                                                    setFavorites(newFavs);
-                                                    localStorage.setItem('gsc_favorites', JSON.stringify(newFavs));
-                                                }}
-                                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded text-red-500 transition-all"
-                                            >
-                                                <Trash2 size={12} />
-                                            </button>
-                                        </div>
-                                    ))}
-
-                                    {favorites.length === 0 && !isCurrentPageFavorite && (
-                                        <div className="p-4 text-center text-gray-400 text-xs italic">
-                                            No tienes favoritos guardados
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <button
-                        title="Pantalla completa"
-                        onClick={toggleFullscreen}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors hidden sm:block"
-                    >
-                        <Globe size={18} />
-                    </button>
-
-                    {/* Notifications */}
-                    <div className="relative" ref={notificationRef}>
-                        <button
-                            title="Notificaciones"
-                            onClick={() => {
-                                setShowNotifications(!showNotifications);
-                            }}
-                            className={`p-2 hover:bg-white/10 rounded-lg transition-colors relative ${showNotifications ? 'bg-white/10' : ''}`}
-                        >
-                            <Bell size={18} />
-                            {sutranNotifications.length > 0 && (
-                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#002855]" />
+                <div className="flex items-center gap-2">
+                    {/* Mock currency info from the image */}
+                    <div className="hidden xl:flex items-center gap-4 text-[11px] font-bold text-white/70 mr-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-white/40"></span>
+                            <span>GRUPO SAN CRISTOBAL</span>
+                            {userLocation && (
+                                <>
+                                    <span className="text-white/30">•</span>
+                                    <span className="text-white/90">{userLocation}</span>
+                                </>
                             )}
-                        </button>
+                        </div>
+                    </div>
 
-                        {/* Notification Dropdown */}
-                        {showNotifications && (
-                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                                <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                                    <h3 className="text-xs font-black text-[#002855] uppercase tracking-wider">Notificaciones</h3>
-                                    <span className="text-[10px] font-bold text-gray-400">{sutranNotifications.length} Pendientes</span>
-                                </div>
-                                <div className="max-h-[300px] overflow-y-auto">
-                                    {sutranNotifications.length === 0 ? (
-                                        <div className="p-6 text-center text-gray-400 text-xs">
-                                            No tienes notificaciones pendientes
-                                        </div>
-                                    ) : (
-                                        sutranNotifications.map((note) => (
-                                            <div
-                                                key={note.id}
-                                                onClick={() => {
-                                                    navigate('/sutran');
-                                                    setShowNotifications(false);
-                                                }}
-                                                className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 transition-colors group"
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <div className="bg-rose-100 p-2 rounded-lg text-rose-600 mt-0.5">
-                                                        <Bell size={14} />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs font-bold text-gray-800 group-hover:text-blue-700">Visita SUTRAN Programada</p>
-                                                        <p className="text-[11px] text-gray-500 mt-0.5">{note.location_name}</p>
-                                                        <div className="flex items-center gap-2 mt-1.5">
-                                                            <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
-                                                                {getDaysRemaining(note.visit_date)}
-                                                            </span>
-                                                            <span className="text-[10px] text-gray-400">
-                                                                {new Date(note.visit_date).toLocaleDateString('es-ES')}
-                                                            </span>
+                    <div className="flex items-center gap-1">
+
+                        {/* Notifications */}
+                        <div className="relative" ref={notificationRef}>
+                            <button
+                                title="Notificaciones"
+                                onClick={() => {
+                                    setShowNotifications(!showNotifications);
+                                }}
+                                className={`p-2 hover:bg-white/10 rounded-lg transition-colors relative ${showNotifications ? 'bg-white/10' : ''}`}
+                            >
+                                <Bell size={18} />
+                                {sutranNotifications.length > 0 && (
+                                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#002855]" />
+                                )}
+                            </button>
+
+                            {/* Notification Dropdown */}
+                            {showNotifications && (
+                                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                    <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                                        <h3 className="text-xs font-black text-[#002855] uppercase tracking-wider">Notificaciones</h3>
+                                        <span className="text-[10px] font-bold text-gray-400">{sutranNotifications.length} Pendientes</span>
+                                    </div>
+                                    <div className="max-h-[300px] overflow-y-auto">
+                                        {sutranNotifications.length === 0 ? (
+                                            <div className="p-6 text-center text-gray-400 text-xs">
+                                                No tienes notificaciones pendientes
+                                            </div>
+                                        ) : (
+                                            sutranNotifications.map((note) => (
+                                                <div
+                                                    key={note.id}
+                                                    onClick={() => {
+                                                        navigate('/sutran');
+                                                        setShowNotifications(false);
+                                                    }}
+                                                    className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 transition-colors group"
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="bg-rose-100 p-2 rounded-lg text-rose-600 mt-0.5">
+                                                            <Bell size={14} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-bold text-gray-800 group-hover:text-blue-700">Visita SUTRAN Programada</p>
+                                                            <p className="text-[11px] text-gray-500 mt-0.5">{note.location_name}</p>
+                                                            <div className="flex items-center gap-2 mt-1.5">
+                                                                <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
+                                                                    {getDaysRemaining(note.visit_date)}
+                                                                </span>
+                                                                <span className="text-[10px] text-gray-400">
+                                                                    {new Date(note.visit_date).toLocaleDateString('es-ES')}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))
-                                    )}
+                                            ))
+                                        )}
+                                    </div>
+                                    <div className="p-2 border-t border-gray-100 bg-gray-50 text-center">
+                                        <button
+                                            onClick={() => {
+                                                navigate('/sutran');
+                                                setShowNotifications(false);
+                                            }}
+                                            className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest"
+                                        >
+                                            Ver todas
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="p-2 border-t border-gray-100 bg-gray-50 text-center">
-                                    <button
-                                        onClick={() => {
-                                            navigate('/sutran');
-                                            setShowNotifications(false);
-                                        }}
-                                        className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest"
-                                    >
-                                        Ver todas
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <button title="Ayuda" onClick={() => alert('Soporte no disponible')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                        <HelpCircle size={18} />
-                    </button>
-
-                    <div className="h-8 w-[1px] bg-white/20 mx-1" />
-
-                    <button className="flex items-center gap-2 p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-                        <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold uppercase">
-                            {user?.full_name?.charAt(0)}
+                            )}
                         </div>
-                        <Settings size={18} />
-                    </button>
+
+                        <button
+                            title={isPinned ? "Desfijar Header" : "Fijar Header"}
+                            onClick={togglePin}
+                            className={`p-2 rounded-lg transition-colors hidden sm:flex ${isPinned ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/70'}`}
+                        >
+                            {isPinned ? <Pin size={18} /> : <PinOff size={18} />}
+                        </button>
+
+                        <button title="Ayuda" onClick={() => alert('Soporte no disponible')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                            <HelpCircle size={18} />
+                        </button>
+
+                        <div className="h-8 w-[1px] bg-white/20 mx-1" />
+
+                        <button className="flex items-center gap-2 p-1.5 hover:bg-white/10 rounded-lg transition-colors">
+                            <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold uppercase">
+                                {user?.full_name?.charAt(0)}
+                            </div>
+                            <Settings size={18} />
+                        </button>
+                    </div>
                 </div>
-            </div>
-        </header>
+            </header>
+
+        </>
     );
 }

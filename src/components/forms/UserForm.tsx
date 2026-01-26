@@ -52,16 +52,17 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
     { id: 'cameras', label: 'Cámaras', category: 'Principal' },
     { id: 'maintenance', label: 'Mantenimiento', category: 'Principal' },
     { id: 'sent', label: 'Enviados', category: 'Principal' },
+    { id: 'tickets', label: 'Mesa de Ayuda (Tickets)', category: 'Principal' },
     { id: 'sutran', label: 'Sutran', category: 'Operaciones' },
     { id: 'checklist', label: 'Checklist', category: 'Operaciones' },
+    { id: 'flota-vehicular', label: 'Flota Vehicular', category: 'Operaciones' },
+    { id: 'mtc', label: 'MTC', category: 'Operaciones' },
     { id: 'locations', label: 'Sedes', category: 'Configuración' },
     { id: 'users', label: 'Usuarios', category: 'Configuración' },
-    { id: 'vactions', label: 'Vacaciones', category: 'RRHH' },
+    { id: 'vacations', label: 'Vacaciones', category: 'RRHH' },
     { id: 'servers', label: 'Servidores', category: 'TI' },
     { id: 'audit', label: 'Auditoría', category: 'TI' },
     { id: 'integrity', label: 'Integridad', category: 'TI' },
-    { id: 'flota-vehicular', label: 'Flota Vehicular', category: 'Operaciones' },
-    { id: 'mtc', label: 'MTC', category: 'Operaciones' },
   ];
 
   useEffect(() => {
@@ -222,13 +223,24 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
     setLoading(true);
 
-    const dataToSave = {
-      ...formData,
+    // Prepare data to save - exclude password if empty
+    const dataToSave: any = {
+      full_name: formData.full_name,
+      email: formData.email,
+      dni: formData.dni || null,
+      role: formData.role,
       location_id: formData.location_id || null,
+      phone: formData.phone || null,
+      status: formData.status,
+      notes: formData.notes || null,
+      permissions: formData.permissions,
       updated_at: new Date().toISOString(),
-      // Solo incluir contraseña si se proporciona
-      ...(formData.password && { password: formData.password }),
     };
+
+    // Only include password if it's provided and not empty
+    if (formData.password && formData.password.trim() !== '') {
+      dataToSave.password = formData.password;
+    }
 
     try {
       if (editUser) {
@@ -467,10 +479,11 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
                       onChange={handleChange}
                       className="w-full pl-10 pr-4 py-2 bg-white border border-[#e2e8f0] rounded-lg outline-none focus:ring-2 focus:ring-[#002855]/20 focus:border-[#002855] transition-all text-[13px] font-semibold text-[#1e293b] appearance-none cursor-pointer"
                     >
-                      <option value="admin">Administrador (Master)</option>
-                      <option value="supervisor">Supervisor de Área</option>
-                      <option value="technician">Técnico Operativo</option>
-                      <option value="user">Usuario Estándar</option>
+                      <option value="systems">Sistemas (Acceso Total)</option>
+                      <option value="management">Gerencia (Acceso Total)</option>
+                      <option value="admin">Administrador (Operaciones)</option>
+                      <option value="supervisor">Supervisor (Operaciones)</option>
+                      <option value="user">Usuario Estándar (Consulta)</option>
                       <option value="custom">⚙️ Personalizado (Específico)</option>
                     </select>
                   </div>
@@ -520,6 +533,42 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
                 </div>
               </div>
 
+              {/* Granular Permissions Section */}
+              {formData.role === 'custom' && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-500 pb-4">
+                  <div className="flex items-center gap-2 pb-2 border-b border-[#e2e8f0]">
+                    <div className="w-1 h-4 bg-[#6366f1] rounded-full" />
+                    <h3 className="text-[12px] font-black text-[#64748b] uppercase tracking-widest">Permisos de Módulo</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {['Principal', 'Operaciones', 'Configuración', 'RRHH', 'TI'].map(category => (
+                      <div key={category} className="space-y-3 bg-white p-4 rounded-xl border border-[#e2e8f0] shadow-sm">
+                        <h4 className="text-[10px] font-black text-[#94a3b8] uppercase tracking-[0.2em] mb-2">{category}</h4>
+                        <div className="space-y-2">
+                          {availablePermissions.filter(p => p.category === category).map(permission => (
+                            <label key={permission.id} className="flex items-center gap-3 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={formData.permissions.includes(permission.id)}
+                                onChange={(e) => {
+                                  const newPermissions = e.target.checked
+                                    ? [...formData.permissions, permission.id]
+                                    : formData.permissions.filter(p => p !== permission.id);
+                                  setFormData(prev => ({ ...prev, permissions: newPermissions }));
+                                }}
+                                className="w-4 h-4 rounded text-[#002855] border-[#cbd5e1] focus:ring-[#002855]/20 focus:ring-offset-0 transition-all"
+                              />
+                              <span className="text-[13px] font-medium text-[#475569] group-hover:text-[#1e293b] transition-colors">{permission.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1.5 pt-2">
                 <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider">Notas y Observaciones</label>
                 <textarea
@@ -532,46 +581,9 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
                 />
               </div>
             </div>
-
-            {/* Granular Permissions Section */}
-            {formData.role === 'custom' && (
-              <div className="space-y-5 animate-in fade-in slide-in-from-left-4 duration-500">
-                <div className="flex items-center gap-2 pb-2 border-b border-[#e2e8f0]">
-                  <div className="w-1 h-4 bg-[#6366f1] rounded-full" />
-                  <h3 className="text-[12px] font-black text-[#64748b] uppercase tracking-widest">Permisos de Módulo</h3>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {['Principal', 'Operaciones', 'Configuración', 'RRHH', 'TI'].map(category => (
-                    <div key={category} className="space-y-3 bg-white p-4 rounded-xl border border-[#e2e8f0] shadow-sm">
-                      <h4 className="text-[10px] font-black text-[#94a3b8] uppercase tracking-[0.2em] mb-2">{category}</h4>
-                      <div className="space-y-2">
-                        {availablePermissions.filter(p => p.category === category).map(permission => (
-                          <label key={permission.id} className="flex items-center gap-3 cursor-pointer group">
-                            <input
-                              type="checkbox"
-                              checked={formData.permissions.includes(permission.id)}
-                              onChange={(e) => {
-                                const newPermissions = e.target.checked
-                                  ? [...formData.permissions, permission.id]
-                                  : formData.permissions.filter(p => p !== permission.id);
-                                setFormData(prev => ({ ...prev, permissions: newPermissions }));
-                              }}
-                              className="w-4 h-4 rounded text-[#002855] border-[#cbd5e1] focus:ring-[#002855]/20 focus:ring-offset-0 transition-all"
-                            />
-                            <span className="text-[13px] font-medium text-[#475569] group-hover:text-[#1e293b] transition-colors">{permission.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Footer Estilo ERP - Inside the scrollable box or outside? 
-              Actually, it's better sticky at the bottom of the content box */}
+          {/* Footer Estilo ERP */}
           <div className="bg-[#f8fafc] border-t border-[#e2e8f0] px-8 py-5 flex items-center justify-between sticky bottom-0 z-10 shadow-[0_-4px_12px_rgba(0,0,0,0.02)]">
             <button
               type="button"
@@ -604,4 +616,3 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
     </div>
   );
 }
-

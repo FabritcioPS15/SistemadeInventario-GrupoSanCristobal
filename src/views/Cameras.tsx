@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List, ExternalLink, Star, Video } from 'lucide-react';
+import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { supabase, Camera, Location } from '../lib/supabase';
@@ -27,6 +28,7 @@ export default function Cameras({ subview }: CamerasProps) {
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterStorage, setFilterStorage] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
 
   useEffect(() => {
     (async () => {
@@ -275,7 +277,7 @@ export default function Cameras({ subview }: CamerasProps) {
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
-      <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30">
+      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex items-center gap-4">
           <div className="bg-[#f1f5f9] p-2 rounded-xl border border-[#e2e8f0]">
             <Video className="text-[#002855]" size={20} />

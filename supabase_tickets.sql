@@ -26,7 +26,7 @@ alter table public.tickets enable row level security;
 alter table public.ticket_comments enable row level security;
 
 create policy "Users can view all tickets" on public.tickets for select using (true);
-create policy "Users can insert tickets" on public.tickets for insert with check (auth.uid() = requester_id);
+create policy "Users can insert tickets" on public.tickets for insert with check (auth.uid() is not null);
 create policy "Users can update their own tickets" on public.tickets for update using (auth.uid() = requester_id);
 
 create policy "Users can view all comments" on public.ticket_comments for select using (true);

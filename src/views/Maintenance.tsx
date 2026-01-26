@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, Eye, Clock, AlertTriangle, CheckCircle, Wrench, X, MapPin, ShieldCheck, DollarSign, Package, LayoutGrid, List as ListIcon, ChevronUp, ChevronDown, Star } from 'lucide-react';
+import { Plus, Search, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Calendar, User, Eye, Download, Info, Star, X, MapPin, ShieldCheck, DollarSign, Package, LayoutGrid, List as ListIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase, AssetWithDetails, Location } from '../lib/supabase';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
 import { useAuth } from '../contexts/AuthContext';
@@ -53,6 +54,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const [viewingRecord, setViewingRecord] = useState<MaintenanceRecord | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
   const [typeFilter, setTypeFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [machineTypeFilter, setMachineTypeFilter] = useState('');
@@ -338,19 +341,33 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
-      {/* Title / Tab Bar - Minimalist Executive Style */}
-      <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm">
+      {/* Standard Application Header (h-14) */}
+      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex items-center gap-4">
           <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
             <Wrench size={20} />
           </div>
-          <div>
+          <div className="hidden lg:block">
             <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Mantenimiento y Soporte</h2>
             <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
               <span>Tickets y Servicios</span>
               <div className="w-1 h-1 bg-gray-300 rounded-full" />
               <span>{maintenanceRecords.length} Registros</span>
             </div>
+          </div>
+        </div>
+
+        {/* Integrated Search Bar in Header */}
+        <div className="flex-1 max-w-md px-4">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar mantenimientos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all text-sm font-medium"
+            />
           </div>
         </div>
 
@@ -428,23 +445,12 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-slate-400 sm:text-sm transition-all"
-                placeholder="Buscar descripción, técnico, activo..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
               <select
-                className="block w-full pl-3 pr-10 py-2 text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
+                className="block w-full pl-3 pr-10 py-2 text-xs sm:text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
@@ -454,9 +460,10 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 ))}
               </select>
             </div>
-            <div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo</label>
               <select
-                className="block w-full pl-3 pr-10 py-2 text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
+                className="block w-full pl-3 pr-10 py-2 text-xs sm:text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
               >
@@ -466,9 +473,10 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 ))}
               </select>
             </div>
-            <div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sede</label>
               <select
-                className="block w-full pl-3 pr-10 py-2 text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
+                className="block w-full pl-3 pr-10 py-2 text-xs sm:text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
                 value={locationFilter}
                 onChange={(e) => setLocationFilter(e.target.value)}
               >
@@ -478,7 +486,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 ))}
               </select>
             </div>
-            <div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Orden</label>
               <select
                 value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : ''}
                 onChange={(e) => {
@@ -489,7 +498,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                     setSortConfig(null);
                   }
                 }}
-                className="block w-full pl-3 pr-10 py-2 text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium text-slate-700"
+                className="block w-full pl-3 pr-10 py-2 text-xs sm:text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium text-slate-700"
               >
                 <option value="">Ordenar por...</option>
                 <option value="date-desc">Fecha (Reciente)</option>

@@ -56,109 +56,116 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-                <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                    <h2 className="text-xl font-bold text-slate-800">Nuevo Ticket de Soporte</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                        <X size={20} className="text-slate-500" />
+        <div className="fixed inset-0 bg-[#001529]/60 backdrop-blur-md flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-300 border border-white/20">
+                <div className="flex items-center justify-between p-8 border-b border-slate-100 bg-slate-50/50">
+                    <div>
+                        <h2 className="text-2xl font-black text-[#001529] tracking-tight uppercase">Nuevo Caso de Soporte</h2>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registro formal de incidencia técnica</p>
+                    </div>
+                    <button onClick={onClose} className="w-10 h-10 flex items-center justify-center hover:bg-rose-50 rounded-2xl transition-all text-slate-400 hover:text-rose-500">
+                        <X size={24} />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <form onSubmit={handleSubmit} className="p-8 space-y-8">
                     {error && (
-                        <div className="p-4 bg-red-50 text-red-600 rounded-lg flex items-center gap-2 text-sm">
-                            <AlertCircle size={16} />
+                        <div className="p-4 bg-rose-50 text-rose-600 rounded-2xl flex items-center gap-3 text-xs font-bold border border-rose-100">
+                            <AlertCircle size={18} />
                             {error}
                         </div>
                     )}
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Título del Problema</label>
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-3 bg-blue-600 rounded-full"></div>
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Asunto del Problema</label>
+                        </div>
                         <input
                             type="text"
                             required
                             value={formData.title}
                             onChange={e => setFormData({ ...formData, title: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium"
-                            placeholder="Ej: No conecta a internet"
+                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all placeholder:text-slate-400 font-bold text-slate-700 shadow-inner"
+                            placeholder="Ej: Falla en Conectividad de Red Local"
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Categoría</label>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Categorización</label>
                             <select
                                 value={formData.category}
                                 onChange={e => setFormData({ ...formData, category: e.target.value })}
-                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-700 cursor-pointer shadow-inner appearance-none"
                             >
-                                <option value="hardware">Hardware</option>
-                                <option value="software">Software</option>
-                                <option value="network">Red / Internet</option>
-                                <option value="access">Accesos / Cuentas</option>
-                                <option value="other">Otro</option>
+                                <option value="hardware">HARDWARE / EQUIPOS</option>
+                                <option value="software">SOFTWARE / APPS</option>
+                                <option value="network">RED / CONECTIVIDAD</option>
+                                <option value="access">ACCESOS / CUENTAS</option>
+                                <option value="other">OTROS TEMAS</option>
                             </select>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Prioridad</label>
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Nivel de Prioridad</label>
                             <select
                                 value={formData.priority}
                                 onChange={e => setFormData({ ...formData, priority: e.target.value })}
-                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-700 cursor-pointer shadow-inner appearance-none"
                             >
-                                <option value="low">Baja</option>
-                                <option value="medium">Media</option>
-                                <option value="high">Alta</option>
-                                <option value="critical">Crítica</option>
+                                <option value="low">BAJA (Consulta)</option>
+                                <option value="medium">MEDIA (Operativa)</option>
+                                <option value="high">ALTA (Restricción)</option>
+                                <option value="critical">CRÍTICA (Bloqueo)</option>
                             </select>
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sede Afectada</label>
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Ubicación / Sede Afectada</label>
                         <select
+                            required
                             value={formData.location_id}
                             onChange={e => setFormData({ ...formData, location_id: e.target.value })}
-                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none font-bold text-slate-700 cursor-pointer shadow-inner appearance-none"
                         >
-                            <option value="">Seleccionar Sede...</option>
+                            <option value="">SELECCIONE UNA SEDE...</option>
                             {locations.map(loc => (
-                                <option key={loc.id} value={loc.id}>{loc.name}</option>
+                                <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
                             ))}
                         </select>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Descripción Detallada</label>
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Descripción de la Incidencia</label>
                         <textarea
                             required
-                            rows={4}
+                            rows={3}
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium resize-none"
-                            placeholder="Describa el problema con el mayor detalle posible..."
+                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all placeholder:text-slate-400 font-medium text-slate-700 resize-none shadow-inner"
+                            placeholder="Describa el problema con precisión técnica..."
                         />
                     </div>
 
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex gap-4 pt-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-4 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-all"
+                            className="flex-1 px-6 py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
                         >
-                            Cancelar
+                            Anular
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 px-4 py-3 bg-[#002855] text-white rounded-xl font-bold hover:bg-[#002855]/90 transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                            className="flex-1 px-6 py-4 bg-blue-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-blue-500 transition-all shadow-xl shadow-blue-200 disabled:opacity-50 active:scale-95 flex items-center justify-center gap-3 border border-blue-400/30"
                         >
-                            {loading ? 'Guardando...' : (
+                            {loading ? 'Procesando...' : (
                                 <>
                                     <Save size={18} />
-                                    Crear Ticket
+                                    Generar Ticket
                                 </>
                             )}
                         </button>

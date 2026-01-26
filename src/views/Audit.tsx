@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Trash2, Edit, List, ClipboardCheck, AlertCircle, CheckCircle2, Star, X } from 'lucide-react';
+import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase, BranchAudit } from '../lib/supabase';
-import { AUDIT_QUESTIONS } from '../lib/auditQuestions';
 import { useAuth } from '../contexts/AuthContext';
 import AuditForm from '../components/forms/AuditForm';
 
@@ -15,6 +15,7 @@ export default function Audit() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [editingAudit, setEditingAudit] = useState<BranchAudit | undefined>();
+  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
 
   useEffect(() => {
     fetchAudits();
@@ -22,276 +23,140 @@ export default function Audit() {
 
   const fetchAudits = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('branch_audits')
-      .select('*, locations(*)')
-      .order('audit_date', { ascending: false });
-
-    if (!error && data) {
-      setAudits(data as BranchAudit[]);
-    }
+    const { data, error } = await supabase.from('branch_audits').select('*, locations(*)').order('audit_date', { ascending: false });
+    if (!error && data) setAudits(data as BranchAudit[]);
     setLoading(false);
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('¿Estás seguro de eliminar este registro de auditoría?')) return;
-
-    const { error } = await supabase
-      .from('branch_audits')
-      .delete()
-      .eq('id', id);
-
-    if (!error) {
-      await fetchAudits();
-    }
+    if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
+    await supabase.from('branch_audits').delete().eq('id', id);
+    await fetchAudits();
   };
 
-  const handleEdit = (audit: BranchAudit) => {
-    setEditingAudit(audit);
-    setView('form');
-  };
+  const handleEdit = (audit: BranchAudit) => { setEditingAudit(audit); setView('form'); };
 
   const filteredAudits = audits.filter(audit => {
-    const locationName = audit.locations?.name || '';
-    const matchesSearch =
-      locationName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      audit.auditor_name.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = !filterStatus || audit.status === filterStatus;
-
-    return matchesSearch && matchesStatus;
+    const locName = audit.locations?.name || '';
+    const mSearch = locName.toLowerCase().includes(searchTerm.toLowerCase()) || audit.auditor_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const mStatus = !filterStatus || audit.status === filterStatus;
+    return mSearch && mStatus;
   });
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'excellent':
-        return { label: 'Excelente', color: 'bg-emerald-50 text-emerald-800 border-emerald-200', icon: <CheckCircle2 size={14} /> };
-      case 'good':
-        return { label: 'Bueno', color: 'bg-slate-50 text-slate-800 border-slate-200', icon: <CheckCircle2 size={14} /> };
-      case 'regular':
-        return { label: 'Regular', color: 'bg-amber-50 text-amber-800 border-amber-200', icon: <AlertCircle size={14} /> };
-      case 'critical':
-        return { label: 'Crítico', color: 'bg-red-50 text-red-800 border-red-200', icon: <AlertCircle size={14} /> };
-      default:
-        return { label: status, color: 'bg-gray-50 text-gray-800 border-gray-200', icon: null };
+      case 'excellent': return { label: 'Excelente', color: 'bg-emerald-50 text-emerald-800 border-emerald-200', icon: <CheckCircle2 size={14} /> };
+      case 'good': return { label: 'Bueno', color: 'bg-slate-50 text-slate-800 border-slate-200', icon: <CheckCircle2 size={14} /> };
+      case 'regular': return { label: 'Regular', color: 'bg-amber-50 text-amber-800 border-amber-200', icon: <AlertCircle size={14} /> };
+      case 'critical': return { label: 'Crítico', color: 'bg-red-50 text-red-800 border-red-200', icon: <AlertCircle size={14} /> };
+      default: return { label: status, color: 'bg-gray-50 text-gray-800 border-gray-200', icon: null };
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('es-ES', {
-      dateStyle: 'medium',
-    }).format(date);
-  };
+  const formatDate = (ds: string) => new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(new Date(ds));
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc]">
-      <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30">
+    <div className="flex flex-col h-full bg-[#f8f9fc] font-sans">
+      {/* Standard Application Header (h-14) */}
+      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl border border-[#e2e8f0]">
-            <ClipboardCheck className="text-[#002855]" size={20} />
+          <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
+            <ClipboardCheck size={20} />
           </div>
-          <div>
-            <h1 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">AUDITORÍA DEL SISTEMA</h1>
+          <div className="hidden lg:block">
+            <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Auditoría</h2>
             <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span className="flex items-center gap-1"><CheckCircle2 size={10} /> REGISTRO DE EVENTOS</span>
-              <span className="text-[#cbd5e1]">|</span>
-              <span className="bg-[#f1f5f9] px-2 py-0.5 rounded text-[#002855]">{audits.length} Reportes</span>
+              <span>Control de Sedes</span>
+              <div className="w-1 h-1 bg-gray-300 rounded-full" />
+              <span>{audits.length} Reportes</span>
             </div>
+          </div>
+        </div>
+
+        {/* Integrated Search Bar */}
+        <div className="flex-1 max-w-md px-4">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar por sede o auditor..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all text-sm font-medium"
+            />
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-
-          <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
-            <button
-              onClick={() => { setView('history'); setEditingAudit(undefined); }}
-              className={`p-1.5 rounded-md transition-all ${view === 'history' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
-              title="Historial de Auditorías"
-            >
-              <List size={16} />
-            </button>
+          <div className="flex bg-[#f1f5f9] p-1 rounded-lg border border-[#e2e8f0]">
+            <button onClick={() => { setView('history'); setEditingAudit(undefined); }} className={`p-1.5 rounded-md transition-all ${view === 'history' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500'}`}><List size={16} /></button>
             {canEdit() && (
-              <button
-                onClick={() => { setView('form'); }}
-                className={`p-1.5 rounded-md transition-all ${view === 'form' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
-                title="Nueva Auditoría"
-              >
-                <ClipboardCheck size={16} />
-              </button>
+              <button onClick={() => setView('form')} className={`p-1.5 rounded-md transition-all ${view === 'form' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500'}`}><ClipboardCheck size={16} /></button>
             )}
           </div>
 
           <div className="h-6 w-px bg-gray-200 mx-1" />
-
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <Star size={18} />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <X size={18} />
-          </button>
+          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"><Star size={18} /></button>
+          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors"><X size={18} /></button>
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
-
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
         {view === 'form' ? (
           <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-8">
-              <div className="mb-8 border-b border-gray-100 pb-6">
-                <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">
-                  {editingAudit ? 'Actualización de Auditoría' : 'Registro de Nueva Auditoría'}
-                </h3>
-                <p className="text-sm text-slate-500 mt-1 font-medium italic">Documente los hallazgos y el estado de operatividad de la unidad.</p>
-              </div>
-
-              <div className="relative">
-                {/* AuditForm is already styled with its own internal logic, we might need to adjust it too for formality */}
-                <AuditForm
-                  editAudit={editingAudit}
-                  onClose={() => { setView('history'); setEditingAudit(undefined); }}
-                  onSave={async () => { setView('history'); setEditingAudit(undefined); await fetchAudits(); }}
-                />
-              </div>
+            <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-8">
+              <div className="mb-8 border-b border-gray-100 pb-6"><h3 className="text-xl font-black text-[#002855] uppercase tracking-tight">{editingAudit ? 'Editar Evaluación' : 'Nueva Evaluación'}</h3><p className="text-xs font-bold text-gray-500 mt-1 uppercase">Documente los hallazgos y el estado de la unidad.</p></div>
+              <AuditForm editAudit={editingAudit} onClose={() => { setView('history'); setEditingAudit(undefined); }} onSave={async () => { setView('history'); setEditingAudit(undefined); await fetchAudits(); }} />
             </div>
           </div>
         ) : (
-          <div className="space-y-4 animate-in fade-in duration-500">
-            <div className="bg-slate-50/50 rounded-lg border border-slate-200 p-3 mb-6">
-              <div className="flex flex-col md:flex-row gap-3">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <input
-                    type="text"
-                    placeholder="Filtrar por sede o responsable..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-400 transition-all text-sm"
-                  />
-                </div>
-
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="px-4 py-2 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-slate-400 transition-all font-bold text-[10px] uppercase tracking-widest text-slate-600 cursor-pointer"
-                >
-                  <option value="">Estados: Todos</option>
-                  <option value="excellent">Excelente</option>
-                  <option value="good">Bueno</option>
-                  <option value="regular">Regular</option>
-                  <option value="critical">Crítico</option>
+          <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="bg-white p-3 sm:p-4 rounded-xl border border-[#e2e8f0] shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex flex-col gap-1 w-full sm:w-64">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado de Auditoría</label>
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full px-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg font-black text-xs sm:text-[10px] uppercase tracking-widest text-[#64748b] outline-none">
+                  <option value="">TODOS LOS ESTADOS</option>
+                  <option value="excellent">EXCELENTE</option>
+                  <option value="good">BUENO</option>
+                  <option value="regular">REGULAR</option>
+                  <option value="critical">CRÍTICO</option>
                 </select>
               </div>
+              <div className="text-[10px] font-black text-[#64748b] uppercase tracking-widest px-2">{filteredAudits.length} EVALUACIONES</div>
             </div>
 
             {loading ? (
-              <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
-                <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-slate-800"></div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Recuperando información...</p>
-              </div>
+              <div className="flex items-center justify-center min-h-[40vh]"><div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#002855]"></div></div>
             ) : (
-              <div className="grid grid-cols-1 gap-3">
-                {filteredAudits.length > 0 ? (
-                  filteredAudits.map(audit => {
-                    const statusCfg = getStatusConfig(audit.status);
-                    return (
-                      <div key={audit.id} className="bg-white rounded-lg border border-gray-200 p-5 hover:border-slate-400 transition-all duration-200 shadow-sm">
-                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <span className={`px-2.5 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter border ${statusCfg.color}`}>
-                                {statusCfg.label}
-                              </span>
-                              <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest leading-none">REF: {audit.id.slice(0, 8)}</span>
-                            </div>
-
-                            <div className="flex flex-col gap-1 mb-3">
-                              <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                                {audit.locations?.name || 'Sede no especificada'}
-                              </h3>
-                              <p className="text-xs text-slate-500 font-medium">
-                                Responsable de Auditoría: <span className="text-slate-900 font-bold uppercase">{audit.auditor_name}</span>
-                              </p>
-                              {audit.administrator_name && (
-                                <p className="text-xs text-slate-500 font-medium">
-                                  Evaluado (Admin): <span className="text-slate-900 font-bold uppercase">{audit.administrator_name}</span>
-                                </p>
-                              )}
-                            </div>
-
-                            {audit.observations && (
-                              <div className="mt-3 p-3 bg-slate-50 rounded border-l-2 border-slate-300">
-                                <p className="text-xs text-slate-600 leading-relaxed font-medium">"{audit.observations}"</p>
-                              </div>
-                            )}
-
-                            {audit.responses && Object.keys(audit.responses).length > 0 && (
-                              <div className="mt-4 pt-4 border-t border-gray-100">
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-3 text-center">Detalle de Evaluación</p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  {(() => {
-                                    const locType = audit.locations?.type as keyof typeof AUDIT_QUESTIONS;
-                                    const questions = locType ? AUDIT_QUESTIONS[locType] : [];
-                                    return questions.map(q => (
-                                      <div key={q.id} className="flex items-center justify-between p-2 bg-slate-50/50 rounded border border-slate-100/50">
-                                        <span className="text-[10px] text-slate-600 font-medium truncate pr-2">{q.text}</span>
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${audit.responses[q.id] >= 4 ? 'bg-emerald-100 text-emerald-800' :
-                                          audit.responses[q.id] >= 3 ? 'bg-slate-200 text-slate-800' :
-                                            'bg-red-100 text-red-800'
-                                          }`}>
-                                          {audit.responses[q.id]}/5
-                                        </span>
-                                      </div>
-                                    ));
-                                  })()}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-2 lg:flex lg:flex-row items-center gap-4 lg:gap-6 lg:pl-8 lg:border-l border-gray-100 pt-4 lg:py-0">
-                            <div className="text-left lg:text-right">
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Calificación</p>
-                              <div className={`text-xl lg:text-2xl font-bold ${audit.score >= 90 ? 'text-emerald-700' : audit.score >= 70 ? 'text-slate-900' : audit.score >= 50 ? 'text-amber-700' : 'text-red-700'}`}>
-                                {audit.score}%
-                              </div>
-                            </div>
-
-                            <div className="text-right">
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">F. Registro</p>
-                              <p className="text-xs font-bold text-slate-800 uppercase">
-                                {formatDate(audit.audit_date)}
-                              </p>
-                            </div>
-
-                            {canEdit() && (
-                              <div className="flex items-center justify-end gap-1 col-span-2 lg:col-span-1 border-t lg:border-t-0 pt-3 lg:pt-0">
-                                <button
-                                  onClick={() => handleEdit(audit)}
-                                  className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded transition-all"
-                                  title="Editar"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                                <button
-                                  onClick={() => handleDelete(audit.id)}
-                                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            )}
-                          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredAudits.map(audit => {
+                  const statusCfg = getStatusConfig(audit.status);
+                  return (
+                    <div key={audit.id} className="bg-white rounded-2xl border border-[#e2e8f0] p-6 hover:shadow-xl transition-all duration-300 flex flex-col group overflow-hidden">
+                      <div className="flex items-start justify-between mb-6">
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${statusCfg.color}`}>{statusCfg.label}</span>
+                        <span className="text-[8px] font-mono text-slate-300 font-bold uppercase">ID: {audit.id.slice(0, 8)}</span>
+                      </div>
+                      <div className="flex-1 space-y-4">
+                        <div>
+                          <h3 className="text-sm font-black text-[#002855] uppercase tracking-tight mb-1">{audit.locations?.name || 'Sede N/A'}</h3>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Auditor: <span className="text-[#002855]">{audit.auditor_name}</span></p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-center justify-between">
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Calificación</span>
+                          <span className={`text-2xl font-black ${audit.score >= 90 ? 'text-emerald-600' : audit.score >= 70 ? 'text-[#002855]' : 'text-rose-600'}`}>{audit.score}%</span>
                         </div>
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="bg-slate-50 rounded-lg border border-dashed border-slate-200 py-16 flex flex-col items-center justify-center text-center">
-                    <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[11px]">Búsqueda sin resultados</p>
-                  </div>
-                )}
+                      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase">{formatDate(audit.audit_date)}</span>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={() => handleEdit(audit)} className="p-2 text-slate-400 hover:text-blue-600 transition-colors"><Edit size={16} /></button>
+                          <button onClick={() => handleDelete(audit.id)} className="p-2 text-slate-400 hover:text-rose-600 transition-colors"><Trash2 size={16} /></button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

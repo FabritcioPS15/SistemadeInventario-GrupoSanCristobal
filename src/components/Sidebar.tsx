@@ -8,9 +8,11 @@ import { useAuth } from '../contexts/AuthContext';
 type SidebarProps = {
   collapsed: boolean;
   onToggleCollapse: () => void;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 };
 
-export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
+export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onCloseMobile }: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [menuTop, setMenuTop] = useState<number>(0);
   const { user, hasPermission, logout } = useAuth();
@@ -22,9 +24,6 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
       clearTimeout(closeTimeoutRef.current);
     }
 
-    const item = menuItems.find((i) => i.id === itemId);
-
-    // Calculate position
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setMenuTop(rect.top);
     setHoveredItem(itemId);
@@ -121,6 +120,7 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
     },
     { id: 'locations', label: 'Sedes', icon: MapPin, path: '/locations' },
     { id: 'mtc', label: 'MTC Accesos', icon: Key, path: '/mtc' },
+    { id: 'painpoint', label: 'Painpoints', icon: Zap, path: '/painpoint' },
     { id: 'servers', label: 'Servidores', icon: GrServerCluster, path: '/servers' },
     { id: 'flota-vehicular', label: 'Flota Vehicular', icon: Car, path: '/flota-vehicular' },
     { id: 'users', label: 'Usuarios', icon: Users, path: '/users' },
@@ -169,7 +169,11 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
         `}
       </style>
       <aside
-        className={`${collapsed ? 'w-16' : 'w-72'} bg-[#f4f7fa] border-r border-[#e2e8f0] h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-30 flex flex-col overflow-y-auto sidebar-scroll`}
+        className={`
+          ${collapsed ? 'w-16' : 'w-72'} 
+          bg-[#f4f7fa] border-r border-[#e2e8f0] h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-50 flex flex-col overflow-y-auto sidebar-scroll
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
       >
         {/* Logo Section */}
         <div className={`h-14 bg-[#002855] text-white flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} sticky top-0 z-40`}>
@@ -178,15 +182,27 @@ export default function Sidebar({ collapsed, onToggleCollapse }: SidebarProps) {
               <div className="bg-white p-1 rounded-md">
                 <LayoutDashboard size={18} className="text-[#002855]" />
               </div>
-              <span className="font-black tracking-tighter text-lg uppercase">Sistema G.S.C.</span>
+              <span className="font-black tracking-tighter text-[15px] sm:text-lg uppercase truncate">Sistema G.S.C.</span>
             </div>
           )}
-          <button
-            onClick={onToggleCollapse}
-            className="p-1.5 hover:bg-white/10 rounded-md transition-colors"
-          >
-            {collapsed ? <Menu size={18} /> : <X size={20} />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onToggleCollapse}
+              className="p-1.5 hover:bg-white/10 rounded-md transition-colors hidden lg:block"
+            >
+              {collapsed ? <Menu size={18} /> : <X size={20} />}
+            </button>
+
+            {/* Mobile Close Button */}
+            {mobileOpen && (
+              <button
+                onClick={onCloseMobile}
+                className="p-1.5 hover:bg-white/10 rounded-md transition-colors lg:hidden"
+              >
+                <X size={20} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* User Profile Section (Executive Look) */}

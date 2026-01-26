@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download, Upload, Package, ChevronUp, ChevronDown, Star, X } from 'lucide-react';
+import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { supabase, AssetWithDetails, Location, AssetType } from '../lib/supabase';
@@ -40,6 +41,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -660,20 +662,35 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
       {/* Title / Tab Bar - Minimalist Executive Style */}
-      <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm">
+      {/* Standard Application Header (h-14) */}
+      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex items-center gap-4">
           <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
             <Package size={20} />
           </div>
-          <div>
+          <div className="hidden lg:block">
             <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">
-              Control de Inventario{categoryFromFilter ? ` - ${categoryFromFilter}` : ''}
+              Inventario{categoryFromFilter ? ` - ${categoryFromFilter}` : ''}
             </h2>
             <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
               <span>Gestión de Activos</span>
               <div className="w-1 h-1 bg-gray-300 rounded-full" />
               <span>{stats.totalAssets} Items</span>
             </div>
+          </div>
+        </div>
+
+        {/* Integrated Search Bar in Header */}
+        <div className="flex-1 max-w-md px-4">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar activos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-100 focus:border-slate-400 transition-all text-sm font-medium"
+            />
           </div>
         </div>
 
@@ -771,71 +788,67 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
           </div>
         </div>
 
-        {/* Control Bar */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                type="text"
-                placeholder="Buscar por marca, modelo, serie..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 transition-all text-sm"
-              />
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 mb-6">
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ordenamiento</label>
+                <select
+                  value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : ''}
+                  onChange={(e) => {
+                    const [key, direction] = e.target.value.split('-');
+                    if (key) {
+                      setSortConfig({ key, direction: direction as 'asc' | 'desc' });
+                    } else {
+                      setSortConfig(null);
+                    }
+                  }}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white text-xs sm:text-sm font-medium text-slate-700"
+                >
+                  <option value="">Ordenar por...</option>
+                  <option value="type-asc">Tipo (A-Z)</option>
+                  <option value="type-desc">Tipo (Z-A)</option>
+                  <option value="device-asc">Dispositivo (A-Z)</option>
+                  <option value="device-desc">Dispositivo (Z-A)</option>
+                  <option value="location-asc">Ubicación (A-Z)</option>
+                  <option value="location-desc">Ubicación (Z-A)</option>
+                  <option value="status-asc">Estado (A-Z)</option>
+                  <option value="status-desc">Estado (Z-A)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ubicación</label>
+                <select
+                  value={filterLocation}
+                  onChange={(e) => setFilterLocation(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white text-xs sm:text-sm font-medium"
+                >
+                  <option value="">Todas las sedes</option>
+                  {locations.map(location => (
+                    <option key={location.id} value={location.id}>{location.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white text-xs sm:text-sm font-medium"
+                >
+                  <option value="">Todos los estados</option>
+                  <option value="active">Activo</option>
+                  <option value="inactive">Inactivo</option>
+                  <option value="maintenance">Mantenimiento</option>
+                  <option value="extracted">Extraído</option>
+                  <option value="new">Nuevo</option>
+                  <option value="pending">Pendiente</option>
+                  <option value="disponible">Disponible</option>
+                </select>
+              </div>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <select
-                value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : ''}
-                onChange={(e) => {
-                  const [key, direction] = e.target.value.split('-');
-                  if (key) {
-                    setSortConfig({ key, direction: direction as 'asc' | 'desc' });
-                  } else {
-                    setSortConfig(null);
-                  }
-                }}
-                className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white sm:min-w-[180px] text-sm font-medium text-slate-700"
-              >
-                <option value="">Ordenar por...</option>
-                <option value="type-asc">Tipo (A-Z)</option>
-                <option value="type-desc">Tipo (Z-A)</option>
-                <option value="device-asc">Dispositivo (A-Z)</option>
-                <option value="device-desc">Dispositivo (Z-A)</option>
-                <option value="location-asc">Ubicación (A-Z)</option>
-                <option value="location-desc">Ubicación (Z-A)</option>
-                <option value="status-asc">Estado (A-Z)</option>
-                <option value="status-desc">Estado (Z-A)</option>
-              </select>
-
-              <select
-                value={filterLocation}
-                onChange={(e) => setFilterLocation(e.target.value)}
-                className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white sm:min-w-[180px] text-sm font-medium"
-              >
-                <option value="">Todas las sedes</option>
-                {locations.map(location => (
-                  <option key={location.id} value={location.id}>{location.name}</option>
-                ))}
-              </select>
-
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white sm:min-w-[150px] text-sm font-medium"
-              >
-                <option value="">Todos los estados</option>
-                <option value="active">Activo</option>
-                <option value="inactive">Inactivo</option>
-                <option value="maintenance">Mantenimiento</option>
-                <option value="extracted">Extraído</option>
-                <option value="new">Nuevo</option>
-                <option value="pending">Pendiente</option>
-                <option value="disponible">Disponible</option>
-              </select>
-            </div>
-
           </div>
         </div>
 

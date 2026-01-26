@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopHeader from './components/TopHeader';
@@ -25,6 +25,7 @@ import PasswordSetup from './components/PasswordSetup';
 import Checklist from './views/Checklist';
 import Vacations from './views/Vacations';
 import Tickets from './views/Tickets';
+import Painpoints from './views/Painpoints';
 
 // Componente para proteger rutas basadas en permisos
 function ProtectedRoute({ children, permission }: { children: React.ReactNode, permission?: string }) {
@@ -94,8 +95,14 @@ function ChecklistWrapper() {
 
 function AppContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { user, loading, needsPasswordSetup } = useAuth();
   const location = useLocation();
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [location]);
 
   // Mostrar loading mientras se verifica la autenticación
   if (loading) {
@@ -130,13 +137,24 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8f9fc] flex">
+    <div className="min-h-screen bg-[#f8f9fc] flex overflow-x-hidden">
       <Sidebar
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        mobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'ml-16' : 'ml-72'}`}>
-        <TopHeader />
+
+      {/* Mobile Overlay */}
+      {isMobileSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity animate-in fade-in"
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
+
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ml-0 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-72'}`}>
+        <TopHeader onMobileMenuClick={() => setIsMobileSidebarOpen(true)} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto">
           <Routes>
             <Route path="/" element={<ProtectedRoute permission="dashboard"><Dashboard /></ProtectedRoute>} />
@@ -183,6 +201,7 @@ function AppContent() {
             <Route path="/connection-test" element={<ProtectedRoute permission="connection-test"><ConnectionTest /></ProtectedRoute>} />
             <Route path="/quick-diagnostic" element={<ProtectedRoute permission="quick-diagnostic"><QuickDiagnostic /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute permission="tickets"><Tickets /></ProtectedRoute>} />
+            <Route path="/painpoint" element={<ProtectedRoute permission="painpoint"><Painpoints /></ProtectedRoute>} />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />

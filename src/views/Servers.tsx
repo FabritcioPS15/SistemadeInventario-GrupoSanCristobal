@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, X, Eye, EyeOff, Globe, Activity, Database, Server as ServerLucide, LayoutGrid, List, Star } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Plus, Search, Edit, Trash2, MapPin, X, Eye, Globe, Activity, Database, Server as ServerLucide, LayoutGrid, List, Star } from 'lucide-react';
+import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 import { supabase, Server, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,28 +10,17 @@ export default function Servers() {
   const [servers, setServers] = useState<Server[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
+  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Server | undefined>();
-  const [form, setForm] = useState({
-    name: '',
-    location_id: '',
-    ip_address: '',
-    anydesk_id: '',
-    username: '',
-    password: '',
-    notes: '',
-  });
+  const [form, setForm] = useState({ name: '', location_id: '', ip_address: '', anydesk_id: '', username: '', password: '', notes: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [stats, setStats] = useState({
-    total: 0,
-    withIp: 0,
-    withAnydesk: 0,
-    recentlyUpdated: 0
-  });
+  const [stats, setStats] = useState({ total: 0, withIp: 0, withAnydesk: 0, recentlyUpdated: 0 });
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [viewingServer, setViewingServer] = useState<Server | undefined>();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -40,10 +30,7 @@ export default function Servers() {
   }, []);
 
   const fetchServers = async () => {
-    const { data, error } = await supabase
-      .from('servers')
-      .select('*, locations(*)')
-      .order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('servers').select('*, locations(*)').order('created_at', { ascending: false });
     if (!error && data) {
       setServers(data as Server[]);
       calculateStats(data as Server[]);
@@ -51,24 +38,14 @@ export default function Servers() {
   };
 
   const calculateStats = (srvData: Server[]) => {
-    let withIp = 0;
-    let withAnydesk = 0;
-    let recentlyUpdated = 0;
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
+    let withIp = 0, withAnydesk = 0, recentlyUpdated = 0;
+    const oneWeekAgo = new Date(); oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     srvData.forEach(s => {
       if (s.ip_address) withIp++;
       if (s.anydesk_id) withAnydesk++;
       if (new Date(s.updated_at) > oneWeekAgo) recentlyUpdated++;
     });
-
-    setStats({
-      total: srvData.length,
-      withIp,
-      withAnydesk,
-      recentlyUpdated
-    });
+    setStats({ total: srvData.length, withIp, withAnydesk, recentlyUpdated });
   };
 
   const fetchLocations = async () => {
@@ -76,266 +53,129 @@ export default function Servers() {
     if (data) setLocations(data);
   };
 
-  const resetForm = () => {
-    setForm({ name: '', location_id: '', ip_address: '', anydesk_id: '', username: '', password: '', notes: '' });
-    setErrors({});
-  };
-
-  const openCreate = () => {
-    setEditing(undefined);
-    resetForm();
-    setShowForm(true);
-  };
-
-  const openEdit = (srv: Server) => {
-    setEditing(srv);
-    setForm({
-      name: srv.name || '',
-      location_id: srv.location_id || '',
-      ip_address: srv.ip_address || '',
-      anydesk_id: srv.anydesk_id || '',
-      username: srv.username || '',
-      password: srv.password || '',
-      notes: srv.notes || '',
-    });
-    setShowForm(true);
-  };
+  const resetForm = () => { setForm({ name: '', location_id: '', ip_address: '', anydesk_id: '', username: '', password: '', notes: '' }); setErrors({}); };
+  const openCreate = () => { setEditing(undefined); resetForm(); setShowForm(true); };
+  const openEdit = (s: Server) => { setEditing(s); setForm({ name: s.name || '', location_id: s.location_id || '', ip_address: s.ip_address || '', anydesk_id: s.anydesk_id || '', username: s.username || '', password: s.password || '', notes: s.notes || '' }); setShowForm(true); };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs: Record<string, string> = {};
-    if (!form.name.trim()) errs.name = 'Requerido';
-    if (form.ip_address && !/^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/.test(form.ip_address)) errs.ip_address = 'IP inválida';
-    setErrors(errs);
-    if (Object.keys(errs).length) return;
-
-    const payload = {
-      name: form.name.trim(),
-      location_id: form.location_id || null,
-      ip_address: form.ip_address || null,
-      anydesk_id: form.anydesk_id || null,
-      username: form.username || null,
-      password: form.password || null,
-      notes: form.notes || null,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (editing) {
-      const { error } = await supabase.from('servers').update(payload).eq('id', editing.id);
-      if (error) return alert('Error al actualizar: ' + error.message);
-    } else {
-      const { error } = await supabase.from('servers').insert(payload as any);
-      if (error) return alert('Error al crear: ' + error.message);
-    }
-    setShowForm(false);
-    setEditing(undefined);
-    await fetchServers();
+    if (!form.name.trim()) return setErrors({ name: 'Requerido' });
+    const payload = { ...form, updated_at: new Date().toISOString() };
+    if (editing) await supabase.from('servers').update(payload).eq('id', editing.id);
+    else await supabase.from('servers').insert(payload as any);
+    setShowForm(false); await fetchServers();
   };
 
-  const del = async (srv: Server) => {
-    if (!confirm(`¿Eliminar servidor "${srv.name}"?`)) return;
-    const { error } = await supabase.from('servers').delete().eq('id', srv.id);
-    if (error) return alert('Error al eliminar: ' + error.message);
-    await fetchServers();
+  const del = async (s: Server) => {
+    if (confirm(`¿Eliminar servidor "${s.name}"?`)) { await supabase.from('servers').delete().eq('id', s.id); await fetchServers(); }
   };
 
   const filtered = servers.filter(s => {
     const q = search.toLowerCase();
-    return (
-      s.name?.toLowerCase().includes(q) ||
-      s.ip_address?.toLowerCase().includes(q) ||
-      s.anydesk_id?.toLowerCase().includes(q) ||
-      s.locations?.name?.toLowerCase().includes(q)
-    );
+    return s.name?.toLowerCase().includes(q) || s.ip_address?.toLowerCase().includes(q) || s.anydesk_id?.toLowerCase().includes(q) || s.locations?.name?.toLowerCase().includes(q);
   });
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc]">
-      <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30">
+    <div className="flex flex-col h-full bg-[#f8f9fc] font-sans">
+      {/* Standard Executive Header (h-14) */}
+      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl border border-[#e2e8f0]">
-            <ServerLucide className="text-[#002855]" size={20} />
+          <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
+            <ServerLucide size={20} />
           </div>
-          <div>
-            <h1 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">INFRAESTRUCTURA DE SERVIDORES</h1>
+          <div className="hidden lg:block">
+            <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Infraestructura</h2>
             <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span className="flex items-center gap-1"><Database size={10} /> DATA CENTER Y RECURSOS</span>
-              <span className="text-[#cbd5e1]">|</span>
-              <span className="bg-[#f1f5f9] px-2 py-0.5 rounded text-[#002855]">{stats.total} Equipos</span>
+              <span>Data Center y Recursos</span>
+              <div className="w-1 h-1 bg-gray-300 rounded-full" />
+              <span>{stats.total} Equipos</span>
             </div>
+          </div>
+        </div>
+
+        {/* Integrated Search Bar */}
+        <div className="flex-1 max-w-md px-4">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, IP, AnyDesk o sede..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all text-sm font-medium"
+            />
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
-              title="Vista Cuadrícula"
-            >
-              <LayoutGrid size={16} />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
-              title="Vista Listado"
-            >
-              <List size={16} />
-            </button>
+          <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#f1f5f9] p-1 rounded-lg border border-[#e2e8f0] w-fit">
+            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><LayoutGrid size={18} /></button>
+            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><List size={18} /></button>
           </div>
 
-          <div className="h-6 w-px bg-gray-200 mx-1" />
+          <div className="h-6 w-px bg-gray-200 mx-1 hidden sm:block" />
 
           {canEdit() && (
-            <button
-              onClick={openCreate}
-              className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#002855] text-white rounded-lg hover:bg-[#002855]/90 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm h-9"
-            >
-              <Plus size={14} />
-              <span className="hidden sm:inline">Nuevo</span>
-            </button>
+            <button onClick={openCreate} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors" title="Nuevo Servidor"><Plus size={22} /></button>
           )}
 
-          <div className="h-6 w-px bg-gray-200 mx-1" />
-
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <Star size={18} />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <X size={18} />
-          </button>
+          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"><Star size={18} /></button>
+          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors"><X size={18} /></button>
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
-
-        {/* Dashboard de estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Servidores</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-              <ServerLucide className="h-5 w-5 text-gray-300" />
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Total Servidores', value: stats.total, icon: ServerLucide, bg: 'bg-blue-50', color: 'text-blue-600' },
+            { label: 'Conectividad IP', value: stats.withIp, icon: Globe, bg: 'bg-emerald-50', color: 'text-emerald-600' },
+            { label: 'Acceso AnyDesk', value: stats.withAnydesk, icon: Activity, bg: 'bg-rose-50', color: 'text-rose-600' },
+            { label: 'Actualizados (7d)', value: stats.recentlyUpdated, icon: Database, bg: 'bg-amber-50', color: 'text-amber-600' },
+          ].map((stat, i) => (
+            <div key={i} className="bg-white border border-[#e2e8f0] rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+              <div className="flex items-center justify-between relative z-10">
+                <div>
+                  <p className="text-[10px] font-black text-[#64748b] uppercase tracking-widest mb-1">{stat.label}</p>
+                  <p className="text-2xl font-black text-[#002855]">{stat.value}</p>
+                </div>
+                <div className={`p-2.5 rounded-lg ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}><stat.icon size={18} /></div>
+              </div>
+              <div className={`absolute -right-2 -bottom-2 w-16 h-16 ${stat.bg} opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform`} />
             </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Conectividad IP</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-gray-900">{stats.withIp}</div>
-              <Globe className="h-5 w-5 text-gray-300" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Acceso AnyDesk</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-gray-900">{stats.withAnydesk}</div>
-              <Activity className="h-5 w-5 text-gray-300" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Actualizados (7d)</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-blue-500">{stats.recentlyUpdated}</div>
-              <Database size={20} className="text-blue-500/20" />
-            </div>
-          </div>
+          ))}
         </div>
 
-        {/* Filtros compactos */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="md:col-span-2 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                className="w-full pl-10 pr-4 py-2 border border-blue-100/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                placeholder="Buscar por nombre, IP, AnyDesk o sede..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="md:col-span-2 flex items-center justify-end">
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  className="flex items-center gap-1 text-[10px] font-black text-rose-500 hover:text-rose-600 transition-colors uppercase tracking-widest"
-                >
-                  <X size={14} /> Limpiar búsqueda
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
         {loading ? (
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
-          </div>
+          <div className="flex items-center justify-center min-h-[40vh]"><div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#002855]"></div></div>
         ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filtered.map(srv => (
-              <div key={srv.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400/50 transition-all duration-300 flex flex-col group overflow-hidden">
+              <div key={srv.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-xl transition-all duration-300 flex flex-col group overflow-hidden">
                 <div className="p-6 flex-1">
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-gray-50 rounded-xl p-2.5 group-hover:bg-blue-50 transition-colors duration-300 ring-1 ring-gray-100 group-hover:ring-blue-100">
-                        <ServerIcon size={20} className="text-gray-600 group-hover:text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors uppercase tracking-tight mb-1">
-                          {srv.name}
-                        </h3>
-                        {srv.locations && (
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-widest">
-                            <MapPin size={12} className="text-blue-500" />
-                            <span>{srv.locations.name}</span>
-                          </div>
-                        )}
-                      </div>
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="p-3 bg-slate-50 rounded-xl group-hover:bg-blue-50 transition-colors"><ServerIcon size={20} className="text-slate-600 group-hover:text-blue-600" /></div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-black text-[#002855] uppercase tracking-tight truncate">{srv.name}</h3>
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 mt-0.5 uppercase"><MapPin size={12} className="text-blue-500" /> {srv.locations?.name || 'Sede N/A'}</div>
                     </div>
                   </div>
-
                   <div className="space-y-4">
-                    {srv.ip_address && (
-                      <div className="bg-blue-50/30 p-3 rounded-xl border border-blue-100/30">
-                        <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest block mb-1">Dirección IP</label>
-                        <p className="text-sm text-blue-900 font-black font-mono tracking-tight">{srv.ip_address}</p>
-                      </div>
-                    )}
-                    {srv.anydesk_id && (
-                      <div className="bg-emerald-50/30 p-3 rounded-xl border border-emerald-100/30">
-                        <label className="text-[10px] font-black text-emerald-700/50 uppercase tracking-widest block mb-1">AnyDesk ID</label>
-                        <p className="text-sm text-emerald-900 font-black font-mono tracking-tight">{srv.anydesk_id}</p>
-                      </div>
-                    )}
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Dirección IP</label>
+                      <p className="text-xs text-[#002855] font-black font-mono">{srv.ip_address || '—'}</p>
+                    </div>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">AnyDesk ID</label>
+                      <p className="text-xs text-[#002855] font-black font-mono">{srv.anydesk_id || '—'}</p>
+                    </div>
                   </div>
                 </div>
-
-                <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex gap-2">
-                  <button
-                    onClick={() => setViewingServer(srv)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-widest bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-95 shadow-sm"
-                  >
-                    <Eye size={14} />
-                    DETALLES
-                  </button>
+                <div className="px-6 py-4 bg-gray-50/50 border-t flex gap-2">
+                  <button onClick={() => setViewingServer(srv)} className="flex-1 py-2 text-[9px] font-black uppercase text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50">Detalles</button>
                   {canEdit() && (
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => openEdit(srv)}
-                        className="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-sm"
-                        title="Modificar servidor"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        onClick={() => del(srv)}
-                        className="p-2 bg-white text-rose-500 border border-rose-200 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"
-                        title="Eliminar servidor"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      <button onClick={() => openEdit(srv)} className="p-2 text-blue-600 bg-white border border-blue-100 rounded-lg hover:bg-blue-600 hover:text-white transition-all"><Edit size={14} /></button>
+                      <button onClick={() => del(srv)} className="p-2 text-rose-500 bg-white border border-rose-100 rounded-lg hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={14} /></button>
                     </div>
                   )}
                 </div>
@@ -343,80 +183,40 @@ export default function Servers() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0] overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-[#e2e8f0]">
+                <thead className="bg-[#f8fafc]">
                   <tr>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Nombre</th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Sede</th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">IP</th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">AnyDesk</th>
-                    <th scope="col" className="relative px-6 py-4">
-                      <span className="sr-only">Acciones</span>
-                    </th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Servidor / Hostname</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Sede</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Red (IP / AnyDesk)</th>
+                    <th className="px-6 py-3 text-right text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
+                <tbody className="divide-y divide-[#e2e8f0] bg-white">
                   {filtered.map(srv => (
-                    <tr key={srv.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <tr key={srv.id} className="hover:bg-gray-50/50 group">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="bg-gray-50 rounded-lg p-2">
-                            <ServerIcon size={18} className="text-gray-600" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-bold text-gray-900 uppercase tracking-tight">{srv.name}</div>
-                          </div>
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 group-hover:bg-[#002855] group-hover:text-white transition-colors"><ServerIcon size={14} /></div>
+                          <span className="text-sm font-bold text-gray-900 uppercase">{srv.name}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {srv.locations && (
-                          <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                            <MapPin size={14} className="text-blue-500" />
-                            <span>{srv.locations.name}</span>
-                          </div>
-                        )}
+                      <td className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">{srv.locations?.name || '—'}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-4">
+                          <div className="flex items-center gap-1.5"><Globe size={12} className="text-blue-400" /><span className="text-xs font-mono text-[#002855]">{srv.ip_address || '—'}</span></div>
+                          <div className="flex items-center gap-1.5"><Activity size={12} className="text-emerald-400" /><span className="text-xs font-mono text-[#002855]">{srv.anydesk_id || '—'}</span></div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {srv.ip_address ? (
-                          <span className="text-sm font-mono font-bold text-blue-900">{srv.ip_address}</span>
-                        ) : (
-                          <span className="text-sm text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {srv.anydesk_id ? (
-                          <span className="text-sm font-mono font-bold text-emerald-900">{srv.anydesk_id}</span>
-                        ) : (
-                          <span className="text-sm text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => setViewingServer(srv)}
-                            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
-                            title="Ver detalles"
-                          >
-                            <Eye size={16} />
-                          </button>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={() => setViewingServer(srv)} className="p-2 text-slate-400 hover:text-[#002855]"><Eye size={16} /></button>
                           {canEdit() && (
                             <>
-                              <button
-                                onClick={() => openEdit(srv)}
-                                className="p-2 text-slate-600 hover:text-white hover:bg-slate-800 rounded-lg transition-all"
-                                title="Editar"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              <button
-                                onClick={() => del(srv)}
-                                className="p-2 text-rose-500 hover:text-white hover:bg-rose-500 rounded-lg transition-all"
-                                title="Eliminar"
-                              >
-                                <Trash2 size={16} />
-                              </button>
+                              <button onClick={() => openEdit(srv)} className="p-2 text-slate-400 hover:text-blue-600"><Edit size={16} /></button>
+                              <button onClick={() => del(srv)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 size={16} /></button>
                             </>
                           )}
                         </div>
@@ -428,249 +228,58 @@ export default function Servers() {
             </div>
           </div>
         )}
-
-        {/* Modal de Detalles */}
-        {viewingServer && (
-          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
-              {/* Modal Header */}
-              <div className="px-8 py-6 flex items-center justify-between border-b border-gray-100 bg-slate-50/50">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-2xl bg-white shadow-sm border border-gray-100">
-                    <ServerIcon size={24} className="text-slate-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Infraestructura Central</h2>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none mt-1">Servidor de Red</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setViewingServer(undefined)}
-                  className="p-2 hover:bg-white rounded-full transition-colors text-gray-400 hover:text-gray-600"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="p-8 overflow-y-auto space-y-8">
-                {/* Información básica */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-4 bg-slate-500 rounded-full" />
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Identificación del Equipo</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50">
-                    <div className="md:col-span-2">
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nombre del Host</label>
-                      <p className="text-gray-900 font-bold text-lg leading-tight uppercase">{viewingServer.name}</p>
-                    </div>
-
-                    {viewingServer.locations && (
-                      <div className="md:col-span-2">
-                        <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Ubicación Física / Sede</label>
-                        <div className="flex items-center gap-2 text-sm text-gray-700 font-bold uppercase">
-                          <MapPin size={14} className="text-blue-500" />
-                          {viewingServer.locations.name}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Conectividad */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-4 bg-blue-500 rounded-full" />
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Direccionamiento y Acceso</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Dirección IP (LAN/WAN)</label>
-                      <p className="text-gray-900 font-black font-mono tracking-tight">{viewingServer.ip_address || 'Sin IP asignada'}</p>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Identificador AnyDesk</label>
-                      <p className="text-gray-900 font-black font-mono tracking-tight">{viewingServer.anydesk_id || 'Sin AnyDesk'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Credenciales */}
-                {(viewingServer.username || viewingServer.password) && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-1 h-4 bg-purple-500 rounded-full" />
-                      <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Autenticación de Sistema</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {viewingServer.username && (
-                        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Usuario</label>
-                          <p className="text-gray-900 font-black font-mono">{viewingServer.username}</p>
-                        </div>
-                      )}
-                      {viewingServer.password && (
-                        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contraseña</label>
-                          <div className="flex items-center gap-2">
-                            <p className="text-gray-900 font-black font-mono tracking-widest">
-                              {showPasswords[viewingServer.id] ? viewingServer.password : '••••••••'}
-                            </p>
-                            <button
-                              onClick={() => setShowPasswords(prev => ({ ...prev, [viewingServer.id]: !prev[viewingServer.id] }))}
-                              className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 ml-auto"
-                            >
-                              {showPasswords[viewingServer.id] ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Notas */}
-                {viewingServer.notes && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-1 h-4 bg-amber-500 rounded-full" />
-                      <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Especificaciones / Otros</h3>
-                    </div>
-                    <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100">
-                      <p className="text-sm text-amber-950 font-medium italic leading-relaxed whitespace-pre-wrap">{viewingServer.notes}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Modal Footer */}
-              <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
-                <button
-                  onClick={() => setViewingServer(undefined)}
-                  className="flex-1 px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-widest bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
-                >
-                  Cerrar
-                </button>
-                {canEdit() && (
-                  <div className="flex-1 flex gap-3">
-                    <button
-                      onClick={() => {
-                        const srv = viewingServer;
-                        setViewingServer(undefined);
-                        openEdit(srv);
-                      }}
-                      className="flex-1 px-4 py-3 text-[10px] font-bold text-white uppercase tracking-widest bg-slate-800 rounded-xl hover:bg-slate-900 transition-all active:scale-95 shadow-lg shadow-slate-200"
-                    >
-                      Editar Servidor
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
-              <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-800">{editing ? 'Editar Servidor' : 'Nuevo Servidor'}</h2>
-                <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600">
-                  <X size={20} />
-                </button>
-              </div>
-              <form onSubmit={save} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
-                  <input
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                  />
-                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sede</label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={form.location_id}
-                    onChange={(e) => setForm({ ...form, location_id: e.target.value })}
-                  >
-                    <option value="">Sin ubicación específica</option>
-                    {locations.map(l => (
-                      <option key={l.id} value={l.id}>{l.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">IP</label>
-                    <input
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      placeholder="192.168.1.10"
-                      value={form.ip_address}
-                      onChange={(e) => setForm({ ...form, ip_address: e.target.value })}
-                    />
-                    {errors.ip_address && <p className="text-red-500 text-sm mt-1">{errors.ip_address}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">AnyDesk</label>
-                    <input
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-                      placeholder="123 456 789"
-                      value={form.anydesk_id}
-                      onChange={(e) => setForm({ ...form, anydesk_id: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
-                    <input
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="admin"
-                      value={form.username}
-                      onChange={(e) => setForm({ ...form, username: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-                    <input
-                      type="password"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="••••••••"
-                      value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
-                  <textarea
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Detalles, accesos, observaciones..."
-                    value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4 border-t border-gray-100 mt-6">
-                  <button type="button" onClick={() => setShowForm(false)} className="flex-1 px-4 py-2.5 text-[11px] font-bold text-slate-500 uppercase tracking-widest bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-slate-700 transition-colors">Cancelar</button>
-                  <button type="submit" className="flex-1 px-4 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 font-bold text-[11px] uppercase tracking-widest shadow-md">Guardar</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden flex flex-col shadow-2xl">
+            <div className="bg-[#002855] px-8 py-5 flex items-center justify-between">
+              <h2 className="text-lg font-black text-white uppercase tracking-wider">{editing ? 'Editar Recurso' : 'Nuevo Recurso'}</h2>
+              <button onClick={() => setShowForm(false)} className="text-white/70 hover:text-white"><X size={24} /></button>
+            </div>
+            <form onSubmit={save} className="p-8 space-y-4 flex-1 bg-slate-50">
+              <input placeholder="Nombre del Host *" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-1 focus:ring-blue-500 font-bold" required />
+              <select value={form.location_id} onChange={e => setForm({ ...form, location_id: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-1 focus:ring-blue-500">{locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
+              <div className="grid grid-cols-2 gap-4">
+                <input placeholder="Host IP" value={form.ip_address} onChange={e => setForm({ ...form, ip_address: e.target.value })} className="px-4 py-2.5 rounded-xl border border-gray-200 font-mono text-xs" />
+                <input placeholder="AnyDesk ID" value={form.anydesk_id} onChange={e => setForm({ ...form, anydesk_id: e.target.value })} className="px-4 py-2.5 rounded-xl border border-gray-200 font-mono text-xs" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <input placeholder="Usuario" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs" />
+                <input type="password" placeholder="Contraseña" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs" />
+              </div>
+              <textarea placeholder="Notas técnicas..." value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs resize-none" />
+              <div className="flex gap-3 pt-4"><button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 text-xs font-black uppercase text-gray-400">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#002855] text-white rounded-lg text-xs font-black uppercase shadow-lg shadow-blue-900/10">Guardar</button></div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {viewingServer && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="px-8 py-6 bg-slate-50 border-b flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-white rounded-2xl shadow-sm"><ServerIcon size={24} className="text-slate-600" /></div>
+                <div><h3 className="text-xl font-black text-[#002855] uppercase tracking-tight">Ficha Técnica</h3><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Host: {viewingServer.name}</p></div>
+              </div>
+              <button onClick={() => setViewingServer(undefined)} className="text-gray-400 p-2"><X size={24} /></button>
+            </div>
+            <div className="p-8 overflow-y-auto space-y-6">
+              <div className="bg-blue-50/30 p-6 rounded-2xl border border-blue-100/50">
+                <label className="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-2">Sede / Ubicación</label>
+                <p className="text-lg font-black text-[#002855] uppercase">{viewingServer.locations?.name || 'No especificada'}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-xl border shadow-sm"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">IP LAN</label><p className="font-mono font-bold text-[#002855]">{viewingServer.ip_address || '—'}</p></div>
+                <div className="bg-white p-4 rounded-xl border shadow-sm"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">AnyDesk</label><p className="font-mono font-bold text-[#002855]">{viewingServer.anydesk_id || '—'}</p></div>
+              </div>
+              {viewingServer.notes && <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100"><p className="text-sm font-medium italic text-amber-950 leading-relaxed">"{viewingServer.notes}"</p></div>}
+            </div>
+            <div className="p-6 bg-slate-50 border-t flex gap-3"><button onClick={() => setViewingServer(undefined)} className="flex-1 py-3 text-xs font-black uppercase text-gray-400 bg-white border border-gray-200 rounded-xl">Cerrar</button></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-

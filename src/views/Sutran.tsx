@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Building2, Calendar, MapPin, User, Clock, Search, Plus, Edit, Trash2, Eye, X, AlertTriangle, CheckCircle, FileText, Send, Star } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Search, Building2, Calendar, FileText, User, MapPin, Clock, Info, CheckCircle, AlertTriangle, Trash2, Edit, X, Download, Star } from 'lucide-react';
+import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase } from '../lib/supabase';
 import type { SutranVisit } from '../lib/supabase';
 import SutranVisitForm from '../components/forms/SutranVisitForm';
@@ -9,6 +10,7 @@ export default function Sutran() {
   const { canEdit } = useAuth();
   const [visits, setVisits] = useState<SutranVisit[]>([]);
   const [loading, setLoading] = useState(true);
+  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [visitTypeFilter, setVisitTypeFilter] = useState('');
@@ -214,52 +216,51 @@ export default function Sutran() {
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
       {/* Title / Tab Bar - Minimalist Executive Style */}
-      <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30">
+      {/* Standard Application Header (h-14) */}
+      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex items-center gap-4">
           <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
             <Building2 size={20} />
           </div>
-          <div>
+          <div className="hidden lg:block">
             <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Normativa Sutran</h2>
             <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
               <span>Cumplimiento Regulatorio</span>
               <div className="w-1 h-1 bg-gray-300 rounded-full" />
-              <span>{visits.length} Registros</span>
+              <span>{visits.length} Visitas</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={async () => {
-              try {
-                const { error } = await supabase.from('sutran_visits').select('id').limit(1);
-                if (error) throw error;
-                alert('Conexión con Supabase exitosa');
-              } catch (err: any) {
-                alert(`Error de conexión: ${err.message}`);
-              }
-            }}
-            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition-all font-bold text-[9px] uppercase tracking-widest mr-2"
-          >
-            <Building2 size={12} />
-            Test DB
-          </button>
+        {/* Integrated Search Bar in Header */}
+        <div className="flex-1 max-w-md px-4">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar inspectores, sedes u observaciones..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all text-sm font-medium"
+            />
+          </div>
+        </div>
 
-          <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
-            {canEdit() && (
+        <div className="flex items-center gap-2">
+          {canEdit() && (
+            <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
               <button
                 onClick={() => {
                   setEditingVisit(undefined);
                   setShowForm(true);
                 }}
-                className="p-2 ml-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
+                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
                 title="Nueva Visita"
               >
-                <Plus size={18} />
+                <Plus size={22} />
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
             <Star size={18} />
@@ -271,8 +272,8 @@ export default function Sutran() {
       </div>
 
       <div className="p-6 space-y-6">
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Quick Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Visitas</div>
             <div className="flex items-end justify-between">
@@ -307,47 +308,29 @@ export default function Sutran() {
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Búsqueda */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-md bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-slate-400 sm:text-sm transition-all"
-                placeholder="Buscar inspector, sede..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            {/* Filtro Estado */}
-            <div>
+          <div className="flex flex-col lg:flex-row justify-end gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <select
-                className="block w-full pl-3 pr-10 py-2 text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
+                className="block w-full pl-3 pr-10 py-2 border border-slate-300 rounded-md bg-white text-xs font-bold text-slate-700 outline-none cursor-pointer uppercase tracking-wider"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <option value="">Todos los Estados</option>
-                <option value="pending">Pendiente</option>
-                <option value="in_progress">En Progreso</option>
-                <option value="completed">Completada</option>
-                <option value="cancelled">Cancelada</option>
+                <option value="">TODOS LOS ESTADOS</option>
+                <option value="pending">PENDIENTE</option>
+                <option value="in_progress">EN PROGRESO</option>
+                <option value="completed">COMPLETADA</option>
+                <option value="cancelled">CANCELADA</option>
               </select>
-            </div>
 
-            {/* Filtro Tipo */}
-            <div>
               <select
-                className="block w-full pl-3 pr-10 py-2 text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
+                className="block w-full pl-3 pr-10 py-2 border border-slate-300 rounded-md bg-white text-xs font-bold text-slate-700 outline-none cursor-pointer uppercase tracking-wider"
                 value={visitTypeFilter}
                 onChange={(e) => setVisitTypeFilter(e.target.value)}
               >
-                <option value="">Todos los Tipos</option>
-                <option value="programada">Programada</option>
-                <option value="no_programada">No programada</option>
-                <option value="de_gabinete">De gabinete</option>
+                <option value="">TODOS LOS TIPOS</option>
+                <option value="programada">PROGRAMADA</option>
+                <option value="no_programada">NO PROGRAMADA</option>
+                <option value="de_gabinete">DE GABINETE</option>
               </select>
             </div>
           </div>

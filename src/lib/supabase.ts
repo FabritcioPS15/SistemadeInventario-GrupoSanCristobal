@@ -1,5 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Messaging System Types
+export type Conversation = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ConversationParticipant = {
+  id: string;
+  conversation_id: string;
+  user_id: string;
+  last_read_at?: string;
+  created_at: string;
+};
+
+export type Message = {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+  read_at?: string;
+};
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
