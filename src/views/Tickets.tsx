@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Ticket, Plus, LayoutGrid, List, Search, Filter, Clock, User, ArrowRight, MoreHorizontal, Star, X } from 'lucide-react';
+import { Ticket, Plus, LayoutGrid, List, Search, Filter, Clock, User, ArrowRight, Star, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
@@ -42,7 +42,6 @@ const PRIORITY_STYLES: Record<string, string> = {
 };
 
 export default function Tickets() {
-    const { user } = useAuth();
     const [tickets, setTickets] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -215,9 +214,9 @@ export default function Tickets() {
                     </div>
                 ) : viewMode === 'kanban' ? (
                     /* PREMIUM KANBAN */
-                    <div className="flex h-full gap-4 sm:gap-8 overflow-x-auto pb-4 snap-x remove-scrollbar">
+                    <div className="flex h-full gap-4 sm:gap-8 overflow-x-auto pb-4 snap-x snap-mandatory remove-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
                         {Object.entries(TICKET_STATUSES).map(([statusKey, config]) => (
-                            <div key={statusKey} className="flex-none w-80 flex flex-col h-full bg-slate-200/40 rounded-[2rem] border border-white/40 shadow-xl backdrop-blur-sm snap-center overflow-hidden">
+                            <div key={statusKey} className="flex-none w-[280px] sm:w-80 flex flex-col h-full bg-slate-200/40 rounded-[1.5rem] sm:rounded-[2rem] border border-white/40 shadow-xl backdrop-blur-sm snap-center overflow-hidden">
                                 {/* Kanban Column Header */}
                                 <div className="px-6 py-5 bg-white/60 border-b border-white/40 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -236,7 +235,7 @@ export default function Tickets() {
                                             <div
                                                 key={ticket.id}
                                                 onClick={() => setSelectedTicket(ticket)}
-                                                className="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:border-blue-200 cursor-pointer transition-all duration-300 group relative transform hover:-translate-y-1 active:scale-[0.98]"
+                                                className="bg-white p-4 sm:p-5 rounded-[1.2rem] sm:rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:border-blue-200 cursor-pointer transition-all duration-300 group relative transform hover:-translate-y-1 active:scale-[0.98]"
                                             >
                                                 {/* Priority Indicator */}
                                                 <div className={`absolute left-0 top-6 bottom-6 w-1 rounded-r-full group-hover:w-1.5 transition-all ${PRIORITY_STYLES[ticket.priority as keyof typeof PRIORITY_STYLES]}`}></div>
@@ -317,7 +316,7 @@ export default function Tickets() {
                             <div
                                 key={ticket.id}
                                 onClick={() => setSelectedTicket(ticket)}
-                                className="bg-white border border-slate-200 rounded-[1.5rem] p-4 sm:p-5 hover:shadow-2xl hover:border-blue-300 transition-all duration-300 cursor-pointer flex items-center justify-between group relative overflow-hidden"
+                                className="bg-white border border-slate-200 rounded-[1.2rem] sm:rounded-[1.5rem] p-3 sm:p-5 hover:shadow-2xl hover:border-blue-300 transition-all duration-300 cursor-pointer flex items-center justify-between group relative overflow-hidden"
                             >
                                 <div className="flex items-center gap-3 sm:gap-8 min-w-0">
                                     <div className={`w-10 h-10 sm:w-14 sm:h-14 flex-shrink-0 rounded-xl sm:rounded-2xl flex items-center justify-center text-lg sm:text-2xl shadow-lg border-2 ${TICKET_STATUSES[ticket.status as keyof typeof TICKET_STATUSES]?.color}`}>

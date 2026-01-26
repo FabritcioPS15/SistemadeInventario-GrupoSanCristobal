@@ -17,6 +17,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     const [sending, setSending] = useState(false);
     const commentsEndRef = useRef<HTMLDivElement>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
+    const [activeTab, setActiveTab] = useState<'details' | 'feed'>('details');
 
     useEffect(() => {
         setCurrentTicket(initialTicket);
@@ -190,12 +191,30 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     };
 
     return (
-        <div className="fixed inset-0 bg-[#001529]/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-            <div className="bg-[#f8fafc] rounded-[2.5rem] shadow-2xl w-full max-w-6xl h-[85vh] flex overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-300">
+        <div className="fixed inset-0 bg-[#001529]/60 backdrop-blur-md flex items-center justify-center z-50 p-0 sm:p-4">
+            <div className="bg-[#f8fafc] rounded-none sm:rounded-[2.5rem] shadow-2xl w-full max-w-6xl h-full sm:h-[85vh] flex flex-col md:flex-row overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-300">
+                {/* Mobile Tabs Switcher */}
+                <div className="flex md:hidden bg-white border-b border-slate-200">
+                    <button
+                        onClick={() => setActiveTab('details')}
+                        className={`flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'details' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-slate-400'}`}
+                    >
+                        Detalles
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('feed')}
+                        className={`flex-1 py-4 text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'feed' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-slate-400'}`}
+                    >
+                        Actividad
+                    </button>
+                    <button onClick={onClose} className="px-4 text-slate-400">
+                        <X size={20} />
+                    </button>
+                </div>
 
                 {/* Left Panel: Executive Summary */}
-                <div className="w-[380px] bg-white border-r border-slate-200 p-8 flex flex-col overflow-y-auto custom-scrollbar shadow-[10px_0_30px_-15px_rgba(0,0,0,0.05)] relative z-10">
-                    <div className="flex items-center justify-between mb-8">
+                <div className={`w-full md:w-[380px] bg-white border-r border-slate-200 p-6 sm:p-8 flex flex-col overflow-y-auto custom-scrollbar shadow-[10px_0_30px_-15px_rgba(0,0,0,0.05)] relative z-10 ${activeTab === 'details' ? 'flex' : 'hidden md:flex'}`}>
+                    <div className="flex items-center justify-between mb-8 md:flex">
                         <div className="flex flex-col">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Referencia</span>
                             <span className="text-xs font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">#{currentTicket.id.slice(0, 12).toUpperCase()}</span>
@@ -203,6 +222,10 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                         <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-2 shadow-sm ${getPriorityStyle(currentTicket.priority)}`}>
                             {currentTicket.priority}
                         </div>
+                        {/* Desktop Only Close Button in Panel */}
+                        <button onClick={onClose} className="hidden md:flex p-2 hover:bg-rose-50 rounded-xl transition-all text-slate-400 hover:text-rose-500">
+                            <X size={20} />
+                        </button>
                     </div>
 
                     <h2 className="text-2xl font-black text-[#001529] mb-6 leading-[1.1] tracking-tight">{currentTicket.title}</h2>
@@ -308,8 +331,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                 </div>
 
                 {/* Right Panel: Executive Feed */}
-                <div className="flex-1 flex flex-col bg-[#f1f5f9]/50">
-                    <div className="p-6 bg-white border-b border-slate-200 flex items-center justify-between shadow-sm">
+                <div className={`flex-1 flex flex-col bg-[#f1f5f9]/50 ${activeTab === 'feed' ? 'flex' : 'hidden md:flex'}`}>
+                    <div className="p-4 sm:p-6 bg-white border-b border-slate-200 flex items-center justify-between shadow-sm">
                         <div className="flex items-center gap-4">
                             <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
                                 <MessageSquare size={20} />
@@ -319,7 +342,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Hilo de Seguimiento en Tiempo Real</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="w-10 h-10 flex items-center justify-center hover:bg-rose-50 rounded-2xl transition-all text-slate-400 hover:text-rose-500 hover:rotate-90">
+                        <button onClick={onClose} className="hidden md:flex w-10 h-10 items-center justify-center hover:bg-rose-50 rounded-2xl transition-all text-slate-400 hover:text-rose-500 hover:rotate-90">
                             <X size={24} />
                         </button>
                     </div>
@@ -399,6 +422,6 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
