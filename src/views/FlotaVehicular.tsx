@@ -4,7 +4,7 @@ import { Plus, Search, Edit, Trash2, Car, X, Download, LayoutGrid, List, MapPin,
 import ExcelJS from 'exceljs';
 import VehicleImportModal from '../components/VehicleImportModal';
 import Pagination from '../components/Pagination';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 
@@ -106,7 +106,7 @@ export default function FlotaVehicular() {
 
   const fetchSchools = async () => {
     try {
-      const { data, error } = await supabase.from('locations').select('id, name').eq('type', 'escuela_conductores');
+      const { data, error } = await api.from('locations').select();
       if (!error && data) setSchools(data);
     } catch (error) { console.error('Error al cargar las escuelas:', error); }
   };
@@ -149,7 +149,7 @@ export default function FlotaVehicular() {
   const fetchVehiculos = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('vehiculos').select('*').order('placa').limit(1000);
+      const { data, error } = await api.from('vehicles').select();
       if (error) throw error;
       setVehiculos(data || []);
     } catch (error) { console.error('Error al cargar vehículos:', error); } finally { setLoading(false); }
@@ -165,15 +165,15 @@ export default function FlotaVehicular() {
     if (!form.placa || !form.marca || !form.modelo) return;
     const payload = { ...form, updated_at: new Date().toISOString() };
     try {
-      if (editing) await supabase.from('vehiculos').update(payload).eq('id', editing.id);
-      else await supabase.from('vehiculos').insert([form]);
+      if (editing) await api.from('vehicles').update(payload).eq('id', editing.id);
+      else await api.from('vehicles').insert(form);
       fetchVehiculos(); setShowForm(false); resetForm();
     } catch (error) { console.error('Error saving:', error); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar vehículo?')) return;
-    await supabase.from('vehiculos').delete().eq('id', id);
+    await api.from('vehicles').delete().eq('id', id);
     fetchVehiculos();
   };
 

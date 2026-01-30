@@ -17,7 +17,7 @@ import {
   TrendingUp,
   Calendar
 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import DonutChart from '../components/charts/DonutChart';
 
@@ -197,18 +197,18 @@ export default function Dashboard() {
         { count: maintenanceAssets },
         { count: pendingMaintenance },
       ] = await Promise.all([
-        supabase.from('assets').select('*', { count: 'exact', head: true }),
-        supabase.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('cameras').select('*', { count: 'exact', head: true }),
-        supabase.from('cameras').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('locations').select('*', { count: 'exact', head: true }),
-        supabase.from('users').select('*', { count: 'exact', head: true }),
-        supabase.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'maintenance'),
-        supabase.from('maintenance_records').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        api.from('assets').select('*', { count: 'exact', head: true }),
+        api.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        api.from('cameras').select('*', { count: 'exact', head: true }),
+        api.from('cameras').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        api.from('locations').select('*', { count: 'exact', head: true }),
+        api.from('users').select('*', { count: 'exact', head: true }),
+        api.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'maintenance'),
+        api.from('maintenance_records').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
 
       // 2. Fetch Ticket Stats
-      const { data: tickets } = await supabase.from('tickets').select('status, priority, assigned_to');
+      const { data: tickets } = await api.from('tickets').select('status, priority, assigned_to');
       const totalTickets = tickets?.length || 0;
       const openTickets = tickets?.filter(t => t.status === 'open' || t.status === 'in_progress').length || 0;
       const criticalTickets = tickets?.filter(t => t.priority === 'critical' && t.status !== 'closed' && t.status !== 'resolved').length || 0;
@@ -864,3 +864,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, LayoutGrid, List, Lock, Star } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import UserForm from '../components/forms/UserForm';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -516,3 +516,4 @@ export default function Users() {
     </div>
   );
 }
+

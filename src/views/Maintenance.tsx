@@ -164,7 +164,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   };
 
   const fetchLocations = async () => {
-    const { data, error } = await supabase.from('locations').select('*').order('name');
+    const { data, error } = await api.from('locations').select('*').order('name');
     if (error) console.error('Error fetching locations:', error);
     if (data) setLocations(data);
   };
@@ -183,7 +183,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const handleDeleteRecord = async (record: MaintenanceRecord) => {
     if (window.confirm(`¿Estás seguro de que quieres eliminar el registro de mantenimiento "${record.description}"?`)) {
       try {
-        const { error } = await supabase.from('maintenance_records').delete().eq('id', record.id);
+        const { error } = await api.from('maintenance_records').delete().eq('id', record.id);
         if (error) throw error;
         await fetchMaintenanceRecords();
         alert('Registro de mantenimiento eliminado correctamente');
@@ -942,3 +942,5 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
     </div>
   );
 }
+
+

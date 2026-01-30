@@ -31,7 +31,7 @@ export default function Servers() {
   }, []);
 
   const fetchServers = async () => {
-    const { data, error } = await supabase.from('servers').select('*, locations(*)').order('created_at', { ascending: false });
+    const { data, error } = await api.from('servers').select('*, locations(*)').order('created_at', { ascending: false });
     if (!error && data) {
       setServers(data as Server[]);
       calculateStats(data as Server[]);
@@ -50,7 +50,7 @@ export default function Servers() {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    const { data } = await api.from('locations').select('*').order('name');
     if (data) setLocations(data);
   };
 
@@ -62,13 +62,13 @@ export default function Servers() {
     e.preventDefault();
     if (!form.name.trim()) return setErrors({ name: 'Requerido' });
     const payload = { ...form, updated_at: new Date().toISOString() };
-    if (editing) await supabase.from('servers').update(payload).eq('id', editing.id);
-    else await supabase.from('servers').insert(payload as any);
+    if (editing) await api.from('servers').update(payload).eq('id', editing.id);
+    else await api.from('servers').insert(payload as any);
     setShowForm(false); await fetchServers();
   };
 
   const del = async (s: Server) => {
-    if (confirm(`¿Eliminar servidor "${s.name}"?`)) { await supabase.from('servers').delete().eq('id', s.id); await fetchServers(); }
+    if (confirm(`¿Eliminar servidor "${s.name}"?`)) { await api.from('servers').delete().eq('id', s.id); await fetchServers(); }
   };
 
   const filtered = servers.filter(s => {
@@ -286,3 +286,6 @@ export default function Servers() {
     </div>
   );
 }
+
+
+

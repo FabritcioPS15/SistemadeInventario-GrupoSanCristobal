@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Save, AlertCircle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 type TicketFormProps = {
@@ -26,7 +26,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     }, []);
 
     const fetchLocations = async () => {
-        const { data } = await supabase.from('locations').select('id, name');
+        const { data } = await api.from('locations').select('id, name');
         if (data) setLocations(data);
     };
 
@@ -175,3 +175,4 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
         </div>
     );
 }
+

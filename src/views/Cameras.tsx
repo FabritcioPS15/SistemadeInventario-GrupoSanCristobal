@@ -47,7 +47,7 @@ export default function Cameras({ subview }: CamerasProps) {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    const { data } = await api.from('locations').select('*').order('name');
     if (data) setLocations(data);
   };
 
@@ -63,7 +63,7 @@ export default function Cameras({ subview }: CamerasProps) {
 
   const del = async (cam: Camera) => {
     if (!confirm(`¿Eliminar cámara "${cam.name}"?`)) return;
-    const { error } = await supabase.from('cameras').delete().eq('id', cam.id);
+    const { error } = await api.from('cameras').delete().eq('id', cam.id);
     if (error) return alert('Error al eliminar: ' + error.message);
     await fetchCameras();
   };
@@ -1042,6 +1042,9 @@ export default function Cameras({ subview }: CamerasProps) {
     </div>
   );
 }
+
+
+
 
 
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Send, User, Clock, AlertCircle, MessageSquare } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 
 type TicketDetailModalProps = {
@@ -150,7 +150,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
             if (error) throw error;
 
             // 2. Insert "System" comment & Refresh local feed
-            await supabase.from('ticket_comments').insert([
+            await api.from('ticket_comments').insert([
                 {
                     ticket_id: currentTicket.id,
                     user_id: user?.id,
@@ -425,3 +425,4 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         </div >
     );
 }
+

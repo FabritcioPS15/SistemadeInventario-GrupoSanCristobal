@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Building2, Calendar, FileText, User, MapPin, Clock, Info, CheckCircle, AlertTriangle, Trash2, Edit, X, Download, Star, Eye, Send } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import type { SutranVisit } from '../lib/supabase';
 import SutranVisitForm from '../components/forms/SutranVisitForm';
 import { useAuth } from '../contexts/AuthContext';
@@ -634,3 +634,5 @@ export default function Sutran() {
     </div>
   );
 }
+
+

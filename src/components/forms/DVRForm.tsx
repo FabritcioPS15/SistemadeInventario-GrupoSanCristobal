@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, HardDrive } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 
 interface DVRFormProps {
   editDVR?: any;
@@ -99,10 +99,10 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
       };
 
       if (editDVR) {
-        const { error } = await supabase.from('assets').update(dataToSave).eq('id', editDVR.id);
+        const { error } = await api.from('assets').update(dataToSave).eq('id', editDVR.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('assets').insert([dataToSave]);
+        const { error } = await api.from('assets').insert([dataToSave]);
         if (error) throw error;
       }
       onSave();
@@ -270,6 +270,7 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
     </div>
   );
 }
+
 
 
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { supabase, Location, CameraDisk } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
+import { Location, CameraDisk } from '../../lib/api';
 import CameraDiskManager from '../CameraDiskManager';
 
 type Camera = {

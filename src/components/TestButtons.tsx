@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 export default function TestButtons() {
   const [testResult, setTestResult] = useState('');
@@ -99,4 +99,5 @@ export default function TestButtons() {
     </div>
   );
 }
+
 

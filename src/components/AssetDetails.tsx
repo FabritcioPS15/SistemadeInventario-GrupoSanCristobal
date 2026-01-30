@@ -163,3 +163,4 @@ export default function AssetDetails({ asset, onClose }: AssetDetailsProps) {
     </div>
   );
 }
+

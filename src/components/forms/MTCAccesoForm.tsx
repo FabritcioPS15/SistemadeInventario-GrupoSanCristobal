@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 
 type MTCAcceso = {
   id: string;
@@ -418,3 +418,4 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
     </div>
   );
 }
+

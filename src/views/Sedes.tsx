@@ -246,7 +246,7 @@ export default function Sedes() {
           <button
             onClick={async () => {
               try {
-                const { error } = await supabase.from('locations').select('id').limit(1);
+                const { error } = await api.from('locations').select('id').limit(1);
                 if (error) throw error;
                 alert('Conexión con Supabase exitosa');
               } catch (err: any) {
@@ -818,3 +818,6 @@ export default function Sedes() {
     </div>
   );
 }
+
+
+

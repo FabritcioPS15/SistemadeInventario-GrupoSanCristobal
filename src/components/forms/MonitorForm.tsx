@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { X, Monitor } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 
 interface MonitorFormProps {
   editMonitor?: any;
@@ -87,10 +87,10 @@ export default function MonitorForm({ editMonitor, onClose, onSave }: MonitorFor
       };
 
       if (editMonitor) {
-        const { error } = await supabase.from('assets').update(dataToSave).eq('id', editMonitor.id);
+        const { error } = await api.from('assets').update(dataToSave).eq('id', editMonitor.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('assets').insert([dataToSave]);
+        const { error } = await api.from('assets').insert([dataToSave]);
         if (error) throw error;
       }
       onSave();
@@ -224,6 +224,7 @@ export default function MonitorForm({ editMonitor, onClose, onSave }: MonitorFor
     </div>
   );
 }
+
 
 
 

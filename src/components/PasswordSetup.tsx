@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Key, AlertCircle, CheckCircle, Loader2, User, Database } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import Login from './Login';
 
 type User = {
@@ -324,3 +324,4 @@ export default function PasswordSetup() {
     </div>
   );
 }
+

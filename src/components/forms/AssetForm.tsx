@@ -1519,3 +1519,4 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     </div>
   );
 }
+

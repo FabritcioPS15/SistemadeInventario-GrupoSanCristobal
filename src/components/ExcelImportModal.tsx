@@ -478,7 +478,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
             const records = preview.processedRecords;
             for (let i = 0; i < records.length; i += batchSize) {
                 const batch = records.slice(i, i + batchSize);
-                const { error } = await supabase.from('assets').insert(batch);
+                const { error } = await api.from('assets').insert(batch);
                 if (error) throw error;
             }
 
@@ -761,3 +761,6 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
 };
 
 export default ExcelImportModal;
+
+
+

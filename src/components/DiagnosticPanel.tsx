@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 interface DiagnosticResult {
   test: string;
@@ -30,7 +30,7 @@ export default function DiagnosticPanel() {
 
     // Test 2: Verificar conexión básica
     try {
-      const { error } = await supabase.from('locations').select('count', { count: 'exact', head: true });
+      const { error } = await api.from('locations').select('count', { count: 'exact', head: true });
       
       newResults.push({
         test: 'Conexión a Supabase',
@@ -53,7 +53,7 @@ export default function DiagnosticPanel() {
 
     for (const table of tables) {
       try {
-        const { error } = await supabase.from(table).select('*', { count: 'exact', head: true });
+        const { error } = await api.from(table).select('*', { count: 'exact', head: true });
         if (!error) tablesExist++;
       } catch (err) {
         // Tabla no existe
@@ -69,8 +69,8 @@ export default function DiagnosticPanel() {
 
     // Test 4: Verificar datos de prueba
     try {
-      const { count: locationsCount } = await supabase.from('locations').select('*', { count: 'exact', head: true });
-      const { count: assetsCount } = await supabase.from('assets').select('*', { count: 'exact', head: true });
+      const { count: locationsCount } = await api.from('locations').select('*', { count: 'exact', head: true });
+      const { count: assetsCount } = await api.from('assets').select('*', { count: 'exact', head: true });
       
       newResults.push({
         test: 'Datos de Prueba',
@@ -184,3 +184,4 @@ export default function DiagnosticPanel() {
     </div>
   );
 }
+
