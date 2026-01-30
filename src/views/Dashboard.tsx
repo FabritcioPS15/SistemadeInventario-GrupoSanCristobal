@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   Package,
-  Camera,
-  MapPin,
-  TrendingUp,
   AlertCircle,
   Truck,
   Activity,
@@ -11,12 +8,14 @@ import {
   ArrowRight,
   Plus,
   X,
-  Calendar,
   AlertTriangle,
   CheckCircle,
-  Info,
   Wrench,
-  Building2
+  Building2,
+  Ticket,
+  ClipboardList,
+  TrendingUp,
+  Calendar
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -30,12 +29,16 @@ interface DashboardStats {
   totalLocations: number;
   totalUsers: number;
   maintenanceAssets: number;
+  pendingMaintenance: number;
   totalVehicles: number;
   activeVehicles: number;
   maintenanceVehicles: number;
-  activeShipments: number;
-  pendingShipments: number;
-  deliveredShipments: number;
+  // Tickets
+  totalTickets: number;
+  openTickets: number;
+  criticalTickets: number;
+  unassignedTickets: number;
+  // Documents
   expiredSoat: number;
   warningSoat: number;
   expiredCitv: number;
@@ -44,6 +47,7 @@ interface DashboardStats {
   warningPoliza: number;
   expiredContrato: number;
   warningContrato: number;
+  expiringPlates: string[];
 }
 
 interface SutranLocationAlert {
@@ -57,11 +61,13 @@ interface SutranLocationAlert {
 
 interface RecentActivity {
   id: string;
-  type: 'asset' | 'shipment' | 'maintenance' | 'sutran' | 'system';
+  type: 'asset' | 'ticket' | 'maintenance' | 'sutran' | 'system';
   description: string;
   location?: string;
   date: string;
   user?: string;
+  status?: string;
+  priority?: string;
 }
 
 
@@ -75,12 +81,14 @@ export default function Dashboard() {
     totalLocations: 0,
     totalUsers: 0,
     maintenanceAssets: 0,
+    pendingMaintenance: 0,
     totalVehicles: 0,
     activeVehicles: 0,
     maintenanceVehicles: 0,
-    activeShipments: 0,
-    pendingShipments: 0,
-    deliveredShipments: 0,
+    totalTickets: 0,
+    openTickets: 0,
+    criticalTickets: 0,
+    unassignedTickets: 0,
     expiredSoat: 0,
     warningSoat: 0,
     expiredCitv: 0,
@@ -89,11 +97,8 @@ export default function Dashboard() {
     warningPoliza: 0,
     expiredContrato: 0,
     warningContrato: 0,
+    expiringPlates: []
   });
-
-  // Filtro de sede para la sección de flota vehicular
-  const [vehicleLocationFilter, setVehicleLocationFilter] = useState<string>('todos');
-  const [vehicleLocations, setVehicleLocations] = useState<Array<{ id: string; name: string }>>([]);
 
   // Alertas SUTRAN por sede
   const [sutranAlerts, setSutranAlerts] = useState<SutranLocationAlert[]>([]);
@@ -107,38 +112,16 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboardData();
-    fetchVehicleData(vehicleLocationFilter);
+    fetchVehicleData();
   }, []);
 
-  useEffect(() => {
-    const fetchVehicleLocations = async () => {
-      const { data, error } = await supabase
-        .from('locations')
-        .select('id, name')
-        .eq('type', 'escuela_conductores')
-        .order('name');
-
-      if (!error && data) {
-        setVehicleLocations(data as { id: string; name: string }[]);
-      }
-    };
-
-    fetchVehicleLocations();
-  }, []);
-
-  useEffect(() => {
-    fetchVehicleData(vehicleLocationFilter);
-  }, [vehicleLocationFilter]);
-
-  const fetchVehicleData = async (locationFilter: string) => {
+  const fetchVehicleData = async () => {
     try {
       const { data: vehicles } = await supabase
         .from('vehiculos')
-        .select('estado, soat_vencimiento, citv_vencimiento, poliza_vencimiento, contrato_alquiler_vencimiento, ubicacion_actual');
+        .select('id, placa, estado, soat_vencimiento, citv_vencimiento, poliza_vencimiento, contrato_alquiler_vencimiento, ubicacion_actual');
 
-      const filteredVehicles = locationFilter === 'todos'
-        ? (vehicles || [])
-        : (vehicles || []).filter(v => v.ubicacion_actual === locationFilter);
+      const filteredVehicles = vehicles || [];
 
       const totalVehicles = filteredVehicles.length;
       // Con la nueva convención: 'activa', 'en_proceso', 'inactiva'
@@ -154,27 +137,27 @@ export default function Dashboard() {
       let expiredPoliza = 0, warningPoliza = 0;
       let expiredContrato = 0, warningContrato = 0;
 
+      const expiringPlatesSet = new Set<string>();
+
       filteredVehicles.forEach(v => {
+        let hasIssue = false;
         if (v.soat_vencimiento) {
           const date = new Date(v.soat_vencimiento);
-          if (date < today) expiredSoat++;
-          else if (date <= thirtyDaysFromNow) warningSoat++;
+          if (date <= thirtyDaysFromNow) { expiredSoat += (date < today ? 1 : 0); warningSoat += (date >= today ? 1 : 0); hasIssue = true; }
         }
         if (v.citv_vencimiento) {
           const date = new Date(v.citv_vencimiento);
-          if (date < today) expiredCitv++;
-          else if (date <= thirtyDaysFromNow) warningCitv++;
+          if (date <= thirtyDaysFromNow) { expiredCitv += (date < today ? 1 : 0); warningCitv += (date >= today ? 1 : 0); hasIssue = true; }
         }
         if (v.poliza_vencimiento) {
           const date = new Date(v.poliza_vencimiento);
-          if (date < today) expiredPoliza++;
-          else if (date <= thirtyDaysFromNow) warningPoliza++;
+          if (date <= thirtyDaysFromNow) { expiredPoliza += (date < today ? 1 : 0); warningPoliza += (date >= today ? 1 : 0); hasIssue = true; }
         }
         if (v.contrato_alquiler_vencimiento) {
           const date = new Date(v.contrato_alquiler_vencimiento);
-          if (date < today) expiredContrato++;
-          else if (date <= thirtyDaysFromNow) warningContrato++;
+          if (date <= thirtyDaysFromNow) { expiredContrato += (date < today ? 1 : 0); warningContrato += (date >= today ? 1 : 0); hasIssue = true; }
         }
+        if (hasIssue) expiringPlatesSet.add(v.placa);
       });
 
       setStats(prev => ({
@@ -190,6 +173,7 @@ export default function Dashboard() {
         warningPoliza,
         expiredContrato,
         warningContrato,
+        expiringPlates: Array.from(expiringPlatesSet)
       }));
 
     } catch (err) {
@@ -211,6 +195,7 @@ export default function Dashboard() {
         { count: totalLocations },
         { count: totalUsers },
         { count: maintenanceAssets },
+        { count: pendingMaintenance },
       ] = await Promise.all([
         supabase.from('assets').select('*', { count: 'exact', head: true }),
         supabase.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'active'),
@@ -219,16 +204,17 @@ export default function Dashboard() {
         supabase.from('locations').select('*', { count: 'exact', head: true }),
         supabase.from('users').select('*', { count: 'exact', head: true }),
         supabase.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'maintenance'),
+        supabase.from('maintenance_records').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
 
-      // 2. Fetch Shipment Stats
-      const { data: shipments } = await supabase.from('shipments').select('status');
-      const activeShipments = shipments?.filter(s => s.status === 'in_transit').length || 0;
-      const pendingShipments = shipments?.filter(s => s.status === 'pending').length || 0;
-      const deliveredShipments = shipments?.filter(s => s.status === 'delivered').length || 0;
+      // 2. Fetch Ticket Stats
+      const { data: tickets } = await supabase.from('tickets').select('status, priority, assigned_to');
+      const totalTickets = tickets?.length || 0;
+      const openTickets = tickets?.filter(t => t.status === 'open' || t.status === 'in_progress').length || 0;
+      const criticalTickets = tickets?.filter(t => t.priority === 'critical' && t.status !== 'closed' && t.status !== 'resolved').length || 0;
+      const unassignedTickets = tickets?.filter(t => !t.assigned_to && t.status !== 'closed' && t.status !== 'resolved').length || 0;
 
-      // Importante: no tocar aquí las estadísticas de vehículos ni vencimientos,
-      // esas las controla fetchVehicleData para respetar el filtro de sede.
+      // Update basic stats without touching vehicle stats (handled by fetchVehicleData)
       setStats(prev => ({
         ...prev,
         totalAssets: totalAssets || 0,
@@ -238,9 +224,11 @@ export default function Dashboard() {
         totalLocations: totalLocations || 0,
         totalUsers: totalUsers || 0,
         maintenanceAssets: maintenanceAssets || 0,
-        activeShipments,
-        pendingShipments,
-        deliveredShipments,
+        pendingMaintenance: pendingMaintenance || 0,
+        totalTickets,
+        openTickets,
+        criticalTickets,
+        unassignedTickets
       }));
 
       // 4. Fetch SUTRAN Info por sede
@@ -288,20 +276,19 @@ export default function Dashboard() {
 
         setSutranAlerts(alerts);
         setActiveSutranIndex(0);
-
-        // Para compatibilidad con el banner principal, usar la más crítica
       }
 
-      // 5. Fetch Recent Activity
-      const { data: recentShipments } = await supabase
-        .from('shipments')
-        .select('id, created_at, status')
+      // 5. Fetch Recent Activity (Modified)
+      // Fetch Recent Tickets
+      const { data: recentTickets } = await supabase
+        .from('tickets')
+        .select('id, created_at, title, status, priority')
         .order('created_at', { ascending: false })
-        .limit(3);
+        .limit(4);
 
       const { data: recentMaintenance } = await supabase
         .from('maintenance_records')
-        .select('id, created_at, status')
+        .select('id, created_at, status, description')
         .order('created_at', { ascending: false })
         .limit(3);
 
@@ -313,12 +300,14 @@ export default function Dashboard() {
 
       const activities: RecentActivity[] = [];
 
-      recentShipments?.forEach(s => {
+      recentTickets?.forEach(t => {
         activities.push({
-          id: s.id,
-          type: 'shipment',
-          description: `Envío ${s.status === 'pending' ? 'creado' : 'actualizado'}`,
-          date: s.created_at
+          id: t.id,
+          type: 'ticket',
+          description: `Ticket: ${t.title}`,
+          date: t.created_at,
+          status: t.status,
+          priority: t.priority
         });
       });
 
@@ -342,7 +331,7 @@ export default function Dashboard() {
       });
 
       activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setRecentActivity(activities.slice(0, 5));
+      setRecentActivity(activities.slice(0, 6));
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -364,34 +353,34 @@ export default function Dashboard() {
       path: '/inventory'
     },
     {
+      title: 'Mesa de Ayuda',
+      value: stats.openTickets,
+      subtitle: `${stats.criticalTickets} críticos, ${stats.unassignedTickets} sin asignar`,
+      icon: Ticket,
+      color: 'red',
+      bgColor: 'bg-red-50',
+      textColor: 'text-red-600',
+      path: '/tickets'
+    },
+    {
+      title: 'Mantenimiento',
+      value: stats.maintenanceAssets + stats.maintenanceVehicles,
+      subtitle: `${stats.pendingMaintenance} pendientes de atención`,
+      icon: Wrench,
+      color: 'orange',
+      bgColor: 'bg-orange-50',
+      textColor: 'text-orange-600',
+      path: '/maintenance'
+    },
+    {
       title: 'Flota Vehicular',
       value: stats.totalVehicles,
-      subtitle: `${stats.activeVehicles} activas, ${stats.maintenanceVehicles} en proceso`,
+      subtitle: `${stats.activeVehicles} operativas`,
       icon: Truck,
       color: 'indigo',
       bgColor: 'bg-indigo-50',
       textColor: 'text-indigo-600',
-      path: '/flota'
-    },
-    {
-      title: 'Cámaras',
-      value: stats.totalCameras,
-      subtitle: `${stats.activeCameras} activas`,
-      icon: Camera,
-      color: 'green',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-600',
-      path: '/cameras'
-    },
-    {
-      title: 'Sedes',
-      value: stats.totalLocations,
-      subtitle: 'Ubicaciones',
-      icon: MapPin,
-      color: 'purple',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-600',
-      path: '/sedes'
+      path: '/flota-vehicular'
     },
   ];
 
@@ -435,6 +424,14 @@ export default function Dashboard() {
         </div>
         <div className="flex w-full md:w-auto gap-3 justify-center md:justify-end">
           <button
+            onClick={() => navigate('/tickets')}
+            className="flex-1 md:flex-none justify-center items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm font-bold text-[11px] uppercase tracking-wider"
+          >
+            <Ticket size={16} />
+            <span className="md:hidden lg:inline">Ver Tickets</span>
+            <span className="hidden md:inline lg:hidden">Tickets</span>
+          </button>
+          <button
             onClick={() => navigate('/inventory')}
             className="flex-1 md:flex-none justify-center items-center gap-2 px-5 py-2.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all shadow-lg shadow-slate-200 font-bold text-[11px] uppercase tracking-wider"
           >
@@ -442,93 +439,128 @@ export default function Dashboard() {
             <span className="md:hidden lg:inline">Nuevo Activo</span>
             <span className="hidden md:inline lg:hidden">Activo</span>
           </button>
-          <button
-            onClick={() => navigate('/enviados')}
-            className="flex-1 md:flex-none justify-center items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm font-bold text-[11px] uppercase tracking-wider"
-          >
-            <Truck size={16} />
-            <span className="md:hidden lg:inline">Nuevo Envío</span>
-            <span className="hidden md:inline lg:hidden">Envío</span>
-          </button>
         </div>
       </div>
 
-      {/* SUTRAN Alert Banner - Carrusel por sede */}
-      {sutranAlerts.length > 0 && (
-        <div className={`rounded-xl p-6 border shadow-sm transition-all hover:shadow-md ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'bg-gradient-to-r from-red-50 to-white border-red-200' :
-          sutranAlerts[activeSutranIndex].status === 'warning' ? 'bg-gradient-to-r from-yellow-50 to-white border-yellow-200' :
-            'bg-gradient-to-r from-blue-50 to-white border-blue-200'
-          }`}>
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto text-center sm:text-left">
-              <div className={`p-3 rounded-full shadow-sm mx-auto sm:mx-0 ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'bg-white text-red-600' :
-                sutranAlerts[activeSutranIndex].status === 'warning' ? 'bg-white text-yellow-600' :
-                  'bg-white text-blue-600'
-                }`}>
-                <Activity size={28} />
-              </div>
-              <div className="flex-1">
-                <h3 className={`text-lg font-bold ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'text-red-900' :
-                  sutranAlerts[activeSutranIndex].status === 'warning' ? 'text-yellow-900' :
-                    'text-blue-900'
+      {/* System Alerts Section (Consolidated) */}
+      <div className="grid grid-cols-1 gap-4">
+        {sutranAlerts.length > 0 && (
+          <div className={`rounded-xl p-4 border shadow-sm transition-all hover:shadow-md ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'bg-gradient-to-r from-red-50 to-white border-red-200' :
+            sutranAlerts[activeSutranIndex].status === 'warning' ? 'bg-gradient-to-r from-yellow-50 to-white border-yellow-200' :
+              'bg-gradient-to-r from-blue-50 to-white border-blue-200'
+            }`}>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto text-center sm:text-left">
+                <div className={`p-3 rounded-full shadow-sm mx-auto sm:mx-0 ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'bg-white text-red-600' :
+                  sutranAlerts[activeSutranIndex].status === 'warning' ? 'bg-white text-yellow-600' :
+                    'bg-white text-blue-600'
                   }`}>
-                  Estimación de Visita SUTRAN
-                </h3>
-                <p className={`text-sm mt-1 ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'text-red-700' :
-                  sutranAlerts[activeSutranIndex].status === 'warning' ? 'text-yellow-700' :
-                    'text-blue-700'
-                  }`}>
-                  <span className="font-medium">{sutranAlerts[activeSutranIndex].locationName}:</span> Próxima visita estimada <span className="font-semibold text-base">{sutranAlerts[activeSutranIndex].nextEstimatedVisit}</span>
-                </p>
-                <div className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'bg-red-100 text-red-800' :
-                  sutranAlerts[activeSutranIndex].status === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-blue-100 text-blue-800'
-                  }`}>
-                  <Clock size={12} />
-                  {sutranAlerts[activeSutranIndex].daysUntilNext > 0
-                    ? `Faltan aprox. ${sutranAlerts[activeSutranIndex].daysUntilNext} días`
-                    : 'Visita podría ser inminente'
-                  }
+                  <Activity size={24} />
+                </div>
+                <div className="flex-1">
+                  <h3 className={`text-base font-bold ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'text-red-900' :
+                    sutranAlerts[activeSutranIndex].status === 'warning' ? 'text-yellow-900' :
+                      'text-blue-900'
+                    }`}>
+                    SUTRAN: {sutranAlerts[activeSutranIndex].locationName}
+                  </h3>
+                  <p className={`text-xs mt-1 ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'text-red-700' :
+                    sutranAlerts[activeSutranIndex].status === 'warning' ? 'text-yellow-700' :
+                      'text-blue-700'
+                    }`}>
+                    Est: <span className="font-semibold">{sutranAlerts[activeSutranIndex].nextEstimatedVisit}</span>
+                    <span className="mx-2">•</span>
+                    {sutranAlerts[activeSutranIndex].daysUntilNext > 0
+                      ? `Faltan ${sutranAlerts[activeSutranIndex].daysUntilNext} días`
+                      : 'Inminente'
+                    }
+                  </p>
                 </div>
               </div>
-            </div>
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-              {/* Controles del carrusel */}
-              {sutranAlerts.length > 1 && (
-                <div className="flex items-center justify-center gap-2 bg-white/60 backdrop-blur px-3 py-1.5 rounded-lg w-full sm:w-auto">
-                  <button
-                    onClick={() => setActiveSutranIndex((prev) => (prev - 1 + sutranAlerts.length) % sutranAlerts.length)}
-                    className="p-1 hover:bg-black/10 rounded transition-colors"
-                    title="Anterior sede"
-                  >
-                    <ArrowRight size={16} className="rotate-180" />
-                  </button>
-                  <span className="text-xs font-medium text-gray-700 px-1">
-                    {activeSutranIndex + 1} / {sutranAlerts.length}
-                  </span>
-                  <button
-                    onClick={() => setActiveSutranIndex((prev) => (prev + 1) % sutranAlerts.length)}
-                    className="p-1 hover:bg-black/10 rounded transition-colors"
-                    title="Siguiente sede"
-                  >
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-              )}
-              <button
-                onClick={() => setShowSutranDetails(true)}
-                className={`w-full sm:w-auto px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-2 ${sutranAlerts[activeSutranIndex].status === 'danger' ? 'bg-red-600 text-white hover:bg-red-700 hover:shadow-red-200' :
-                  sutranAlerts[activeSutranIndex].status === 'warning' ? 'bg-amber-500 text-white hover:bg-amber-600 hover:shadow-amber-200' :
-                    'bg-slate-800 text-white hover:bg-slate-700 hover:shadow-slate-300'
-                  }`}
-              >
-                <Info size={16} />
-                Ver Detalles
-              </button>
+
+              <div className="flex items-center gap-2">
+                {sutranAlerts.length > 1 && (
+                  <div className="flex items-center justify-center gap-1 bg-white/60 backdrop-blur px-2 py-1 rounded-lg">
+                    <button
+                      onClick={() => setActiveSutranIndex((prev) => (prev - 1 + sutranAlerts.length) % sutranAlerts.length)}
+                      className="p-1 hover:bg-black/10 rounded transition-colors"
+                    >
+                      <ArrowRight size={14} className="rotate-180" />
+                    </button>
+                    <span className="text-[10px] font-bold text-gray-700 px-1">
+                      {activeSutranIndex + 1}/{sutranAlerts.length}
+                    </span>
+                    <button
+                      onClick={() => setActiveSutranIndex((prev) => (prev + 1) % sutranAlerts.length)}
+                      className="p-1 hover:bg-black/10 rounded transition-colors"
+                    >
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                )}
+                <button
+                  onClick={() => setShowSutranDetails(true)}
+                  className="px-3 py-1.5 bg-white/80 hover:bg-white text-xs font-bold rounded-lg border border-black/5 shadow-sm transition-all"
+                >
+                  Ver Info
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Critical Tickets & Docs Alert Row */}
+        {/* Critical Tickets & Docs Alert Row */}
+        {(stats.criticalTickets > 0 || (stats.expiredSoat + stats.expiredCitv + stats.expiredPoliza + stats.expiredContrato) > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {stats.criticalTickets > 0 && (
+              <div className="bg-red-50 border border-red-100 rounded-xl p-4 flex items-center justify-between shadow-sm cursor-pointer hover:shadow-md transition-all" onClick={() => navigate('/tickets')}>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 text-red-600 rounded-lg">
+                    <Ticket size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-red-900">Tickets Críticos</h4>
+                    <p className="text-xs text-red-700">{stats.criticalTickets} ticket(s) requieren atención urgente</p>
+                  </div>
+                </div>
+                <ArrowRight size={16} className="text-red-400" />
+              </div>
+            )}
+
+            {/* Documentos Vencidos - Desglose Detallado */}
+            {(stats.expiredSoat + stats.expiredCitv + stats.expiredPoliza + stats.expiredContrato + stats.warningSoat + stats.warningCitv + stats.warningPoliza + stats.warningContrato) > 0 && (
+              <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3 cursor-pointer" onClick={() => navigate('/flota-vehicular')}>
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="text-orange-600" size={18} />
+                    <h4 className="text-sm font-bold text-orange-900">Alertas de Documentación</h4>
+                  </div>
+                  <ArrowRight size={16} className="text-orange-400" />
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  {[
+                    { label: 'SOAT', exp: stats.expiredSoat, warn: stats.warningSoat },
+                    { label: 'CITV', exp: stats.expiredCitv, warn: stats.warningCitv },
+                    { label: 'Póliza', exp: stats.expiredPoliza, warn: stats.warningPoliza },
+                    { label: 'Contrato', exp: stats.expiredContrato, warn: stats.warningContrato },
+                  ].map((doc, idx) => (
+                    <div key={idx} className={`px-2 py-1.5 rounded text-center border ${doc.exp > 0 ? 'bg-red-100 border-red-200 text-red-800' :
+                      doc.warn > 0 ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
+                        'bg-white border-orange-100 text-gray-400 opacity-60'
+                      }`}>
+                      <p className="text-[10px] font-bold uppercase">{doc.label}</p>
+                      <p className="text-xs font-bold">
+                        {doc.exp > 0 ? `${doc.exp} venc.` : doc.warn > 0 ? `${doc.warn} por venc.` : 'OK'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Main Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -584,35 +616,49 @@ export default function Dashboard() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 hover:border-blue-200 transition-colors">
-                <p className="text-sm text-gray-500 mb-1 font-medium">Envíos en Tránsito</p>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                  <p className="text-2xl font-bold text-gray-900">{stats.activeShipments}</p>
+            <div className="grid grid-cols-1 gap-4">
+              {/* Quick Checklists Links */}
+              <h4 className="text-sm font-medium text-gray-500 mb-2">Accesos Rápidos</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => navigate('/checklist/escon')}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-left group"
+                >
+                  <div className="p-2 bg-blue-100 text-blue-600 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <ClipboardList size={18} />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-gray-900 text-xs uppercase tracking-wide">ESCON</h5>
+                    <p className="text-[10px] text-gray-500">Escuelas</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => navigate('/checklist/citv')}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-all text-left group"
+                >
+                  <div className="p-2 bg-orange-100 text-orange-600 rounded-lg group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                    <Truck size={18} />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-gray-900 text-xs uppercase tracking-wide">CITV</h5>
+                    <p className="text-[10px] text-gray-500">Rev. Técnicas</p>
+                  </div>
+                </button>
+              </div>
+
+              <div className="mt-2 bg-orange-50 rounded-lg p-4 border border-orange-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-orange-800 font-bold">Mantenimientos Pendientes</p>
+                    <p className="text-xs text-orange-600 mt-0.5">Requieren atención inmediata</p>
+                  </div>
+                  <div className="flex items-center justify-center w-10 h-10 bg-white rounded-full shadow-sm text-orange-600 font-bold border border-orange-100">
+                    {stats.pendingMaintenance}
+                  </div>
                 </div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 hover:border-orange-200 transition-colors">
-                <p className="text-sm text-gray-500 mb-1 font-medium">En Mantenimiento</p>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                  <p className="text-2xl font-bold text-gray-900">{stats.maintenanceAssets}</p>
-                </div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 hover:border-yellow-200 transition-colors">
-                <p className="text-sm text-gray-500 mb-1 font-medium">Envíos Pendientes</p>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pendingShipments}</p>
-                </div>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 hover:border-red-200 transition-colors">
-                <p className="text-sm text-gray-500 mb-1 font-medium">Vehículos Mant.</p>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                  <p className="text-2xl font-bold text-gray-900">{stats.maintenanceVehicles}</p>
-                </div>
-              </div>
+
             </div>
           </div>
         </div>
@@ -628,11 +674,12 @@ export default function Dashboard() {
             {recentActivity.length > 0 ? (
               recentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0 last:pb-0 group">
-                  <div className={`mt-1 p-2 rounded-lg transition-colors group-hover:scale-105 ${activity.type === 'shipment' ? 'bg-blue-50 text-blue-600' :
+                  <div className={`mt-1 p-2 rounded-lg transition-colors group-hover:scale-105 ${activity.type === 'ticket' ? 'bg-indigo-50 text-indigo-600' :
                     activity.type === 'maintenance' ? 'bg-orange-50 text-orange-600' :
-                      'bg-gray-50 text-gray-600'
+                      activity.type === 'sutran' ? 'bg-blue-50 text-blue-600' :
+                        'bg-gray-50 text-gray-600'
                     }`}>
-                    {activity.type === 'shipment' ? <Truck size={16} /> :
+                    {activity.type === 'ticket' ? <Ticket size={16} /> :
                       activity.type === 'maintenance' ? <Wrench size={16} /> :
                         activity.type === 'sutran' ? <Building2 size={16} /> :
                           <Clock size={16} />}
@@ -641,6 +688,15 @@ export default function Dashboard() {
                     <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors truncate">
                       {activity.description}
                     </p>
+                    {activity.type === 'ticket' && activity.priority && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${activity.status === 'open' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                          }`}>{activity.status === 'open' ? 'Abierto' : activity.status}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${activity.priority === 'critical' ? 'bg-red-100 text-red-700' :
+                          activity.priority === 'high' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
+                          }`}>{activity.priority}</span>
+                      </div>
+                    )}
                     <p className="text-xs text-gray-500 mt-0.5">
                       {new Date(activity.date).toLocaleDateString()} - {new Date(activity.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
@@ -661,103 +717,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Fleet Status Section - Replaces Diagnostic Tools */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-          <div className="flex items-center gap-2">
-            <Truck className="text-indigo-600" size={20} />
-            <h3 className="text-lg font-semibold text-gray-900">Estado de la Flota</h3>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-            <select
-              value={vehicleLocationFilter}
-              onChange={(e) => setVehicleLocationFilter(e.target.value)}
-              className="w-full sm:w-auto px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
-            >
-              <option value="todos">Todas las sedes</option>
-              {vehicleLocations.map((loc) => (
-                <option key={loc.id} value={loc.id}>{loc.name}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => navigate('/flota-vehicular')}
-              className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-colors whitespace-nowrap"
-            >
-              Catálogo
-            </button>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {/* Summary Cards */}
-          <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-100 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-indigo-700 font-medium">Total Unidades</p>
-              <p className="text-2xl font-bold text-indigo-900">{stats.totalVehicles}</p>
-            </div>
-            <Truck className="text-indigo-400" size={24} />
-          </div>
-          <div className="bg-green-50 rounded-lg p-4 border border-green-100 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-green-700 font-medium">Operativos</p>
-              <p className="text-2xl font-bold text-green-900">{stats.activeVehicles}</p>
-            </div>
-            <CheckCircle className="text-green-400" size={24} />
-          </div>
-          <div className="bg-orange-50 rounded-lg p-4 border border-orange-100 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-orange-700 font-medium">Mantenimiento</p>
-              <p className="text-2xl font-bold text-orange-900">{stats.maintenanceVehicles}</p>
-            </div>
-            <Activity className="text-orange-400" size={24} />
-          </div>
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-700 font-medium">Otros Estados</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalVehicles - stats.activeVehicles - stats.maintenanceVehicles}</p>
-            </div>
-            <AlertCircle className="text-gray-400" size={24} />
-          </div>
-        </div>
-
-        <h4 className="text-sm font-medium text-gray-700 mb-4">Vencimientos de Documentos</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Alert Cards Logic */}
-          {[
-            { title: 'SOAT', expired: stats.expiredSoat, warning: stats.warningSoat, ok: stats.totalVehicles - stats.expiredSoat - stats.warningSoat },
-            { title: 'Rev. Técnica', expired: stats.expiredCitv, warning: stats.warningCitv, ok: stats.totalVehicles - stats.expiredCitv - stats.warningCitv },
-            { title: 'Póliza', expired: stats.expiredPoliza, warning: stats.warningPoliza, ok: stats.totalVehicles - stats.expiredPoliza - stats.warningPoliza },
-            { title: 'Contrato', expired: stats.expiredContrato, warning: stats.warningContrato, ok: stats.totalVehicles - stats.expiredContrato - stats.warningContrato }
-          ].map((doc, idx) => (
-            <div key={idx} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
-              <div className="flex items-center justify-between mb-3">
-                <h5 className="font-semibold text-gray-900">{doc.title}</h5>
-                {doc.expired > 0 ? (
-                  <AlertTriangle size={18} className="text-red-500" />
-                ) : doc.warning > 0 ? (
-                  <AlertTriangle size={18} className="text-yellow-500" />
-                ) : (
-                  <CheckCircle size={18} className="text-green-500" />
-                )}
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between items-center text-red-600 bg-red-50 px-2 py-1 rounded">
-                  <span>Vencidos</span>
-                  <span className="font-bold">{doc.expired}</span>
-                </div>
-                <div className="flex justify-between items-center text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
-                  <span>Por Vencer</span>
-                  <span className="font-bold">{doc.warning}</span>
-                </div>
-                <div className="flex justify-between items-center text-green-600 bg-green-50 px-2 py-1 rounded">
-                  <span>Vigentes</span>
-                  <span className="font-bold">{doc.ok}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* SUTRAN Details Modal */}
       {showSutranDetails && sutranAlerts.length > 0 && (

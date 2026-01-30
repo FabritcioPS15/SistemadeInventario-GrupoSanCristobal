@@ -10,7 +10,7 @@ import PCForm from '../components/forms/PCForm';
 import ExcelImportModal from '../components/ExcelImportModal';
 import Pagination from '../components/Pagination';
 import { useAuth } from '../contexts/AuthContext';
-import { div } from 'framer-motion/client';
+
 
 type InventoryProps = {
   categoryFilter?: string;
@@ -680,6 +680,26 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
           </div>
         </div>
 
+        {/* Integrated Stats in Header */}
+        <div className="hidden xl:flex items-center gap-4 mx-6 border-l border-r border-slate-100 px-6">
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Total</span>
+            <span className="text-sm font-black text-gray-900 leading-none mt-0.5">{stats.totalAssets}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Activos</span>
+            <span className="text-sm font-black text-emerald-600 leading-none mt-0.5">{stats.activeCount}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Mantenimiento</span>
+            <span className="text-sm font-black text-amber-600 leading-none mt-0.5">{stats.maintenanceCount}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Sin Ubicación</span>
+            <span className="text-sm font-black text-slate-700 leading-none mt-0.5">{stats.withoutLocationCount}</span>
+          </div>
+        </div>
+
         {/* Integrated Search Bar in Header */}
         <div className="flex-1 max-w-md px-4">
           <div className="relative group">
@@ -750,43 +770,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
 
       <div className="p-6 space-y-6">
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Total de activos</div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-slate-900">{stats.totalAssets}</div>
-              </div>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Activos activos</div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-emerald-600">{stats.activeCount}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">En mantenimiento</div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-amber-600">{stats.maintenanceCount}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Sin ubicación</div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-slate-700">{stats.withoutLocationCount}</div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 mb-6">
           <div className="flex flex-col gap-4">

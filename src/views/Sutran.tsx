@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Building2, Calendar, FileText, User, MapPin, Clock, Info, CheckCircle, AlertTriangle, Trash2, Edit, X, Download, Star } from 'lucide-react';
+import { Plus, Search, Building2, Calendar, FileText, User, MapPin, Clock, Info, CheckCircle, AlertTriangle, Trash2, Edit, X, Download, Star, Eye, Send } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase } from '../lib/supabase';
 import type { SutranVisit } from '../lib/supabase';
@@ -232,6 +232,26 @@ export default function Sutran() {
           </div>
         </div>
 
+        {/* Integrated Stats in Header */}
+        <div className="hidden xl:flex items-center gap-4 mx-6 border-l border-r border-slate-100 px-6">
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Total</span>
+            <span className="text-sm font-black text-gray-900 leading-none mt-0.5">{stats.total}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Completas</span>
+            <span className="text-sm font-black text-emerald-600 leading-none mt-0.5">{stats.completed}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Pendientes</span>
+            <span className="text-sm font-black text-yellow-600 leading-none mt-0.5">{stats.pending}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Recientes</span>
+            <span className="text-sm font-black text-blue-600 leading-none mt-0.5">{stats.recentlyAdded}</span>
+          </div>
+        </div>
+
         {/* Integrated Search Bar in Header */}
         <div className="flex-1 max-w-md px-4">
           <div className="relative group">
@@ -273,39 +293,7 @@ export default function Sutran() {
 
       <div className="p-6 space-y-6">
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Visitas</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-              <Building2 size={20} className="text-gray-400" />
-            </div>
-          </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Completadas</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-emerald-600">{stats.completed}</div>
-              <CheckCircle size={20} className="text-emerald-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pendientes</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              <Clock size={20} className="text-yellow-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Recientes (7d)</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-blue-600">{stats.recentlyAdded}</div>
-              <Calendar size={20} className="text-blue-500" />
-            </div>
-          </div>
-        </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-8">
           <div className="flex flex-col lg:flex-row justify-end gap-3">

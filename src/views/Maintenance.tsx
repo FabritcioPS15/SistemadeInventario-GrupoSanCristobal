@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Calendar, User, Eye, Download, Info, Star, X, MapPin, ShieldCheck, DollarSign, Package, LayoutGrid, List as ListIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Search, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Eye, Star, X, MapPin, ShieldCheck, LayoutGrid, List as ListIcon, ChevronUp, ChevronDown, Package } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase, AssetWithDetails, Location } from '../lib/supabase';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
@@ -54,7 +54,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const [viewingRecord, setViewingRecord] = useState<MaintenanceRecord | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
   const [typeFilter, setTypeFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
@@ -357,6 +357,26 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
           </div>
         </div>
 
+        {/* Integrated Stats in Header */}
+        <div className="hidden xl:flex items-center gap-4 mx-6 border-l border-r border-slate-100 px-6">
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Total</span>
+            <span className="text-sm font-black text-gray-900 leading-none mt-0.5">{stats.total}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Pendientes</span>
+            <span className="text-sm font-black text-yellow-600 leading-none mt-0.5">{stats.pending}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Inversión</span>
+            <span className="text-sm font-black text-blue-600 leading-none mt-0.5">S/ {stats.totalCost.toFixed(2)}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Completados</span>
+            <span className="text-sm font-black text-emerald-600 leading-none mt-0.5">{stats.completed}</span>
+          </div>
+        </div>
+
         {/* Integrated Search Bar in Header */}
         <div className="flex-1 max-w-md px-4">
           <div className="relative group">
@@ -414,36 +434,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
       <div className="p-6 space-y-6">
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Mantenimientos</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-              <Wrench size={20} className="text-gray-400" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pendientes</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              <Clock size={20} className="text-yellow-500" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Inversión Total</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-blue-600">S/ {stats.totalCost.toFixed(2)}</div>
-              <DollarSign size={20} className="text-blue-500" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Completados</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-emerald-600">{stats.completed}</div>
-              <CheckCircle size={20} className="text-emerald-500" />
-            </div>
-          </div>
-        </div>
+
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 mb-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

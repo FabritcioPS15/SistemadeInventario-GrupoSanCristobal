@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Key, Users, FileText, ChevronRight, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Wrench, AlertTriangle, Clock, CheckCircle, Send, MapPin, Building2, Menu, X, Shield, Car, ClipboardList, Calendar, LogOut, Info, Ticket } from 'lucide-react';
+import { LayoutDashboard, Package, Key, Users, FileText, ChevronRight, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Wrench, AlertTriangle, Clock, CheckCircle, Send, MapPin, Building2, Menu, X, Car, ClipboardList, Calendar, LogOut, Info, Ticket } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { GrServerCluster } from 'react-icons/gr';
 import { useAuth } from '../contexts/AuthContext';
@@ -126,7 +126,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
     { id: 'users', label: 'Usuarios', icon: Users, path: '/users' },
     { id: 'vacations', label: 'Vacaciones', icon: Calendar, path: '/vacations' },
     { id: 'audit', label: 'Auditoría', icon: FileText, path: '/audit' },
-    { id: 'integrity', label: 'Integridad del Sistema', icon: Shield, path: '/integrity' },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {

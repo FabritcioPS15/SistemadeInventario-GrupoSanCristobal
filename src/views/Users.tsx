@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, LayoutGrid, List, Lock, Star, Phone, Building } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, LayoutGrid, List, Lock, Star } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase } from '../lib/supabase';
 import UserForm from '../components/forms/UserForm';
@@ -211,6 +211,26 @@ export default function Users() {
           </div>
         </div>
 
+        {/* Integrated Stats in Header */}
+        <div className="hidden xl:flex items-center gap-4 mx-6 border-l border-r border-slate-100 px-6">
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Total</span>
+            <span className="text-sm font-black text-gray-900 leading-none mt-0.5">{stats.total}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Activos</span>
+            <span className="text-sm font-black text-emerald-600 leading-none mt-0.5">{stats.active}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Inactivos</span>
+            <span className="text-sm font-black text-rose-600 leading-none mt-0.5">{stats.inactive}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Nuevos</span>
+            <span className="text-sm font-black text-indigo-600 leading-none mt-0.5">{stats.recentlyAdded}</span>
+          </div>
+        </div>
+
         {/* Integrated Search Bar in Header */}
         <div className="flex-1 max-w-md px-4">
           <div className="relative group">
@@ -251,28 +271,7 @@ export default function Users() {
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {[
-            { label: 'Total Activos', value: stats.active, icon: UsersIcon, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Sistemas', value: stats.byRole.systems || 0, icon: Lock, color: 'text-rose-600', bg: 'bg-rose-50' },
-            { label: 'Gerencia', value: stats.byRole.management || 0, icon: Crown, color: 'text-amber-600', bg: 'bg-amber-50' },
-            { label: 'Admin/Super', value: (stats.byRole.admin || 0) + (stats.byRole.supervisor || 0), icon: Shield, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Nuevos (7d)', value: stats.recentlyAdded, icon: Plus, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white border border-[#e2e8f0] rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-              <div className="flex items-center justify-between relative z-10">
-                <div>
-                  <p className="text-[10px] font-black text-[#64748b] uppercase tracking-widest mb-1">{stat.label}</p>
-                  <p className="text-2xl font-black text-[#002855]">{stat.value}</p>
-                </div>
-                <div className={`p-2.5 rounded-lg ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>
-                  <stat.icon size={18} />
-                </div>
-              </div>
-              <div className={`absolute -right-2 -bottom-2 w-16 h-16 ${stat.bg} opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform`} />
-            </div>
-          ))}
-        </div>
+
 
         {/* Control Bar */}
         <div className="flex flex-col gap-4 bg-white p-3 sm:p-4 rounded-xl border border-[#e2e8f0] shadow-sm">

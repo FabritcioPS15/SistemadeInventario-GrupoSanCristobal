@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, X, Eye, Globe, Activity, Database, Server as ServerLucide, LayoutGrid, List, Star } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, Search, Edit, Trash2, MapPin, X, Eye, Globe, Activity, Server as ServerLucide, LayoutGrid, List, Star } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 import { supabase, Server, Location } from '../lib/supabase';
@@ -18,6 +18,7 @@ export default function Servers() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [stats, setStats] = useState({ total: 0, withIp: 0, withAnydesk: 0, recentlyUpdated: 0 });
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+
   const [viewingServer, setViewingServer] = useState<Server | undefined>();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
@@ -93,6 +94,26 @@ export default function Servers() {
           </div>
         </div>
 
+        {/* Integrated Stats in Header */}
+        <div className="hidden xl:flex items-center gap-4 mx-6 border-l border-r border-slate-100 px-6">
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Total</span>
+            <span className="text-sm font-black text-gray-900 leading-none mt-0.5">{stats.total}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Con IP</span>
+            <span className="text-sm font-black text-emerald-600 leading-none mt-0.5">{stats.withIp}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">AnyDesk</span>
+            <span className="text-sm font-black text-rose-600 leading-none mt-0.5">{stats.withAnydesk}</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Actualizados</span>
+            <span className="text-sm font-black text-amber-600 leading-none mt-0.5">{stats.recentlyUpdated}</span>
+          </div>
+        </div>
+
         {/* Integrated Search Bar */}
         <div className="flex-1 max-w-md px-4">
           <div className="relative group">
@@ -125,25 +146,7 @@ export default function Servers() {
       </div>
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: 'Total Servidores', value: stats.total, icon: ServerLucide, bg: 'bg-blue-50', color: 'text-blue-600' },
-            { label: 'Conectividad IP', value: stats.withIp, icon: Globe, bg: 'bg-emerald-50', color: 'text-emerald-600' },
-            { label: 'Acceso AnyDesk', value: stats.withAnydesk, icon: Activity, bg: 'bg-rose-50', color: 'text-rose-600' },
-            { label: 'Actualizados (7d)', value: stats.recentlyUpdated, icon: Database, bg: 'bg-amber-50', color: 'text-amber-600' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white border border-[#e2e8f0] rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-              <div className="flex items-center justify-between relative z-10">
-                <div>
-                  <p className="text-[10px] font-black text-[#64748b] uppercase tracking-widest mb-1">{stat.label}</p>
-                  <p className="text-2xl font-black text-[#002855]">{stat.value}</p>
-                </div>
-                <div className={`p-2.5 rounded-lg ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}><stat.icon size={18} /></div>
-              </div>
-              <div className={`absolute -right-2 -bottom-2 w-16 h-16 ${stat.bg} opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform`} />
-            </div>
-          ))}
-        </div>
+
 
         {loading ? (
           <div className="flex items-center justify-center min-h-[40vh]"><div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#002855]"></div></div>
