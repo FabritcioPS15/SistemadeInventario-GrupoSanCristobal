@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Plus, Trash2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 type MaquinariaFormProps = {
@@ -439,3 +439,4 @@ export default function MaquinariaForm({ onClose, onSave, editingMaquinaria }: M
     </div>
   );
 }
+

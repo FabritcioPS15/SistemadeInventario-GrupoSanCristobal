@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, List, Star } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import MTCAccesoForm from '../components/forms/MTCAccesoForm';
 
 type MTCAcceso = {
@@ -655,3 +655,4 @@ export default function MTCAccesos() {
     </div>
   );
 }
+

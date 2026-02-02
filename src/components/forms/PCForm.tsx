@@ -107,7 +107,7 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
   }, [editPC]);
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    const { data } = await api.from('locations').select('*').order('name');
     if (data) setLocations(data);
   };
 
@@ -666,4 +666,5 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
     </div>
   );
 }
+
 

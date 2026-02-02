@@ -23,14 +23,14 @@ export default function Audit() {
 
   const fetchAudits = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('branch_audits').select('*, locations(*)').order('audit_date', { ascending: false });
+    const { data, error } = await api.from('branch_audits').select('*, locations(*)').order('audit_date', { ascending: false });
     if (!error && data) setAudits(data as BranchAudit[]);
     setLoading(false);
   };
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
-    await supabase.from('branch_audits').delete().eq('id', id);
+    await api.from('branch_audits').delete().eq('id', id);
     await fetchAudits();
   };
 
@@ -165,3 +165,6 @@ export default function Audit() {
     </div>
   );
 }
+
+
+

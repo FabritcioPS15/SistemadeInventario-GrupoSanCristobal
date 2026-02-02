@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 interface DiagnosticResult {
   test: string;
@@ -254,3 +254,4 @@ export default function QuickDiagnostic() {
     </div>
   );
 }
+

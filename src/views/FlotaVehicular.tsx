@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, Car, X, Download, LayoutGrid, List, MapPin, Shield, Activity, Info, Star } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Plus, Search, Edit, Trash2, Car, X, Download, LayoutGrid, List, MapPin, Star, Filter } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import VehicleImportModal from '../components/VehicleImportModal';
 import Pagination from '../components/Pagination';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 
@@ -59,13 +60,28 @@ export default function FlotaVehicular() {
     image_position: 'center'
   });
   const [filterEstado, setFilterEstado] = useState<string>('todos');
+  const [filterExpiration, setFilterExpiration] = useState<string | null>(null);
   const [filterSede, setFilterSede] = useState<string>('todos');
   const [schools, setSchools] = useState<Array<{ id: string, name: string }>>([]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  const [exporting, setExporting] = useState(false);
+
+  // Column Filtering State
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [columnFilters, setColumnFilters] = useState<{
+    estado: string[];
+    ubicacion_actual: string[];
+    placa: string;
+  }>({
+    estado: [],
+    ubicacion_actual: [],
+    placa: ''
+  });
+
+  // const [exporting, setExporting] = useState(false);
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
 
@@ -77,9 +93,20 @@ export default function FlotaVehicular() {
     setSortConfig({ key, direction });
   };
 
+  const toggleColumnFilter = (column: string, value: string) => {
+    setColumnFilters(prev => {
+      const current = prev[column as keyof typeof prev] as string[];
+      if (current.includes(value)) {
+        return { ...prev, [column]: current.filter(v => v !== value) };
+      } else {
+        return { ...prev, [column]: [...current, value] };
+      }
+    });
+  };
+
   const fetchSchools = async () => {
     try {
-      const { data, error } = await supabase.from('locations').select('id, name').eq('type', 'escuela_conductores');
+      const { data, error } = await api.from('locations').select();
       if (!error && data) setSchools(data);
     } catch (error) { console.error('Error al cargar las escuelas:', error); }
   };
@@ -95,12 +122,34 @@ export default function FlotaVehicular() {
     return school ? school.name : (ubicacionActual || 'Sin asignar');
   };
 
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const filterType = params.get('filter');
+    if (filterType === 'expiring' || filterType === 'soat' || filterType === 'citv' || filterType === 'poliza') {
+      // Default to 'soat' if just 'expiring' is passed, or use specific param if I update dashboard to pass specific type
+      // For now, if 'expiring' is passed, maybe default to showing one? or none?
+      // Since user wants specific buttons, maybe the dashboard should link to a specific one? 
+      // User didn't specify, but 'expiring' generic link should probably select one or all?
+      // Wait, my logic now REQUIRES a specific type.
+      // Let's make 'expiring' default to 'soat' for now, or update dashboard to link to specific.
+      // Actually, better: if 'expiring', maybe show all? But I removed the 'all' check logic.
+      // Let's defaulting to 'soat' as it's the most critical usually, or just leave it null if I want user to must pick.
+      // But for dashboard integration:
+      if (filterType === 'expiring') setFilterExpiration('soat'); // Default behavior
+      else setFilterExpiration(filterType);
+
+      setFilterEstado('todos');
+    }
+  }, [location.search]);
+
   useEffect(() => { fetchSchools(); fetchVehiculos(); }, []);
 
   const fetchVehiculos = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('vehiculos').select('*').order('placa').limit(1000);
+      const { data, error } = await api.from('vehicles').select();
       if (error) throw error;
       setVehiculos(data || []);
     } catch (error) { console.error('Error al cargar vehículos:', error); } finally { setLoading(false); }
@@ -116,15 +165,15 @@ export default function FlotaVehicular() {
     if (!form.placa || !form.marca || !form.modelo) return;
     const payload = { ...form, updated_at: new Date().toISOString() };
     try {
-      if (editing) await supabase.from('vehiculos').update(payload).eq('id', editing.id);
-      else await supabase.from('vehiculos').insert([form]);
+      if (editing) await api.from('vehicles').update(payload).eq('id', editing.id);
+      else await api.from('vehicles').insert(form);
       fetchVehiculos(); setShowForm(false); resetForm();
     } catch (error) { console.error('Error saving:', error); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar vehículo?')) return;
-    await supabase.from('vehiculos').delete().eq('id', id);
+    await api.from('vehicles').delete().eq('id', id);
     fetchVehiculos();
   };
 
@@ -138,15 +187,26 @@ export default function FlotaVehicular() {
     const q = search.toLowerCase();
     const searchMatch = !search || v.placa.toLowerCase().includes(q) || v.marca.toLowerCase().includes(q) || v.modelo.toLowerCase().includes(q);
     const sedeMatch = filterSede === 'todos' || v.ubicacion_actual === filterSede;
-    const estadoMatch = filterEstado === 'todos' || v.estado === filterEstado;
-    return searchMatch && sedeMatch && estadoMatch;
+
+    const checkExp = (dateStr?: string) => {
+      if (!dateStr) return false;
+      const diff = Math.ceil((new Date(dateStr).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+      return diff <= 30; // Expired or expiring in 30 days
+    };
+
+    if (filterExpiration === 'soat') return searchMatch && sedeMatch && checkExp(v.soat_vencimiento);
+    if (filterExpiration === 'citv') return searchMatch && sedeMatch && checkExp(v.citv_vencimiento);
+    if (filterExpiration === 'poliza') return searchMatch && sedeMatch && checkExp(v.poliza_vencimiento);
+
+    const estadoMatch = (filterEstado === 'todos' || v.estado === filterEstado) &&
+      (columnFilters.estado.length === 0 || columnFilters.estado.includes(v.estado));
+
+    const sedeMatchCol = columnFilters.ubicacion_actual.length === 0 || columnFilters.ubicacion_actual.includes(v.ubicacion_actual);
+
+    return searchMatch && sedeMatch && estadoMatch && sedeMatchCol;
   });
 
-  const stats = useMemo(() => {
-    const counts = { total: vehiculos.length, active: 0, inactive: 0, en_proceso: 0 };
-    vehiculos.forEach(v => { if (v.estado === 'activa') counts.active++; else if (v.estado === 'inactiva') counts.inactive++; else counts.en_proceso++; });
-    return counts;
-  }, [vehiculos]);
+
 
   const sortedVehiculos = useMemo(() => {
     if (!sortConfig) return filteredVehiculos;
@@ -162,17 +222,95 @@ export default function FlotaVehicular() {
   const paginatedVehiculos = useMemo(() => sortedVehiculos.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage), [sortedVehiculos, currentPage, itemsPerPage]);
 
   const handleExportExcel = async () => {
-    setExporting(true);
     try {
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Flota');
-      ws.columns = [{ header: 'PLACA', key: 'placa' }, { header: 'MARCA', key: 'marca' }];
-      filteredVehiculos.forEach(v => ws.addRow({ placa: v.placa, marca: v.marca }));
+      const ws = wb.addWorksheet('Flota Vehicular');
+
+      // Define Columns with Widths
+      ws.columns = [
+        { header: 'PLACA', key: 'placa', width: 15 },
+        { header: 'MARCA', key: 'marca', width: 20 },
+        { header: 'MODELO', key: 'modelo', width: 20 },
+        { header: 'COLOR', key: 'color', width: 15 },
+        { header: 'AÑO', key: 'anio', width: 10 },
+        { header: 'ESTADO', key: 'estado', width: 15 },
+        { header: 'SEDE ACTUAL', key: 'ubicacion', width: 25 },
+        { header: 'VENC. SOAT', key: 'soat', width: 15 },
+        { header: 'VENC. CITV', key: 'citv', width: 15 },
+        { header: 'VENC. PÓLIZA', key: 'poliza', width: 15 },
+        { header: 'VENC. CONTRATO', key: 'contrato', width: 15 },
+        { header: 'NOTAS', key: 'notas', width: 30 },
+      ];
+
+      // Style Header Row
+      ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
+      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '002855' } };
+      ws.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+      // Add Data
+      filteredVehiculos.forEach(v => {
+        ws.addRow({
+          placa: v.placa,
+          marca: v.marca,
+          modelo: v.modelo,
+          color: v.color || '---',
+          anio: v.año,
+          estado: v.estado.toUpperCase().replace('_', ' '),
+          ubicacion: getEscuelaNombre(v.ubicacion_actual).toUpperCase(),
+          soat: v.soat_vencimiento ? new Date(v.soat_vencimiento).toLocaleDateString() : '---',
+          citv: v.citv_vencimiento ? new Date(v.citv_vencimiento).toLocaleDateString() : '---',
+          poliza: v.poliza_vencimiento ? new Date(v.poliza_vencimiento).toLocaleDateString() : '---',
+          contrato: v.contrato_alquiler_vencimiento ? new Date(v.contrato_alquiler_vencimiento).toLocaleDateString() : '---',
+          notas: v.notas || ''
+        });
+      });
+
+      // Style Data Rows (Center align mostly)
+      ws.eachRow((row, rowNumber) => {
+        if (rowNumber > 1) {
+          row.alignment = { vertical: 'middle', horizontal: 'left' };
+          row.getCell(1).font = { bold: true }; // Bold Placa
+          row.getCell(5).alignment = { horizontal: 'center' }; // Center Year
+          row.getCell(8).alignment = { horizontal: 'center' }; // Center Dates
+          row.getCell(9).alignment = { horizontal: 'center' };
+          row.getCell(10).alignment = { horizontal: 'center' };
+          row.getCell(11).alignment = { horizontal: 'center' };
+        }
+      });
+
+      // Export
       const buffer = await wb.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = 'Flota.xlsx'; a.click();
-    } finally { setExporting(false); }
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Flota_Vehicular_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+    } catch (error) {
+      console.error('Error exporting excel:', error);
+      alert('Error al exportar a Excel');
+    }
+  };
+
+  const getExpirationStatus = (dateStr?: string) => {
+    if (!dateStr) return { label: '---', color: 'text-gray-300', bg: 'bg-gray-50' };
+    const date = new Date(dateStr);
+    const today = new Date();
+    const diffTime = date.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return { label: 'VENCIDO', color: 'text-rose-700', bg: 'bg-rose-100' };
+    if (diffDays <= 30) return { label: 'VENCE PRONTO', color: 'text-amber-700', bg: 'bg-amber-100' };
+    return { label: 'VIGENTE', color: 'text-emerald-700', bg: 'bg-emerald-100' };
+  };
+
+  const RenderDocBadge = ({ date }: { date?: string }) => {
+    const status = getExpirationStatus(date);
+    return (
+      <div className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded border border-opacity-50 min-w-[70px] ${status.bg} ${status.color}`}>
+        <span className="text-[10px] font-bold">{date ? new Date(date).toLocaleDateString() : '---'}</span>
+      </div>
+    );
   };
 
   if (loading) return <div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500" /></div>;
@@ -187,13 +325,21 @@ export default function FlotaVehicular() {
             <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">{filteredVehiculos.length} Unidades</p>
           </div>
         </div>
+
+
+
         <div className="flex-1 max-w-md px-4">
+          {/* Search Input */}
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input type="text" placeholder="Buscar unidad..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex bg-[#f1f5f9] p-1 rounded-lg border mr-2">
+            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500'}`}><LayoutGrid size={18} /></button>
+            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500'}`}><List size={18} /></button>
+          </div>
           {canEdit() && <button onClick={() => { resetForm(); setShowForm(true); }} className="p-2 text-gray-400 hover:text-[#002855]"><Plus size={22} /></button>}
           <button onClick={handleExportExcel} className="p-2 text-gray-400 hover:text-emerald-600"><Download size={18} /></button>
           <button className="p-2 text-gray-400"><Star size={18} /></button>
@@ -201,47 +347,85 @@ export default function FlotaVehicular() {
         </div>
       </div>
 
-      <div className="p-6 space-y-6 overflow-y-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: 'Total', value: stats.total, icon: Car, bg: 'bg-blue-50', color: 'text-blue-600' },
-            { label: 'Activas', value: stats.active, icon: Activity, bg: 'bg-emerald-50', color: 'text-emerald-600' },
-            { label: 'Inactivas', value: stats.inactive, icon: Info, bg: 'bg-rose-50', color: 'text-rose-600' },
-            { label: 'Proceso', value: stats.en_proceso, icon: Shield, bg: 'bg-amber-50', color: 'text-amber-600' }
-          ].map((s, i) => (
-            <div key={i} className="bg-white border rounded-xl p-4 flex items-center justify-between shadow-sm">
-              <div><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</p><p className="text-2xl font-black text-[#002855]">{s.value}</p></div>
-              <div className={`p-2.5 rounded-lg ${s.bg} ${s.color}`}><s.icon size={18} /></div>
-            </div>
-          ))}
-        </div>
+      {/* Sticky Secondary Header (Filters) */}
+      <div className={`bg-white border-b border-[#e2e8f0] px-6 py-3 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sticky top-14 z-20 shadow-sm transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+        <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-center">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filtrar por:</span>
+          {/* Status Pills */}
+          <div className="flex bg-[#f1f5f9] p-1 rounded-lg border w-fit overflow-x-auto">
+            {['todos'].map(status => (
+              <button
+                key={status}
+                onClick={() => { setFilterEstado(status); setFilterExpiration(null); }}
+                className={`px-3 py-1.5 rounded-md text-[10px] sm:text-xs font-black uppercase transition-all whitespace-nowrap ${filterEstado === status && !filterExpiration ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                Todos
+              </button>
+            ))}
 
-        <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex bg-[#f1f5f9] p-1 rounded-lg border w-fit">
-              <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500'}`}><LayoutGrid size={18} /></button>
-              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500'}`}><List size={18} /></button>
-            </div>
-            <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} className="w-full px-3 py-1.5 border rounded-lg text-xs font-bold uppercase text-slate-500">
-              <option value="todos">ESTADOS (TODOS)</option>
-              <option value="activa">ACTIVA</option>
-              <option value="inactiva">INACTIVA</option>
-            </select>
-            <select value={filterSede} onChange={e => setFilterSede(e.target.value)} className="w-full px-3 py-1.5 border rounded-lg text-xs font-bold uppercase text-slate-500">
-              <option value="todos">SEDES (TODAS)</option>
-              {schools.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
-            </select>
+            <div className="w-[1px] h-4 bg-gray-200 mx-1" />
+
+            {/* Expiration Filters */}
+            {[
+              { id: 'soat', label: 'Vence SOAT' },
+              { id: 'citv', label: 'Vence CITV' },
+              { id: 'poliza', label: 'Vence Póliza' }
+            ].map(exp => (
+              <button
+                key={exp.id}
+                onClick={() => { setFilterExpiration(exp.id); setFilterEstado('todos'); }}
+                className={`px-3 py-1.5 rounded-md text-[10px] sm:text-xs font-black uppercase transition-all whitespace-nowrap flex items-center gap-1 ${filterExpiration === exp.id ? 'bg-rose-500 text-white shadow-sm' : 'text-rose-500 hover:bg-rose-50'}`}
+              >
+                {filterExpiration === exp.id && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+                {exp.label}
+              </button>
+            ))}
           </div>
         </div>
 
+        {/* Location Styled Filter */}
+        <div className="relative w-full lg:w-64">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+            <Filter size={14} />
+          </div>
+          <select
+            value={filterSede}
+            onChange={e => setFilterSede(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold uppercase text-slate-600 outline-none focus:ring-2 focus:ring-[#002855]/10 appearance-none cursor-pointer hover:border-slate-300 transition-colors"
+          >
+            <option value="todos">Todas las Sedes</option>
+            {schools.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto bg-white">
+
         {viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {paginatedVehiculos.map(v => (
               <div key={v.id} className="bg-white rounded-2xl shadow-sm border hover:shadow-xl transition-all p-6 flex flex-col group">
                 <div className="flex justify-between items-start mb-4">
-                  <div><h3 className="text-sm font-black text-[#002855] uppercase">{v.placa}</h3><p className="text-[10px] text-slate-400 font-bold">{v.marca} {v.modelo}</p></div>
+                  <div><h3 className="text-sm font-black text-[#002855] uppercase">{v.placa}</h3><p className="text-[10px] text-slate-400 font-bold">{v.marca} {v.modelo} - {v.color}</p></div>
                   {getEstadoBadge(v.estado)}
                 </div>
+
+                {/* Visual Document Status in Grid */}
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="text-center">
+                    <p className="text-[9px] font-bold text-gray-400 mb-0.5">SOAT</p>
+                    <div className={`h-1.5 rounded-full w-full ${getExpirationStatus(v.soat_vencimiento).bg.replace('bg-', 'bg-').replace('100', '500')}`}></div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[9px] font-bold text-gray-400 mb-0.5">CITV</p>
+                    <div className={`h-1.5 rounded-full w-full ${getExpirationStatus(v.citv_vencimiento).bg.replace('bg-', 'bg-').replace('100', '500')}`}></div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[9px] font-bold text-gray-400 mb-0.5">PÓLIZA</p>
+                    <div className={`h-1.5 rounded-full w-full ${getExpirationStatus(v.poliza_vencimiento).bg.replace('bg-', 'bg-').replace('100', '500')}`}></div>
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase mb-6"><MapPin size={14} className="text-rose-500" /> {getEscuelaNombre(v.ubicacion_actual)}</div>
                 <div className="mt-auto flex gap-2 pt-4 border-t">
                   <button onClick={() => handleEdit(v)} className="flex-1 py-2 text-[9px] font-black uppercase border rounded-lg">Editar</button>
@@ -251,19 +435,165 @@ export default function FlotaVehicular() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden overflow-x-auto">
-            <table className="min-w-full divide-y">
-              <thead className="bg-[#f8fafc]"><tr><th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('placa')}>Unidad</th><th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('estado')}>Estado</th><th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('ubicacion_actual')}>Sede</th><th className="px-6 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">Acciones</th></tr></thead>
-              <tbody className="divide-y bg-white">
-                {paginatedVehiculos.map(v => (
-                  <tr key={v.id} className="hover:bg-gray-50 group">
-                    <td className="px-6 py-4"><div className="flex flex-col"><span className="text-sm font-bold">{v.placa}</span><span className="text-[10px] text-slate-400">{v.marca} {v.modelo}</span></div></td>
-                    <td className="px-6 py-4">{getEstadoBadge(v.estado)}</td>
-                    <td className="px-6 py-4 text-[10px] font-bold uppercase">{getEscuelaNombre(v.ubicacion_actual)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                        <button onClick={() => handleEdit(v)} className="p-2 text-slate-400 hover:text-blue-600"><Edit size={16} /></button>
-                        <button onClick={() => handleDelete(v.id)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 size={16} /></button>
+          <div className="bg-white overflow-x-auto">
+            <table className="min-w-full divide-y-2 divide-gray-200 border-collapse">
+              <thead>
+                <tr className="bg-[#f8f9fa]">
+                  <th className="w-12 px-2 py-2 text-center border-r border-b border-gray-200 text-[11px] font-bold text-gray-500">#</th>
+                  <th className="w-10 px-2 py-2 text-center border-r border-b border-gray-200 text-[11px] font-bold text-gray-500">
+                    <input type="checkbox" className="rounded border-gray-300 text-[#002855] focus:ring-[#002855]" />
+                  </th>
+                  <th className="px-3 py-2 text-left border-r border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-tight group relative">
+                    <div className="flex items-center justify-between cursor-pointer" onClick={() => handleSort('placa')}>
+                      <div className="flex items-center gap-1">Unidad {sortConfig?.key === 'placa' && <span className="text-[#002855]">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div>
+                    </div>
+                  </th>
+                  <th className="px-3 py-2 text-left border-r border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-tight group" onClick={() => handleSort('marca')}>
+                    <div className="flex items-center gap-1">Marca / Modelo</div>
+                  </th>
+                  <th className="px-3 py-2 text-left border-r border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-tight" onClick={() => handleSort('color')}>Color</th>
+
+                  {/* Sede Filter Header */}
+                  <th className="px-3 py-2 text-left border-r border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-tight relative">
+                    <div className="flex items-center justify-between cursor-pointer group" onClick={() => setActiveFilter(activeFilter === 'sede' ? null : 'sede')}>
+                      <span>Sede</span>
+                      <div className={`p-1 rounded-md transition-all ${columnFilters.ubicacion_actual.length > 0 || sortConfig?.key === 'ubicacion_actual' ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-gray-200 text-slate-400'}`}>
+                        <Filter size={12} className={columnFilters.ubicacion_actual.length > 0 || sortConfig?.key === 'ubicacion_actual' ? 'fill-current' : ''} />
+                      </div>
+                    </div>
+                    {/* Sede Dropdown */}
+                    {activeFilter === 'sede' && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setActiveFilter(null)} />
+                        <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-2">
+                          <div className="flex gap-1 mb-2">
+                            <button onClick={() => { handleSort('ubicacion_actual'); setSortConfig({ key: 'ubicacion_actual', direction: 'asc' }); }} className={`flex-1 flex items-center justify-center p-1.5 rounded bg-gray-50 hover:bg-gray-100 text-[10px] uppercase font-bold text-slate-600 ${sortConfig?.key === 'ubicacion_actual' && sortConfig.direction === 'asc' ? 'bg-blue-50 text-blue-600 border border-blue-200' : ''}`}>A-Z</button>
+                            <button onClick={() => { handleSort('ubicacion_actual'); setSortConfig({ key: 'ubicacion_actual', direction: 'desc' }); }} className={`flex-1 flex items-center justify-center p-1.5 rounded bg-gray-50 hover:bg-gray-100 text-[10px] uppercase font-bold text-slate-600 ${sortConfig?.key === 'ubicacion_actual' && sortConfig.direction === 'desc' ? 'bg-blue-50 text-blue-600 border border-blue-200' : ''}`}>Z-A</button>
+                          </div>
+                          <div className="text-[10px] font-bold text-gray-400 mb-2 uppercase px-1">Filtrar por Sede</div>
+                          <div className="space-y-1 max-h-48 overflow-y-auto">
+                            {schools.map(school => (
+                              <label key={school.id} className="flex items-center gap-2 p-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={columnFilters.ubicacion_actual.includes(school.id)}
+                                  onChange={() => toggleColumnFilter('ubicacion_actual', school.id)}
+                                  className="rounded border-gray-300 text-[#002855] w-3 h-3"
+                                />
+                                <span className="text-[11px] text-gray-700 capitalize truncate">{school.name.toLowerCase()}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </th>
+
+                  {/* Date Columns with Sort */}
+                  {['soat', 'citv', 'poliza'].map(doc => (
+                    <th key={doc} className="px-3 py-2 text-center border-r border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-tight relative">
+                      <div className="flex items-center justify-center gap-1 cursor-pointer group" onClick={() => setActiveFilter(activeFilter === doc ? null : doc)}>
+                        <span>{doc.toUpperCase()}</span>
+                        <div className={`p-1 rounded-md transition-all ${sortConfig?.key === `${doc}_vencimiento` ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-gray-200 text-slate-400'}`}>
+                          <Filter size={12} className={sortConfig?.key === `${doc}_vencimiento` ? 'fill-current' : ''} />
+                        </div>
+                      </div>
+                      {activeFilter === doc && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setActiveFilter(null)} />
+                          <div className="absolute top-full right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-2 text-left">
+                            <div className="text-[10px] font-bold text-gray-400 mb-2 uppercase px-1">Ordenar por Fecha</div>
+                            <div className="space-y-1">
+                              <button onClick={() => handleSort(`${doc}_vencimiento`)} className={`w-full text-left p-1.5 rounded text-[11px] uppercase font-bold hover:bg-gray-50 flex items-center justify-between ${sortConfig?.key === `${doc}_vencimiento` && sortConfig.direction === 'asc' ? 'text-blue-600 bg-blue-50' : 'text-slate-600'}`}>
+                                <span>Más Cercano</span>
+                                {sortConfig?.key === `${doc}_vencimiento` && sortConfig.direction === 'asc' && <span>✓</span>}
+                              </button>
+                              <button onClick={() => { setSortConfig({ key: `${doc}_vencimiento`, direction: 'desc' }); }} className={`w-full text-left p-1.5 rounded text-[11px] uppercase font-bold hover:bg-gray-50 flex items-center justify-between ${sortConfig?.key === `${doc}_vencimiento` && sortConfig.direction === 'desc' ? 'text-blue-600 bg-blue-50' : 'text-slate-600'}`}>
+                                <span>Más Lejano</span>
+                                {sortConfig?.key === `${doc}_vencimiento` && sortConfig.direction === 'desc' && <span>✓</span>}
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </th>
+                  ))}
+
+                  {/* Estado Filter Header */}
+                  <th className="px-3 py-2 text-center border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-tight relative">
+                    <div className="flex items-center justify-center gap-2 cursor-pointer group" onClick={() => setActiveFilter(activeFilter === 'estado' ? null : 'estado')}>
+                      <span>Estado</span>
+                      <div className={`p-1 rounded-md transition-all ${columnFilters.estado.length > 0 || sortConfig?.key === 'estado' ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-gray-200 text-slate-400'}`}>
+                        <Filter size={12} className={columnFilters.estado.length > 0 || sortConfig?.key === 'estado' ? 'fill-current' : ''} />
+                      </div>
+                    </div>
+                    {/* Estado Dropdown */}
+                    {activeFilter === 'estado' && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setActiveFilter(null)} />
+                        <div className="absolute top-full right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-xl z-50 p-2 text-left">
+                          <div className="flex gap-1 mb-2">
+                            <button onClick={() => { handleSort('estado'); setSortConfig({ key: 'estado', direction: 'asc' }); }} className={`flex-1 flex items-center justify-center p-1.5 rounded bg-gray-50 hover:bg-gray-100 text-[10px] uppercase font-bold text-slate-600 ${sortConfig?.key === 'estado' && sortConfig.direction === 'asc' ? 'bg-blue-50 text-blue-600 border border-blue-200' : ''}`}>A-Z</button>
+                            <button onClick={() => { handleSort('estado'); setSortConfig({ key: 'estado', direction: 'desc' }); }} className={`flex-1 flex items-center justify-center p-1.5 rounded bg-gray-50 hover:bg-gray-100 text-[10px] uppercase font-bold text-slate-600 ${sortConfig?.key === 'estado' && sortConfig.direction === 'desc' ? 'bg-blue-50 text-blue-600 border border-blue-200' : ''}`}>Z-A</button>
+                          </div>
+                          <div className="text-[10px] font-bold text-gray-400 mb-2 uppercase px-1">Filtrar Estado</div>
+                          <div className="space-y-1">
+                            {['activa', 'en_proceso', 'inactiva'].map(status => (
+                              <label key={status} className="flex items-center gap-2 p-1.5 hover:bg-gray-50 rounded cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={columnFilters.estado.includes(status)}
+                                  onChange={() => toggleColumnFilter('estado', status)}
+                                  className="rounded border-gray-300 text-[#002855] w-3 h-3"
+                                />
+                                <span className="text-[11px] text-gray-700 capitalize">{status.replace('_', ' ')}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </th>
+                  <th className="w-16 px-2 py-2 text-center border-b border-gray-200"></th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {paginatedVehiculos.map((v, index) => (
+                  <tr key={v.id} className="hover:bg-blue-50/50 transition-colors group text-[12px]">
+                    <td className="px-2 py-1.5 text-center border-r border-gray-200 font-medium text-gray-400">
+                      {(currentPage - 1) * itemsPerPage + index + 1}
+                    </td>
+                    <td className="px-2 py-1.5 text-center border-r border-gray-200">
+                      <input type="checkbox" className="rounded border-gray-300 text-[#002855] focus:ring-[#002855]" />
+                    </td>
+                    <td className="px-3 py-1.5 border-r border-gray-200 font-bold text-[#002855] cursor-pointer hover:underline" onClick={() => handleEdit(v)}>
+                      {v.placa}
+                    </td>
+                    <td className="px-3 py-1.5 border-r border-gray-200 text-gray-600 font-medium">
+                      {v.marca} {v.modelo}
+                    </td>
+                    <td className="px-3 py-1.5 border-r border-gray-200 text-gray-600 uppercase">
+                      {v.color || '---'}
+                    </td>
+                    <td className="px-3 py-1.5 border-r border-gray-200 text-gray-600 uppercase">
+                      {getEscuelaNombre(v.ubicacion_actual)}
+                    </td>
+                    <td className="px-2 py-1.5 border-r border-gray-200 text-center">
+                      <RenderDocBadge date={v.soat_vencimiento} />
+                    </td>
+                    <td className="px-2 py-1.5 border-r border-gray-200 text-center">
+                      <RenderDocBadge date={v.citv_vencimiento} />
+                    </td>
+                    <td className="px-2 py-1.5 border-r border-gray-200 text-center">
+                      <RenderDocBadge date={v.poliza_vencimiento} />
+                    </td>
+                    <td className="px-3 py-1.5 border-r border-gray-200 text-center">
+                      {getEstadoBadge(v.estado)}
+                    </td>
+                    <td className="px-2 py-1.5 text-center">
+                      <div className="flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={(e) => { e.stopPropagation(); handleEdit(v); }} className="p-1 text-slate-400 hover:text-blue-600 rounded"><Edit size={14} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDelete(v.id); }} className="p-1 text-slate-400 hover:text-rose-600 rounded"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -282,6 +612,29 @@ export default function FlotaVehicular() {
             <form onSubmit={handleSubmit} className="p-8 space-y-4 overflow-y-auto bg-slate-50 flex-1">
               <input placeholder="Placa" value={form.placa} onChange={e => setForm({ ...form, placa: e.target.value.toUpperCase() })} className="w-full px-4 py-2 rounded-lg border outline-none font-bold" required />
               <div className="grid grid-cols-2 gap-4"><input placeholder="Marca" value={form.marca} onChange={e => setForm({ ...form, marca: e.target.value })} className="w-full px-4 py-2 rounded-lg border outline-none" required /><input placeholder="Modelo" value={form.modelo} onChange={e => setForm({ ...form, modelo: e.target.value })} className="w-full px-4 py-2 rounded-lg border outline-none" required /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <input placeholder="Color" value={form.color} onChange={e => setForm({ ...form, color: e.target.value })} className="w-full px-4 py-2 rounded-lg border outline-none" required />
+                <input placeholder="Año" type="number" value={form.año} onChange={e => setForm({ ...form, año: parseInt(e.target.value) })} className="w-full px-4 py-2 rounded-lg border outline-none" required />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">Vencimiento SOAT</label>
+                  <input type="date" value={form.soat_vencimiento} onChange={e => setForm({ ...form, soat_vencimiento: e.target.value })} className="w-full px-4 py-2 rounded-lg border outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">Vencimiento CITV</label>
+                  <input type="date" value={form.citv_vencimiento} onChange={e => setForm({ ...form, citv_vencimiento: e.target.value })} className="w-full px-4 py-2 rounded-lg border outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">Vencimiento Póliza</label>
+                  <input type="date" value={form.poliza_vencimiento} onChange={e => setForm({ ...form, poliza_vencimiento: e.target.value })} className="w-full px-4 py-2 rounded-lg border outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-500 uppercase">Vencimiento Contrato</label>
+                  <input type="date" value={form.contrato_alquiler_vencimiento} onChange={e => setForm({ ...form, contrato_alquiler_vencimiento: e.target.value })} className="w-full px-4 py-2 rounded-lg border outline-none" />
+                </div>
+              </div>
               <select value={form.ubicacion_actual} onChange={e => setForm({ ...form, ubicacion_actual: e.target.value })} className="w-full px-4 py-2 rounded-lg border font-bold" required>{schools.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}</select>
               <div className="flex gap-3 pt-4"><button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 text-xs font-black uppercase text-gray-400">Cancelar</button><button type="submit" className="flex-1 py-2 bg-[#002855] text-white rounded-lg text-xs font-black uppercase">Guardar</button></div>
             </form>

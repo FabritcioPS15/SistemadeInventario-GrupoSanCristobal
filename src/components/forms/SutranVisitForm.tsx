@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, User, MapPin, FileText, X } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 import type { SutranVisit, Location } from '../../lib/supabase';
 
 interface SutranVisitFormProps {
@@ -66,7 +66,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
   }, [visit]);
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    const { data } = await api.from('locations').select('*').order('name');
     if (data) setLocations(data);
   };
 
@@ -446,3 +446,4 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
     </div>
   );
 }
+

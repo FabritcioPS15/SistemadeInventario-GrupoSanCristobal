@@ -137,3 +137,4 @@ export default function CategoryDropdown({ assetTypes, selectedType, onTypeChang
     </div>
   );
 }
+

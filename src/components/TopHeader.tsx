@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, Settings, HelpCircle, LayoutGrid, Menu, Pin, PinOff } from 'lucide-react';
+import { Search, Bell, Settings, HelpCircle, LayoutGrid, Menu, Pin, PinOff, AlertTriangle } from 'lucide-react';
 import { supabase, SutranVisit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
@@ -16,6 +16,7 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
     const [sutranNotifications, setSutranNotifications] = useState<SutranVisit[]>([]);
+    const [vehicleNotifications, setVehicleNotifications] = useState<any[]>([]);
     const [userLocation, setUserLocation] = useState<string>('');
     const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -231,7 +232,7 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                                 className={`p-2 hover:bg-white/10 rounded-lg transition-colors relative ${showNotifications ? 'bg-white/10' : ''}`}
                             >
                                 <Bell size={18} />
-                                {sutranNotifications.length > 0 && (
+                                {sutranNotifications.length + vehicleNotifications.length > 0 && (
                                     <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#002855]" />
                                 )}
                             </button>
@@ -241,42 +242,75 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
                                     <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
                                         <h3 className="text-xs font-black text-[#002855] uppercase tracking-wider">Notificaciones</h3>
-                                        <span className="text-[10px] font-bold text-gray-400">{sutranNotifications.length} Pendientes</span>
+                                        <span className="text-[10px] font-bold text-gray-400">{sutranNotifications.length + vehicleNotifications.length} Pendientes</span>
                                     </div>
                                     <div className="max-h-[300px] overflow-y-auto">
-                                        {sutranNotifications.length === 0 ? (
+                                        {sutranNotifications.length === 0 && vehicleNotifications.length === 0 ? (
                                             <div className="p-6 text-center text-gray-400 text-xs">
                                                 No tienes notificaciones pendientes
                                             </div>
                                         ) : (
-                                            sutranNotifications.map((note) => (
-                                                <div
-                                                    key={note.id}
-                                                    onClick={() => {
-                                                        navigate('/sutran');
-                                                        setShowNotifications(false);
-                                                    }}
-                                                    className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 transition-colors group"
-                                                >
-                                                    <div className="flex items-start gap-3">
-                                                        <div className="bg-rose-100 p-2 rounded-lg text-rose-600 mt-0.5">
-                                                            <Bell size={14} />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs font-bold text-gray-800 group-hover:text-blue-700">Visita SUTRAN Programada</p>
-                                                            <p className="text-[11px] text-gray-500 mt-0.5">{note.location_name}</p>
-                                                            <div className="flex items-center gap-2 mt-1.5">
-                                                                <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
-                                                                    {getDaysRemaining(note.visit_date)}
-                                                                </span>
-                                                                <span className="text-[10px] text-gray-400">
-                                                                    {new Date(note.visit_date).toLocaleDateString('es-ES')}
-                                                                </span>
+                                            <>
+                                                {/* Vehicle Alerts */}
+                                                {vehicleNotifications.map((note) => (
+                                                    <div
+                                                        key={note.id}
+                                                        onClick={() => {
+                                                            navigate('/flota-vehicular');
+                                                            setShowNotifications(false);
+                                                        }}
+                                                        className="p-3 hover:bg-orange-50 cursor-pointer border-b border-gray-50 transition-colors group"
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className={`p-2 rounded-lg mt-0.5 ${note.priority === 'danger' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                                <AlertTriangle size={14} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-gray-800 group-hover:text-amber-700">{note.title}</p>
+                                                                <p className="text-[11px] text-gray-500 mt-0.5">{note.subtitle}</p>
+                                                                <div className="flex items-center gap-2 mt-1.5">
+                                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${note.priority === 'danger'
+                                                                        ? 'text-rose-600 bg-rose-50 border-rose-100'
+                                                                        : 'text-amber-600 bg-amber-50 border-amber-100'
+                                                                        }`}>
+                                                                        {note.daysRemaining < 0 ? `Vencido hace ${Math.abs(note.daysRemaining)} días` : (note.daysRemaining === 0 ? 'Vence Hoy' : `Vence en ${note.daysRemaining} días`)}
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))
+                                                ))}
+
+                                                {/* Sutran Alerts */}
+                                                {sutranNotifications.map((note) => (
+                                                    <div
+                                                        key={note.id}
+                                                        onClick={() => {
+                                                            navigate('/sutran');
+                                                            setShowNotifications(false);
+                                                        }}
+                                                        className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 transition-colors group"
+                                                    >
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="bg-blue-100 p-2 rounded-lg text-blue-600 mt-0.5">
+                                                                <Bell size={14} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-gray-800 group-hover:text-blue-700">Visita SUTRAN Programada</p>
+                                                                <p className="text-[11px] text-gray-500 mt-0.5">{note.location_name}</p>
+                                                                <div className="flex items-center gap-2 mt-1.5">
+                                                                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                                                                        {getDaysRemaining(note.visit_date)}
+                                                                    </span>
+                                                                    <span className="text-[10px] text-gray-400">
+                                                                        {new Date(note.visit_date).toLocaleDateString('es-ES')}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </>
                                         )}
                                     </div>
                                     <div className="p-2 border-t border-gray-100 bg-gray-50 text-center">
@@ -321,3 +355,5 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
         </>
     );
 }
+
+

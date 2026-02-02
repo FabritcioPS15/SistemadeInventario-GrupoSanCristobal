@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader2, Package } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 
 type SparePart = {
   id?: string;
@@ -514,3 +514,4 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
     </div>
   );
 }
+

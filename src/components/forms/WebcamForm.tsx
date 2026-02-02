@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Camera } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 
 interface WebcamFormProps {
   editWebcam?: any;
@@ -436,5 +436,6 @@ export default function WebcamForm({ editWebcam, onClose, onSave }: WebcamFormPr
     </div>
   );
 }
+
 
 

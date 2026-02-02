@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Smartphone } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api';
 
 interface PhoneFormProps {
   editPhone?: any;
@@ -464,5 +464,6 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
     </div>
   );
 }
+
 
 

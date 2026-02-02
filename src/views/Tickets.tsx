@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Ticket, Plus, LayoutGrid, List, Search, Filter, Clock, User, ArrowRight, Star, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import TicketForm from '../components/forms/TicketForm';
@@ -390,3 +390,4 @@ export default function Tickets() {
         </div>
     );
 }
+

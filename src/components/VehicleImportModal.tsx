@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
 import { X, FileSpreadsheet, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 type VehicleImportModalProps = {
     isOpen: boolean;
@@ -261,7 +261,7 @@ export default function VehicleImportModal({ isOpen, onClose, onSuccess, locatio
             const records = preview.processedRecords;
             for (let i = 0; i < records.length; i += batchSize) {
                 const batch = records.slice(i, i + batchSize);
-                const { error } = await supabase.from('vehiculos').insert(batch);
+                const { error } = await api.from('vehiculos').insert(batch);
                 if (error) throw error;
             }
 
@@ -495,3 +495,4 @@ export default function VehicleImportModal({ isOpen, onClose, onSuccess, locatio
         </div>
     );
 }
+

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, Package, ChevronDown, ChevronUp } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import SparePartForm from '../components/forms/SparePartForm';
 
 type SparePart = {
@@ -406,3 +406,4 @@ export default function SpareParts() {
     </div>
   );
 }
+

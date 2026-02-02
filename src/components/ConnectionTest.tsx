@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 export default function ConnectionTest() {
   const [results, setResults] = useState<any[]>([]);
@@ -22,7 +22,7 @@ export default function ConnectionTest() {
 
     // Test 2: Conexión básica
     try {
-      const { data, error } = await supabase.from('locations').select('count', { count: 'exact', head: true });
+      const { data, error } = await api.from('locations').select('count', { count: 'exact', head: true });
       testResults.push({
         test: 'Conexión Básica',
         status: error ? 'error' : 'success',
@@ -40,7 +40,7 @@ export default function ConnectionTest() {
 
     // Test 3: Verificar datos
     try {
-      const { data, error } = await supabase.from('locations').select('*').limit(5);
+      const { data, error } = await api.from('locations').select('*').limit(5);
       testResults.push({
         test: 'Datos de Ubicaciones',
         status: error ? 'error' : 'success',
@@ -58,7 +58,7 @@ export default function ConnectionTest() {
 
     // Test 4: Verificar activos
     try {
-      const { data, error } = await supabase.from('assets').select('*').limit(5);
+      const { data, error } = await api.from('assets').select('*').limit(5);
       testResults.push({
         test: 'Datos de Activos',
         status: error ? 'error' : 'success',
@@ -165,3 +165,4 @@ export default function ConnectionTest() {
     </div>
   );
 }
+

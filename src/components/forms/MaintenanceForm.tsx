@@ -106,7 +106,7 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
 
   const fetchLocations = async () => {
     try {
-      const { data, error } = await supabase.from('locations').select('*').order('name');
+      const { data, error } = await api.from('locations').select('*').order('name');
       if (error) throw error;
       if (data) setLocations(data);
     } catch (error) {
@@ -651,3 +651,4 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
     </div>
   );
 }
+
