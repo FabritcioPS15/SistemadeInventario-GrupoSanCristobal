@@ -99,8 +99,8 @@ CREATE TABLE IF NOT EXISTS assets (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Vehicles Table
-CREATE TABLE IF NOT EXISTS vehicles (
+-- Vehiculos Table
+CREATE TABLE IF NOT EXISTS vehiculos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     placa VARCHAR(20) NOT NULL UNIQUE,
     marca VARCHAR(100),
@@ -214,7 +214,7 @@ CREATE TABLE IF NOT EXISTS camera_disks (
 CREATE TABLE IF NOT EXISTS maintenance_records (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     asset_id UUID REFERENCES assets(id) ON DELETE CASCADE,
-    vehicle_id UUID REFERENCES vehicles(id) ON DELETE CASCADE,
+    vehicle_id UUID REFERENCES vehiculos(id) ON DELETE CASCADE,
     maintenance_date DATE NOT NULL,
     maintenance_type VARCHAR(100),
     description TEXT,
@@ -236,17 +236,56 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert default admin user (password: admin123)
-INSERT INTO users (email, password_hash, full_name, role) 
-VALUES ('admin@inventario.com', '$2a$10$rH8qGXvH5xGZqKqGqGqGqOqGqGqGqGqGqGqGqGqGqGqGqGqGqGqGqG', 'Administrador', 'admin')
-ON CONFLICT (email) DO NOTHING;
+-- MTC Accesses Table
+CREATE TABLE IF NOT EXISTS mtc_accesos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    url TEXT NOT NULL,
+    username VARCHAR(255),
+    password VARCHAR(255),
+    access_type VARCHAR(100),
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tickets Table
+CREATE TABLE IF NOT EXISTS tickets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    priority VARCHAR(50) CHECK (priority IN ('low', 'medium', 'high', 'critical')) DEFAULT 'medium',
+    status VARCHAR(50) CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')) DEFAULT 'open',
+    category VARCHAR(50) CHECK (category IN ('hardware', 'software', 'network', 'access', 'other')) DEFAULT 'other',
+    requester_id UUID REFERENCES users(id),
+    assigned_to UUID REFERENCES users(id),
+    location_id UUID REFERENCES locations(id),
+    attended_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Ticket Comments Table
+CREATE TABLE IF NOT EXISTS ticket_comments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    ticket_id UUID REFERENCES tickets(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id),
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create and insert default admin user (password: admin123)
+-- (Already handled above)
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_assets_location ON assets(location_id);
-CREATE INDEX IF NOT EXISTS idx_vehicles_ubicacion ON vehicles(ubicacion_actual);
+CREATE INDEX IF NOT EXISTS idx_vehicles_ubicacion ON vehiculos(ubicacion_actual);
 CREATE INDEX IF NOT EXISTS idx_cameras_location ON cameras(location_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_asset ON maintenance_records(asset_id);
 CREATE INDEX IF NOT EXISTS idx_maintenance_vehicle ON maintenance_records(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_requester ON tickets(requester_id);
+CREATE INDEX IF NOT EXISTS idx_tickets_assigned ON tickets(assigned_to);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -260,6 +299,9 @@ $$ language 'plpgsql';
 -- Apply triggers to all tables
 CREATE TRIGGER update_locations_updated_at BEFORE UPDATE ON locations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_assets_updated_at BEFORE UPDATE ON assets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_vehicles_updated_at BEFORE UPDATE ON vehicles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_vehicles_updated_at BEFORE UPDATE ON vehiculos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_cameras_updated_at BEFORE UPDATE ON cameras FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_mtc_accesos_updated_at BEFORE UPDATE ON mtc_accesos FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_tickets_updated_at BEFORE UPDATE ON tickets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_ticket_comments_updated_at BEFORE UPDATE ON ticket_comments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

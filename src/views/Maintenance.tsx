@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Eye, Star, X, MapPin, ShieldCheck, LayoutGrid, List as ListIcon, ChevronUp, ChevronDown, Package } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase, AssetWithDetails, Location } from '../lib/supabase';
+import { api } from '../lib/api';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -876,7 +877,13 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                           </div>
                           <div>
                             <p className="text-[8px] font-bold text-slate-400">FECHA</p>
-                            <p className="text-[10px] font-bold text-slate-700">{viewingRecord?.completed_date ? new Date(viewingRecord.completed_date as any).toLocaleDateString() : 'Pend.'}</p>
+                            <p className="text-[10px] font-bold text-slate-700">
+                              {(() => {
+                                if (!viewingRecord?.completed_date) return 'Pend.';
+                                const [y, m, d] = (viewingRecord.completed_date as unknown as string).split('-');
+                                return `${d}/${m}/${y}`;
+                              })()}
+                            </p>
                           </div>
                           <div>
                             <p className="text-[8px] font-bold text-slate-400">COSTO</p>

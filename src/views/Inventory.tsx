@@ -1,15 +1,18 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { Plus, Search, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download, Upload, Package, ChevronUp, ChevronDown, Star, X } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
-import { supabase, AssetWithDetails, Location, AssetType } from '../lib/supabase';
-import AssetForm from '../components/forms/AssetForm';
-import AssetDetails from '../components/AssetDetails';
-import PCForm from '../components/forms/PCForm';
-import ExcelImportModal from '../components/ExcelImportModal';
-import Pagination from '../components/Pagination';
+import { supabase, AssetWithDetails, Location, AssetType, ResourceCredential } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import ViewHeader from '../components/ViewHeader';
+
+// Lazy load heavy components
+const AssetForm = lazy(() => import('../components/forms/AssetForm'));
+const AssetDetails = lazy(() => import('../components/AssetDetails'));
+const PCForm = lazy(() => import('../components/forms/PCForm'));
+const ExcelImportModal = lazy(() => import('../components/ExcelImportModal'));
+const Pagination = lazy(() => import('../components/Pagination'));
 
 
 type InventoryProps = {
@@ -34,6 +37,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
@@ -41,6 +45,14 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
 
   const handleSort = (key: string) => {
@@ -240,7 +252,23 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
       throw error;
     }
 
-    if (data) setAssets(data as AssetWithDetails[]);
+    // Fetch credentials separately due to polymorphic relationship
+    const { data: credentials, error: credError } = await supabase
+      .from('resource_credentials')
+      .select('*')
+      .eq('resource_type', 'asset');
+
+    if (credError) {
+      console.error('Error fetching credentials:', credError);
+    }
+
+    if (data) {
+      const assetsWithCreds = data.map((asset: any) => ({
+        ...asset,
+        resource_credentials: credentials?.filter((c: ResourceCredential) => c.resource_id === asset.id) || []
+      }));
+      setAssets(assetsWithCreds as AssetWithDetails[]);
+    }
   };
 
   const fetchLocations = async () => {
@@ -310,10 +338,15 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
       const matchesSearch =
-        asset.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.serial_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.asset_types?.name.toLowerCase().includes(searchTerm.toLowerCase());
+        asset.brand?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        asset.model?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        asset.serial_number?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        asset.asset_types?.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        asset.resource_credentials?.some(c =>
+          c.username?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          c.label?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+          c.notes?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+        );
 
       // Aplicar filtro de categoría desde el menú
       const categoryFromFilter = getCategoryFromFilter(categoryFilter);
@@ -661,112 +694,72 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
 
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
-      {/* Title / Tab Bar - Minimalist Executive Style */}
-      {/* Standard Application Header (h-14) */}
-      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
-            <Package size={20} />
-          </div>
-          <div className="hidden lg:block">
-            <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">
-              Inventario{categoryFromFilter ? ` - ${categoryFromFilter}` : ''}
-            </h2>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span>Gestión de Activos</span>
-              <div className="w-1 h-1 bg-gray-300 rounded-full" />
-              <span>{stats.totalAssets} Items</span>
-            </div>
-          </div>
-        </div>
+      <ViewHeader
+        icon={<Package size={20} />}
+        title={`Inventario${categoryFromFilter ? ` - ${categoryFromFilter}` : ''}`}
+        subtitle="Gestión de Activos"
+        isHeaderVisible={isHeaderVisible}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Buscar activos..."
+        stats={[
+          { label: 'Total', value: stats.totalAssets },
+          { label: 'Activos', value: stats.activeCount, color: 'text-emerald-600' },
+          { label: 'Mantenimiento', value: stats.maintenanceCount, color: 'text-amber-600' },
+          { label: 'Sin Ubicación', value: stats.withoutLocationCount, color: 'text-slate-700' }
+        ]}
+      >
+        {selectedIds.size > 0 && canEdit() && (
+          <button
+            onClick={handleBulkDelete}
+            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-all font-bold text-[10px] uppercase tracking-widest mr-2"
+            title="Eliminar seleccionados"
+          >
+            <Trash2 size={12} />
+            Eliminar ({selectedIds.size})
+          </button>
+        )}
 
-        {/* Integrated Stats in Header */}
-        <div className="hidden xl:flex items-center gap-4 mx-6 border-l border-r border-slate-100 px-6">
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Total</span>
-            <span className="text-sm font-black text-gray-900 leading-none mt-0.5">{stats.totalAssets}</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Activos</span>
-            <span className="text-sm font-black text-emerald-600 leading-none mt-0.5">{stats.activeCount}</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Mantenimiento</span>
-            <span className="text-sm font-black text-amber-600 leading-none mt-0.5">{stats.maintenanceCount}</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">Sin Ubicación</span>
-            <span className="text-sm font-black text-slate-700 leading-none mt-0.5">{stats.withoutLocationCount}</span>
-          </div>
-        </div>
-
-        {/* Integrated Search Bar in Header */}
-        <div className="flex-1 max-w-md px-4">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar activos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-100 focus:border-slate-400 transition-all text-sm font-medium"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && canEdit() && (
+        <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
+          <button
+            onClick={handleExportExcel}
+            disabled={exporting}
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
+            title="Exportar Excel"
+          >
+            <Download size={18} />
+          </button>
+          {canEdit() && (
             <button
-              onClick={handleBulkDelete}
-              className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-all font-bold text-[10px] uppercase tracking-widest mr-2"
-              title="Eliminar seleccionados"
+              onClick={() => setShowUploadModal(true)}
+              className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
+              title="Importar Excel"
             >
-              <Trash2 size={12} />
-              Eliminar ({selectedIds.size})
+              <Upload size={18} />
             </button>
           )}
-
-          <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
+          {canEdit() && (
             <button
-              onClick={handleExportExcel}
-              disabled={exporting}
+              onClick={() => {
+                setSelectedAsset(undefined);
+                setEditingAsset(undefined);
+                setShowAssetForm(true);
+              }}
               className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
-              title="Exportar Excel"
+              title="Nuevo Activo"
             >
-              <Download size={18} />
+              <Plus size={18} />
             </button>
-            {canEdit() && (
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
-                title="Importar Excel"
-              >
-                <Upload size={18} />
-              </button>
-            )}
-            {canEdit() && (
-              <button
-                onClick={() => {
-                  setSelectedAsset(undefined);
-                  setEditingAsset(undefined);
-                  setShowAssetForm(true);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
-                title="Nuevo Activo"
-              >
-                <Plus size={18} />
-              </button>
-            )}
-          </div>
-
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <Star size={18} />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors">
-            <X size={18} />
-          </button>
+          )}
         </div>
-      </div>
+
+        <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
+          <Star size={18} />
+        </button>
+        <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors">
+          <X size={18} />
+        </button>
+      </ViewHeader>
 
       <div className="p-6 space-y-6">
 
@@ -836,16 +829,18 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
           </div>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination with Suspense */}
         {filteredAssets.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredAssets.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={handlePageChange}
-            onItemsPerPageChange={handleItemsPerPageChange}
-          />
+          <Suspense fallback={<div className="h-10 w-full animate-pulse bg-slate-50 rounded-lg"></div>}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredAssets.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={handleItemsPerPageChange}
+            />
+          </Suspense>
         )}
 
         {/* Table View */}
@@ -1095,44 +1090,46 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
           )}
         </div>
 
-        {/* Forms and Modals */}
-        {showAssetForm && (
-          <AssetForm
-            onClose={handleCloseForm}
-            onSave={handleSaveAsset}
-            editAsset={editingAsset}
-            preselectedAssetTypeId={getAssetTypeIdFromFilter(categoryFilter)}
-          />
-        )}
+        {/* Forms and Modals with Suspense */}
+        <Suspense fallback={<div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div></div>}>
+          {showAssetForm && (
+            <AssetForm
+              onClose={handleCloseForm}
+              onSave={handleSaveAsset}
+              editAsset={editingAsset}
+              preselectedAssetTypeId={getAssetTypeIdFromFilter(categoryFilter)}
+            />
+          )}
 
-        {showPCForm && (
-          <PCForm
-            editPC={editingPC}
-            onClose={handleClosePCForm}
-            onSave={handleSavePC}
-          />
-        )}
+          {showPCForm && (
+            <PCForm
+              editPC={editingPC}
+              onClose={handleClosePCForm}
+              onSave={handleSavePC}
+            />
+          )}
 
-        {showAssetDetails && selectedAsset && (
-          <AssetDetails
-            asset={selectedAsset}
-            onClose={() => {
-              setShowAssetDetails(false);
-              setSelectedAsset(undefined);
+          {showAssetDetails && selectedAsset && (
+            <AssetDetails
+              asset={selectedAsset}
+              onClose={() => {
+                setShowAssetDetails(false);
+                setSelectedAsset(undefined);
+              }}
+            />
+          )}
+          {/* Modal de Importación Excel */}
+          <ExcelImportModal
+            isOpen={showUploadModal}
+            onClose={() => setShowUploadModal(false)}
+            onSuccess={() => {
+              fetchAssets();
+              alert('Importación completada exitosamente');
             }}
+            assetTypes={assetTypes}
+            locations={locations}
           />
-        )}
-        {/* Modal de Importación Excel */}
-        <ExcelImportModal
-          isOpen={showUploadModal}
-          onClose={() => setShowUploadModal(false)}
-          onSuccess={() => {
-            fetchAssets();
-            alert('Importación completada exitosamente');
-          }}
-          assetTypes={assetTypes}
-          locations={locations}
-        />
+        </Suspense>
       </div>
     </div>
 

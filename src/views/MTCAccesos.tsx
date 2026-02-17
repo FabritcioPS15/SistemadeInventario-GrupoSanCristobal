@@ -1,19 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, List, Star } from 'lucide-react';
-import { api } from '../lib/api';
+import { supabase, MTCAcceso, ResourceCredential } from '../lib/supabase';
 import MTCAccesoForm from '../components/forms/MTCAccesoForm';
-
-type MTCAcceso = {
-  id: string;
-  name: string;
-  url: string;
-  username?: string;
-  password?: string;
-  access_type: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-};
+import ViewHeader from '../components/ViewHeader';
 
 type ViewType = 'list' | 'form';
 
@@ -40,13 +29,34 @@ export default function MTCAccesos() {
 
   const fetchAccesos = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('mtc_accesos')
       .select('*')
       .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching MTC accesos:', error);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch credentials separately
+    const { data: credentials, error: credError } = await supabase
+      .from('resource_credentials')
+      .select('*')
+      .eq('resource_type', 'mtc_acceso');
+
+    if (credError) {
+      console.error('Error fetching MTC credentials:', credError);
+    }
+
     if (data) {
-      setAccesos(data);
-      calculateStats(data);
+      const accesosWithCreds = data.map((acceso: any) => ({
+        ...acceso,
+        resource_credentials: credentials?.filter((c: ResourceCredential) => c.resource_id === acceso.id) || []
+      }));
+      setAccesos(accesosWithCreds as MTCAcceso[]);
+      calculateStats(accesosWithCreds as MTCAcceso[]);
     }
     setLoading(false);
   };
@@ -94,7 +104,7 @@ export default function MTCAccesos() {
   const handleDeleteAcceso = async (acceso: MTCAcceso) => {
     console.log('🗑️ Iniciando eliminación de acceso MTC:', acceso);
 
-    if (window.confirm(`¿Estás seguro de que quieres eliminar el acceso "${acceso.name}"?`)) {
+    if (window.confirm(`¿Estás seguro de que quieres eliminar el acceso "${acceso.name}" ? `)) {
       try {
         console.log(`🗑️ Eliminando acceso: ${acceso.name} (ID: ${acceso.id})`);
         const { data, error } = await supabase
@@ -107,7 +117,7 @@ export default function MTCAccesos() {
 
         if (error) {
           console.error('❌ Error al eliminar acceso MTC:', error);
-          alert(`Error al eliminar el acceso MTC: ${error.message}\n\nCódigo: ${error.code}\nDetalles: ${error.details}`);
+          alert(`Error al eliminar el acceso MTC: ${error.message} \n\nCódigo: ${error.code} \nDetalles: ${error.details} `);
         } else {
           console.log('✅ Acceso MTC eliminado correctamente');
           await fetchAccesos();
@@ -182,9 +192,12 @@ export default function MTCAccesos() {
   };
 
   const filteredAccesos = accesos.filter(acceso => {
-    const matchesSearch = acceso.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      acceso.access_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      acceso.url.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = searchTerm.toLowerCase();
+    const matchesSearch = acceso.name.toLowerCase().includes(q) ||
+      acceso.access_type.toLowerCase().includes(q) ||
+      acceso.url.toLowerCase().includes(q) ||
+      acceso.username?.toLowerCase().includes(q) ||
+      acceso.resource_credentials?.some(c => c.label.toLowerCase().includes(q) || c.username?.toLowerCase().includes(q));
 
     const matchesType = !accessTypeFilter || acceso.access_type === accessTypeFilter;
 
@@ -193,78 +206,45 @@ export default function MTCAccesos() {
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
-      <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30">
-        <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl border border-[#e2e8f0]">
-            <Shield className="text-[#002855]" size={20} />
-          </div>
-          <div>
-            <h1 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">ACCESOS MTC</h1>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span className="flex items-center gap-1"><Shield size={10} /> CREDENCIALES Y PERMISOS</span>
-              <span className="text-[#cbd5e1]">|</span>
-              <span className="bg-[#f1f5f9] px-2 py-0.5 rounded text-[#002855]">{stats.total} Registros</span>
-            </div>
-          </div>
-        </div>
+      <ViewHeader
+        icon={<Shield size={20} />}
+        title="ACCESOS MTC"
+        subtitle="CREDENCIALES Y PERMISOS"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Buscar por nombre, tipo, URL, usuario..."
+        stats={[
+          { label: 'Registros', value: stats.total }
+        ]}
+      >
+        <div className="h-6 w-px bg-gray-200 mx-1" />
 
-        <div className="flex items-center gap-2">
+        <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
           <button
-            onClick={async () => {
-              console.log('🔍 Probando conexión con Supabase...');
-              try {
-                const { data, error } = await supabase
-                  .from('mtc_accesos')
-                  .select('count')
-                  .limit(1);
-
-                if (error) {
-                  console.error('❌ Error de conexión:', error);
-                  alert(`Error de conexión: ${error.message}`);
-                } else {
-                  console.log('✅ Conexión exitosa:', data);
-                  alert('Conexión con Supabase exitosa');
-                }
-              } catch (err) {
-                console.error('❌ Error inesperado:', err);
-                alert('Error inesperado: ' + err);
-              }
-            }}
-            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-[10px] font-bold uppercase tracking-widest shadow-sm h-9"
+            onClick={() => { setView('list'); setEditingAcceso(undefined); }}
+            className={`p - 1.5 rounded - md transition - all ${view === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'} `}
+            title="Listado"
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="hidden sm:inline">Probar DB</span>
+            <List size={16} />
           </button>
-
-          <div className="h-6 w-px bg-gray-200 mx-1" />
-
-          <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
-            <button
-              onClick={() => { setView('list'); setEditingAcceso(undefined); }}
-              className={`p-1.5 rounded-md transition-all ${view === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
-              title="Listado"
-            >
-              <List size={16} />
-            </button>
-            <button
-              onClick={() => { setView('form'); }}
-              className={`p-1.5 rounded-md transition-all ${view === 'form' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
-              title="Nuevo Acceso"
-            >
-              <Plus size={16} />
-            </button>
-          </div>
-
-          <div className="h-6 w-px bg-gray-200 mx-1" />
-
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <Star size={18} />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <X size={18} />
+          <button
+            onClick={() => { setView('form'); }}
+            className={`p - 1.5 rounded - md transition - all ${view === 'form' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'} `}
+            title="Nuevo Acceso"
+          >
+            <Plus size={16} />
           </button>
         </div>
-      </div>
+
+        <div className="h-6 w-px bg-gray-200 mx-1" />
+
+        <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
+          <Star size={18} />
+        </button>
+        <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
+          <X size={18} />
+        </button>
+      </ViewHeader>
 
       <div className="p-6 space-y-6">
 
@@ -410,7 +390,7 @@ export default function MTCAccesos() {
                             {acceso.name}
                           </h3>
                           <div className="flex items-center gap-2">
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${getAccessTypeColor(acceso.access_type)}`}>
+                            <span className={`inline - flex items - center gap - 1.5 px - 2 py - 0.5 rounded text - [10px] font - bold uppercase tracking - widest border ${getAccessTypeColor(acceso.access_type)} `}>
                               {getAccessTypeIcon(acceso.access_type)}
                               {acceso.access_type}
                             </span>
@@ -423,11 +403,11 @@ export default function MTCAccesos() {
                           <div className="flex items-center justify-between mb-2">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Enlace Directo</label>
                             <button
-                              onClick={() => copyToClipboard(acceso.url, `url-${acceso.id}`)}
+                              onClick={() => copyToClipboard(acceso.url, `url - ${acceso.id} `)}
                               className="p-1.5 hover:bg-white rounded-lg transition-colors text-gray-400 hover:text-blue-600 active:scale-90"
                               title="Copiar URL"
                             >
-                              {copiedItems[`url-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                              {copiedItems[`url - ${acceso.id} `] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                             </button>
                           </div>
                           <a
@@ -447,11 +427,11 @@ export default function MTCAccesos() {
                               <div className="flex items-center justify-between mb-2">
                                 <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest">Identidad</label>
                                 <button
-                                  onClick={() => copyToClipboard(acceso.username!, `username-${acceso.id}`)}
+                                  onClick={() => copyToClipboard(acceso.username!, `username - ${acceso.id} `)}
                                   className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-400 hover:text-blue-600 active:scale-90"
                                   title="Copiar usuario"
                                 >
-                                  {copiedItems[`username-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                                  {copiedItems[`username - ${acceso.id} `] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                                 </button>
                               </div>
                               <p className="text-sm text-blue-900 font-black tracking-tight font-mono">{acceso.username}</p>
@@ -462,11 +442,11 @@ export default function MTCAccesos() {
                                   <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest">Token / Pass</label>
                                   <div className="flex items-center gap-1">
                                     <button
-                                      onClick={() => copyToClipboard(acceso.password!, `password-${acceso.id}`)}
+                                      onClick={() => copyToClipboard(acceso.password!, `password - ${acceso.id} `)}
                                       className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-400 hover:text-blue-600 active:scale-90"
                                       title="Copiar contraseña"
                                     >
-                                      {copiedItems[`password-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                                      {copiedItems[`password - ${acceso.id} `] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                                     </button>
                                     <button
                                       onClick={() => togglePasswordVisibility(acceso.id)}
@@ -534,7 +514,7 @@ export default function MTCAccesos() {
               <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
                 <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
                   {/* Modal Header */}
-                  <div className={`px-8 py-6 flex items-center justify-between border-b border-gray-100 ${getAccessTypeColor(viewingAcceso.access_type).split(' ')[0]} bg-opacity-30`}>
+                  <div className={`px - 8 py - 6 flex items - center justify - between border - b border - gray - 100 ${getAccessTypeColor(viewingAcceso.access_type).split(' ')[0]} bg - opacity - 30`}>
                     <div className="flex items-center gap-4">
                       <div className="p-3 rounded-2xl bg-white shadow-sm border border-gray-100">
                         {getAccessTypeIcon(viewingAcceso.access_type)}
@@ -590,13 +570,13 @@ export default function MTCAccesos() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {viewingAcceso.username && (
                             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Usuario</label>
+                              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Usuario Principal</label>
                               <p className="text-gray-900 font-black font-mono break-all">{viewingAcceso.username}</p>
                             </div>
                           )}
                           {viewingAcceso.password && (
                             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contraseña</label>
+                              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contraseña Principal</label>
                               <div className="flex items-center gap-2">
                                 <p className="text-gray-900 font-black font-mono tracking-widest">
                                   {showPasswords[viewingAcceso.id] ? viewingAcceso.password : '••••••••'}
@@ -611,6 +591,33 @@ export default function MTCAccesos() {
                             </div>
                           )}
                         </div>
+
+                        {/* Additional Credentials for MTC Access */}
+                        {viewingAcceso.resource_credentials && viewingAcceso.resource_credentials.length > 0 && (
+                          <div className="space-y-3 pt-2">
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Cuentas Adicionales</label>
+                            {viewingAcceso.resource_credentials.map(c => (
+                              <div key={c.id} className="bg-slate-50 p-4 rounded-2xl border border-gray-100 flex items-center justify-between">
+                                <div>
+                                  <p className="text-[10px] font-black text-blue-600 uppercase mb-1">{c.label}</p>
+                                  <div className="flex items-center gap-4 text-xs">
+                                    <span className="font-bold font-mono">{c.username || '—'}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-gray-400">PASS:</span>
+                                      <span className="font-mono font-bold">{showPasswords[c.id] ? (c.password || '—') : '••••••••'}</span>
+                                      <button onClick={() => togglePasswordVisibility(c.id)} className="text-blue-500 hover:text-blue-700">
+                                        <Eye size={12} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                                <button onClick={() => copyToClipboard(c.password || '', `pass - ${c.id} `)} className="p-2 hover:bg-white rounded-lg transition-colors text-gray-400">
+                                  {copiedItems[`pass - ${c.id} `] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 

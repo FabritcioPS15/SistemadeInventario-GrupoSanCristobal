@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { supabase, AssetType, Location, AssetWithDetails } from '../../lib/supabase';
+import { X, AlertCircle, CheckCircle, Loader2, Plus } from 'lucide-react';
+import { supabase, AssetType, Location, AssetWithDetails, ResourceCredential } from '../../lib/supabase';
 
 type AssetFormProps = {
   onClose: () => void;
@@ -30,7 +30,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     status: editAsset?.status || 'active',
     notes: editAsset?.notes || '',
     image_url: editAsset?.image_url || '',
-    
+
     // Campos adicionales para maquinarias
     item: editAsset?.item || '',
     descripcion: editAsset?.descripcion || '',
@@ -42,7 +42,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     fecha_adquisicion: editAsset?.fecha_adquisicion || '',
     valor_estimado: editAsset?.valor_estimado || '',
     estado_uso: editAsset?.estado_uso || '',
-    
+
     // Campos adicionales para PC/Laptop
     processor: editAsset?.processor || '',
     ram: editAsset?.ram || '',
@@ -50,7 +50,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     bios_mode: editAsset?.bios_mode || '',
     area: editAsset?.area || '',
     placa: editAsset?.placa || '',
-    
+
     // Campos adicionales para Cámaras
     name: editAsset?.name || '',
     url: editAsset?.url || '',
@@ -59,7 +59,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     port: editAsset?.port || '',
     access_type: editAsset?.access_type || 'url',
     auth_code: editAsset?.auth_code || '',
-    
+
     // Campos adicionales para Celulares
     imei: editAsset?.imei || '',
     operator: editAsset?.operator || '',
@@ -70,18 +70,19 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     almacenamiento: editAsset?.almacenamiento || '',
     bateria_estado: editAsset?.bateria_estado || '',
     accesorios: editAsset?.accesorios || '',
-    
+
     // Campos adicionales para Impresoras/Escáneres
     tipo_impresion: editAsset?.tipo_impresion || '',
     tecnologia_impresion: editAsset?.tecnologia_impresion || '',
     velocidad_impresion: editAsset?.velocidad_impresion || '',
     resolucion: editAsset?.resolucion || '',
-    
+
     // Campos adicionales para Monitores/Proyectores
     tamaño_pantalla: editAsset?.tamaño_pantalla || '',
     resolucion_pantalla: editAsset?.resolucion_pantalla || '',
     tipo_conexion: editAsset?.tipo_conexion || '',
     luminosidad: editAsset?.luminosidad || '',
+    resource_credentials: (editAsset?.resource_credentials || []) as Partial<ResourceCredential>[],
   });
 
   const [tinteTipo, setTinteTipo] = useState<string>('');
@@ -109,8 +110,22 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
         notes: editAsset.notes || '',
       };
 
-      const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
-      setHasChanges(hasFormChanges);
+      const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify({
+        asset_type_id: formData.asset_type_id,
+        location_id: formData.location_id || '',
+        brand: formData.brand || '',
+        model: formData.model || '',
+        serial_number: formData.serial_number || '',
+        anydesk_id: formData.anydesk_id || '',
+        ip_address: formData.ip_address || '',
+        phone_number: formData.phone_number || '',
+        capacity: formData.capacity || '',
+        status: formData.status,
+        notes: formData.notes || '',
+      });
+
+      const hasCredChanges = JSON.stringify(editAsset.resource_credentials || []) !== JSON.stringify(formData.resource_credentials);
+      setHasChanges(hasFormChanges || hasCredChanges);
     }
   }, [formData, editAsset]);
 
@@ -146,14 +161,14 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
       .from('asset_types')
       .select('*')
       .order('name');
-    
+
     if (data) {
       // Asegurar que 'Maquinaria' esté disponible
       const hasMaquinaria = data.some(type => type.name === 'Maquinaria');
       const hasOtros = data.some(type => type.name === 'Otros');
-      
+
       let tempTypes = [...data];
-      
+
       if (!hasMaquinaria) {
         // Agregar 'Maquinaria' temporalmente si no existe en la BD
         const maquinariaType = {
@@ -163,7 +178,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
         };
         tempTypes.push(maquinariaType);
       }
-      
+
       if (!hasOtros) {
         // Agregar 'Otros' temporalmente si no existe en la BD
         const otrosType = {
@@ -173,7 +188,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
         };
         tempTypes.push(otrosType);
       }
-      
+
       setAssetTypes(tempTypes);
     }
   };
@@ -294,6 +309,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    let resource_id = editAsset?.id;
 
     // Validar campos requeridos
     const requiredFields = ['asset_type_id', 'status'];
@@ -341,7 +357,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     let mergedNotes = formData.notes;
     const selectedAssetType = assetTypes.find(t => t.id === formData.asset_type_id);
     const selectedTypeName = selectedAssetType?.name || '';
-    
+
     if (selectedTypeName === 'Tinte') {
       if (tinteTipo && !mergedNotes.includes('Tipo:')) {
         mergedNotes = (mergedNotes ? mergedNotes + '\n' : '') + `Tipo: ${tinteTipo}`;
@@ -358,7 +374,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
           .select('id')
           .eq('name', 'Maquinaria')
           .single();
-        
+
         if (existingType) {
           finalAssetTypeId = existingType.id;
         } else {
@@ -386,7 +402,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
           .select('id')
           .eq('name', 'Otros')
           .single();
-        
+
         if (existingType) {
           finalAssetTypeId = existingType.id;
         } else {
@@ -405,8 +421,9 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
       }
     }
 
+    const { resource_credentials, ...submitData } = formData;
     const dataToSave = {
-      ...formData,
+      ...submitData,
       asset_type_id: finalAssetTypeId,
       location_id: formData.location_id || null,
       notes: mergedNotes,
@@ -445,10 +462,12 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
         }
         console.log('Activo actualizado correctamente');
       } else {
-        console.log('Creando nuevo activo:', dataToSave);
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('assets')
-          .insert([dataToSave]);
+          .insert([dataToSave])
+          .select();
+
+        if (data) resource_id = data[0].id;
 
         if (error) {
           // Fallback si la columna image_url no existe
@@ -472,6 +491,23 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
           }
         }
         console.log('Activo creado correctamente');
+      }
+
+      // Save additional credentials
+      if (resource_id) {
+        await supabase.from('resource_credentials').delete().eq('resource_id', resource_id).eq('resource_type', 'asset');
+        if (resource_credentials.length > 0) {
+          await supabase.from('resource_credentials').insert(
+            resource_credentials.map(c => ({
+              resource_id,
+              resource_type: 'asset',
+              label: c.label || 'Accesos',
+              username: c.username,
+              password: c.password,
+              notes: c.notes
+            }))
+          );
+        }
       }
 
       setLoading(false);
@@ -1485,6 +1521,168 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          {/* Credentials Section */}
+          <div className="space-y-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                Cuentas y Usuarios Adicionales
+              </h3>
+              <button
+                type="button"
+                onClick={() => setFormData(p => ({
+                  ...p,
+                  resource_credentials: [...p.resource_credentials, { label: '', username: '', password: '' }]
+                }))}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 uppercase tracking-widest px-2 py-1 bg-blue-50 rounded border border-blue-100"
+              >
+                <Plus size={14} /> Agregar
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {formData.resource_credentials.map((cred, idx) => (
+                <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200 relative group">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({
+                      ...p,
+                      resource_credentials: p.resource_credentials.filter((_, i) => i !== idx)
+                    }))}
+                    className="absolute -top-2 -right-2 p-1 bg-white border border-red-200 rounded-full text-red-500 shadow-sm hover:bg-red-500 hover:text-white transition-all"
+                  >
+                    <X size={12} />
+                  </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Etiqueta</label>
+                      <input
+                        placeholder="Ej: Admin"
+                        value={cred.label}
+                        onChange={e => {
+                          const nc = [...formData.resource_credentials];
+                          nc[idx].label = e.target.value;
+                          setFormData(p => ({ ...p, resource_credentials: nc }));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Usuario</label>
+                      <input
+                        placeholder="Usuario"
+                        value={cred.username}
+                        onChange={e => {
+                          const nc = [...formData.resource_credentials];
+                          nc[idx].username = e.target.value;
+                          setFormData(p => ({ ...p, resource_credentials: nc }));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Contraseña</label>
+                      <input
+                        type="text"
+                        placeholder="Contraseña"
+                        value={cred.password}
+                        onChange={e => {
+                          const nc = [...formData.resource_credentials];
+                          nc[idx].password = e.target.value;
+                          setFormData(p => ({ ...p, resource_credentials: nc }));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {formData.resource_credentials.length === 0 && (
+                <p className="text-center py-4 text-sm text-gray-400 italic">No hay cuentas adicionales</p>
+              )}
+            </div>
+          </div>
+
+          {/* Credentials Section */}
+          <div className="space-y-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                Cuentas y Usuarios Adicionales
+              </h3>
+              <button
+                type="button"
+                onClick={() => setFormData(p => ({
+                  ...p,
+                  resource_credentials: [...p.resource_credentials, { label: '', username: '', password: '' }]
+                }))}
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 uppercase tracking-widest px-2 py-1 bg-blue-50 rounded border border-blue-100"
+              >
+                <Plus size={14} /> Agregar
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {formData.resource_credentials.map((cred, idx) => (
+                <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200 relative group">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({
+                      ...p,
+                      resource_credentials: p.resource_credentials.filter((_, i) => i !== idx)
+                    }))}
+                    className="absolute -top-2 -right-2 p-1 bg-white border border-red-200 rounded-full text-red-500 shadow-sm hover:bg-red-500 hover:text-white transition-all"
+                  >
+                    <X size={12} />
+                  </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Etiqueta</label>
+                      <input
+                        placeholder="Ej: Admin"
+                        value={cred.label}
+                        onChange={e => {
+                          const nc = [...formData.resource_credentials];
+                          nc[idx].label = e.target.value;
+                          setFormData(p => ({ ...p, resource_credentials: nc }));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Usuario</label>
+                      <input
+                        placeholder="Usuario"
+                        value={cred.username}
+                        onChange={e => {
+                          const nc = [...formData.resource_credentials];
+                          nc[idx].username = e.target.value;
+                          setFormData(p => ({ ...p, resource_credentials: nc }));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Contraseña</label>
+                      <input
+                        type="text"
+                        placeholder="Contraseña"
+                        value={cred.password}
+                        onChange={e => {
+                          const nc = [...formData.resource_credentials];
+                          nc[idx].password = e.target.value;
+                          setFormData(p => ({ ...p, resource_credentials: nc }));
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {formData.resource_credentials.length === 0 && (
+                <p className="text-center py-4 text-sm text-gray-400 italic">No hay cuentas adicionales</p>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Trash2, Edit, List, ClipboardCheck, AlertCircle, CheckCircle2, Star, X } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase, BranchAudit } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import AuditForm from '../components/forms/AuditForm';
 

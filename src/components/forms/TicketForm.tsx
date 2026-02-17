@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Save, AlertCircle } from 'lucide-react';
 import { api } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 type TicketFormProps = {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Send, User, Clock, AlertCircle, MessageSquare } from 'lucide-react';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 type TicketDetailModalProps = {
@@ -13,6 +14,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     const { user } = useAuth();
     const [currentTicket, setCurrentTicket] = useState<any>(initialTicket);
     const [comments, setComments] = useState<any[]>([]);
+    const [cannedResponses, setCannedResponses] = useState<any[]>([]);
+    const [showCanned, setShowCanned] = useState(false);
     const [newComment, setNewComment] = useState('');
     const [sending, setSending] = useState(false);
     const commentsEndRef = useRef<HTMLDivElement>(null);
@@ -21,7 +24,20 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
 
     useEffect(() => {
         setCurrentTicket(initialTicket);
+        fetchCannedResponses();
     }, [initialTicket]);
+
+    const fetchCannedResponses = async () => {
+        try {
+            const { data } = await supabase
+                .from('ticket_canned_responses')
+                .select('*')
+                .order('title');
+            if (data) setCannedResponses(data);
+        } catch (error) {
+            console.error('Error fetching canned responses:', error);
+        }
+    };
 
     useEffect(() => {
         fetchComments();
@@ -140,6 +156,10 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
             if (newStatus === 'in_progress') {
                 updatePayload.assigned_to = user?.id;
                 updatePayload.attended_at = new Date().toISOString();
+            } else if (newStatus === 'resolved') {
+                updatePayload.resolved_at = new Date().toISOString();
+            } else if (newStatus === 'closed') {
+                updatePayload.closed_at = new Date().toISOString();
             }
 
             const { error } = await supabase
@@ -338,8 +358,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                 <MessageSquare size={20} />
                             </div>
                             <div>
-                                <h3 className="text-sm font-black text-[#001529] uppercase tracking-widest">Feed de Actividad</h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Hilo de Seguimiento en Tiempo Real</p>
+                                <h3 className="text-[#001529]">Feed de Actividad</h3>
+                                <p className="detail-label mt-0.5">Hilo de Seguimiento en Tiempo Real</p>
                             </div>
                         </div>
                         <button onClick={onClose} className="hidden md:flex w-10 h-10 items-center justify-center hover:bg-rose-50 rounded-2xl transition-all text-slate-400 hover:text-rose-500 hover:rotate-90">
@@ -382,16 +402,13 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                             </div>
                                         </div>
                                         <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                                            <div className={`p-5 rounded-[2rem] text-[13px] leading-relaxed shadow-xl ${isMe
-                                                ? 'bg-blue-600 text-white rounded-tr-none'
-                                                : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none'
-                                                }`}>
-                                                {comment.content}
+                                            <div className={`p-4 rounded-2xl shadow-sm border ${isMe ? 'bg-blue-600 text-white border-blue-400' : 'bg-white text-slate-700 border-slate-200'}`}>
+                                                <p className={isMe ? 'text-white font-bold leading-relaxed' : 'text-slate-700 font-bold leading-relaxed'}>{comment.content}</p>
                                             </div>
-                                            <div className={`flex items-center gap-2 mt-2 px-2 text-[10px] font-bold uppercase tracking-wider ${isMe ? 'text-blue-400' : 'text-slate-400'}`}>
-                                                <span>{comment.author?.full_name}</span>
+                                            <div className={`mt-2 flex items-center gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
+                                                <span className="detail-label">{comment.author?.full_name || comment.user?.full_name}</span>
                                                 <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                                <span>{new Date(comment.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span className="detail-label italic">{new Date(comment.created_at).toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -403,13 +420,48 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
 
                     {/* Chat Input: Executive Style */}
                     <div className="p-6 bg-white border-t border-slate-200 relative">
+                        {showCanned && (
+                            <div className="absolute bottom-full left-6 right-6 mb-2 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden z-20 animate-in slide-in-from-bottom-4 duration-200">
+                                <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Respuestas Rápidas</span>
+                                    <button onClick={() => setShowCanned(false)} className="text-slate-400 hover:text-rose-500 transition-colors"><X size={14} /></button>
+                                </div>
+                                <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
+                                    {cannedResponses.map(resp => (
+                                        <button
+                                            key={resp.id}
+                                            onClick={() => {
+                                                setNewComment(resp.content);
+                                                setShowCanned(false);
+                                            }}
+                                            className="w-full text-left px-5 py-3 hover:bg-blue-50 transition-colors border-b border-slate-50 last:border-0 group"
+                                        >
+                                            <p className="text-[10px] font-black text-blue-600 uppercase mb-0.5">{resp.title}</p>
+                                            <p className="text-xs text-slate-500 line-clamp-1 group-hover:text-slate-700">{resp.content}</p>
+                                        </button>
+                                    ))}
+                                    {cannedResponses.length === 0 && (
+                                        <div className="p-4 text-center text-[10px] font-black text-slate-400 uppercase">Sin plantillas disponibles</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSendComment} className="flex gap-4 bg-slate-50 p-2 rounded-[2rem] border border-slate-200 shadow-inner group focus-within:ring-4 focus-within:ring-blue-100 focus-within:border-blue-400 transition-all">
+                            <button
+                                type="button"
+                                onClick={() => setShowCanned(!showCanned)}
+                                className={`w-12 h-12 flex items-center justify-center rounded-[1.5rem] transition-all shadow-sm active:scale-95 ${showCanned ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-100 hover:bg-blue-50'}`}
+                                title="Respuestas Rápidas"
+                            >
+                                <MessageSquare size={18} />
+                            </button>
                             <input
                                 type="text"
                                 value={newComment}
                                 onChange={(e) => setNewComment(e.target.value)}
                                 placeholder="Escribe un mensaje de seguimiento..."
-                                className="flex-1 px-6 bg-transparent outline-none text-[13px] font-medium placeholder:text-slate-400"
+                                className="flex-1 px-2 bg-transparent outline-none text-[13px] font-medium placeholder:text-slate-400"
                             />
                             <button
                                 type="submit"

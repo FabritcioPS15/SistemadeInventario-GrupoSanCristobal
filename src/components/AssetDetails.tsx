@@ -1,4 +1,5 @@
-import { X, Monitor, MapPin, Camera, ExternalLink } from 'lucide-react';
+import { X, Monitor, MapPin, Camera, ExternalLink, Eye, EyeOff, Copy, Check, User } from 'lucide-react';
+import { useState } from 'react';
 import { AssetWithDetails } from '../lib/supabase';
 
 type AssetDetailsProps = {
@@ -7,6 +8,22 @@ type AssetDetailsProps = {
 };
 
 export default function AssetDetails({ asset, onClose }: AssetDetailsProps) {
+  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [copiedItems, setCopiedItems] = useState<Record<string, boolean>>({});
+
+  const togglePasswordVisibility = (id: string) => {
+    setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedItems({ ...copiedItems, [id]: true });
+      setTimeout(() => setCopiedItems({ ...copiedItems, [id]: false }), 2000);
+    } catch (err) {
+      console.error('Failed to copy!', err);
+    }
+  };
   const statusColors = {
     active: 'bg-green-100 text-green-800',
     inactive: 'bg-gray-100 text-gray-800',
@@ -141,8 +158,51 @@ export default function AssetDetails({ asset, onClose }: AssetDetailsProps) {
             </div>
           )}
 
+          {asset.resource_credentials && asset.resource_credentials.length > 0 && (
+            <div className="space-y-4 pt-4 border-t border-gray-100">
+              <div className="flex items-center gap-2">
+                <User size={18} className="text-purple-600" />
+                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Cuentas y Usuarios</h3>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {asset.resource_credentials.map(c => (
+                  <div key={c.id} className="bg-slate-50 p-4 rounded-2xl border border-gray-100 flex items-center justify-between group hover:bg-white transition-all">
+                    <div className="flex-1">
+                      <p className="text-[10px] font-black text-blue-600 uppercase mb-1">{c.label}</p>
+                      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase">Usuario:</span>
+                          <span className="text-sm font-bold font-mono">{c.username || '—'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase">Pass:</span>
+                          <span className="text-sm font-bold font-mono tracking-wider">
+                            {showPasswords[c.id] ? (c.password || '—') : '••••••••'}
+                          </span>
+                          <button
+                            onClick={() => togglePasswordVisibility(c.id)}
+                            className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600 transition-colors"
+                          >
+                            {showPasswords[c.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                      {c.notes && <p className="text-[10px] text-gray-500 mt-2 italic font-medium">{c.notes}</p>}
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(c.password || '', `pass-${c.id}`)}
+                      className="p-2.5 hover:bg-blue-50 rounded-xl transition-colors text-slate-400 hover:text-blue-600 ml-4 border border-transparent hover:border-blue-100"
+                    >
+                      {copiedItems[`pass-${c.id}`] ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {asset.notes && (
-            <div>
+            <div className="pt-4 border-t border-gray-100">
               <label className="text-sm font-medium text-gray-500 block mb-1">Notas</label>
               <p className="text-gray-900 whitespace-pre-wrap">{asset.notes}</p>
             </div>

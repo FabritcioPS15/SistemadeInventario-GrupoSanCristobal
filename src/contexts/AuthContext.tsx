@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 
 type User = {
   id: string;

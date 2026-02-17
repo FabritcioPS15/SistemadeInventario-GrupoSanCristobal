@@ -4,6 +4,7 @@ import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { supabase, Camera, Location } from '../lib/supabase';
+import { api } from '../lib/api';
 import CameraForm from '../components/forms/CameraForm';
 import { useAuth } from '../contexts/AuthContext';
 import { RiFileExcel2Line } from "react-icons/ri";

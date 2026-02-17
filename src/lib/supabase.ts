@@ -129,6 +129,7 @@ export type Asset = {
   resolucion_pantalla?: string;
   tipo_conexion?: string;
   luminosidad?: string;
+  resource_credentials?: ResourceCredential[];
 };
 
 export type AssetWithDetails = Asset & {
@@ -172,18 +173,32 @@ export type Camera = {
   camera_disks?: CameraDisk[];
 };
 
+export type ResourceCredential = {
+  id: string;
+  resource_id: string;
+  resource_type: 'server' | 'mtc_acceso' | 'asset';
+  label: string;
+  username?: string;
+  password?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Server = {
   id: string;
   name: string;
   location_id?: string;
   ip_address?: string;
   anydesk_id?: string;
+  anydesk_password?: string;
   username?: string;
   password?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
   locations?: Location;
+  resource_credentials?: ResourceCredential[];
 };
 
 export type SutranVisit = {
@@ -219,6 +234,19 @@ export type BranchAudit = {
   created_at: string;
   updated_at: string;
   locations?: Location;
+};
+
+export type MTCAcceso = {
+  id: string;
+  name: string;
+  url: string;
+  username?: string;
+  password?: string;
+  access_type: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  resource_credentials?: ResourceCredential[];
 };
 
 // Re-exportar tipos y funciones de relaciones

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Building2, Calendar, FileText, User, MapPin, Clock, Info, CheckCircle, AlertTriangle, Trash2, Edit, X, Download, Star, Eye, Send } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { api } from '../lib/api';
-import type { SutranVisit } from '../lib/supabase';
+import { supabase, type SutranVisit } from '../lib/supabase';
 import SutranVisitForm from '../components/forms/SutranVisitForm';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -139,6 +139,14 @@ export default function Sutran() {
       case 'de_gabinete': return 'De gabinete';
       default: return 'Desconocido';
     }
+  };
+
+  const formatLocalDate = (dateStr: string) => {
+    if (!dateStr) return '---';
+    const [year, month, day] = dateStr.split('-');
+    if (!year || !month || !day) return dateStr;
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return `${day} ${months[parseInt(month) - 1]} ${year}`;
   };
 
   const typeColors: Record<string, string> = {
@@ -369,7 +377,7 @@ export default function Sutran() {
                           <div className="flex items-center gap-1.5 p-2 px-3 bg-slate-50 border border-slate-100 rounded-lg w-fit">
                             <Calendar size={14} className="text-slate-400" />
                             <span className="font-bold text-slate-900 text-[11px] uppercase">
-                              {new Date(visit.visit_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {formatLocalDate(visit.visit_date)}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-bold uppercase tracking-tight">
@@ -490,7 +498,7 @@ export default function Sutran() {
                         <div className="space-y-4">
                           <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                             <span className="text-sm text-gray-500">Fecha de Inspección</span>
-                            <p className="text-sm font-bold text-gray-900">{viewingVisit.visit_date}</p>
+                            <p className="text-sm font-bold text-gray-900">{formatLocalDate(viewingVisit.visit_date)}</p>
                           </div>
                           <div className="flex justify-between items-center pb-2 border-b border-gray-200">
                             <span className="text-sm text-gray-500">Tipo de Visita</span>

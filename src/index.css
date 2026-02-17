@@ -6,6 +6,21 @@
   * {
     font-family: 'Sansation', sans-serif;
   }
+
+  /* Standard typography system */
+  h1 { @apply text-3xl font-black uppercase tracking-tight text-slate-800; }
+  h2 { @apply text-xl font-black uppercase tracking-tight text-slate-800; }
+  h3 { @apply text-base font-black uppercase tracking-tight text-slate-800; }
+  p { @apply text-[13px] font-medium text-slate-600 leading-relaxed; }
+  
+  /* Global Table Standardization */
+  table { @apply w-full text-[12px] text-left text-slate-700 bg-white; }
+  thead th { @apply px-6 py-4 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 bg-slate-50 border-b border-slate-200; }
+  tbody td { @apply px-6 py-4 border-b border-slate-100 font-bold; }
+  
+  /* Custom Utilities */
+  .detail-label { @apply text-[10px] font-black uppercase tracking-widest text-slate-400; }
+  .detail-value { @apply text-[13px] font-bold text-slate-700; }
 }
 
 @layer utilities {

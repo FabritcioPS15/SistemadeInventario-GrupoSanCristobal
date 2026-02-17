@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Settings, HelpCircle, LayoutGrid, Menu, Pin, PinOff, AlertTriangle } from 'lucide-react';
 import { supabase, SutranVisit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,11 +12,10 @@ type TopHeaderProps = {
 export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
     const [sutranNotifications, setSutranNotifications] = useState<SutranVisit[]>([]);
-    const [vehicleNotifications, setVehicleNotifications] = useState<any[]>([]);
+    const [vehicleNotifications] = useState<any[]>([]);
     const [userLocation, setUserLocation] = useState<string>('');
     const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -93,21 +92,6 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
         };
     }, [user?.location_id, user?.id]);
 
-    // Helper to get readable title from path
-    const getPageTitle = (path: string) => {
-        if (path === '/') return 'Dashboard';
-        if (path.startsWith('/inventory')) return 'Inventario';
-        if (path.startsWith('/tickets')) return 'Mesa de Ayuda';
-        if (path.startsWith('/users')) return 'Usuarios';
-        if (path.startsWith('/flota')) return 'Flota Vehicular';
-        if (path.startsWith('/maintenance')) return 'Mantenimiento';
-        if (path.startsWith('/checklist')) return 'Checklists';
-        if (path.startsWith('/sutran')) return 'SUTRAN';
-        if (path.startsWith('/cameras')) return 'Camaras';
-        if (path.startsWith('/audit')) return 'Auditoría';
-        return 'Página del Sistema';
-    };
-
 
     // Fetch Sutran notifications
     useEffect(() => {
@@ -165,7 +149,9 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
     const getDaysRemaining = (dateString: string) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const targetDate = new Date(dateString);
+
+        const [y, m, d] = dateString.split('-').map(Number);
+        const targetDate = new Date(y, m - 1, d);
         targetDate.setHours(0, 0, 0, 0);
 
         const diffTime = targetDate.getTime() - today.getTime();
@@ -303,7 +289,10 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                                                                         {getDaysRemaining(note.visit_date)}
                                                                     </span>
                                                                     <span className="text-[10px] text-gray-400">
-                                                                        {new Date(note.visit_date).toLocaleDateString('es-ES')}
+                                                                        {(() => {
+                                                                            const [y, m, d] = note.visit_date.split('-');
+                                                                            return `${d}/${m}/${y}`;
+                                                                        })()}
                                                                     </span>
                                                                 </div>
                                                             </div>

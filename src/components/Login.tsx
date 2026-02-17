@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
-import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {

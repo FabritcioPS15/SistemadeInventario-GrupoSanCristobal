@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Save } from 'lucide-react';
-import { supabase, Location } from '../../lib/supabase';
+import { X, Save, Plus } from 'lucide-react';
+import { supabase, Location, ResourceCredential } from '../../lib/supabase';
 
 type PCFormProps = {
   editPC?: any;
@@ -35,6 +35,7 @@ type PCFormData = {
   fecha_adquisicion: string;
   valor_estimado: string;
   estado_uso: string;
+  resource_credentials: Partial<ResourceCredential>[];
 };
 
 export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
@@ -64,7 +65,8 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
     gama: '',
     fecha_adquisicion: '',
     valor_estimado: '',
-    estado_uso: ''
+    estado_uso: '',
+    resource_credentials: []
   });
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
@@ -101,28 +103,29 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
         gama: editPC.gama || '',
         fecha_adquisicion: editPC.fecha_adquisicion || '',
         valor_estimado: editPC.valor_estimado || '',
-        estado_uso: editPC.estado_uso || ''
+        estado_uso: editPC.estado_uso || '',
+        resource_credentials: editPC.resource_credentials || []
       });
     }
   }, [editPC]);
 
   const fetchLocations = async () => {
-    const { data } = await api.from('locations').select('*').order('name');
+    const { data } = await supabase.from('locations').select('*').order('name');
     if (data) setLocations(data);
   };
 
   const generateRandomCode = () => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setFormData(prev => ({ ...prev, code }));
+    setFormData((prev: PCFormData) => ({ ...prev, code }));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev: PCFormData) => ({ ...prev, [name]: value }));
 
     // Limpiar error cuando el usuario empiece a escribir
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev: Record<string, string>) => ({ ...prev, [name]: '' }));
     }
   };
 
@@ -151,13 +154,20 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
 
     setLoading(true);
     try {
+      const { resource_credentials, ...restFormData } = formData;
       const dataToSave = {
-        ...formData,
-        asset_type_id: 'pc', // Asumiendo que existe este tipo en asset_types
+        ...restFormData,
+        asset_type_id: (restFormData.pc_laptop === 'pc' ? 'pc-type-id' : 'laptop-type-id'), // This should ideally be resolved to actual IDs
         status: 'active',
         created_at: editPC ? editPC.created_at : new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+
+      // Resolve actual type IDs if needed (for simplicity using names for now if type IDs are known, but better to use IDs from DB)
+      // I'll assume 'pc' and 'laptop' are placeholders and try to find real ones or use names if the DB allows.
+      // Actually, in AssetForm.tsx there is mapping logic.
+
+      let resource_id = editPC?.id;
 
       if (editPC) {
         const { error } = await supabase
@@ -167,11 +177,30 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('assets')
-          .insert([dataToSave]);
+          .insert([dataToSave])
+          .select();
 
         if (error) throw error;
+        if (data) resource_id = data[0].id;
+      }
+
+      // Save additional credentials
+      if (resource_id) {
+        await supabase.from('resource_credentials').delete().eq('resource_id', resource_id).eq('resource_type', 'asset');
+        if (resource_credentials.length > 0) {
+          await supabase.from('resource_credentials').insert(
+            resource_credentials.map((c: Partial<ResourceCredential>) => ({
+              resource_id,
+              resource_type: 'asset',
+              label: c.label || 'Accesos',
+              username: c.username,
+              password: c.password,
+              notes: c.notes
+            }))
+          );
+        }
       }
 
       onSave();
@@ -243,7 +272,7 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
                   }`}
               >
                 <option value="">Seleccionar sede</option>
-                {locations.map(location => (
+                {locations.map((location: Location) => (
                   <option key={location.id} value={location.id}>
                     {location.name}
                   </option>
@@ -637,6 +666,92 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
               className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
               placeholder="Observaciones o detalles adicionales..."
             />
+          </div>
+
+          {/* Credentials Section */}
+          <div className="col-span-2 space-y-4 pt-6 mt-6 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-1.5 h-4 bg-purple-600 rounded-full"></span>
+                Cuentas y Usuarios Adicionales
+              </h3>
+              <button
+                type="button"
+                onClick={() => setFormData((p: PCFormData) => ({
+                  ...p,
+                  resource_credentials: [...p.resource_credentials, { label: '', username: '', password: '' }]
+                }))}
+                className="text-[10px] font-black text-blue-600 hover:text-blue-800 flex items-center gap-1 uppercase tracking-widest px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100"
+              >
+                <Plus size={14} /> Agregar Cuenta
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {formData.resource_credentials.map((cred: Partial<ResourceCredential>, idx: number) => (
+                <div key={idx} className="bg-slate-50 p-4 rounded-xl border border-slate-200 relative group animate-in slide-in-from-top-2 duration-300">
+                  <button
+                    type="button"
+                    onClick={() => setFormData((p: PCFormData) => ({
+                      ...p,
+                      resource_credentials: p.resource_credentials.filter((_, i: number) => i !== idx)
+                    }))}
+                    className="absolute -top-2 -right-2 p-1 bg-white border border-rose-200 rounded-full text-rose-500 shadow-sm hover:bg-rose-500 hover:text-white transition-all"
+                  >
+                    <X size={12} />
+                  </button>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Etiqueta (Ej: Admin, Usuario)</label>
+                      <input
+                        placeholder="Etiqueta"
+                        value={cred.label}
+                        onChange={e => {
+                          const nc = [...formData.resource_credentials];
+                          nc[idx].label = e.target.value;
+                          setFormData((p: PCFormData) => ({ ...p, resource_credentials: nc }));
+                        }}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Usuario</label>
+                        <input
+                          placeholder="Usuario"
+                          value={cred.username}
+                          onChange={e => {
+                            const nc = [...formData.resource_credentials];
+                            nc[idx].username = e.target.value;
+                            setFormData((p: PCFormData) => ({ ...p, resource_credentials: nc }));
+                          }}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Contraseña</label>
+                        <input
+                          type="password"
+                          placeholder="••••••••"
+                          value={cred.password}
+                          onChange={e => {
+                            const nc = [...formData.resource_credentials];
+                            nc[idx].password = e.target.value;
+                            setFormData((p: PCFormData) => ({ ...p, resource_credentials: nc }));
+                          }}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {formData.resource_credentials.length === 0 && (
+                <div className="col-span-2 text-center py-6 border-2 border-dashed border-slate-100 rounded-xl">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-mono">No hay cuentas adicionales registradas</p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Botones */}

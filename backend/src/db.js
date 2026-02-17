@@ -7,6 +7,7 @@ const pool = new Pool({
     database: process.env.DB_NAME || 'inventario',
     user: process.env.DB_USER || 'admin',
     password: process.env.DB_PASSWORD || 'SecurePassword123',
+    ssl: { rejectUnauthorized: false }, // Required for Supabase
 });
 
 pool.on('error', (err) => {

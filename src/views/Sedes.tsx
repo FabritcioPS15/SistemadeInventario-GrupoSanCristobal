@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Edit, Trash2, MapPin, Building, Users, Package, Eye, X, FileText, ExternalLink, LayoutGrid, List, ChevronUp, ChevronDown, Star } from 'lucide-react';
 import { supabase, Location } from '../lib/supabase';
+import { api } from '../lib/api';
 import LocationForm from '../components/forms/LocationForm';
+import ViewHeader from '../components/ViewHeader';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Sedes() {
@@ -226,70 +228,47 @@ export default function Sedes() {
 
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
-      {/* Title / Tab Bar - Minimalist Executive Style */}
-      <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
-            <Building size={20} />
-          </div>
-          <div>
-            <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Gestión de Sedes</h2>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span>Infraestructura</span>
-              <div className="w-1 h-1 bg-gray-300 rounded-full" />
-              <span>{locations.length} Ubicaciones</span>
-            </div>
-          </div>
-        </div>
-
+      <ViewHeader
+        icon={<Building size={20} />}
+        title="Gestión de Sedes"
+        subtitle="Infraestructura"
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Buscar sedes..."
+        stats={[
+          { label: 'Ubicaciones', value: locations.length }
+        ]}
+      >
         <div className="flex items-center gap-2">
-          <button
-            onClick={async () => {
-              try {
-                const { error } = await api.from('locations').select('id').limit(1);
-                if (error) throw error;
-                alert('Conexión con Supabase exitosa');
-              } catch (err: any) {
-                alert(`Error de conexión: ${err.message}`);
-              }
-            }}
-            className="hidden sm:flex items-center justify-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition-all font-bold text-[9px] uppercase tracking-widest mr-2"
-          >
-            <Building size={12} />
-            Test DB
-          </button>
-
           <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
             <div className="flex bg-[#f1f5f9] p-1 rounded-lg">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
                 title="Vista Cuadrícula"
               >
                 <LayoutGrid size={16} />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
                 title="Vista Lista"
               >
                 <List size={16} />
               </button>
             </div>
-            {canEdit() && (
-              <button
-                onClick={() => {
-                  setEditingLocation(undefined);
-                  setShowForm(true);
-                }}
-                className="p-2 ml-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
-                title="Nueva Sede"
-              >
-                <Plus size={18} />
-              </button>
-            )}
           </div>
 
+          <button
+            onClick={() => {
+              setEditingLocation(undefined);
+              setShowForm(true);
+            }}
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
+            title="Nueva Sede"
+          >
+            <Plus size={20} />
+          </button>
           <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
             <Star size={18} />
           </button>
@@ -297,7 +276,7 @@ export default function Sedes() {
             <X size={18} />
           </button>
         </div>
-      </div>
+      </ViewHeader>
 
       <div className="p-6 space-y-6">
 

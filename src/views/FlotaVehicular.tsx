@@ -107,14 +107,17 @@ export default function FlotaVehicular() {
   const fetchSchools = async () => {
     try {
       const { data, error } = await api.from('locations').select();
-      if (!error && data) setSchools(data);
-    } catch (error) { console.error('Error al cargar las escuelas:', error); }
+      if (error) throw error;
+      if (data) setSchools(data);
+    } catch (err: any) {
+      console.error('Error al cargar las escuelas:', err);
+    }
   };
 
   const getEstadoBadge = (estado: string) => {
     const symbols = { activa: 'Activa', en_proceso: 'En proceso', inactiva: 'Inactiva' };
     const colors = { activa: 'bg-green-100 text-green-800', en_proceso: 'bg-yellow-100 text-yellow-800', inactiva: 'bg-gray-100 text-gray-800' };
-    return <span className={`px-2 py-1 text-[10px] font-black uppercase tracking-tight rounded-full ${colors[estado as keyof typeof colors]}`}>{symbols[estado as keyof typeof symbols]}</span>;
+    return <span className={`px-2 py-1 detail-label rounded-full ${colors[estado as keyof typeof colors]}`}>{symbols[estado as keyof typeof symbols]}</span>;
   };
 
   const getEscuelaNombre = (ubicacionActual: string) => {
@@ -149,10 +152,15 @@ export default function FlotaVehicular() {
   const fetchVehiculos = async () => {
     try {
       setLoading(true);
-      const { data, error } = await api.from('vehicles').select();
+      const { data, error } = await api.from('vehiculos').select();
       if (error) throw error;
       setVehiculos(data || []);
-    } catch (error) { console.error('Error al cargar vehículos:', error); } finally { setLoading(false); }
+    } catch (err: any) {
+      console.error('Error al cargar vehículos:', err);
+      alert(`Error al cargar la flota: ${err.message || 'Error de conexión'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetForm = () => {
@@ -162,19 +170,67 @@ export default function FlotaVehicular() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.placa || !form.marca || !form.modelo) return;
-    const payload = { ...form, updated_at: new Date().toISOString() };
+    if (!form.placa || !form.marca || !form.modelo) {
+      alert('Por favor complete los campos obligatorios (Placa, Marca, Modelo)');
+      return;
+    }
+
+    // Sanitize payload: convert empty strings to null for DB columns (dates, foreign keys)
+    const sanitize = (val: string) => val.trim() === '' ? null : val;
+
+    const payload = {
+      ...form,
+      ubicacion_actual: sanitize(form.ubicacion_actual),
+      fecha_ultimo_mantenimiento: sanitize(form.fecha_ultimo_mantenimiento),
+      citv_emision: sanitize(form.citv_emision),
+      citv_vencimiento: sanitize(form.citv_vencimiento),
+      soat_emision: sanitize(form.soat_emision),
+      soat_vencimiento: sanitize(form.soat_vencimiento),
+      poliza_emision: sanitize(form.poliza_emision),
+      poliza_vencimiento: sanitize(form.poliza_vencimiento),
+      contrato_alquiler_emision: sanitize(form.contrato_alquiler_emision),
+      contrato_alquiler_vencimiento: sanitize(form.contrato_alquiler_vencimiento),
+      updated_at: new Date().toISOString()
+    };
+
     try {
-      if (editing) await api.from('vehicles').update(payload).eq('id', editing.id);
-      else await api.from('vehicles').insert(form);
-      fetchVehiculos(); setShowForm(false); resetForm();
-    } catch (error) { console.error('Error saving:', error); }
+      setLoading(true);
+      let result;
+
+      if (editing) {
+        result = await api.from('vehiculos').update(payload).eq('id', editing.id);
+      } else {
+        result = await api.from('vehiculos').insert(payload);
+      }
+
+      if (result.error) throw result.error;
+
+      alert(editing ? 'Vehículo actualizado correctamente' : 'Vehículo creado correctamente');
+      fetchVehiculos();
+      setShowForm(false);
+      resetForm();
+    } catch (err: any) {
+      console.error('Error saving:', err);
+      alert(`Error al guardar: ${err.message || 'Error desconocido'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('¿Eliminar vehículo?')) return;
-    await api.from('vehicles').delete().eq('id', id);
-    fetchVehiculos();
+    if (!confirm('¿Está seguro de eliminar este vehículo? Esta acción no se puede deshacer.')) return;
+    try {
+      setLoading(true);
+      const { error } = await api.from('vehiculos').delete().eq('id', id);
+      if (error) throw error;
+      alert('Vehículo eliminado correctamente');
+      fetchVehiculos();
+    } catch (err: any) {
+      console.error('Error deleting:', err);
+      alert(`Error al eliminar: ${err.message || 'Error desconocido'}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEdit = (v: Vehiculo) => {
@@ -257,10 +313,10 @@ export default function FlotaVehicular() {
           anio: v.año,
           estado: v.estado.toUpperCase().replace('_', ' '),
           ubicacion: getEscuelaNombre(v.ubicacion_actual).toUpperCase(),
-          soat: v.soat_vencimiento ? new Date(v.soat_vencimiento).toLocaleDateString() : '---',
-          citv: v.citv_vencimiento ? new Date(v.citv_vencimiento).toLocaleDateString() : '---',
-          poliza: v.poliza_vencimiento ? new Date(v.poliza_vencimiento).toLocaleDateString() : '---',
-          contrato: v.contrato_alquiler_vencimiento ? new Date(v.contrato_alquiler_vencimiento).toLocaleDateString() : '---',
+          soat: formatLocalDate(v.soat_vencimiento),
+          citv: formatLocalDate(v.citv_vencimiento),
+          poliza: formatLocalDate(v.poliza_vencimiento),
+          contrato: formatLocalDate(v.contrato_alquiler_vencimiento),
           notas: v.notas || ''
         });
       });
@@ -292,10 +348,25 @@ export default function FlotaVehicular() {
     }
   };
 
+  const formatLocalDate = (dateStr?: string) => {
+    if (!dateStr) return '---';
+    // dateStr is expected to be YYYY-MM-DD
+    const [year, month, day] = dateStr.split('-');
+    if (!year || !month || !day) return dateStr;
+    return `${day}/${month}/${year}`;
+  };
+
   const getExpirationStatus = (dateStr?: string) => {
     if (!dateStr) return { label: '---', color: 'text-gray-300', bg: 'bg-gray-50' };
-    const date = new Date(dateStr);
+
+    // Parse YYYY-MM-DD as local midnight
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+
+    // Today at local midnight
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const diffTime = date.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -308,7 +379,7 @@ export default function FlotaVehicular() {
     const status = getExpirationStatus(date);
     return (
       <div className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded border border-opacity-50 min-w-[70px] ${status.bg} ${status.color}`}>
-        <span className="text-[10px] font-bold">{date ? new Date(date).toLocaleDateString() : '---'}</span>
+        <span className="text-[10px] font-bold">{formatLocalDate(date)}</span>
       </div>
     );
   };
@@ -350,7 +421,7 @@ export default function FlotaVehicular() {
       {/* Sticky Secondary Header (Filters) */}
       <div className={`bg-white border-b border-[#e2e8f0] px-6 py-3 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 sticky top-14 z-20 shadow-sm transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto items-center">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filtrar por:</span>
+          <span className="detail-label">Filtrar por:</span>
           {/* Status Pills */}
           <div className="flex bg-[#f1f5f9] p-1 rounded-lg border w-fit overflow-x-auto">
             {['todos'].map(status => (
@@ -406,7 +477,10 @@ export default function FlotaVehicular() {
             {paginatedVehiculos.map(v => (
               <div key={v.id} className="bg-white rounded-2xl shadow-sm border hover:shadow-xl transition-all p-6 flex flex-col group">
                 <div className="flex justify-between items-start mb-4">
-                  <div><h3 className="text-sm font-black text-[#002855] uppercase">{v.placa}</h3><p className="text-[10px] text-slate-400 font-bold">{v.marca} {v.modelo} - {v.color}</p></div>
+                  <div>
+                    <h3 className="mb-0.5">{v.placa}</h3>
+                    <p className="detail-label">{v.marca} {v.modelo} - {v.color}</p>
+                  </div>
                   {getEstadoBadge(v.estado)}
                 </div>
 
@@ -426,29 +500,27 @@ export default function FlotaVehicular() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase mb-6"><MapPin size={14} className="text-rose-500" /> {getEscuelaNombre(v.ubicacion_actual)}</div>
-                <div className="mt-auto flex gap-2 pt-4 border-t">
-                  <button onClick={() => handleEdit(v)} className="flex-1 py-2 text-[9px] font-black uppercase border rounded-lg">Editar</button>
-                  <button onClick={() => handleDelete(v.id)} className="p-2 text-rose-500 border border-rose-100 rounded-lg hover:bg-rose-500 hover:text-white"><Trash2 size={14} /></button>
+                <div className="flex items-center gap-2 detail-label mb-6"><MapPin size={14} className="text-rose-500" /> {getEscuelaNombre(v.ubicacion_actual)}</div>
+                <div className="mt-auto flex gap-2 pt-4 border-t border-slate-50">
+                  <button onClick={() => handleEdit(v)} className="flex-1 py-2 text-[10px] font-black uppercase border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">Editar</button>
+                  <button onClick={() => handleDelete(v.id)} className="p-2 text-rose-500 border border-rose-100 rounded-xl hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={16} /></button>
                 </div>
               </div>
             ))}
           </div>
         ) : (
           <div className="bg-white overflow-x-auto">
-            <table className="min-w-full divide-y-2 divide-gray-200 border-collapse">
+            <table className="min-w-full">
               <thead>
-                <tr className="bg-[#f8f9fa]">
-                  <th className="w-12 px-2 py-2 text-center border-r border-b border-gray-200 text-[11px] font-bold text-gray-500">#</th>
-                  <th className="w-10 px-2 py-2 text-center border-r border-b border-gray-200 text-[11px] font-bold text-gray-500">
-                    <input type="checkbox" className="rounded border-gray-300 text-[#002855] focus:ring-[#002855]" />
+                <tr>
+                  <th className="w-12 text-center">#</th>
+                  <th className="w-10 text-center">
+                    <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   </th>
-                  <th className="px-3 py-2 text-left border-r border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-tight group relative">
-                    <div className="flex items-center justify-between cursor-pointer" onClick={() => handleSort('placa')}>
-                      <div className="flex items-center gap-1">Unidad {sortConfig?.key === 'placa' && <span className="text-[#002855]">{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div>
-                    </div>
+                  <th className="cursor-pointer group relative" onClick={() => handleSort('placa')}>
+                    <div className="flex items-center gap-1">Unidad {sortConfig?.key === 'placa' && <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>}</div>
                   </th>
-                  <th className="px-3 py-2 text-left border-r border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-tight group" onClick={() => handleSort('marca')}>
+                  <th className="cursor-pointer group" onClick={() => handleSort('marca')}>
                     <div className="flex items-center gap-1">Marca / Modelo</div>
                   </th>
                   <th className="px-3 py-2 text-left border-r border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-tight" onClick={() => handleSort('color')}>Color</th>
@@ -520,7 +592,7 @@ export default function FlotaVehicular() {
                   ))}
 
                   {/* Estado Filter Header */}
-                  <th className="px-3 py-2 text-center border-b border-gray-200 text-[11px] font-bold text-gray-600 uppercase tracking-tight relative">
+                  <th className="relative text-center">
                     <div className="flex items-center justify-center gap-2 cursor-pointer group" onClick={() => setActiveFilter(activeFilter === 'estado' ? null : 'estado')}>
                       <span>Estado</span>
                       <div className={`p-1 rounded-md transition-all ${columnFilters.estado.length > 0 || sortConfig?.key === 'estado' ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-gray-200 text-slate-400'}`}>
@@ -557,37 +629,37 @@ export default function FlotaVehicular() {
                   <th className="w-16 px-2 py-2 text-center border-b border-gray-200"></th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white">
                 {paginatedVehiculos.map((v, index) => (
-                  <tr key={v.id} className="hover:bg-blue-50/50 transition-colors group text-[12px]">
-                    <td className="px-2 py-1.5 text-center border-r border-gray-200 font-medium text-gray-400">
+                  <tr key={v.id} className="hover:bg-blue-50/50 transition-colors group">
+                    <td className="text-center border-r border-gray-100 text-slate-400">
                       {(currentPage - 1) * itemsPerPage + index + 1}
                     </td>
-                    <td className="px-2 py-1.5 text-center border-r border-gray-200">
-                      <input type="checkbox" className="rounded border-gray-300 text-[#002855] focus:ring-[#002855]" />
+                    <td className="text-center border-r border-gray-100">
+                      <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                     </td>
-                    <td className="px-3 py-1.5 border-r border-gray-200 font-bold text-[#002855] cursor-pointer hover:underline" onClick={() => handleEdit(v)}>
+                    <td className="border-r border-gray-100 text-blue-700 cursor-pointer hover:underline" onClick={() => handleEdit(v)}>
                       {v.placa}
                     </td>
-                    <td className="px-3 py-1.5 border-r border-gray-200 text-gray-600 font-medium">
+                    <td className="border-r border-gray-100">
                       {v.marca} {v.modelo}
                     </td>
-                    <td className="px-3 py-1.5 border-r border-gray-200 text-gray-600 uppercase">
+                    <td className="border-r border-gray-100 uppercase">
                       {v.color || '---'}
                     </td>
-                    <td className="px-3 py-1.5 border-r border-gray-200 text-gray-600 uppercase">
+                    <td className="border-r border-gray-100">
                       {getEscuelaNombre(v.ubicacion_actual)}
                     </td>
-                    <td className="px-2 py-1.5 border-r border-gray-200 text-center">
+                    <td className="border-r border-gray-100 text-center">
                       <RenderDocBadge date={v.soat_vencimiento} />
                     </td>
-                    <td className="px-2 py-1.5 border-r border-gray-200 text-center">
+                    <td className="border-r border-gray-100 text-center">
                       <RenderDocBadge date={v.citv_vencimiento} />
                     </td>
-                    <td className="px-2 py-1.5 border-r border-gray-200 text-center">
+                    <td className="border-r border-gray-100 text-center">
                       <RenderDocBadge date={v.poliza_vencimiento} />
                     </td>
-                    <td className="px-3 py-1.5 border-r border-gray-200 text-center">
+                    <td className="border-r border-gray-100 text-center">
                       {getEstadoBadge(v.estado)}
                     </td>
                     <td className="px-2 py-1.5 text-center">

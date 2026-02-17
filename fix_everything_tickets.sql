@@ -46,12 +46,23 @@ ALTER TABLE public.tickets
   ADD COLUMN IF NOT EXISTS attended_at TIMESTAMP WITH TIME ZONE;
 
 -- 3. OPTIMIZATION PHASE: Realtime and Indexes
+-- 3. OPTIMIZATION PHASE: Realtime and Indexes
 CREATE INDEX IF NOT EXISTS idx_tickets_assigned_to ON public.tickets(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_tickets_requester_id ON public.tickets(requester_id);
 
 -- Enable Realtime (Crucial for the "Atender" status to show up instantly)
--- We remove and re-add to be sure
-ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS public.tickets, public.ticket_comments;
+DO $$
+BEGIN
+    -- Drop tables from publication if they exist
+    IF EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'tickets') THEN
+        ALTER PUBLICATION supabase_realtime DROP TABLE public.tickets;
+    END IF;
+    
+    IF EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'ticket_comments') THEN
+        ALTER PUBLICATION supabase_realtime DROP TABLE public.ticket_comments;
+    END IF;
+END $$;
+
 ALTER PUBLICATION supabase_realtime ADD TABLE public.tickets, public.ticket_comments;
 
 -- 4. SECURITY PHASE: Global Transparent Policies

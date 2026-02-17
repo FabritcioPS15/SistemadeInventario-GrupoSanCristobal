@@ -1,23 +1,11 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { api } from '../../lib/api';
-
-type MTCAcceso = {
-  id: string;
-  name: string;
-  url: string;
-  username?: string;
-  password?: string;
-  access_type: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-};
+import { AlertCircle, CheckCircle, Loader2, Plus, X } from 'lucide-react';
+import { supabase, ResourceCredential } from '../../lib/supabase';
 
 type MTCAccesoFormProps = {
   onClose: () => void;
   onSave: () => void;
-  editAcceso?: MTCAcceso;
+  editAcceso?: any;
 };
 
 export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAccesoFormProps) {
@@ -33,9 +21,9 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
     password: editAcceso?.password || '',
     access_type: editAcceso?.access_type || 'web',
     notes: editAcceso?.notes || '',
+    resource_credentials: (editAcceso?.resource_credentials || []) as Partial<ResourceCredential>[],
   });
 
-  // Detectar cambios en el formulario
   useEffect(() => {
     if (editAcceso) {
       const originalData = {
@@ -45,16 +33,15 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
         password: editAcceso.password || '',
         access_type: editAcceso.access_type,
         notes: editAcceso.notes || '',
+        resource_credentials: editAcceso.resource_credentials || [],
       };
-
       const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
       setHasChanges(hasFormChanges);
     }
   }, [formData, editAcceso]);
 
-  // Funciones de validación
   const validateURL = (url: string): boolean => {
-    if (!url) return false; // Campo requerido
+    if (!url) return false;
     try {
       new URL(url);
       return true;
@@ -64,29 +51,22 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
   };
 
   const checkDuplicateAccessName = async (name: string, currentAccessId?: string): Promise<boolean> => {
-    if (!name) return false; // Campo requerido
-
+    if (!name) return false;
     const { data, error } = await supabase
       .from('mtc_accesos')
       .select('id')
       .eq('name', name);
-
     if (error) return false;
-
-    // Si estamos editando, excluir el acceso actual
     if (currentAccessId && data) {
       return !data.some(access => access.id !== currentAccessId);
     }
-
     return data?.length === 0;
   };
 
   const validateField = async (fieldName: string, value: string) => {
     setValidationStatus(prev => ({ ...prev, [fieldName]: 'checking' }));
-
     let isValid = true;
     let errorMessage = '';
-
     switch (fieldName) {
       case 'name':
         if (!value.trim()) {
@@ -103,7 +83,6 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
           }
         }
         break;
-
       case 'url':
         if (!value.trim()) {
           isValid = false;
@@ -114,196 +93,117 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
         }
         break;
     }
-
     setValidationStatus(prev => ({ ...prev, [fieldName]: isValid ? 'valid' : 'invalid' }));
     setErrors(prev => ({ ...prev, [fieldName]: errorMessage }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validar campos requeridos
     const requiredFields = ['name', 'url', 'access_type'];
     const newErrors: Record<string, string> = {};
-
     requiredFields.forEach(field => {
       if (!formData[field as keyof typeof formData]) {
         newErrors[field] = 'Este campo es requerido';
       }
     });
-
-    // Validar campos con formato específico
     if (formData.url && !validateURL(formData.url)) {
       newErrors.url = 'URL inválida';
     }
-
     setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
-    if (Object.keys(newErrors).length > 0) {
-      return;
-    }
-
-    // Confirmar cambios si estamos editando
     if (editAcceso && hasChanges) {
-      const confirmed = window.confirm(
-        '¿Estás seguro de que quieres guardar los cambios realizados?'
-      );
-      if (!confirmed) return;
+      if (!window.confirm('¿Estás seguro de que quieres guardar los cambios?')) return;
     }
 
     setLoading(true);
-
-    const dataToSave = {
-      ...formData,
-      updated_at: new Date().toISOString(),
-    };
+    const { resource_credentials, ...submitData } = formData;
+    const dataToSave = { ...submitData, updated_at: new Date().toISOString() };
 
     try {
+      let resource_id = editAcceso?.id;
       if (editAcceso) {
-        const { error } = await supabase
-          .from('mtc_accesos')
-          .update(dataToSave)
-          .eq('id', editAcceso.id);
-
-        if (error) {
-          console.error('Error al actualizar acceso MTC:', error);
-          setErrors({ submit: 'Error al actualizar el acceso MTC: ' + error.message });
-          setLoading(false);
-          return;
-        }
+        const { error } = await supabase.from('mtc_accesos').update(dataToSave).eq('id', editAcceso.id);
+        if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('mtc_accesos')
-          .insert([dataToSave]);
-
-        if (error) {
-          console.error('Error al crear acceso MTC:', error);
-          setErrors({ submit: 'Error al crear el acceso MTC: ' + error.message });
-          setLoading(false);
-          return;
-        }
+        const { data, error } = await supabase.from('mtc_accesos').insert([dataToSave]).select();
+        if (error) throw error;
+        if (data) resource_id = data[0].id;
       }
 
+      if (resource_id) {
+        await supabase.from('resource_credentials').delete().eq('resource_id', resource_id).eq('resource_type', 'mtc_acceso');
+        if (resource_credentials.length > 0) {
+          await supabase.from('resource_credentials').insert(
+            resource_credentials.map(c => ({
+              resource_id,
+              resource_type: 'mtc_acceso',
+              label: c.label || 'Accesos',
+              username: c.username,
+              password: c.password,
+              notes: c.notes
+            }))
+          );
+        }
+      }
       setLoading(false);
       onSave();
-    } catch (err) {
-      console.error('Error:', err);
-      setErrors({ submit: 'Error inesperado: ' + err });
+    } catch (err: any) {
+      console.error('Error saving:', err);
+      setErrors({ submit: 'Error al guardar: ' + (err.message || err) });
       setLoading(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    // Limpiar error del campo cuando el usuario empiece a escribir
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-
-    // Validar campos específicos en tiempo real (con debounce)
-    const fieldsToValidate = ['name', 'url'];
-    if (fieldsToValidate.includes(name)) {
-      // Debounce para evitar muchas validaciones
-      setTimeout(() => {
-        validateField(name, value);
-      }, 500);
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    if (['name', 'url'].includes(name)) {
+      setTimeout(() => validateField(name, value), 500);
     }
   };
 
-  // Función helper para renderizar el estado de validación
-  const renderValidationIcon = (fieldName: string) => {
-    const status = validationStatus[fieldName];
-    if (status === 'checking') {
-      return <Loader2 size={16} className="text-blue-500 animate-spin" />;
-    } else if (status === 'valid') {
-      return <CheckCircle size={16} className="text-green-500" />;
-    } else if (status === 'invalid') {
-      return <AlertCircle size={16} className="text-red-500" />;
-    }
-    return null;
-  };
-
-  // Función helper para obtener clases CSS del campo
   const getFieldClasses = (fieldName: string) => {
-    const baseClasses = "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2";
+    const baseClasses = "w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 transition-all text-sm";
     const status = validationStatus[fieldName];
-
-    if (status === 'invalid' || errors[fieldName]) {
-      return `${baseClasses} border-red-300 focus:ring-red-500`;
-    } else if (status === 'valid') {
-      return `${baseClasses} border-green-300 focus:ring-green-500`;
-    }
-
-    return `${baseClasses} border-gray-300 focus:ring-blue-500`;
+    if (status === 'invalid' || errors[fieldName]) return `${baseClasses} border-rose-300 focus:ring-rose-500 bg-rose-50/30`;
+    if (status === 'valid') return `${baseClasses} border-emerald-300 focus:ring-emerald-500 bg-emerald-50/30`;
+    return `${baseClasses} border-slate-200 focus:ring-blue-500 bg-white`;
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-      <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between bg-slate-50/50">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-500">
+      <div className="border-b border-slate-100 px-6 py-5 flex items-center justify-between bg-slate-50/50">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
+          <h2 className="text-lg font-black text-[#002855] uppercase tracking-tight">
             {editAcceso ? 'Editar Acceso MTC' : 'Nuevo Acceso MTC'}
           </h2>
           {editAcceso && hasChanges && (
-            <p className="text-xs text-orange-600 mt-0.5 font-bold uppercase tracking-wider flex items-center gap-1">
-              <AlertCircle size={12} />
-              Cambios sin guardar
+            <p className="text-[10px] text-orange-600 mt-1 font-bold uppercase tracking-widest flex items-center gap-1">
+              <AlertCircle size={12} /> Cambios sin guardar
             </p>
           )}
         </div>
-        {/* Close button removed or handled by parent if needed. For embedded form, we usually have 'Cancel' at bottom */}
       </div>
 
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
-        {/* Mensaje de error general */}
+      <form onSubmit={handleSubmit} className="p-8 space-y-8">
         {errors.submit && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm flex items-center gap-2 text-red-700">
-            <AlertCircle size={16} />
-            <p>{errors.submit}</p>
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-xs font-bold text-rose-700 flex items-center gap-3">
+            <AlertCircle size={18} /> <p>{errors.submit}</p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="col-span-1 md:col-span-2">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Nombre del Acceso *
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className={`${getFieldClasses('name')} text-sm placeholder:text-gray-300`}
-                placeholder="Ej: Portal MTC Principal"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {renderValidationIcon('name')}
-              </div>
-            </div>
-            {errors.name && (
-              <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.name}</p>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="md:col-span-2">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Nombre del Acceso *</label>
+            <input name="name" value={formData.name} onChange={handleChange} required className={getFieldClasses('name')} placeholder="Ej: Portal MTC Principal" />
+            {errors.name && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase">{errors.name}</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Tipo de Acceso *
-            </label>
-            <select
-              name="access_type"
-              value={formData.access_type}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all bg-white"
-            >
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Tipo de Acceso *</label>
+            <select name="access_type" value={formData.access_type} onChange={handleChange} required className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 bg-white font-bold text-slate-700">
               <option value="web">Web Service / Portal</option>
               <option value="api">API Endpoint</option>
               <option value="ftp">Servidor FTP</option>
@@ -314,108 +214,93 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-              URL de Destino *
-            </label>
-            <div className="relative">
-              <input
-                type="url"
-                name="url"
-                value={formData.url}
-                onChange={handleChange}
-                required
-                className={`${getFieldClasses('url')} text-sm placeholder:text-gray-300`}
-                placeholder="https://portal.mtc.gob.pe"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {renderValidationIcon('url')}
-              </div>
-            </div>
-            {errors.url && (
-              <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.url}</p>
-            )}
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">URL de Destino *</label>
+            <input type="url" name="url" value={formData.url} onChange={handleChange} required className={getFieldClasses('url')} placeholder="https://portal.mtc.gob.pe" />
+            {errors.url && <p className="text-rose-500 text-[10px] mt-1.5 font-bold uppercase">{errors.url}</p>}
           </div>
 
-          <div className="col-span-1 md:col-span-2 border-t border-gray-100 pt-6 mt-2">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
-              Credenciales de Acceso
-            </h3>
+          <div className="md:col-span-2 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-1.5 h-4 bg-blue-600 rounded-full"></span> Credenciales Principales
+              </h3>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Usuario / ID
-                </label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300"
-                  placeholder="usuario@mtc.gob.pe"
-                />
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Usuario / ID</label>
+                <input name="username" value={formData.username} onChange={handleChange} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono shadow-sm" placeholder="usuario@mtc.gob.pe" />
               </div>
-
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Contraseña / Token
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300"
-                  placeholder="••••••••"
-                />
+                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Contraseña / Token</label>
+                <input type="password" name="password" value={formData.password} onChange={handleChange} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono shadow-sm" placeholder="••••••••" />
               </div>
             </div>
           </div>
 
-          <div className="col-span-1 md:col-span-2">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Notas y Observaciones
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300 resize-none"
-              placeholder="Información adicional sobre el acceso, restricciones, etc..."
-            />
+          <div className="md:col-span-2 space-y-4 pt-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-1.5 h-4 bg-purple-600 rounded-full"></span> Cuentas Adicionales
+              </h3>
+              <button type="button" onClick={() => setFormData(p => ({ ...p, resource_credentials: [...p.resource_credentials, { label: '', username: '', password: '' }] }))} className="text-[10px] font-black text-blue-600 hover:text-blue-800 flex items-center gap-1 uppercase tracking-widest px-2 py-1 bg-blue-50 rounded-lg border border-blue-100">
+                <Plus size={12} /> Agregar Cuenta
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {formData.resource_credentials.map((cred, idx) => (
+                <div key={idx} className="bg-slate-50/50 p-5 rounded-2xl border border-slate-200 relative group animate-in zoom-in-95 duration-200">
+                  <button type="button" onClick={() => setFormData(p => ({ ...p, resource_credentials: p.resource_credentials.filter((_, i) => i !== idx) }))} className="absolute -top-2 -right-2 p-1.5 bg-white border border-rose-200 rounded-full text-rose-500 shadow-md hover:bg-rose-500 hover:text-white transition-all">
+                    <X size={12} />
+                  </button>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Etiqueta / Rol</label>
+                      <input placeholder="Ej: Administrador" value={cred.label} onChange={e => {
+                        const nc = [...formData.resource_credentials]; nc[idx].label = e.target.value;
+                        setFormData(p => ({ ...p, resource_credentials: nc }));
+                      }} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Usuario</label>
+                      <input placeholder="Usuario" value={cred.username} onChange={e => {
+                        const nc = [...formData.resource_credentials]; nc[idx].username = e.target.value;
+                        setFormData(p => ({ ...p, resource_credentials: nc }));
+                      }} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Contraseña</label>
+                      <input type="password" placeholder="••••••••" value={cred.password} onChange={e => {
+                        const nc = [...formData.resource_credentials]; nc[idx].password = e.target.value;
+                        setFormData(p => ({ ...p, resource_credentials: nc }));
+                      }} className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {formData.resource_credentials.length === 0 && (
+                <div className="text-center py-6 border-2 border-dashed border-slate-100 rounded-2xl">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No hay cuentas adicionales</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="md:col-span-2 pt-4">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">Notas y Observaciones</label>
+            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3} className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 bg-white resize-none" placeholder="Detalles técnicos u observaciones importantes..." />
           </div>
         </div>
 
-        <div className="pt-6 border-t border-gray-100 flex gap-3 justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="px-6 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-slate-700 transition-colors disabled:opacity-50"
-          >
+        <div className="pt-8 border-t border-slate-100 flex gap-4 justify-end">
+          <button type="button" onClick={onClose} disabled={loading} className="px-8 py-3 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-all active:scale-95 shadow-sm">
             Cancelar
           </button>
-          <button
-            type="submit"
-            disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-            className="px-6 py-2.5 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-slate-800 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <CheckCircle size={14} />
-                {editAcceso ? 'Actualizar' : 'Crear'} Acceso
-              </>
-            )}
+          <button type="submit" disabled={loading} className="px-8 py-3 bg-[#002855] text-white text-[10px] font-black rounded-xl hover:bg-slate-800 transition-all active:scale-95 shadow-lg flex items-center gap-3 uppercase tracking-[0.2em]">
+            {loading ? <><Loader2 size={16} className="animate-spin" /> Guardando...</> : <><CheckCircle size={16} /> {editAcceso ? 'Actualizar' : 'Crear'} Acceso</>}
           </button>
         </div>
       </form>
     </div>
   );
 }
-

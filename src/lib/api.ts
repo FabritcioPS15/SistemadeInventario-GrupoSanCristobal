@@ -1,109 +1,44 @@
-// API Client for Backend Communication
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// API Client wrapper for Supabase - Ensuring all calls go through the official Supabase client
+import { supabase } from './supabase';
 
 class ApiClient {
-    private baseUrl: string;
-
-    constructor(baseUrl: string) {
-        this.baseUrl = baseUrl;
+    // Delegates to official Supabase client with proper typing
+    from(table: string) {
+        return supabase.from(table as any);
     }
 
-    private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-        const url = `${this.baseUrl}${endpoint}`;
-
-        const config: RequestInit = {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options?.headers,
-            },
-        };
-
-        const response = await fetch(url, config);
-
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ message: 'Request failed' }));
-            throw new Error(error.message || `HTTP Error: ${response.status}`);
-        }
-
-        return response.json();
-    }
-
-    // Generic CRUD operations
+    // Mantener compatibilidad con llamadas directas si existieran
     async getAll<T>(table: string): Promise<T[]> {
-        return this.request<T[]>(`/api/${table}`);
+        const { data, error } = await supabase.from(table).select('*');
+        if (error) throw error;
+        return data as T[];
     }
 
     async getById<T>(table: string, id: string): Promise<T> {
-        return this.request<T>(`/api/${table}/${id}`);
+        const { data, error } = await supabase.from(table).select('*').eq('id', id).single();
+        if (error) throw error;
+        return data as T;
     }
 
     async create<T>(table: string, data: Partial<T>): Promise<T> {
-        return this.request<T>(`/api/${table}`, {
-            method: 'POST',
-            body: JSON.stringify(data),
-        });
+        const { data: created, error } = await supabase.from(table).insert(data).select().single();
+        if (error) throw error;
+        return created as T;
     }
 
     async update<T>(table: string, id: string, data: Partial<T>): Promise<T> {
-        return this.request<T>(`/api/${table}/${id}`, {
-            method: 'PATCH',
-            body: JSON.stringify(data),
-        });
+        const { data: updated, error } = await supabase.from(table).update(data).eq('id', id).select().single();
+        if (error) throw error;
+        return updated as T;
     }
 
     async delete(table: string, id: string): Promise<void> {
-        return this.request<void>(`/api/${table}/${id}`, {
-            method: 'DELETE',
-        });
-    }
-
-    // Specific query methods (matching Supabase pattern)
-    from(table: string) {
-        return {
-            select: async () => {
-                const data = await this.getAll<any>(table);
-                return { data, error: null };
-            },
-            insert: async (values: any) => {
-                try {
-                    const data = await this.create(table, values);
-                    return { data, error: null };
-                } catch (error: any) {
-                    return { data: null, error };
-                }
-            },
-            update: (values: any) => {
-                // Return an object with eq method, NOT a promise
-                return {
-                    eq: async (_field: string, value: any) => {
-                        try {
-                            const data = await this.update(table, value, values);
-                            return { data, error: null };
-                        } catch (error: any) {
-                            return { data: null, error };
-                        }
-                    }
-                };
-            },
-            delete: () => {
-                // Return an object with eq method, NOT a promise
-                return {
-                    eq: async (_field: string, value: any) => {
-                        try {
-                            await this.delete(table, value);
-                            return { data: null, error: null };
-                        } catch (error: any) {
-                            return { data: null, error };
-                        }
-                    }
-                };
-            }
-        };
+        const { error } = await supabase.from(table).delete().eq('id', id);
+        if (error) throw error;
     }
 }
 
-export const api = new ApiClient(API_URL);
+export const api = new ApiClient();
 
 // Re-export types from supabase for compatibility
 export type { Location, Asset, AssetType, AssetWithDetails, CameraDisk } from './supabase';

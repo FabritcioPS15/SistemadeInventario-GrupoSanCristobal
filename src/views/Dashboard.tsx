@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import {
   Package,
   AlertCircle,
@@ -17,9 +17,10 @@ import {
   TrendingUp,
   Calendar
 } from 'lucide-react';
-import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import DonutChart from '../components/charts/DonutChart';
+
+const DonutChart = lazy(() => import('../components/charts/DonutChart'));
 
 interface DashboardStats {
   totalAssets: number;
@@ -128,8 +129,10 @@ export default function Dashboard() {
       const activeVehicles = filteredVehicles.filter(v => v.estado === 'activa').length;
       const maintenanceVehicles = filteredVehicles.filter(v => v.estado === 'en_proceso').length;
 
-      const today = new Date();
-      const thirtyDaysFromNow = new Date();
+      const todayMidnight = new Date();
+      todayMidnight.setHours(0, 0, 0, 0);
+
+      const thirtyDaysFromNow = new Date(todayMidnight);
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
       let expiredSoat = 0, warningSoat = 0;
@@ -139,23 +142,44 @@ export default function Dashboard() {
 
       const expiringPlatesSet = new Set<string>();
 
+      const getSafeDate = (dateStr: string) => {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        return new Date(y, m - 1, d);
+      };
+
       filteredVehicles.forEach(v => {
         let hasIssue = false;
         if (v.soat_vencimiento) {
-          const date = new Date(v.soat_vencimiento);
-          if (date <= thirtyDaysFromNow) { expiredSoat += (date < today ? 1 : 0); warningSoat += (date >= today ? 1 : 0); hasIssue = true; }
+          const date = getSafeDate(v.soat_vencimiento);
+          if (date <= thirtyDaysFromNow) {
+            expiredSoat += (date < todayMidnight ? 1 : 0);
+            warningSoat += (date >= todayMidnight ? 1 : 0);
+            hasIssue = true;
+          }
         }
         if (v.citv_vencimiento) {
-          const date = new Date(v.citv_vencimiento);
-          if (date <= thirtyDaysFromNow) { expiredCitv += (date < today ? 1 : 0); warningCitv += (date >= today ? 1 : 0); hasIssue = true; }
+          const date = getSafeDate(v.citv_vencimiento);
+          if (date <= thirtyDaysFromNow) {
+            expiredCitv += (date < todayMidnight ? 1 : 0);
+            warningCitv += (date >= todayMidnight ? 1 : 0);
+            hasIssue = true;
+          }
         }
         if (v.poliza_vencimiento) {
-          const date = new Date(v.poliza_vencimiento);
-          if (date <= thirtyDaysFromNow) { expiredPoliza += (date < today ? 1 : 0); warningPoliza += (date >= today ? 1 : 0); hasIssue = true; }
+          const date = getSafeDate(v.poliza_vencimiento);
+          if (date <= thirtyDaysFromNow) {
+            expiredPoliza += (date < todayMidnight ? 1 : 0);
+            warningPoliza += (date >= todayMidnight ? 1 : 0);
+            hasIssue = true;
+          }
         }
         if (v.contrato_alquiler_vencimiento) {
-          const date = new Date(v.contrato_alquiler_vencimiento);
-          if (date <= thirtyDaysFromNow) { expiredContrato += (date < today ? 1 : 0); warningContrato += (date >= today ? 1 : 0); hasIssue = true; }
+          const date = getSafeDate(v.contrato_alquiler_vencimiento);
+          if (date <= thirtyDaysFromNow) {
+            expiredContrato += (date < todayMidnight ? 1 : 0);
+            warningContrato += (date >= todayMidnight ? 1 : 0);
+            hasIssue = true;
+          }
         }
         if (hasIssue) expiringPlatesSet.add(v.placa);
       });
@@ -197,18 +221,18 @@ export default function Dashboard() {
         { count: maintenanceAssets },
         { count: pendingMaintenance },
       ] = await Promise.all([
-        api.from('assets').select('*', { count: 'exact', head: true }),
-        api.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        api.from('cameras').select('*', { count: 'exact', head: true }),
-        api.from('cameras').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        api.from('locations').select('*', { count: 'exact', head: true }),
-        api.from('users').select('*', { count: 'exact', head: true }),
-        api.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'maintenance'),
-        api.from('maintenance_records').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('assets').select('*', { count: 'exact', head: true }),
+        supabase.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('cameras').select('*', { count: 'exact', head: true }),
+        supabase.from('cameras').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('locations').select('*', { count: 'exact', head: true }),
+        supabase.from('users').select('*', { count: 'exact', head: true }),
+        supabase.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'maintenance'),
+        supabase.from('maintenance_records').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
 
       // 2. Fetch Ticket Stats
-      const { data: tickets } = await api.from('tickets').select('status, priority, assigned_to');
+      const { data: tickets } = await supabase.from('tickets').select('status, priority, assigned_to');
       const totalTickets = tickets?.length || 0;
       const openTickets = tickets?.filter(t => t.status === 'open' || t.status === 'in_progress').length || 0;
       const criticalTickets = tickets?.filter(t => t.priority === 'critical' && t.status !== 'closed' && t.status !== 'resolved').length || 0;
@@ -399,11 +423,11 @@ export default function Dashboard() {
     return (
       <div className="p-8">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertCircle className="text-red-600" size={20} />
-            <h3 className="text-lg font-semibold text-red-800">Error de Conexión</h3>
+          <div className="flex items-center gap-3 mb-4">
+            <AlertCircle className="text-red-600" size={24} />
+            <h2 className="text-red-800">Error de Conexión</h2>
           </div>
-          <p className="text-red-700 mb-4">{error}</p>
+          <p className="text-red-700 mb-6">{error}</p>
           <button
             onClick={fetchDashboardData}
             className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
@@ -419,8 +443,8 @@ export default function Dashboard() {
     <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="w-full md:w-auto text-center md:text-left">
-          <h2 className="text-2xl font-bold text-gray-900">Dashboard General</h2>
-          <p className="text-gray-600">Resumen de operaciones y estado del sistema</p>
+          <h1>Dashboard General</h1>
+          <p>Resumen de operaciones y estado del sistema</p>
         </div>
         <div className="flex w-full md:w-auto gap-3 justify-center md:justify-end">
           <button
@@ -520,8 +544,8 @@ export default function Dashboard() {
                     <Ticket size={20} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-red-900">Tickets Críticos</h4>
-                    <p className="text-xs text-red-700">{stats.criticalTickets} ticket(s) requieren atención urgente</p>
+                    <h3 className="text-red-900 leading-none mb-1">Tickets Críticos</h3>
+                    <p className="text-red-700">{stats.criticalTickets} ticket(s) requieren atención urgente</p>
                   </div>
                 </div>
                 <ArrowRight size={16} className="text-red-400" />
@@ -534,7 +558,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-3 cursor-pointer" onClick={() => navigate('/flota-vehicular')}>
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="text-orange-600" size={18} />
-                    <h4 className="text-sm font-bold text-orange-900">Alertas de Documentación</h4>
+                    <h3 className="text-orange-900">Alertas de Documentación</h3>
                   </div>
                   <ArrowRight size={16} className="text-orange-400" />
                 </div>
@@ -578,9 +602,9 @@ export default function Dashboard() {
                 </div>
                 <ArrowRight size={20} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
               </div>
-              <h3 className="text-gray-600 text-xs font-medium mb-0.5 uppercase tracking-wide">{stat.title}</h3>
-              <p className="text-2xl font-bold text-gray-900 leading-snug">{stat.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{stat.subtitle}</p>
+              <p className="detail-label mb-1">{stat.title}</p>
+              <h2 className="text-gray-900 leading-none mb-2">{stat.value}</h2>
+              <p className="text-gray-500">{stat.subtitle}</p>
             </div>
           );
         })}
@@ -592,28 +616,32 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <TrendingUp className="text-blue-600" size={20} />
-              <h3 className="text-lg font-semibold text-gray-900">Estado del Sistema</h3>
+              <h2>Estado del Sistema</h2>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div className="flex flex-col sm:flex-row justify-around items-center gap-6 py-4">
-              <DonutChart
-                percentage={stats.totalAssets > 0 ? (stats.activeAssets / stats.totalAssets) * 100 : 0}
-                color="text-blue-600"
-                label={`${stats.totalAssets > 0 ? Math.round((stats.activeAssets / stats.totalAssets) * 100) : 0}%`}
-                subLabel="Activos Ops."
-                size={140}
-                strokeWidth={12}
-              />
-              <DonutChart
-                percentage={stats.totalVehicles > 0 ? (stats.activeVehicles / stats.totalVehicles) * 100 : 0}
-                color="text-indigo-600"
-                label={`${stats.totalVehicles > 0 ? Math.round((stats.activeVehicles / stats.totalVehicles) * 100) : 0}%`}
-                subLabel="Flota activa"
-                size={140}
-                strokeWidth={12}
-              />
+              <Suspense fallback={<div className="h-[140px] w-[140px] flex items-center justify-center text-xs text-slate-400">Cargando...</div>}>
+                <DonutChart
+                  percentage={stats.totalAssets > 0 ? (stats.activeAssets / stats.totalAssets) * 100 : 0}
+                  color="text-blue-600"
+                  label={`${stats.totalAssets > 0 ? Math.round((stats.activeAssets / stats.totalAssets) * 100) : 0}%`}
+                  subLabel="Activos Ops."
+                  size={140}
+                  strokeWidth={12}
+                />
+              </Suspense>
+              <Suspense fallback={<div className="h-[140px] w-[140px] flex items-center justify-center text-xs text-slate-400">Cargando...</div>}>
+                <DonutChart
+                  percentage={stats.totalVehicles > 0 ? (stats.activeVehicles / stats.totalVehicles) * 100 : 0}
+                  color="text-indigo-600"
+                  label={`${stats.totalVehicles > 0 ? Math.round((stats.activeVehicles / stats.totalVehicles) * 100) : 0}%`}
+                  subLabel="Flota activa"
+                  size={140}
+                  strokeWidth={12}
+                />
+              </Suspense>
             </div>
 
             <div className="grid grid-cols-1 gap-4">

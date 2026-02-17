@@ -46,5 +46,5 @@ export function useHeaderVisible(isPinned: boolean = false) {
         return () => document.removeEventListener('scroll', handleScroll, { capture: true });
     }, [isPinned]);
 
-    return isVisible;
+    return true;
 }

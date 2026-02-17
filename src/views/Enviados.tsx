@@ -345,7 +345,12 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                                   {statusLabels[shipment.status]}
                                 </span>
                                 <span className="text-xs text-slate-400 font-bold tracking-wide">
-                                  {new Date(shipment.shipment_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  {(() => {
+                                    if (!shipment.shipment_date) return '---';
+                                    const [y, m, d] = shipment.shipment_date.split('-');
+                                    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                                    return `${d} ${months[parseInt(m) - 1]} ${y}`;
+                                  })()}
                                 </span>
                               </div>
 
@@ -594,7 +599,12 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                       <div className="flex items-center gap-3">
                         <Calendar size={18} className="text-slate-400" />
                         <span className="text-lg font-bold text-slate-800">
-                          {new Date(viewingShipment.shipment_date).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                          {(() => {
+                            if (!viewingShipment.shipment_date) return '---';
+                            const [y, m, d] = viewingShipment.shipment_date.split('-').map(Number);
+                            const date = new Date(y, m - 1, d);
+                            return date.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                          })()}
                         </span>
                       </div>
                     </div>
