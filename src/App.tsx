@@ -26,7 +26,9 @@ import PasswordSetup from './components/PasswordSetup';
 import Checklist from './views/Checklist';
 import Vacations from './views/Vacations';
 import Tickets from './views/Tickets';
+import TicketHistory from './views/TicketHistory';
 import Painpoints from './views/Painpoints';
+import TicketDetail from './views/TicketDetail';
 
 // Componente para proteger rutas basadas en permisos
 function ProtectedRoute({ children, permission }: { children: React.ReactNode, permission?: string }) {
@@ -155,9 +157,11 @@ function AppContent() {
         />
       )}
 
-      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ml-0 ${sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-72'}`}>
-        <TopHeader onMobileMenuClick={() => setIsMobileSidebarOpen(true)} />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}`}>
+        <div className="fixed top-0 left-0 right-0 z-[100]">
+          <TopHeader onMobileMenuClick={() => setIsMobileSidebarOpen(true)} />
+        </div>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto mt-14">
           <Routes>
             <Route path="/" element={<ProtectedRoute permission="dashboard"><Dashboard /></ProtectedRoute>} />
 
@@ -204,6 +208,8 @@ function AppContent() {
             <Route path="/quick-diagnostic" element={<ProtectedRoute permission="quick-diagnostic"><QuickDiagnostic /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute permission="tickets"><Tickets /></ProtectedRoute>} />
             <Route path="/tickets/:view" element={<ProtectedRoute permission="tickets"><Tickets /></ProtectedRoute>} />
+            <Route path="/tickets/history" element={<ProtectedRoute permission="tickets"><TicketHistory /></ProtectedRoute>} />
+            <Route path="/ticket/:ticketId" element={<ProtectedRoute permission="tickets"><TicketDetail /></ProtectedRoute>} />
             <Route path="/painpoint" element={<ProtectedRoute permission="painpoint"><Painpoints /></ProtectedRoute>} />
 
             {/* Fallback */}

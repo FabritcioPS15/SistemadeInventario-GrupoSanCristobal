@@ -255,13 +255,28 @@ export default function FlotaVehicular() {
         ) : (
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden overflow-x-auto">
             <table className="min-w-full divide-y">
-              <thead className="bg-[#f8fafc]"><tr><th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('placa')}>Unidad</th><th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('estado')}>Estado</th><th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('ubicacion_actual')}>Sede</th><th className="px-6 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">Acciones</th></tr></thead>
+              <thead className="bg-[#f8fafc]">
+                <tr>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('placa')}>Unidad</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('estado')}>Estado</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('ubicacion_actual')}>Sede</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('citv_vencimiento')}>CITV (Vence)</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('soat_vencimiento')}>SOAT (Vence)</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('poliza_vencimiento')}>Póliza (Vence)</th>
+                  <th className="px-6 py-3 text-left text-[10px] font-bold text-slate-500 uppercase cursor-pointer" onClick={() => handleSort('contrato_alquiler_vencimiento')}>Contrato (Vence)</th>
+                  <th className="px-6 py-3 text-right text-[10px] font-bold text-slate-500 uppercase">Acciones</th>
+                </tr>
+              </thead>
               <tbody className="divide-y bg-white">
                 {paginatedVehiculos.map(v => (
                   <tr key={v.id} className="hover:bg-gray-50 group">
                     <td className="px-6 py-4"><div className="flex flex-col"><span className="text-sm font-bold">{v.placa}</span><span className="text-[10px] text-slate-400">{v.marca} {v.modelo}</span></div></td>
                     <td className="px-6 py-4">{getEstadoBadge(v.estado)}</td>
                     <td className="px-6 py-4 text-[10px] font-bold uppercase">{getEscuelaNombre(v.ubicacion_actual)}</td>
+                    <td className="px-6 py-4 text-[11px] font-medium">{v.citv_vencimiento ? new Date(v.citv_vencimiento).toLocaleDateString() : '-'}</td>
+                    <td className="px-6 py-4 text-[11px] font-medium">{v.soat_vencimiento ? new Date(v.soat_vencimiento).toLocaleDateString() : '-'}</td>
+                    <td className="px-6 py-4 text-[11px] font-medium">{v.poliza_vencimiento ? new Date(v.poliza_vencimiento).toLocaleDateString() : '-'}</td>
+                    <td className="px-6 py-4 text-[11px] font-medium">{v.contrato_alquiler_vencimiento ? new Date(v.contrato_alquiler_vencimiento).toLocaleDateString() : '-'}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
                         <button onClick={() => handleEdit(v)} className="p-2 text-slate-400 hover:text-blue-600"><Edit size={16} /></button>

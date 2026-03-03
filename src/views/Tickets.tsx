@@ -1,20 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Clock, History, ArrowRight, CheckCircle2, ShieldCheck, X, Lock, BarChart3, TrendingUp, Users, Download, Activity } from 'lucide-react';
+import { Clock, History, ArrowRight, CheckCircle2, ShieldCheck, X, Lock, BarChart3, TrendingUp, Download, Activity, XCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import TicketForm from '../components/forms/TicketForm';
-import TicketDetailModal from '../components/TicketDetailModal';
-import { div } from 'framer-motion/client';
 
-// Definición de Estilos de Prioridad
-const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string }> = {
-    critical: { label: 'Crítico', color: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
-    high: { label: 'Alta', color: 'text-orange-600 bg-orange-50', dot: 'bg-orange-500' },
-    medium: { label: 'Media', color: 'text-amber-600 bg-amber-50', dot: 'bg-amber-500' },
-    low: { label: 'Baja', color: 'text-emerald-600 bg-emerald-50', dot: 'bg-emerald-500' }
+// Definición de Estilos de Prioridad (P1 más crítico)
+const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string, badge: string }> = {
+    critical: { label: 'P1', color: 'text-red-700 bg-red-50 border-red-200', dot: 'bg-red-600', badge: 'bg-red-600 text-white' },
+    high: { label: 'P2', color: 'text-orange-700 bg-orange-50 border-orange-200', dot: 'bg-orange-600', badge: 'bg-orange-600 text-white' },
+    medium: { label: 'P3', color: 'text-yellow-700 bg-yellow-50 border-yellow-200', dot: 'bg-yellow-600', badge: 'bg-yellow-600 text-white' },
+    low: { label: 'P4', color: 'text-green-700 bg-green-50 border-green-200', dot: 'bg-green-600', badge: 'bg-green-600 text-white' }
 };
 
 export default function Tickets() {
@@ -25,9 +23,7 @@ export default function Tickets() {
     const [tickets, setTickets] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
-    const [selectedTicket, setSelectedTicket] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [showArchived, setShowArchived] = useState(false);
 
     // Sincronizar activeTab con la URL
     const activeTab = useMemo(() => {
@@ -85,28 +81,72 @@ export default function Tickets() {
 
     const handleAutomation = async (ticketsData: any[] = tickets) => {
         const now = new Date();
+        const threeMinutes = 3 * 60 * 1000;
         const tenMinutes = 10 * 60 * 1000;
 
-        // 1. Resuelto -> Cerrado
+        // 1. Resuelto -> Cerrado (automáticamente después de 3 minutos)
         const toClose = ticketsData.filter(t =>
             t.status === 'resolved' &&
             t.resolved_at &&
-            (now.getTime() - new Date(t.resolved_at).getTime()) >= tenMinutes
+            (now.getTime() - new Date(t.resolved_at).getTime()) >= threeMinutes
         );
 
-        // 2. Cerrado -> Archivado
-        const toArchive = ticketsData.filter(t =>
-            t.status === 'closed' &&
-            t.updated_at &&
-            (now.getTime() - new Date(t.updated_at).getTime()) >= tenMinutes
-        );
+        // 2. Cerrado -> Archivado (después de 10 minutos)
+        const toArchive = ticketsData.filter(t => {
+            const isClosed = t.status === 'closed';
+            const hasClosedAt = t.closed_at;
+            
+            // Usar solo closed_at para el archivado
+            const archiveTime = hasClosedAt ? t.closed_at : null;
+            const timeDiff = archiveTime ? (now.getTime() - new Date(archiveTime).getTime()) : 0;
+            const shouldArchive = isClosed && archiveTime && timeDiff >= tenMinutes;
+            
+            // Debug: mostrar información de tickets cerrados
+            if (isClosed) {
+                console.log('Ticket cerrado para archivar:', {
+                    id: t.id,
+                    status: t.status,
+                    created_at: t.created_at,
+                    closed_at: t.closed_at,
+                    archiveTime: archiveTime,
+                    timeDiff: Math.floor(timeDiff / 60000), // en minutos
+                    shouldArchive
+                });
+            }
+            
+            return shouldArchive;
+        });
+
+        console.log('Automation check:', {
+            totalTickets: ticketsData.length,
+            toClose: toClose.length,
+            toArchive: toArchive.length,
+            now: now.toISOString()
+        });
 
         if (toClose.length > 0) {
-            await supabase.from('tickets').update({ status: 'closed' }).in('id', toClose.map(t => t.id));
+            console.log('Cerrando automáticamente tickets resueltos:', toClose.map(t => t.id));
+            
+            // Actualizar tickets resueltos a cerrados
+            for (const ticket of toClose) {
+                await supabase.from('tickets').update({
+                    status: 'closed',
+                    closed_at: new Date().toISOString()
+                }).eq('id', ticket.id);
+                
+                // Agregar comentario automático de cierre
+                await supabase.from('ticket_comments').insert([{
+                    ticket_id: ticket.id,
+                    user_id: '00000000-0000-0000-0000-000000000000', // ID del sistema
+                    content: `**SISTEMA**: Ticket cerrado automáticamente después de 3 minutos en estado "Resuelto"`,
+                }]);
+            }
+            
             fetchTickets();
         }
 
         if (toArchive.length > 0) {
+            console.log('Archivando tickets:', toArchive.map(t => t.id));
             await supabase.from('tickets').update({ status: 'archived' }).in('id', toArchive.map(t => t.id));
             fetchTickets();
         }
@@ -332,7 +372,7 @@ export default function Tickets() {
                                                 {filteredTickets.myCreated.map(t => {
                                                     const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                                     return (
-                                                        <tr key={t.id} onClick={() => setSelectedTicket(t)} className="hover:bg-blue-50/10 cursor-pointer transition-all group">
+                                                        <tr key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="hover:bg-blue-50/10 cursor-pointer transition-all group">
                                                             <td className="px-7 py-5"><span className="text-[11px] font-black text-[#002855]">#TK-{t.id.slice(0, 6).toUpperCase()}</span></td>
                                                             <td className="px-5 py-5">
                                                                 <p className="text-[12px] font-black text-slate-700 uppercase line-clamp-1">{t.title}</p>
@@ -397,7 +437,7 @@ export default function Tickets() {
                                                 {filteredTickets.myAttended.map(t => {
                                                     const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                                     return (
-                                                        <tr key={t.id} onClick={() => setSelectedTicket(t)} className="hover:bg-indigo-50/10 cursor-pointer transition-all group">
+                                                        <tr key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="hover:bg-indigo-50/10 cursor-pointer transition-all group">
                                                             <td className="px-7 py-5"><span className="text-[11px] font-black text-[#002855]">#TK-{t.id.slice(0, 6).toUpperCase()}</span></td>
                                                             <td className="px-5 py-5">
                                                                 <p className="text-[12px] font-black text-slate-700 uppercase line-clamp-1">{t.title}</p>
@@ -440,10 +480,10 @@ export default function Tickets() {
                         <>
                             {/* Kanban Section */}
                             <div className="p-8 mt-6">
-                                <div className="flex gap-8 overflow-x-auto pb-6 custom-scrollbar w-full max-w-[1800px] mx-auto">
+                                <div className="flex gap-6 overflow-x-auto pb-6 custom-scrollbar w-full max-w-[1600px] mx-auto">
 
                                     {/* Column: Pendiente */}
-                                    <div className="flex-none w-[380px]">
+                                    <div className="flex-none w-[320px]">
                                         <div className="flex items-center justify-between mb-6 px-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
@@ -451,32 +491,49 @@ export default function Tickets() {
                                                 <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-black">{filteredTickets.pending.length}</span>
                                             </div>
                                         </div>
-                                        <div className="space-y-4">
+                                        <div className="max-h-[400px] overflow-y-auto space-y-4 custom-scrollbar pr-2">
                                             {filteredTickets.pending.map(t => (
-                                                <div key={t.id} onClick={() => setSelectedTicket(t)} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
-                                                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-3 block">#TK-{t.id.slice(0, 6)}</span>
-                                                    <h4 className="text-sm font-black text-[#002855] leading-tight mb-5 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
-                                                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                                                <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
+                                                        <span className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                            {PRIORITY_STYLES[t.priority]?.label || 'P4'}
+                                                        </span>
+                                                    </div>
+                                                    <h4 className="text-sm font-black text-[#002855] leading-tight mb-4 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
+                                                    <div className="space-y-3">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-100 uppercase overflow-hidden shadow-inner">
+                                                            <div className="w-7 h-7 rounded-xl bg-orange-50 flex items-center justify-center text-[9px] font-black text-orange-600 border border-orange-100 uppercase overflow-hidden shadow-inner">
                                                                 {t.requester?.avatar_url ? (
                                                                     <img src={t.requester.avatar_url} alt="" className="w-full h-full object-cover" />
                                                                 ) : t.requester?.full_name?.charAt(0)}
                                                             </div>
-                                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-tight">{t.requester?.full_name?.split(' ')[0]}</span>
+                                                            <div className="flex-1">
+                                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-tight">Solicitante</p>
+                                                                <p className="text-[10px] font-bold text-slate-700">{t.requester?.full_name?.split(' ')[0]}</p>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 text-slate-300 text-[10px] font-bold">
-                                                            <Clock size={12} />
-                                                            {new Date(t.created_at).toLocaleDateString()}
-                                                        </div>
+                                                        {t.attendant && (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-7 h-7 rounded-xl bg-blue-50 flex items-center justify-center text-[9px] font-black text-blue-600 border border-blue-100 uppercase overflow-hidden shadow-inner">
+                                                                    {t.attendant?.avatar_url ? (
+                                                                        <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                    ) : t.attendant?.full_name?.charAt(0)}
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-tight">Atendido por</p>
+                                                                    <p className="text-[10px] font-bold text-slate-700">{t.attendant?.full_name?.split(' ')[0]}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* Column: In Progress */}
-                                    <div className="flex-none w-[380px]">
+                                    {/* Column: En Proceso */}
+                                    <div className="flex-none w-[320px]">
                                         <div className="flex items-center justify-between mb-6 px-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
@@ -484,27 +541,44 @@ export default function Tickets() {
                                                 <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-black">{filteredTickets.inProgress.length}</span>
                                             </div>
                                         </div>
-                                        <div className="space-y-4">
+                                        <div className="max-h-[400px] overflow-y-auto space-y-4 custom-scrollbar pr-2">
                                             {filteredTickets.inProgress.map(t => (
-                                                <div key={t.id} onClick={() => setSelectedTicket(t)} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
-                                                    <div className="flex justify-between items-start mb-3">
+                                                <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
+                                                    <div className="flex justify-between items-start mb-2">
                                                         <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                                    </div>
-                                                    <h4 className="text-sm font-black text-[#002855] leading-tight mb-5 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
-                                                    <div className="flex items-center justify-between pt-4 border-t border-slate-50">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-[10px] font-black text-blue-400 border border-blue-100 uppercase overflow-hidden shadow-inner">
-                                                                {t.attendant?.avatar_url ? (
-                                                                    <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
-                                                                ) : t.attendant?.full_name?.charAt(0)}
+                                                            <span className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                                {PRIORITY_STYLES[t.priority]?.label || 'P4'}
+                                                            </span>
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                                        </div>
+                                                    </div>
+                                                    <h4 className="text-sm font-black text-[#002855] leading-tight mb-4 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-7 h-7 rounded-xl bg-orange-50 flex items-center justify-center text-[9px] font-black text-orange-600 border border-orange-100 uppercase overflow-hidden shadow-inner">
+                                                                {t.requester?.avatar_url ? (
+                                                                    <img src={t.requester.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                ) : t.requester?.full_name?.charAt(0)}
                                                             </div>
-                                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-tight">{t.attendant?.full_name?.split(' ')[0]}</span>
+                                                            <div className="flex-1">
+                                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-tight">Solicitante</p>
+                                                                <p className="text-[10px] font-bold text-slate-700">{t.requester?.full_name?.split(' ')[0]}</p>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 text-slate-300 text-[10px] font-bold">
-                                                            <Clock size={12} />
-                                                            {new Date(t.created_at).toLocaleDateString()}
-                                                        </div>
+                                                        {t.attendant && (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-7 h-7 rounded-xl bg-blue-50 flex items-center justify-center text-[9px] font-black text-blue-600 border border-blue-100 uppercase overflow-hidden shadow-inner">
+                                                                    {t.attendant?.avatar_url ? (
+                                                                        <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                    ) : t.attendant?.full_name?.charAt(0)}
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-tight">Atendido por</p>
+                                                                    <p className="text-[10px] font-bold text-slate-700">{t.attendant?.full_name?.split(' ')[0]}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -512,7 +586,7 @@ export default function Tickets() {
                                     </div>
 
                                     {/* Column: Resolved */}
-                                    <div className="flex-none w-[380px]">
+                                    <div className="flex-none w-[320px]">
                                         <div className="flex items-center justify-between mb-6 px-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
@@ -520,22 +594,143 @@ export default function Tickets() {
                                                 <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-black">{filteredTickets.resolved.length}</span>
                                             </div>
                                         </div>
-                                        <div className="space-y-4">
+                                        <div className="max-h-[400px] overflow-y-auto space-y-4 custom-scrollbar pr-2">
                                             {filteredTickets.resolved.map(t => (
-                                                <div key={t.id} onClick={() => setSelectedTicket(t)} className="bg-emerald-50/30 p-6 rounded-3xl border border-emerald-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
-                                                    <span className="text-[9px] font-black text-emerald-300 uppercase tracking-widest mb-3 block">#TK-{t.id.slice(0, 6)}</span>
-                                                    <h4 className="text-sm font-black text-emerald-900 leading-tight mb-5 line-clamp-2 uppercase">{t.title}</h4>
-                                                    <div className="flex items-center justify-between pt-4 border-t border-emerald-100">
-                                                        <div className="flex items-center gap-2 text-emerald-600">
-                                                            <CheckCircle2 size={14} />
-                                                            <span className="text-[10px] font-black uppercase tracking-widest">Resuelto</span>
+                                                <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-emerald-50/30 p-5 rounded-3xl border border-emerald-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="text-[9px] font-black text-emerald-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
+                                                        <span className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                            {PRIORITY_STYLES[t.priority]?.label || 'P4'}
+                                                        </span>
+                                                    </div>
+                                                    <h4 className="text-sm font-black text-emerald-900 leading-tight mb-4 line-clamp-2 uppercase">{t.title}</h4>
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-7 h-7 rounded-xl bg-orange-50 flex items-center justify-center text-[9px] font-black text-orange-600 border border-orange-100 uppercase overflow-hidden shadow-inner">
+                                                                {t.requester?.avatar_url ? (
+                                                                    <img src={t.requester.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                ) : t.requester?.full_name?.charAt(0)}
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-tight">Solicitante</p>
+                                                                <p className="text-[10px] font-bold text-emerald-800">{t.requester?.full_name?.split(' ')[0]}</p>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex items-center gap-1.5 text-emerald-400 text-[10px] font-bold">
-                                                            {new Date(t.resolved_at || t.updated_at).toLocaleDateString()}
-                                                        </div>
+                                                        {t.attendant && (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-7 h-7 rounded-xl bg-emerald-100 flex items-center justify-center text-[9px] font-black text-emerald-700 border border-emerald-200 uppercase overflow-hidden shadow-inner">
+                                                                    {t.attendant?.avatar_url ? (
+                                                                        <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                    ) : t.attendant?.full_name?.charAt(0)}
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-tight">Atendido por</p>
+                                                                    <p className="text-[10px] font-bold text-emerald-800">{t.attendant?.full_name?.split(' ')[0]}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Column: Cerrados */}
+                                    <div className="flex-none w-[320px]">
+                                        <div className="flex items-center justify-between mb-6 px-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2.5 h-2.5 rounded-full bg-slate-400" />
+                                                <h3 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">Cerrados</h3>
+                                                <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-black">{filteredTickets.closed.length}</span>
+                                            </div>
+                                        </div>
+                                        <div className="max-h-[400px] overflow-y-auto space-y-4 custom-scrollbar pr-2">
+                                            {filteredTickets.closed.map(t => {
+                                                const createdDate = new Date(t.created_at);
+                                                const closedDate = new Date(t.closed_at || t.updated_at);
+                                                
+                                                // Calcular diferencia en milisegundos
+                                                const diffMs = closedDate.getTime() - createdDate.getTime();
+                                                const diffSeconds = Math.floor(diffMs / 1000);
+                                                const diffMinutes = Math.floor(diffSeconds / 60);
+                                                const diffHours = Math.floor(diffMinutes / 60);
+                                                const diffDays = Math.floor(diffHours / 24);
+                                                
+                                                // Formato legible del tiempo
+                                                let timeToCloseText = '';
+                                                if (diffDays > 0) {
+                                                    timeToCloseText = diffDays === 1 ? '1 día' : `${diffDays} días`;
+                                                    if (diffHours % 24 > 0) {
+                                                        timeToCloseText += ` ${diffHours % 24}h`;
+                                                    }
+                                                } else if (diffHours > 0) {
+                                                    timeToCloseText = diffHours === 1 ? '1 hora' : `${diffHours} horas`;
+                                                    if (diffMinutes % 60 > 0) {
+                                                        timeToCloseText += ` ${diffMinutes % 60}m`;
+                                                    }
+                                                } else if (diffMinutes > 0) {
+                                                    timeToCloseText = diffMinutes === 1 ? '1 minuto' : `${diffMinutes} minutos`;
+                                                    if (diffSeconds % 60 > 0) {
+                                                        timeToCloseText += ` ${diffSeconds % 60}s`;
+                                                    }
+                                                } else {
+                                                    timeToCloseText = diffSeconds <= 1 ? 'menos de 1 segundo' : `${diffSeconds} segundos`;
+                                                }
+
+                                                return (
+                                                <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-slate-50/30 p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
+                                                        <span className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                            {PRIORITY_STYLES[t.priority]?.label || 'P4'}
+                                                        </span>
+                                                    </div>
+                                                    <h4 className="text-sm font-black text-slate-700 leading-tight mb-4 line-clamp-2 uppercase">{t.title}</h4>
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-7 h-7 rounded-xl bg-orange-50 flex items-center justify-center text-[9px] font-black text-orange-600 border border-orange-100 uppercase overflow-hidden shadow-inner">
+                                                                {t.requester?.avatar_url ? (
+                                                                    <img src={t.requester.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                ) : t.requester?.full_name?.charAt(0)}
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-tight">Solicitante</p>
+                                                                <p className="text-[10px] font-bold text-slate-700">{t.requester?.full_name?.split(' ')[0]}</p>
+                                                            </div>
+                                                        </div>
+                                                        {t.attendant && (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-7 h-7 rounded-xl bg-slate-200 flex items-center justify-center text-[9px] font-black text-slate-600 border border-slate-300 uppercase overflow-hidden shadow-inner">
+                                                                    {t.attendant?.avatar_url ? (
+                                                                        <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                    ) : t.attendant?.full_name?.charAt(0)}
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-tight">Atendido por</p>
+                                                                    <p className="text-[10px] font-bold text-slate-700">{t.attendant?.full_name?.split(' ')[0]}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        <div className="border-t border-slate-200 pt-3 space-y-2">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight">Creado:</span>
+                                                                <span className="text-[9px] font-bold text-slate-600">
+                                                                    {createdDate && !isNaN(createdDate.getTime()) 
+                                                                        ? createdDate.toLocaleString('es-PE', { 
+                                                                            day: '2-digit', 
+                                                                            month: 'short', 
+                                                                            year: 'numeric',
+                                                                            hour: '2-digit',
+                                                                            minute: '2-digit'
+                                                                          }) 
+                                                                        : 'N/A'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 </div>
@@ -551,10 +746,10 @@ export default function Tickets() {
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Reporte detallado de las últimas interacciones</p>
                                     </div>
                                     <button
-                                        onClick={() => setShowArchived(true)}
+                                        onClick={() => navigate('/tickets/history')}
                                         className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#002855] hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
                                     >
-                                        Ver todos los tickets
+                                        Historial de tickets
                                         <ArrowRight size={14} />
                                     </button>
                                 </div>
@@ -574,7 +769,7 @@ export default function Tickets() {
                                             {filteredTickets.recent.map(t => {
                                                 const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                                 return (
-                                                    <tr key={t.id} onClick={() => setSelectedTicket(t)} className="hover:bg-blue-50/10 transition-all cursor-pointer group active:bg-blue-50/30">
+                                                    <tr key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="hover:bg-blue-50/10 transition-all cursor-pointer group active:bg-blue-50/30">
                                                         <td className="px-8 py-6">
                                                             <span className="text-[11px] font-black text-[#002855] tracking-tight">#TK-{t.id.slice(0, 6).toUpperCase()}</span>
                                                         </td>
@@ -631,76 +826,7 @@ export default function Tickets() {
                         onSave={() => { setShowForm(false); fetchTickets(); }}
                     />
                 )}
-
-                {selectedTicket && (
-                    <TicketDetailModal
-                        ticket={selectedTicket}
-                        onClose={() => setSelectedTicket(null)}
-                        onUpdate={fetchTickets}
-                    />
-                )}
-
-                {showArchived && (
-                    <div className="fixed inset-0 bg-[#001529]/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
-                        <div className="bg-white rounded-[3rem] w-full max-w-6xl h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
-                            <div className="p-8 border-b border-slate-50 flex items-center justify-between shrink-0 bg-[#F8FAFC]">
-                                <div className="flex items-center gap-6">
-                                    <div className="w-14 h-14 rounded-3xl bg-[#002855] flex items-center justify-center text-white shadow-xl">
-                                        <History size={28} />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl font-black text-[#002855] tracking-tight">Historial de Incidencias</h2>
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registro completo de tickets archivados</p>
-                                    </div>
-                                </div>
-                                <button onClick={() => setShowArchived(false)} className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 hover:bg-rose-50 hover:text-rose-500 text-slate-400 transition-all shadow-sm">
-                                    <X size={24} />
-                                </button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto p-8 bg-[#F8FAFC]/50 custom-scrollbar">
-                                {filteredTickets.archivedList.length === 0 ? (
-                                    <div className="h-full flex flex-col justify-center items-center text-slate-300 gap-6">
-                                        <div className="w-24 h-24 rounded-full bg-white border-2 border-dashed border-slate-100 flex items-center justify-center">
-                                            <ShieldCheck size={48} className="opacity-20" />
-                                        </div>
-                                        <p className="text-[12px] font-black uppercase tracking-[0.3em] opacity-40">Sin Registros Archivados</p>
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {filteredTickets.archivedList.map(t => (
-                                            <div key={t.id} onClick={() => { setSelectedTicket(t); setShowArchived(false); }} className="bg-white p-7 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
-                                                <div className="flex justify-between items-start mb-5">
-                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
-                                                    <div className="px-3 py-1 rounded-lg bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-slate-100">
-                                                        <Lock size={12} />
-                                                        Cerrado
-                                                    </div>
-                                                </div>
-                                                <h4 className="text-base font-black text-[#002855] leading-tight mb-6 group-hover:text-blue-600 transition-colors uppercase">{t.title}</h4>
-
-                                                <div className="space-y-4 pt-6 border-t border-slate-50">
-                                                    <div className="flex items-center gap-3 text-[11px] font-bold text-slate-500">
-                                                        <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center uppercase font-black text-slate-400 border border-slate-100">
-                                                            {t.requester?.full_name?.charAt(0)}
-                                                        </div>
-                                                        <span className="truncate uppercase">{t.requester?.full_name}</span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                                                        <span className="text-slate-300">Finalizado el:</span>
-                                                        <span className="text-slate-600 font-mono">{new Date(t.updated_at).toLocaleDateString()}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                )}
             </div>
-        </div >
+        </div>
     );
 }

@@ -203,7 +203,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
 
     return (
         <div className="fixed inset-0 bg-[#001529]/70 backdrop-blur-xl flex items-center justify-center z-50 p-4 md:p-8 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-7xl h-full max-h-[900px] flex flex-col md:flex-row overflow-hidden border border-white/20 animate-in slide-in-from-bottom-8 duration-500">
+            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-5xl h-full max-h-[700px] flex flex-col md:flex-row overflow-hidden border border-white/20 animate-in slide-in-from-bottom-8 duration-500">
 
                 {/* Left side: Information (incident context) */}
                 <div className="w-full md:w-[420px] bg-[#F8FAFC] border-r border-slate-100 p-10 flex flex-col overflow-y-auto custom-scrollbar">
@@ -266,7 +266,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                         <div className="pt-10 border-t border-slate-200">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-4">Gestión de Estado</p>
                             <div className="flex flex-wrap gap-2">
-                                {['open', 'in_progress', 'resolved', 'closed'].map(st => (
+                                {['open', 'resolved', 'closed'].map(st => (
                                     <button
                                         key={st}
                                         onClick={() => handleStatusUpdate(st)}
@@ -276,17 +276,20 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                         {getStatusLabel(st)}
                                     </button>
                                 ))}
+                                {canManageStatus && (
+                                    <button
+                                        key="in_progress"
+                                        onClick={() => handleStatusUpdate('in_progress')}
+                                        disabled={statusUpdating}
+                                        className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${currentTicket.status === 'in_progress' ? 'bg-[#002855] text-white shadow-xl scale-105' : 'bg-white text-slate-300 border border-slate-100 hover:border-slate-300 hover:text-slate-500'}`}
+                                    >
+                                        {getStatusLabel('in_progress')}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    <button
-                        onClick={onClose}
-                        className="mt-auto pt-10 flex items-center gap-3 text-[10px] font-black text-slate-300 hover:text-rose-500 transition-all uppercase tracking-[0.3em]"
-                    >
-                        <X size={16} />
-                        Cerrar Ventana
-                    </button>
                 </div>
 
                 {/* Right side: Interaction Feed (Chat interface) */}
@@ -303,15 +306,23 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                         </div>
                         <div className="flex items-center gap-3">
                             <button
+                                onClick={onClose}
+                                className="w-12 h-12 rounded-2xl bg-white border border-slate-100 text-slate-300 hover:text-slate-600 transition-all flex items-center justify-center hover:bg-slate-50"
+                                title="Cerrar ventana"
+                            >
+                                <X size={20} />
+                            </button>
+                            <button
                                 onClick={handleDeleteTicket}
                                 className="w-12 h-12 rounded-2xl bg-white border border-slate-100 text-slate-300 hover:text-rose-500 transition-all flex items-center justify-center hover:bg-rose-50"
+                                title="Eliminar ticket"
                             >
                                 <Trash2 size={20} />
                             </button>
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar bg-[#F8FAFC]/30">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-[#F8FAFC]/30">
                         {comments.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-slate-300 space-y-6">
                                 <div className="w-20 h-20 rounded-full border-2 border-dashed border-slate-200 flex items-center justify-center">
@@ -361,21 +372,21 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                         <div ref={commentsEndRef} />
                     </div>
 
-                    <div className="p-8 bg-white border-t border-slate-50">
+                    <div className="p-4 bg-white border-t border-slate-50">
                         <form onSubmit={handleSendComment} className="relative group">
                             <input
                                 type="text"
                                 value={newComment}
                                 onChange={(e) => setNewComment(e.target.value)}
                                 placeholder="Escribe un mensaje aquí..."
-                                className="w-full h-16 pl-8 pr-20 bg-[#F8FAFC] rounded-[2rem] border border-slate-100 outline-none focus:ring-4 focus:ring-blue-50 text-[13px] font-bold text-[#002855] placeholder:text-slate-300 transition-all"
+                                className="w-full h-12 pl-6 pr-16 bg-[#F8FAFC] rounded-[1.5rem] border border-slate-100 outline-none focus:ring-4 focus:ring-blue-50 text-[13px] font-bold text-[#002855] placeholder:text-slate-300 transition-all"
                             />
                             <button
                                 type="submit"
                                 disabled={!newComment.trim() || sending}
-                                className="absolute right-2 top-2 w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-200 hover:scale-110 active:scale-95 transition-all disabled:opacity-30"
+                                className="absolute right-1.5 top-1.5 w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-200 hover:scale-110 active:scale-95 transition-all disabled:opacity-30"
                             >
-                                <Send size={20} />
+                                <Send size={18} />
                             </button>
                         </form>
                     </div>

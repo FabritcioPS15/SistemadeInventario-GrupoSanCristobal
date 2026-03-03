@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Key, Users, FileText, ChevronRight, Zap,
   Wrench, Send, MapPin, Building2,
   Car, ClipboardList, LogOut, Ticket,
-  Settings, Menu
+  Settings, Menu, ChevronLeft
 } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { GrServerCluster } from 'react-icons/gr';
@@ -217,7 +217,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       <aside
         className={`
           ${collapsed ? 'w-20' : 'w-72'} 
-          bg-[#001529] text-[#a6adb4] h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-[70] flex flex-col shadow-2xl overflow-hidden
+          bg-[#001529] text-[#a6adb4] h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-[90] flex flex-col shadow-2xl overflow-hidden
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
@@ -232,12 +232,33 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             )}
           </div>
 
-          <button
-            onClick={onToggleCollapse}
-            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors text-white/40 hover:text-white"
-          >
-            {collapsed ? <ChevronRight size={18} /> : <Menu size={18} />}
-          </button>
+          {/* Botón de Colapsar Mejorado */}
+          <div className="relative">
+            <button
+              onClick={onToggleCollapse}
+              className="p-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-300 text-white/70 hover:text-white group border border-white/20 hover:border-white/30 shadow-lg"
+            >
+              <div className="relative">
+                {/* Flecha principal - más grande y visible */}
+                {collapsed ? (
+                  <ChevronRight size={18} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:text-white" />
+                ) : (
+                  <ChevronLeft size={18} className="transition-transform duration-300 group-hover:-translate-x-1 group-hover:text-white" />
+                )}
+                
+                {/* Indicador visual más prominente */}
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full animate-pulse opacity-80 group-hover:opacity-100 transition-opacity duration-300 shadow-lg shadow-blue-400/50" />
+              </div>
+            </button>
+            
+            {/* Tooltip mejorado */}
+            <div className={`absolute right-full mr-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 pointer-events-none transition-opacity duration-300 shadow-xl whitespace-nowrap ${collapsed ? 'group-hover:opacity-100' : ''}`}>
+              <div className="font-semibold">{collapsed ? 'Expandir menú' : 'Colapsar menú'}</div>
+              <div className="text-gray-300 text-[10px] mt-0.5">Click para {collapsed ? 'mostrar' : 'ocultar'}</div>
+              {/* Flechita del tooltip */}
+              <div className="absolute left-full top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45" />
+            </div>
+          </div>
         </div>
 
         {/* Navigation Content */}

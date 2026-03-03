@@ -156,8 +156,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
 
     const fullAccess = [
-      'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-      'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular', 'tickets', 'tickets-dashboard', 'tickets-mine', 'tickets-reports', 'painpoint',
+      'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'checklist', 'painpoint',
+      'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular', 'tickets', 'tickets-dashboard', 'tickets-mine', 'tickets-reports', 'my-chats', 'painpoint',
       'inventory-pc', 'inventory-celular', 'inventory-dvr', 'inventory-impresora', 'inventory-escaner',
       'inventory-monitor', 'inventory-laptop', 'inventory-proyector', 'inventory-switch', 'inventory-chip',
       'inventory-tinte', 'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',

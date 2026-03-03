@@ -10,7 +10,7 @@ type TicketFormProps = {
 
 const FREQUENT_ISSUES = [
     { title: 'Impresora no enciende / no imprime', category: 'hardware', priority: 'medium', description: 'La impresora de la sede no responde a los comandos de impresión o está apagada.' },
-    { title: 'Olvidé mi contraseña de acceso', category: 'access', priority: 'high', description: 'Requiero un reset de contraseña para ingresar al sistema.' },
+    { title: 'Olvidé mi contraseña de acceso del MTC / Correo', category: 'access', priority: 'high', description: 'Requiero un reset de contraseña para ingresar al sistema.' },
     { title: 'Sistema ERP está lento o se cierra', category: 'software', priority: 'high', description: 'El sistema principal presenta lentitud extrema o cierres inesperados.' },
     { title: 'Sin conexión a Internet en recepción', category: 'network', priority: 'critical', description: 'Toda el área de recepción está sin conexión a red.' },
     { title: 'Falla en cámara de seguridad', category: 'hardware', priority: 'medium', description: 'Una de las cámaras no muestra imagen en el monitor.' },

@@ -53,6 +53,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
     { id: 'maintenance', label: 'Mantenimiento', category: 'Principal' },
     { id: 'sent', label: 'Enviados', category: 'Principal' },
     { id: 'tickets', label: 'Mesa de Ayuda (Tickets)', category: 'Principal' },
+    { id: 'my-chats', label: 'Mis Chats', category: 'Principal' },
     { id: 'sutran', label: 'Sutran', category: 'Operaciones' },
     { id: 'checklist', label: 'Checklist', category: 'Operaciones' },
     { id: 'flota-vehicular', label: 'Flota Vehicular', category: 'Operaciones' },

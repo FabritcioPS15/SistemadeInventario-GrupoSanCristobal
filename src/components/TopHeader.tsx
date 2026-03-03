@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Bell, Settings, HelpCircle, Menu, Pin, PinOff, Image as ImageIcon, Check, LayoutDashboard, User as UserIcon, LogOut, ChevronRight, Home, ChevronDown, Search, Plus, X } from 'lucide-react';
+import { Bell, Settings, HelpCircle, Menu, Image as ImageIcon, Check, LayoutDashboard, User as UserIcon, LogOut, ChevronRight, Home, ChevronDown, Search, Plus, X } from 'lucide-react';
 import { supabase, SutranVisit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { div } from 'framer-motion/client';
 
 const ROUTE_LABELS: Record<string, string> = {
     'inventory': 'Inventario',
@@ -225,8 +226,7 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
     };
 
     return (
-        <>
-            <header className={`h-14 bg-[#001529] text-white flex items-center justify-between px-6 sticky top-0 z-50 shadow-xl border-b border-white/5`}>
+            <header className={`h-14 bg-[#001529] text-white flex items-center justify-between px-6 sticky top-0 z-[100] shadow-xl border-b border-white/5`}>
                 <div className="flex items-center gap-4 lg:gap-8 overflow-hidden">
                     <button
                         className="p-1.5 hover:bg-white/10 rounded-lg transition-colors lg:hidden shrink-0"
@@ -237,277 +237,264 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
 
                     {/* Branding Section (Static) */}
                     <div className="flex items-center gap-3 shrink-0 mr-4 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/')}>
-                        <div className="bg-white p-1 rounded-md">
-                            <LayoutDashboard size={18} className="text-[#002855]" />
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                            <LayoutDashboard size={18} />
                         </div>
-                        <span className="font-black tracking-tighter text-[14px] sm:text-lg uppercase truncate max-w-[120px] sm:max-w-none">
-                            Sistema G.S.C.
-                        </span>
+                        <span className="font-black text-white text-[13px] tracking-widest uppercase">Sistema GSC</span>
                     </div>
 
-                    <div className="h-8 w-[1px] bg-white/20 shrink-0 hidden sm:block" />
-
-                    {/* Breadcrumbs inline */}
-                    {showBreadcrumbs && (
-                        <nav className="hidden md:flex items-center gap-1.5 overflow-hidden">
-                            <Link
-                                to="/"
-                                className="flex items-center gap-1 text-white/40 hover:text-white/80 transition-colors shrink-0 p-1 rounded-md hover:bg-white/10"
-                            >
-                                <Home size={13} />
-                            </Link>
-                            {pathnames.length > 0 && <ChevronRight size={11} className="text-white/20 shrink-0" />}
-                            {pathnames.map((seg, idx) => {
-                                const last = idx === pathnames.length - 1;
-                                const to = `/${pathnames.slice(0, idx + 1).join('/')}`;
-                                const label = ROUTE_LABELS[seg.toLowerCase()] || seg.replace(/-/g, ' ');
-                                return (
-                                    <div key={to} className="flex items-center gap-1.5 shrink-0 min-w-0">
-                                        {last ? (
-                                            <span className="text-[10px] font-black text-white/90 uppercase tracking-widest bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 truncate max-w-[180px]">
-                                                {label}
-                                            </span>
-                                        ) : (
-                                            <Link
-                                                to={to}
-                                                className="text-[10px] font-black text-white/40 hover:text-white/80 uppercase tracking-widest transition-colors truncate max-w-[120px]"
-                                            >
-                                                {label}
-                                            </Link>
-                                        )}
-                                        {!last && <ChevronRight size={11} className="text-white/20 shrink-0" />}
-                                    </div>
-                                );
-                            })}
-                        </nav>
-                    )}
-
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <div className="hidden xl:flex items-center gap-4 text-[11px] font-bold text-white/70 mr-4">
-                        <div className="flex items-center gap-2">
-                            <span>{user?.full_name}</span>
-                            {userLocation && (
-                                <>
-                                    <span className="text-white/30">•</span>
-                                    <span className="text-white/90">{userLocation}</span>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Ticket context actions dropdown */}
-                    {isTicketsRoute && (
-                        <div className="relative" ref={actionsRef}>
-                            <button
-                                onClick={() => setShowActions(v => !v)}
-                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'}`}
-                            >
-                                <Plus size={13} />
-                                Acciones
-                                <ChevronDown size={13} className={`transition-transform duration-200 ${showActions ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {showActions && (
-                                <div className="absolute right-0 top-full mt-2 w-72 bg-[#001e3c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[200] animate-in fade-in slide-in-from-top-2 duration-200">
-                                    <div className="p-4 border-b border-white/10">
-                                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-3">Buscar tickets</p>
-                                        <div className="relative">
-                                            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-                                            <input
-                                                autoFocus
-                                                type="text"
-                                                value={searchValue}
-                                                onChange={e => setSearchValue(e.target.value)}
-                                                placeholder="Buscar por título, usuario..."
-                                                className="w-full bg-white/10 border border-white/10 rounded-xl pl-8 pr-8 py-2.5 text-[11px] text-white placeholder-white/30 font-medium outline-none focus:border-blue-500/50 focus:bg-white/15 transition-all"
-                                            />
-                                            {searchValue && (
-                                                <button onClick={() => setSearchValue('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
-                                                    <X size={13} />
-                                                </button>
+                    {/* Breadcrumbs - Se adapta al espacio disponible */}
+                    <div className="flex items-center gap-1.5 overflow-hidden min-w-0">
+                        {showBreadcrumbs && pathnames.length > 0 && (
+                            <>
+                                {pathnames.map((name, index) => {
+                                    const last = index === pathnames.length - 1;
+                                    const to = `/${pathnames.slice(0, index + 1).join('/')}`;
+                                    const label = ROUTE_LABELS[name.toLowerCase()] || name.replace(/-/g, ' ');
+                                    return (
+                                        <div key={to} className="flex items-center gap-1.5 shrink-0 min-w-0">
+                                            {last ? (
+                                                <span className="text-[10px] font-black text-white/90 uppercase tracking-widest bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 truncate max-w-[200px]">
+                                                    {label}
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => navigate(to)}
+                                                        className="text-[10px] font-black text-white/60 uppercase tracking-widest hover:text-white/80 transition-colors truncate max-w-[120px]"
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                    <ChevronRight size={12} className="text-white/40 shrink-0" />
+                                                </>
                                             )}
                                         </div>
-                                    </div>
-                                    <div className="p-3">
-                                        <button
-                                            onClick={handleNewTicket}
-                                            className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/30"
-                                        >
-                                            <Plus size={15} />
-                                            Nuevo Ticket
-                                        </button>
+                                    );
+                                })}
+                            </>
+                        )}
+                </div>
+
+            </div>
+
+            <div className="flex items-center gap-2">
+                {/* Ticket context actions dropdown */}
+                {isTicketsRoute && (
+                    <div className="relative" ref={actionsRef}>
+                        <button
+                            onClick={() => setShowActions(v => !v)}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'}`}
+                        >
+                            <Plus size={13} />
+                            Acciones
+                            <ChevronDown size={13} className={`transition-transform duration-200 ${showActions ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {showActions && (
+                            <div className="absolute right-0 top-full mt-2 w-72 bg-[#001e3c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[200] animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="p-4 border-b border-white/10">
+                                    <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-3">Buscar tickets</p>
+                                    <div className="relative">
+                                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            value={searchValue}
+                                            onChange={e => setSearchValue(e.target.value)}
+                                            placeholder="Buscar por título, usuario..."
+                                            className="w-full bg-white/10 border border-white/10 rounded-xl pl-8 pr-8 py-2.5 text-[11px] text-white placeholder-white/30 font-medium outline-none focus:border-blue-500/50 focus:bg-white/15 transition-all"
+                                        />
+                                        {searchValue && (
+                                            <button onClick={() => setSearchValue('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
+                                                <X size={13} />
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
+                                <div className="p-3">
+                                    <button
+                                        onClick={handleNewTicket}
+                                        className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/30"
+                                    >
+                                        <Plus size={15} />
+                                        Nuevo Ticket
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <div className="flex items-center gap-1">
+                    {/* Notifications */}
+                    <div className="relative" ref={notificationRef}>
+                        <button
+                            title="Notificaciones"
+                            onClick={() => setShowNotifications(!showNotifications)}
+                            className={`p-2 hover:bg-white/10 rounded-lg transition-colors relative ${showNotifications ? 'bg-white/10' : ''}`}
+                        >
+                            <Bell size={18} />
+                            {sutranNotifications.length > 0 && (
+                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#002855]" />
                             )}
-                        </div>
-                    )}
+                        </button>
 
-                    <div className="flex items-center gap-1">
-                        {/* Notifications */}
-                        <div className="relative" ref={notificationRef}>
-                            <button
-                                title="Notificaciones"
-                                onClick={() => setShowNotifications(!showNotifications)}
-                                className={`p-2 hover:bg-white/10 rounded-lg transition-colors relative ${showNotifications ? 'bg-white/10' : ''}`}
-                            >
-                                <Bell size={18} />
-                                {sutranNotifications.length > 0 && (
-                                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#002855]" />
-                                )}
-                            </button>
-
-                            {showNotifications && (
-                                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                                    <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                                        <h3 className="text-xs font-black text-[#002855] uppercase tracking-wider">Notificaciones</h3>
-                                        <span className="text-[10px] font-bold text-gray-400">{sutranNotifications.length} Pendientes</span>
-                                    </div>
-                                    <div className="max-h-[300px] overflow-y-auto">
-                                        {sutranNotifications.length === 0 ? (
-                                            <div className="p-6 text-center text-gray-400 text-xs">No tienes notificaciones pendientes</div>
-                                        ) : (
-                                            sutranNotifications.map((note) => (
-                                                <div
-                                                    key={note.id}
-                                                    onClick={() => { navigate('/sutran'); setShowNotifications(false); }}
-                                                    className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 transition-colors group"
-                                                >
-                                                    <div className="flex items-start gap-3">
-                                                        <div className="bg-rose-100 p-2 rounded-lg text-rose-600 mt-0.5"><Bell size={14} /></div>
-                                                        <div>
-                                                            <p className="text-xs font-bold text-gray-800 group-hover:text-blue-700">Visita SUTRAN Programada</p>
-                                                            <p className="text-[11px] text-gray-500 mt-0.5">{note.location_name}</p>
-                                                            <div className="flex items-center gap-2 mt-1.5">
-                                                                <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">{getDaysRemaining(note.visit_date)}</span>
-                                                                <span className="text-[10px] text-gray-400">{new Date(note.visit_date).toLocaleDateString('es-ES')}</span>
-                                                            </div>
+                        {showNotifications && (
+                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                                    <h3 className="text-xs font-black text-[#002855] uppercase tracking-wider">Notificaciones</h3>
+                                    <span className="text-[10px] font-bold text-gray-400">{sutranNotifications.length} Pendientes</span>
+                                </div>
+                                <div className="max-h-[300px] overflow-y-auto">
+                                    {sutranNotifications.length === 0 ? (
+                                        <div className="p-6 text-center text-gray-400 text-xs">No tienes notificaciones pendientes</div>
+                                    ) : (
+                                        sutranNotifications.map((note) => (
+                                            <div
+                                                key={note.id}
+                                                onClick={() => { navigate('/sutran'); setShowNotifications(false); }}
+                                                className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 transition-colors group"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <div className="bg-rose-100 p-2 rounded-lg text-rose-600 mt-0.5"><Bell size={14} /></div>
+                                                    <div>
+                                                        <p className="text-xs font-bold text-gray-800 group-hover:text-blue-700">Visita SUTRAN Programada</p>
+                                                        <p className="text-[11px] text-gray-500 mt-0.5">{note.location_name}</p>
+                                                        <div className="flex items-center gap-2 mt-1.5">
+                                                            <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">{getDaysRemaining(note.visit_date)}</span>
+                                                            <span className="text-[10px] text-gray-400">{new Date(note.visit_date).toLocaleDateString('es-ES')}</span>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            ))
-                                        )}
-                                    </div>
-                                    <div className="p-2 border-t border-gray-100 bg-gray-50 text-center">
-                                        <button onClick={() => { navigate('/sutran'); setShowNotifications(false); }} className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest">Ver todas</button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <button
-                            title={isPinned ? "Desfijar Header" : "Fijar Header"}
-                            onClick={togglePin}
-                            className={`p-2 rounded-lg transition-colors hidden sm:flex ${isPinned ? 'bg-white/20 text-white' : 'hover:bg-white/10 text-white/70'}`}
-                        >
-                            {isPinned ? <Pin size={18} /> : <PinOff size={18} />}
-                        </button>
-
-                        <button title="Ayuda" onClick={() => alert('Soporte no disponible')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                            <HelpCircle size={18} />
-                        </button>
-
-                        <div className="h-8 w-[1px] bg-white/20 mx-1" />
-
-                        {/* User Profile Settings */}
-                        <div className="relative" ref={settingsRef}>
-                            <button
-                                onClick={() => setShowUserSettings(!showUserSettings)}
-                                className={`flex items-center gap-2 p-1.5 hover:bg-white/10 rounded-lg transition-colors ${showUserSettings ? 'bg-white/10' : ''}`}
-                            >
-                                <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold uppercase overflow-hidden border border-white/10">
-                                    {user?.avatar_url ? (
-                                        <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                                    ) : (
-                                        user?.full_name?.charAt(0)
+                                            </div>
+                                        ))
                                     )}
                                 </div>
-                                <Settings size={18} className={`transition-transform duration-300 ${showUserSettings ? 'rotate-90' : ''}`} />
-                            </button>
+                                <div className="p-2 border-t border-gray-100 bg-gray-50 text-center">
+                                    <button onClick={() => { navigate('/sutran'); setShowNotifications(false); }} className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest">Ver todas</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
-                            {showUserSettings && (
-                                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                                    <div className="p-4 border-b border-gray-100 bg-gradient-to-br from-[#002855] to-[#004e92] text-white">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold uppercase overflow-hidden border border-white/20">
-                                                {user?.avatar_url ? (
-                                                    <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    user?.full_name?.charAt(0)
-                                                )}
-                                            </div>
-                                            <div className="overflow-hidden">
-                                                <h4 className="font-bold text-sm truncate">{user?.full_name}</h4>
-                                                <p className="text-[10px] opacity-80 truncate uppercase tracking-widest">{user?.role}</p>
-                                            </div>
+                    {/* Help Button - Después de notificaciones */}
+                    <button title="Ayuda" onClick={() => alert('Soporte no disponible')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                        <HelpCircle size={18} />
+                    </button>
+
+                    <div className="h-8 w-[1px] bg-white/20 mx-1" />
+
+                    {/* User Info - Nombre y Sede */}
+                    <div className="flex items-center gap-2 mr-3">
+                        {userLocation && (
+                            <>
+                                <span className="text-white/80 text-xs">{userLocation}</span>
+                                <div className="w-1 h-1 bg-white/40 rounded-full" />
+                            </>
+                        )}
+                        <span className="text-white/90 text-xs font-medium">{user?.full_name}</span>
+                    </div>
+
+                    {/* User Profile Settings */}
+                    <div className="relative" ref={settingsRef}>
+                        <button
+                            onClick={() => setShowUserSettings(!showUserSettings)}
+                            className={`flex items-center gap-2 p-1.5 hover:bg-white/10 rounded-lg transition-colors ${showUserSettings ? 'bg-white/10' : ''}`}
+                        >
+                            <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold uppercase overflow-hidden border border-white/10">
+                                {user?.avatar_url ? (
+                                    <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    user?.full_name?.charAt(0)
+                                )}
+                            </div>
+                            <Settings size={18} className={`transition-transform duration-300 ${showUserSettings ? 'rotate-90' : ''}`} />
+                        </button>
+
+                        {showUserSettings && (
+                            <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                <div className="p-4 border-b border-gray-100 bg-gradient-to-br from-[#002855] to-[#004e92] text-white">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold uppercase overflow-hidden border border-white/20">
+                                            {user?.avatar_url ? (
+                                                <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                            ) : (
+                                                user?.full_name?.charAt(0)
+                                            )}
+                                        </div>
+                                        <div className="overflow-hidden">
+                                            <h4 className="font-bold text-sm truncate">{user?.full_name}</h4>
+                                            <p className="text-[10px] opacity-80 truncate uppercase tracking-widest">{user?.role}</p>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div className="p-4 space-y-4">
-                                        <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-widest">Mi Perfil</h3>
+                                <div className="p-4 space-y-4">
+                                    <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-widest">Mi Perfil</h3>
 
-                                        <div className="space-y-3">
-                                            <div>
-                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Nombre Completo</label>
-                                                <div className="relative">
-                                                    <UserIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
-                                                    <input
-                                                        type="text"
-                                                        value={editName}
-                                                        onChange={(e) => setEditName(e.target.value)}
-                                                        className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs focus:ring-1 focus:ring-[#002855] focus:bg-white outline-none transition-all font-bold"
-                                                        placeholder="Nombre"
-                                                    />
-                                                </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Nombre Completo</label>
+                                            <div className="relative">
+                                                <UserIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
+                                                <input
+                                                    type="text"
+                                                    value={editName}
+                                                    onChange={(e) => setEditName(e.target.value)}
+                                                    className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs focus:ring-1 focus:ring-[#002855] focus:bg-white outline-none transition-all font-bold"
+                                                    placeholder="Nombre"
+                                                />
                                             </div>
-
-                                            <div>
-                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">URL Foto de Perfil</label>
-                                                <div className="relative">
-                                                    <ImageIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
-                                                    <input
-                                                        type="text"
-                                                        value={editAvatar}
-                                                        onChange={(e) => setEditAvatar(e.target.value)}
-                                                        className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs focus:ring-1 focus:ring-[#002855] focus:bg-white outline-none transition-all font-medium"
-                                                        placeholder="https://..."
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                onClick={handleSaveProfile}
-                                                disabled={isSaving}
-                                                className="w-full bg-[#002855] text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-[#003d80] transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-900/10 disabled:opacity-50"
-                                            >
-                                                {isSaving ? (
-                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                ) : (
-                                                    <>
-                                                        <Check size={14} />
-                                                        Actualizar Perfil
-                                                    </>
-                                                )}
-                                            </button>
                                         </div>
-                                    </div>
 
-                                    <div className="p-2 bg-gray-50 border-t border-gray-100">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">URL Foto de Perfil</label>
+                                            <div className="relative">
+                                                <ImageIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
+                                                <input
+                                                    type="text"
+                                                    value={editAvatar}
+                                                    onChange={(e) => setEditAvatar(e.target.value)}
+                                                    className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs focus:ring-1 focus:ring-[#002855] focus:bg-white outline-none transition-all font-medium"
+                                                    placeholder="https://..."
+                                                />
+                                            </div>
+                                        </div>
+
                                         <button
-                                            onClick={logout}
-                                            className="w-full py-2 text-[10px] font-bold text-rose-500 hover:bg-rose-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            onClick={handleSaveProfile}
+                                            disabled={isSaving}
+                                            className="w-full bg-[#002855] text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-[#003d80] transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-900/10 disabled:opacity-50"
                                         >
-                                            <LogOut size={12} />
-                                            Cerrar Sesión
+                                            {isSaving ? (
+                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <Check size={14} />
+                                                    Actualizar Perfil
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 </div>
-                            )}
-                        </div>
+
+                                <div className="p-2 bg-gray-50 border-t border-gray-100">
+                                    <button
+                                        onClick={logout}
+                                        className="w-full py-2 text-[10px] font-bold text-rose-500 hover:bg-rose-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <LogOut size={12} />
+                                        Cerrar Sesión
+                                    </button>
+                                </div>
+                            </div>  
+                        )}
                     </div>
                 </div>
+            </div>
             </header>
-        </>
     );
 }
+                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                                                                                                                                                
+                                                                
