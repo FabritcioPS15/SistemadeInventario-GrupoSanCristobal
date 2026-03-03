@@ -107,13 +107,13 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
           .from('assets')
           .update(dataToSave)
           .eq('id', editPhone.id);
-        
+
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('assets')
           .insert([dataToSave]);
-        
+
         if (error) throw error;
       }
 
@@ -136,327 +136,329 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-4xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
             <Smartphone className="text-blue-600" size={24} />
-            <h2 className="text-lg font-semibold text-gray-800">
-              {editPhone ? 'Editar Celular' : 'Nuevo Celular'}
-            </h2>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 uppercase">
+                {editPhone ? 'Editar Celular' : 'Nuevo Celular'}
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-wide">Gestión de dispositivos móviles</p>
+            </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Código */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Código *
-              </label>
-              <div className="flex gap-2">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Código */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Código *
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.code}
+                    onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={generateRandomCode}
+                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Generar
+                  </button>
+                </div>
+              </div>
+
+              {/* Sede */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sede *
+                </label>
+                <select
+                  value={formData.sede}
+                  onChange={(e) => setFormData(prev => ({ ...prev, sede: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Seleccionar sede</option>
+                  {locations.map(location => (
+                    <option key={location.id} value={location.id}>
+                      {location.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Área */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Área
+                </label>
                 <input
                   type="text"
-                  value={formData.code}
-                  onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.area}
+                  onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: Administración, Ventas"
+                />
+              </div>
+
+              {/* Marca */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Marca *
+                </label>
+                <input
+                  type="text"
+                  value={formData.marca}
+                  onChange={(e) => setFormData(prev => ({ ...prev, marca: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: Samsung, iPhone, Xiaomi"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={generateRandomCode}
-                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Generar
-                </button>
               </div>
-            </div>
 
-            {/* Sede */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Sede *
-              </label>
-              <select
-                value={formData.sede}
-                onChange={(e) => setFormData(prev => ({ ...prev, sede: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">Seleccionar sede</option>
-                {locations.map(location => (
-                  <option key={location.id} value={location.id}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              {/* Modelo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Modelo *
+                </label>
+                <input
+                  type="text"
+                  value={formData.modelo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, modelo: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: Galaxy S21, iPhone 13"
+                  required
+                />
+              </div>
 
-            {/* Área */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Área
-              </label>
-              <input
-                type="text"
-                value={formData.area}
-                onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Administración, Ventas"
-              />
-            </div>
+              {/* Número de Serie */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Número de Serie
+                </label>
+                <input
+                  type="text"
+                  value={formData.numero_serie}
+                  onChange={(e) => setFormData(prev => ({ ...prev, numero_serie: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
 
-            {/* Marca */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Marca *
-              </label>
-              <input
-                type="text"
-                value={formData.marca}
-                onChange={(e) => setFormData(prev => ({ ...prev, marca: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Samsung, iPhone, Xiaomi"
-                required
-              />
-            </div>
+              {/* IMEI */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  IMEI *
+                </label>
+                <input
+                  type="text"
+                  value={formData.imei}
+                  onChange={(e) => setFormData(prev => ({ ...prev, imei: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="15 dígitos"
+                  required
+                />
+              </div>
 
-            {/* Modelo */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Modelo *
-              </label>
-              <input
-                type="text"
-                value={formData.modelo}
-                onChange={(e) => setFormData(prev => ({ ...prev, modelo: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Galaxy S21, iPhone 13"
-                required
-              />
-            </div>
+              {/* Número de Teléfono */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Número de Teléfono
+                </label>
+                <input
+                  type="text"
+                  value={formData.numero_telefono}
+                  onChange={(e) => setFormData(prev => ({ ...prev, numero_telefono: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="+51 999 999 999"
+                />
+              </div>
 
-            {/* Número de Serie */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Número de Serie
-              </label>
-              <input
-                type="text"
-                value={formData.numero_serie}
-                onChange={(e) => setFormData(prev => ({ ...prev, numero_serie: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+              {/* Operador */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Operador
+                </label>
+                <select
+                  value={formData.operador}
+                  onChange={(e) => setFormData(prev => ({ ...prev, operador: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Seleccionar operador</option>
+                  <option value="Movistar">Movistar</option>
+                  <option value="Claro">Claro</option>
+                  <option value="Entel">Entel</option>
+                  <option value="Bitel">Bitel</option>
+                  <option value="Virgin Mobile">Virgin Mobile</option>
+                </select>
+              </div>
 
-            {/* IMEI */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                IMEI *
-              </label>
-              <input
-                type="text"
-                value={formData.imei}
-                onChange={(e) => setFormData(prev => ({ ...prev, imei: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="15 dígitos"
-                required
-              />
-            </div>
+              {/* Plan de Datos */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Plan de Datos
+                </label>
+                <input
+                  type="text"
+                  value={formData.plan_datos}
+                  onChange={(e) => setFormData(prev => ({ ...prev, plan_datos: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: 5GB, Ilimitado"
+                />
+              </div>
 
-            {/* Número de Teléfono */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Número de Teléfono
-              </label>
-              <input
-                type="text"
-                value={formData.numero_telefono}
-                onChange={(e) => setFormData(prev => ({ ...prev, numero_telefono: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="+51 999 999 999"
-              />
-            </div>
+              {/* Estado Físico */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Estado Físico
+                </label>
+                <select
+                  value={formData.estado_fisico}
+                  onChange={(e) => setFormData(prev => ({ ...prev, estado_fisico: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Seleccionar estado</option>
+                  <option value="Excelente">Excelente</option>
+                  <option value="Bueno">Bueno</option>
+                  <option value="Regular">Regular</option>
+                  <option value="Malo">Malo</option>
+                  <option value="Dañado">Dañado</option>
+                </select>
+              </div>
 
-            {/* Operador */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Operador
-              </label>
-              <select
-                value={formData.operador}
-                onChange={(e) => setFormData(prev => ({ ...prev, operador: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar operador</option>
-                <option value="Movistar">Movistar</option>
-                <option value="Claro">Claro</option>
-                <option value="Entel">Entel</option>
-                <option value="Bitel">Bitel</option>
-                <option value="Virgin Mobile">Virgin Mobile</option>
-              </select>
-            </div>
+              {/* Sistema Operativo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sistema Operativo
+                </label>
+                <select
+                  value={formData.sistema_operativo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, sistema_operativo: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Seleccionar SO</option>
+                  <option value="Android">Android</option>
+                  <option value="iOS">iOS</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
 
-            {/* Plan de Datos */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Plan de Datos
-              </label>
-              <input
-                type="text"
-                value={formData.plan_datos}
-                onChange={(e) => setFormData(prev => ({ ...prev, plan_datos: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: 5GB, Ilimitado"
-              />
-            </div>
+              {/* Versión SO */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Versión SO
+                </label>
+                <input
+                  type="text"
+                  value={formData.version_so}
+                  onChange={(e) => setFormData(prev => ({ ...prev, version_so: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: Android 12, iOS 16"
+                />
+              </div>
 
-            {/* Estado Físico */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado Físico
-              </label>
-              <select
-                value={formData.estado_fisico}
-                onChange={(e) => setFormData(prev => ({ ...prev, estado_fisico: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar estado</option>
-                <option value="Excelente">Excelente</option>
-                <option value="Bueno">Bueno</option>
-                <option value="Regular">Regular</option>
-                <option value="Malo">Malo</option>
-                <option value="Dañado">Dañado</option>
-              </select>
-            </div>
+              {/* Almacenamiento */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Almacenamiento
+                </label>
+                <input
+                  type="text"
+                  value={formData.almacenamiento}
+                  onChange={(e) => setFormData(prev => ({ ...prev, almacenamiento: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: 128GB, 256GB"
+                />
+              </div>
 
-            {/* Sistema Operativo */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Sistema Operativo
-              </label>
-              <select
-                value={formData.sistema_operativo}
-                onChange={(e) => setFormData(prev => ({ ...prev, sistema_operativo: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar SO</option>
-                <option value="Android">Android</option>
-                <option value="iOS">iOS</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
+              {/* RAM */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  RAM
+                </label>
+                <input
+                  type="text"
+                  value={formData.ram}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ram: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: 6GB, 8GB"
+                />
+              </div>
 
-            {/* Versión SO */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Versión SO
-              </label>
-              <input
-                type="text"
-                value={formData.version_so}
-                onChange={(e) => setFormData(prev => ({ ...prev, version_so: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Android 12, iOS 16"
-              />
-            </div>
+              {/* Estado de Batería */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Estado de Batería
+                </label>
+                <select
+                  value={formData.bateria_estado}
+                  onChange={(e) => setFormData(prev => ({ ...prev, bateria_estado: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Seleccionar estado</option>
+                  <option value="Excelente">Excelente</option>
+                  <option value="Bueno">Bueno</option>
+                  <option value="Regular">Regular</option>
+                  <option value="Malo">Malo</option>
+                  <option value="Requiere cambio">Requiere cambio</option>
+                </select>
+              </div>
 
-            {/* Almacenamiento */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Almacenamiento
-              </label>
-              <input
-                type="text"
-                value={formData.almacenamiento}
-                onChange={(e) => setFormData(prev => ({ ...prev, almacenamiento: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: 128GB, 256GB"
-              />
-            </div>
+              {/* Accesorios */}
+              <div className="md:col-span-2 lg:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Accesorios
+                </label>
+                <input
+                  type="text"
+                  value={formData.accesorios}
+                  onChange={(e) => setFormData(prev => ({ ...prev, accesorios: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: Cargador, Audífonos, Funda"
+                />
+              </div>
 
-            {/* RAM */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                RAM
-              </label>
-              <input
-                type="text"
-                value={formData.ram}
-                onChange={(e) => setFormData(prev => ({ ...prev, ram: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: 6GB, 8GB"
-              />
-            </div>
-
-            {/* Estado de Batería */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado de Batería
-              </label>
-              <select
-                value={formData.bateria_estado}
-                onChange={(e) => setFormData(prev => ({ ...prev, bateria_estado: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Seleccionar estado</option>
-                <option value="Excelente">Excelente</option>
-                <option value="Bueno">Bueno</option>
-                <option value="Regular">Regular</option>
-                <option value="Malo">Malo</option>
-                <option value="Requiere cambio">Requiere cambio</option>
-              </select>
-            </div>
-
-            {/* Accesorios */}
-            <div className="md:col-span-2 lg:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Accesorios
-              </label>
-              <input
-                type="text"
-                value={formData.accesorios}
-                onChange={(e) => setFormData(prev => ({ ...prev, accesorios: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Cargador, Audífonos, Funda"
-              />
-            </div>
-
-            {/* Notas */}
-            <div className="md:col-span-2 lg:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notas
-              </label>
-              <textarea
-                value={formData.notas}
-                onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Información adicional..."
-              />
+              {/* Notas */}
+              <div className="md:col-span-2 lg:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notas
+                </label>
+                <textarea
+                  value={formData.notas}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Información adicional..."
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-6 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              Cancelar
-            </button>
+          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col sm:flex-row-reverse gap-3 z-10">
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="flex-1 px-8 py-3 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"
             >
-              {loading ? 'Guardando...' : editPhone ? 'Actualizar' : 'Crear'}
+              {loading ? 'Guardando...' : (editPhone ? 'Actualizar' : 'Crear Registro')}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
+            >
+              Cancelar
             </button>
           </div>
         </form>
@@ -464,5 +466,3 @@ export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps
     </div>
   );
 }
-
-

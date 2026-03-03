@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List, ExternalLink, Star, Video } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List, ExternalLink, Star, Video } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
@@ -17,7 +17,7 @@ export default function Cameras({ subview }: CamerasProps) {
   const [loading, setLoading] = useState(true);
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [editing, setEditing] = useState<Camera | undefined>();
@@ -282,15 +282,15 @@ export default function Cameras({ subview }: CamerasProps) {
           <div className="bg-[#f1f5f9] p-2 rounded-xl border border-[#e2e8f0]">
             <Video className="text-[#002855]" size={20} />
           </div>
-          <div>
+          <div className="hidden lg:block">
             <h1 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">SISTEMA CCTV</h1>
             <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
               <span className="flex items-center gap-1"><GiCctvCamera size={12} /> {subview ? getSubtitleFromSubview(subview).toUpperCase() : 'MONITOREO Y VIGILANCIA'}</span>
-              <span className="text-[#cbd5e1]">|</span>
-              <span className="bg-[#f1f5f9] px-2 py-0.5 rounded text-[#002855]">{cameras.length} Cámaras</span>
             </div>
           </div>
         </div>
+
+
 
         <div className="flex items-center gap-2">
           <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
@@ -343,68 +343,62 @@ export default function Cameras({ subview }: CamerasProps) {
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
 
-        <div className="bg-white shadow-sm rounded-xl border border-gray-200 mb-8 p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Búsqueda */}
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+        <div className="bg-white p-3 sm:p-4 rounded-xl border border-[#e2e8f0] shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
+                <MapPin size={14} className="text-slate-500" />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sede:</span>
+                <select
+                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
+                  value={filterLocation}
+                  onChange={(e) => setFilterLocation(e.target.value)}
+                >
+                  <option value="todos">TODAS LAS SEDES</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.name.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 text-sm"
-                placeholder="Buscar cámara, modelo, IP..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+
+              <div className="h-8 w-px bg-gray-200 mx-1 hidden sm:block" />
+
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
+                <Video size={14} className="text-slate-500" />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado:</span>
+                <select
+                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                  <option value="todos">TODOS LOS ESTADOS</option>
+                  <option value="active">ACTIVO</option>
+                  <option value="maintenance">MANTENIMIENTO</option>
+                  <option value="inactive">INACTIVO</option>
+                </select>
+              </div>
+
+              <div className="h-8 w-px bg-gray-200 mx-1 hidden sm:block" />
+
+              <div className="flex items-center gap-3 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Almacenamiento Crítico:</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={filterStorage}
+                    onChange={(e) => setFilterStorage(e.target.checked)}
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500"></div>
+                </label>
+              </div>
+
             </div>
 
-            {/* Filtro Sede */}
-            <div>
-              <select
-                className="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 rounded-lg bg-white"
-                value={filterLocation}
-                onChange={(e) => setFilterLocation(e.target.value)}
-              >
-                <option value="todos">Todas las Sedes</option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filtro Estado */}
-            <div>
-              <select
-                className="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none focus:ring-1 focus:ring-slate-500 focus:border-slate-500 rounded-lg bg-white"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="todos">Todos los Estados</option>
-                <option value="active">Activo</option>
-                <option value="maintenance">Mantenimiento</option>
-                <option value="inactive">Inactivo</option>
-              </select>
-            </div>
-
-            {/* Filtro Crítico */}
-            <div className="flex items-center justify-between sm:justify-start px-2 py-2 sm:py-0 border sm:border-0 border-gray-100 rounded-lg">
-              <span className="text-sm font-medium text-gray-700 sm:hidden">Espacio Crítico</span>
-              <label className="inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={filterStorage}
-                  onChange={(e) => setFilterStorage(e.target.checked)}
-                />
-                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-slate-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-800"></div>
-                <span className="ms-3 text-sm font-medium text-gray-700 hidden sm:inline">Espacio Crítico</span>
-              </label>
-            </div>
           </div>
         </div>
 

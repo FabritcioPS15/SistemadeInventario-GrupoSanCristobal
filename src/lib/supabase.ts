@@ -172,14 +172,21 @@ export type Camera = {
   camera_disks?: CameraDisk[];
 };
 
+export type WindowsCredential = {
+  username: string;
+  password?: string;
+  description?: string;
+};
+
 export type Server = {
   id: string;
   name: string;
   location_id?: string;
   ip_address?: string;
   anydesk_id?: string;
-  username?: string;
-  password?: string;
+  username?: string; // Mantener por compatibilidad o como usuario principal
+  password?: string; // Mantener por compatibilidad o como contraseña principal
+  windows_credentials?: WindowsCredential[];
   notes?: string;
   created_at: string;
   updated_at: string;

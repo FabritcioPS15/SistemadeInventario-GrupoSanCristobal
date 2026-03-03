@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Loader2, Plus, Trash2, Edit2 } from 'lucide-react';
 import { supabase, AssetWithDetails } from '../../lib/supabase';
+import { div } from 'framer-motion/client';
 
 type PartUsed = {
   id?: string;
@@ -297,355 +298,359 @@ export default function MaintenanceForm({ onClose, onSave, editRecord }: Mainten
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-4xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-gray-900 uppercase">
               {editRecord ? 'Editar Registro de Mantenimiento' : 'Nuevo Registro de Mantenimiento'}
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">Completa los detalles técnicos del servicio</p>
+            <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-wide">Completa los detalles técnicos del servicio</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <X size={20} className="text-gray-400" />
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
+            <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <section className="space-y-4">
-                <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Información General</h3>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <section className="space-y-4">
+                  <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Información General</h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sede (Opcional)</label>
-                    <select
-                      name="location_id"
-                      value={formData.location_id}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                    >
-                      <option value="">Todas las Sedes</option>
-                      {locations.map(loc => (
-                        <option key={loc.id} value={loc.id}>{loc.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Activo *</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => {
-                          setSearchTerm(e.target.value);
-                          setIsAssetDropdownOpen(true);
-                        }}
-                        onFocus={() => setIsAssetDropdownOpen(true)}
-                        placeholder="Buscar activo..."
-                        className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.asset_id ? 'border-red-300' : 'border-gray-200'}`}
-                      />
-                      {isAssetDropdownOpen && (
-                        <div className="absolute z-30 mt-1 w-full bg-white shadow-2xl rounded-lg border border-gray-100 max-h-60 overflow-y-auto">
-                          {filteredAssets.length > 0 ? (
-                            filteredAssets.map(asset => (
-                              <div
-                                key={asset.id}
-                                className="px-4 py-2.5 hover:bg-blue-50 cursor-pointer border-b last:border-0"
-                                onClick={() => handleAssetSelect(asset)}
-                              >
-                                <p className="text-sm font-bold text-gray-900">{asset.brand} {asset.model}</p>
-                                <div className="flex items-center justify-between mt-0.5">
-                                  <p className="text-[10px] text-gray-500 font-mono">{asset.serial_number}</p>
-                                  <p className="text-[9px] font-black text-blue-500 uppercase tracking-tighter">{asset.locations?.name}</p>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="px-4 py-3 text-center text-gray-400 text-xs italic">
-                              No hay activos en esta sede
-                            </div>
-                          )}
-                        </div>
-                      )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sede (Opcional)</label>
+                      <select
+                        name="location_id"
+                        value={formData.location_id}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                      >
+                        <option value="">Todas las Sedes</option>
+                        {locations.map(loc => (
+                          <option key={loc.id} value={loc.id}>{loc.name}</option>
+                        ))}
+                      </select>
                     </div>
-                    {errors.asset_id && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.asset_id}</p>}
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo *</label>
-                    <select
-                      name="maintenance_type"
-                      value={formData.maintenance_type}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="preventive">Preventivo</option>
-                      <option value="corrective">Correctivo</option>
-                      <option value="technical_review">Revisión Técnica</option>
-                      <option value="repair">Reparación</option>
-                    </select>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Activo *</label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={searchTerm}
+                          onChange={(e) => {
+                            setSearchTerm(e.target.value);
+                            setIsAssetDropdownOpen(true);
+                          }}
+                          onFocus={() => setIsAssetDropdownOpen(true)}
+                          placeholder="Buscar activo..."
+                          className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.asset_id ? 'border-red-300' : 'border-gray-200'}`}
+                        />
+                        {isAssetDropdownOpen && (
+                          <div className="absolute z-30 mt-1 w-full bg-white shadow-2xl rounded-lg border border-gray-100 max-h-60 overflow-y-auto">
+                            {filteredAssets.length > 0 ? (
+                              filteredAssets.map(asset => (
+                                <div
+                                  key={asset.id}
+                                  className="px-4 py-2.5 hover:bg-blue-50 cursor-pointer border-b last:border-0"
+                                  onClick={() => handleAssetSelect(asset)}
+                                >
+                                  <p className="text-sm font-bold text-gray-900">{asset.brand} {asset.model}</p>
+                                  <div className="flex items-center justify-between mt-0.5">
+                                    <p className="text-[10px] text-gray-500 font-mono">{asset.serial_number}</p>
+                                    <p className="text-[9px] font-black text-blue-500 uppercase tracking-tighter">{asset.locations?.name}</p>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="px-4 py-3 text-center text-gray-400 text-xs italic">
+                                No hay activos en esta sede
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {errors.asset_id && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.asset_id}</p>}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Estado *</label>
-                    <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="pending">Pendiente</option>
-                      <option value="in_progress">En Progreso</option>
-                      <option value="completed">Completado</option>
-                      <option value="waiting_parts">Esperando Repuestos</option>
-                    </select>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo *</label>
+                      <select
+                        name="maintenance_type"
+                        value={formData.maintenance_type}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="preventive">Preventivo</option>
+                        <option value="corrective">Correctivo</option>
+                        <option value="technical_review">Revisión Técnica</option>
+                        <option value="repair">Reparación</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Estado *</label>
+                      <select
+                        name="status"
+                        value={formData.status}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="pending">Pendiente</option>
+                        <option value="in_progress">En Progreso</option>
+                        <option value="completed">Completado</option>
+                        <option value="waiting_parts">Esperando Repuestos</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descripción del Servicio *</label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={2}
-                    className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.description ? 'border-red-300' : 'border-gray-200'}`}
-                    placeholder="Detalla el trabajo realizado..."
-                  />
-                  {errors.description && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.description}</p>}
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Fechas y Tiempos</h3>
-                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Prog. Inicia</label>
-                    <input
-                      type="date"
-                      name="scheduled_date"
-                      value={formData.scheduled_date}
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descripción del Servicio *</label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
                       onChange={handleChange}
+                      rows={2}
+                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.description ? 'border-red-300' : 'border-gray-200'}`}
+                      placeholder="Detalla el trabajo realizado..."
+                    />
+                    {errors.description && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.description}</p>}
+                  </div>
+                </section>
+
+                <section className="space-y-4">
+                  <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Fechas y Tiempos</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Prog. Inicia</label>
+                      <input
+                        type="date"
+                        name="scheduled_date"
+                        value={formData.scheduled_date}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Completado</label>
+                      <input
+                        type="date"
+                        name="completed_date"
+                        value={formData.completed_date}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Próx. Mantenimiento</label>
+                      <input
+                        type="date"
+                        name="next_maintenance_date"
+                        value={formData.next_maintenance_date}
+                        onChange={handleChange}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Horas Hombre</label>
+                      <input
+                        type="number"
+                        name="work_hours"
+                        value={formData.work_hours}
+                        onChange={handleChange}
+                        step="0.5"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <div className="space-y-6">
+                <section className="space-y-4">
+                  <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Detalle Técnico</h3>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Causa de Falla</label>
+                    <textarea
+                      name="failure_cause"
+                      value={formData.failure_cause}
+                      onChange={handleChange}
+                      rows={2}
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      placeholder="¿Por qué ocurrió el problema?"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Completado</label>
-                    <input
-                      type="date"
-                      name="completed_date"
-                      value={formData.completed_date}
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Solución Aplicada</label>
+                    <textarea
+                      name="solution_applied"
+                      value={formData.solution_applied}
                       onChange={handleChange}
+                      rows={2}
                       className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Próx. Mantenimiento</label>
-                    <input
-                      type="date"
-                      name="next_maintenance_date"
-                      value={formData.next_maintenance_date}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      placeholder="Pasos realizados para corregir..."
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Horas Hombre</label>
-                    <input
-                      type="number"
-                      name="work_hours"
-                      value={formData.work_hours}
-                      onChange={handleChange}
-                      step="0.5"
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <div className="space-y-6">
-              <section className="space-y-4">
-                <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Detalle Técnico</h3>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Causa de Falla</label>
-                  <textarea
-                    name="failure_cause"
-                    value={formData.failure_cause}
-                    onChange={handleChange}
-                    rows={2}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                    placeholder="¿Por qué ocurrió el problema?"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Solución Aplicada</label>
-                  <textarea
-                    name="solution_applied"
-                    value={formData.solution_applied}
-                    onChange={handleChange}
-                    rows={2}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                    placeholder="Pasos realizados para corregir..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Técnico Responsable</label>
-                  <input
-                    type="text"
-                    name="technician"
-                    value={formData.technician}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                    placeholder="Nombre del técnico"
-                  />
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Repuestos y Costos</h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowPartForm(!showPartForm)}
-                    className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800"
-                  >
-                    <Plus size={14} /> Añadir Repuesto
-                  </button>
-                </div>
-
-                {showPartForm && (
-                  <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Técnico Responsable</label>
                     <input
                       type="text"
-                      placeholder="Nombre del repuesto"
-                      value={newPart.name}
-                      onChange={e => setNewPart({ ...newPart, name: e.target.value })}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                      name="technician"
+                      value={formData.technician}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                      placeholder="Nombre del técnico"
                     />
-                    <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="number"
-                        placeholder="Cantidad"
-                        value={newPart.quantity || ''}
-                        onChange={e => setNewPart({ ...newPart, quantity: parseFloat(e.target.value) })}
-                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Precio Unit."
-                        value={newPart.unit_price || ''}
-                        onChange={e => setNewPart({ ...newPart, unit_price: parseFloat(e.target.value) })}
-                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                      />
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleAddPart}
-                        className="flex-1 px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700"
-                      >
-                        {editingPartIndex !== null ? 'Actualizar' : 'Añadir'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPartForm(false);
-                          setEditingPartIndex(null);
-                        }}
-                        className="px-3 py-2 bg-white text-gray-600 text-xs font-bold rounded-lg border border-gray-200"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
                   </div>
-                )}
+                </section>
 
-                <div className="space-y-2">
-                  {formData.parts_used.map((part, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg text-sm group">
-                      <div className="flex-1">
-                        <p className="font-bold text-gray-900">{part.name}</p>
-                        <p className="text-xs text-gray-500">{part.quantity} x S/ {part.unit_price.toFixed(2)}</p>
+                <section className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Repuestos y Costos</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowPartForm(!showPartForm)}
+                      className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800"
+                    >
+                      <Plus size={14} /> Añadir Repuesto
+                    </button>
+                  </div>
+
+                  {showPartForm && (
+                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
+                      <input
+                        type="text"
+                        placeholder="Nombre del repuesto"
+                        value={newPart.name}
+                        onChange={e => setNewPart({ ...newPart, name: e.target.value })}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <input
+                          type="number"
+                          placeholder="Cantidad"
+                          value={newPart.quantity || ''}
+                          onChange={e => setNewPart({ ...newPart, quantity: parseFloat(e.target.value) })}
+                          className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                        />
+                        <input
+                          type="number"
+                          placeholder="Precio Unit."
+                          value={newPart.unit_price || ''}
+                          onChange={e => setNewPart({ ...newPart, unit_price: parseFloat(e.target.value) })}
+                          className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                        />
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className="font-bold text-blue-600">S/ {part.total_cost.toFixed(2)}</span>
-                        <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setNewPart({ ...part });
-                              setEditingPartIndex(index);
-                              setShowPartForm(true);
-                            }}
-                            className="p-1.5 text-gray-400 hover:text-blue-600"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removePart(index)}
-                            className="p-1.5 text-gray-400 hover:text-rose-600"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={handleAddPart}
+                          className="flex-1 px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700"
+                        >
+                          {editingPartIndex !== null ? 'Actualizar' : 'Añadir'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPartForm(false);
+                            setEditingPartIndex(null);
+                          }}
+                          className="px-3 py-2 bg-white text-gray-600 text-xs font-bold rounded-lg border border-gray-200"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {formData.parts_used.map((part, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg text-sm group">
+                        <div className="flex-1">
+                          <p className="font-bold text-gray-900">{part.name}</p>
+                          <p className="text-xs text-gray-500">{part.quantity} x S/ {part.unit_price.toFixed(2)}</p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="font-bold text-blue-600">S/ {part.total_cost.toFixed(2)}</span>
+                          <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewPart({ ...part });
+                                setEditingPartIndex(index);
+                                setShowPartForm(true);
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-blue-600"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removePart(index)}
+                              className="p-1.5 text-gray-400 hover:text-rose-600"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-800 uppercase italic">Costo Total Estimado</span>
-                  <span className="text-lg font-black text-blue-800 font-mono">S/ {formData.total_cost.toFixed(2)}</span>
+                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-between">
+                    <span className="text-xs font-bold text-blue-800 uppercase italic">Costo Total Estimado</span>
+                    <span className="text-lg font-black text-blue-800 font-mono">S/ {formData.total_cost.toFixed(2)}</span>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col gap-4 z-10">
+              {errors.submit && (
+                <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-rose-800">
+                  <AlertCircle size={20} />
+                  <p className="text-sm font-medium">{errors.submit}</p>
                 </div>
-              </section>
+              )}
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="warranty_claim"
+                    name="warranty_claim"
+                    checked={formData.warranty_claim}
+                    onChange={handleChange}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <label htmlFor="warranty_claim" className="text-xs font-bold text-gray-700 uppercase cursor-pointer">Requerir Garantía</label>
+                </div>
+                <div className="flex flex-col sm:flex-row-reverse gap-3">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex-1 px-8 py-3 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"
+                  >
+                    {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                    {editRecord ? 'Guardar Cambios' : 'Crear Registro'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-
-          <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="warranty_claim"
-                name="warranty_claim"
-                checked={formData.warranty_claim}
-                onChange={handleChange}
-                className="w-4 h-4 text-blue-600 rounded"
-              />
-              <label htmlFor="warranty_claim" className="text-xs font-bold text-gray-700 uppercase cursor-pointer">Requerir Garantía</label>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-6 py-3 sm:py-2.5 text-[10px] font-bold text-slate-600 uppercase tracking-widest bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm order-2 sm:order-1"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-8 py-3 sm:py-2.5 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest order-1 sm:order-2"
-              >
-                {loading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                {editRecord ? 'Guardar Cambios' : 'Crear Registro'}
-              </button>
-            </div>
-          </div>
-
-          {errors.submit && (
-            <div className="mt-4 p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-rose-800">
-              <AlertCircle size={20} />
-              <p className="text-sm font-medium">{errors.submit}</p>
-            </div>
-          )}
         </form>
       </div>
     </div>

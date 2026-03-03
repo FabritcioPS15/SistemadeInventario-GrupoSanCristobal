@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Calendar, User, Eye, Download, Info, Star, X, MapPin, ShieldCheck, DollarSign, Package, LayoutGrid, List as ListIcon, ChevronUp, ChevronDown } from 'lucide-react';
-import { useHeaderVisible } from '../hooks/useHeaderVisible';
+import { Plus, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Eye, Star, X, MapPin, ShieldCheck, Package, LayoutGrid, List as ListIcon, ChevronUp, ChevronDown } from 'lucide-react';
 import { supabase, AssetWithDetails, Location } from '../lib/supabase';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,10 +51,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState<MaintenanceRecord | undefined>();
   const [viewingRecord, setViewingRecord] = useState<MaintenanceRecord | undefined>();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
+  // itemsPerPage, setItemsPerPage and isHeaderVisible no longer needed if not used in the UI
   const [typeFilter, setTypeFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [machineTypeFilter, setMachineTypeFilter] = useState('');
@@ -69,20 +67,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
     }
     setSortConfig({ key, direction });
   };
-  const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    inProgress: 0,
-    completed: 0,
-    waitingParts: 0,
-    preventive: 0,
-    corrective: 0,
-    technicalReview: 0,
-    repair: 0,
-    recentlyAdded: 0,
-    overdue: 0,
-    totalCost: 0
-  });
 
   useEffect(() => {
     fetchData();
@@ -110,57 +94,11 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
       if (data) {
         setMaintenanceRecords(data as MaintenanceRecord[]);
-        calculateStats(data as MaintenanceRecord[]);
       }
     } catch (err: any) {
       console.error('Error loading maintenance records:', err);
       alert(`Error al cargar registros: ${err.message}`);
     }
-  };
-
-  const calculateStats = (records: MaintenanceRecord[]) => {
-    const newStats = {
-      total: records.length,
-      pending: 0,
-      inProgress: 0,
-      completed: 0,
-      waitingParts: 0,
-      preventive: 0,
-      corrective: 0,
-      technicalReview: 0,
-      repair: 0,
-      recentlyAdded: 0,
-      overdue: 0,
-      totalCost: 0
-    };
-
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const today = new Date();
-
-    records.forEach(record => {
-      switch (record.status) {
-        case 'pending': newStats.pending++; break;
-        case 'in_progress': newStats.inProgress++; break;
-        case 'completed': newStats.completed++; break;
-        case 'waiting_parts': newStats.waitingParts++; break;
-      }
-      switch (record.maintenance_type) {
-        case 'preventive': newStats.preventive++; break;
-        case 'corrective': newStats.corrective++; break;
-        case 'technical_review': newStats.technicalReview++; break;
-        case 'repair': newStats.repair++; break;
-      }
-      if (record.total_cost) newStats.totalCost += record.total_cost;
-      const createdDate = new Date(record.created_at);
-      if (createdDate >= oneWeekAgo) newStats.recentlyAdded++;
-      if (record.scheduled_date && record.status !== 'completed') {
-        const scheduledDate = new Date(record.scheduled_date);
-        if (scheduledDate < today) newStats.overdue++;
-      }
-    });
-
-    setStats(newStats);
   };
 
   const fetchLocations = async () => {
@@ -315,7 +253,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   }, [maintenanceRecords, searchTerm, locationFilter, statusFilter, typeFilter, categoryFilter, sortConfig]);
 
   const clearFilters = () => {
-    setSearchTerm('');
     setStatusFilter('');
     setTypeFilter('');
     setLocationFilter('');
@@ -342,34 +279,17 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
       {/* Standard Application Header (h-14) */}
-      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out translate-y-0`}>
         <div className="flex items-center gap-4">
           <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
             <Wrench size={20} />
           </div>
           <div className="hidden lg:block">
             <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Mantenimiento y Soporte</h2>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span>Tickets y Servicios</span>
-              <div className="w-1 h-1 bg-gray-300 rounded-full" />
-              <span>{maintenanceRecords.length} Registros</span>
-            </div>
           </div>
         </div>
 
-        {/* Integrated Search Bar in Header */}
-        <div className="flex-1 max-w-md px-4">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar mantenimientos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all text-sm font-medium"
-            />
-          </div>
-        </div>
+
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
@@ -414,36 +334,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
       <div className="p-6 space-y-6">
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Mantenimientos</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-              <Wrench size={20} className="text-gray-400" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pendientes</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              <Clock size={20} className="text-yellow-500" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Inversión Total</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-blue-600">S/ {stats.totalCost.toFixed(2)}</div>
-              <DollarSign size={20} className="text-blue-500" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Completados</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-emerald-600">{stats.completed}</div>
-              <CheckCircle size={20} className="text-emerald-500" />
-            </div>
-          </div>
-        </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 mb-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

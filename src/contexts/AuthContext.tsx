@@ -12,18 +12,20 @@ type User = {
   status: 'active' | 'inactive';
   notes?: string;
   permissions?: string[];
+  avatar_url?: string;
   created_at: string;
   updated_at: string;
 };
 
 type AuthContextType = {
   user: User | null;
-  login: (user: User) => void;
+  login: (user: User, remember?: boolean) => void;
   logout: () => void;
   loading: boolean;
   hasPermission: (permission: string) => boolean;
   canEdit: () => boolean;
   needsPasswordSetup: boolean;
+  updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -50,6 +52,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkSession();
   }, []);
 
+  // Update localStorage when user changes (if they opted in)
+  useEffect(() => {
+    if (user) {
+      const saved = localStorage.getItem('auth_user');
+      if (saved) {
+        localStorage.setItem('auth_user', JSON.stringify(user));
+      }
+    }
+  }, [user]);
+
   // Subscribe to realtime changes for the current user
   useEffect(() => {
     if (!user?.id) return;
@@ -62,8 +74,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         table: 'users',
         filter: `id=eq.${user.id}`
       }, async (payload) => {
-        console.log('User data updated in realtime:', payload);
-
         // Fetch the complete updated user data
         const { data: updatedUser } = await supabase
           .from('users')
@@ -84,16 +94,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const checkSession = async () => {
     try {
-      // Verificar si hay usuarios sin contraseñas configuradas
+      // 1. Verificar si hay usuario en localStorage
+      const savedUser = localStorage.getItem('auth_user');
+      if (savedUser) {
+        const parsedUser = JSON.parse(savedUser);
+
+        // Refrescar datos desde la DB para asegurar que tenemos location_id y permisos actualizados
+        const { data: freshUser } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', parsedUser.id)
+          .single();
+
+        if (freshUser) {
+          setUser(freshUser as User);
+          localStorage.setItem('auth_user', JSON.stringify(freshUser));
+        } else {
+          setUser(parsedUser);
+        }
+      }
+
+      // 2. Verificar si hay usuarios sin contraseñas configuradas (lógica original)
       const { data: usersData } = await supabase
         .from('users')
-        .select('*')
+        .select('id, password')
         .eq('status', 'active');
 
       if (usersData && usersData.length > 0) {
-        // Verificar si alguno de estos usuarios tiene contraseña
         const hasPasswordUsers = usersData.some(user => user.password && user.password.trim() !== '');
-
         if (!hasPasswordUsers) {
           setNeedsPasswordSetup(true);
         }
@@ -105,12 +133,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const login = (userData: User) => {
+  const login = (userData: User, remember: boolean = false) => {
     setUser(userData);
+    if (remember) {
+      localStorage.setItem('auth_user', JSON.stringify(userData));
+    } else {
+      localStorage.removeItem('auth_user');
+    }
   };
 
   const logout = () => {
     setUser(null);
+    localStorage.removeItem('auth_user');
   };
 
   const hasPermission = (permission: string): boolean => {
@@ -123,7 +157,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const fullAccess = [
       'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'sutran', 'checklist',
-      'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular', 'tickets', 'painpoint',
+      'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular', 'tickets', 'tickets-dashboard', 'tickets-mine', 'tickets-reports', 'painpoint',
       'inventory-pc', 'inventory-celular', 'inventory-dvr', 'inventory-impresora', 'inventory-escaner',
       'inventory-monitor', 'inventory-laptop', 'inventory-proyector', 'inventory-switch', 'inventory-chip',
       'inventory-tinte', 'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
@@ -154,6 +188,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return allowedRoles.includes(user.role);
   };
 
+  const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', user.id);
+
+    if (error) throw error;
+
+    // El estado se actualizará automáticamente vía Realtime subscription
+  };
+
   const value = {
     user,
     login,
@@ -162,6 +209,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     hasPermission,
     canEdit,
     needsPasswordSetup,
+    updateProfile,
   };
 
   return (

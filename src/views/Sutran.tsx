@@ -1,6 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Building2, Calendar, FileText, User, MapPin, Clock, Info, CheckCircle, AlertTriangle, Trash2, Edit, X, Download, Star } from 'lucide-react';
-import { useHeaderVisible } from '../hooks/useHeaderVisible';
+import { useState, useEffect } from 'react';
+import { Plus, Building2, Calendar, FileText, User, MapPin, Clock, CheckCircle, AlertTriangle, Trash2, Edit, X, Star, Eye, Send } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { SutranVisit } from '../lib/supabase';
 import SutranVisitForm from '../components/forms/SutranVisitForm';
@@ -10,7 +9,7 @@ export default function Sutran() {
   const { canEdit } = useAuth();
   const [visits, setVisits] = useState<SutranVisit[]>([]);
   const [loading, setLoading] = useState(true);
-  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
+  // isHeaderVisible no longer needed if not used in the UI
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [visitTypeFilter, setVisitTypeFilter] = useState('');
@@ -217,34 +216,17 @@ export default function Sutran() {
     <div className="flex flex-col h-full bg-[#f8f9fc]">
       {/* Title / Tab Bar - Minimalist Executive Style */}
       {/* Standard Application Header (h-14) */}
-      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out translate-y-0`}>
         <div className="flex items-center gap-4">
           <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
             <Building2 size={20} />
           </div>
           <div className="hidden lg:block">
             <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Normativa Sutran</h2>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span>Cumplimiento Regulatorio</span>
-              <div className="w-1 h-1 bg-gray-300 rounded-full" />
-              <span>{visits.length} Visitas</span>
-            </div>
           </div>
         </div>
 
-        {/* Integrated Search Bar in Header */}
-        <div className="flex-1 max-w-md px-4">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar inspectores, sedes u observaciones..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all text-sm font-medium"
-            />
-          </div>
-        </div>
+
 
         <div className="flex items-center gap-2">
           {canEdit() && (

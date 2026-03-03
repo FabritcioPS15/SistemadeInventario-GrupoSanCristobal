@@ -216,11 +216,11 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-md sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-xl font-semibold text-gray-800">
+            <h2 className="text-xl font-bold text-gray-900 uppercase">
               {editLocation ? 'Editar Ubicación' : 'Nueva Ubicación'}
             </h2>
             {editLocation && hasChanges && (
@@ -229,150 +229,153 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
               </p>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Mensaje de error general */}
-          {errors.submit && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-              <div className="flex items-center">
-                <AlertCircle size={20} className="text-red-500 mr-2" />
-                <p className="text-red-700">{errors.submit}</p>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {/* Mensaje de error general */}
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+                <div className="flex items-center">
+                  <AlertCircle size={20} className="text-red-500 mr-2" />
+                  <p className="text-red-700">{errors.submit}</p>
+                </div>
               </div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nombre *
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className={getFieldClasses('name')}
+                  placeholder="Ej: Policlínico Lima Centro"
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {renderValidationIcon('name')}
+                </div>
+              </div>
+              {errors.name && (
+                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+              )}
             </div>
-          )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Nombre *
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo *
+              </label>
+              <select
+                name="type"
+                value={formData.type}
                 onChange={handleChange}
                 required
-                className={getFieldClasses('name')}
-                placeholder="Ej: Policlínico Lima Centro"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {renderValidationIcon('name')}
-              </div>
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="revision">Revisión</option>
+                <option value="policlinico">Policlínico</option>
+                <option value="escuela_conductores">Escuela de Conductores</option>
+                <option value="central">Central</option>
+                <option value="circuito">Circuito</option>
+              </select>
             </div>
-            {errors.name && (
-              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Región *
+              </label>
+              <select
+                name="region"
+                value={formData.region}
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="lima">Lima</option>
+                <option value="provincia">Provincias</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Dirección
+              </label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ej: Av. Principal 123, Lima"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notas
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Información adicional..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Link de Checklist (Google Sheets, etc.)
+              </label>
+              <input
+                type="text"
+                name="checklist_url"
+                value={formData.checklist_url}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="https://docs.google.com/spreadsheets/..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Link de Historial (Drive, etc.)
+              </label>
+              <input
+                type="text"
+                name="history_url"
+                value={formData.history_url}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="https://drive.google.com/drive/..."
+              />
+            </div>
+
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo *
-            </label>
-            <select
-              name="type"
-              value={formData.type}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="revision">Revisión</option>
-              <option value="policlinico">Policlínico</option>
-              <option value="escuela_conductores">Escuela de Conductores</option>
-              <option value="central">Central</option>
-              <option value="circuito">Circuito</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Región *
-            </label>
-            <select
-              name="region"
-              value={formData.region}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="lima">Lima</option>
-              <option value="provincia">Provincias</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Dirección
-            </label>
-            <input
-              type="text"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Ej: Av. Principal 123, Lima"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notas
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Información adicional..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Link de Checklist (Google Sheets, etc.)
-            </label>
-            <input
-              type="text"
-              name="checklist_url"
-              value={formData.checklist_url}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://docs.google.com/spreadsheets/..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Link de Historial (Drive, etc.)
-            </label>
-            <input
-              type="text"
-              name="history_url"
-              value={formData.history_url}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="https://drive.google.com/drive/..."
-            />
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
+          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col sm:flex-row-reverse gap-3 z-10">
             <button
               type="submit"
               disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-              className="bg-slate-800 text-white py-3 px-4 rounded-lg hover:bg-slate-900 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 order-1 sm:order-2"
+              className="w-full sm:w-auto px-8 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 font-bold text-[10px] uppercase tracking-widest"
             >
               {loading ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                   Guardando...
                 </>
               ) : (
                 <>
-                  <CheckCircle size={14} />
-                  {editLocation ? 'Actualizar' : 'Crear'} Ubicación
+                  <CheckCircle size={16} />
+                  {editLocation ? 'Actualizar' : 'Crear'} Registro
                 </>
               )}
             </button>
@@ -380,7 +383,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="bg-white text-slate-700 py-3 px-4 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm order-2 sm:order-1"
+              className="w-full sm:w-auto px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
             >
               Cancelar
             </button>

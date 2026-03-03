@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import TopHeader from './components/TopHeader';
+
 import Dashboard from './views/Dashboard';
 import Inventory from './views/Inventory';
 import Maintenance from './views/Maintenance';
@@ -33,6 +34,7 @@ function ProtectedRoute({ children, permission }: { children: React.ReactNode, p
   const location = useLocation();
 
   if (!user) {
+    localStorage.setItem('intended_path', location.pathname + location.search);
     return <Navigate to="/login" state={{ from: location }} />;
   }
 
@@ -201,6 +203,7 @@ function AppContent() {
             <Route path="/connection-test" element={<ProtectedRoute permission="connection-test"><ConnectionTest /></ProtectedRoute>} />
             <Route path="/quick-diagnostic" element={<ProtectedRoute permission="quick-diagnostic"><QuickDiagnostic /></ProtectedRoute>} />
             <Route path="/tickets" element={<ProtectedRoute permission="tickets"><Tickets /></ProtectedRoute>} />
+            <Route path="/tickets/:view" element={<ProtectedRoute permission="tickets"><Tickets /></ProtectedRoute>} />
             <Route path="/painpoint" element={<ProtectedRoute permission="painpoint"><Painpoints /></ProtectedRoute>} />
 
             {/* Fallback */}

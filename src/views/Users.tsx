@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, LayoutGrid, List, Lock, Star, Phone, Building } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, LayoutGrid, List, Lock, Star } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase } from '../lib/supabase';
 import UserForm from '../components/forms/UserForm';
@@ -31,7 +31,7 @@ export default function Users() {
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [viewingUser, setViewingUser] = useState<User | undefined>();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm] = useState('');
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -203,27 +203,10 @@ export default function Users() {
           </div>
           <div className="hidden lg:block">
             <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Gestión de Usuarios</h2>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span>Administración de Accesos</span>
-              <div className="w-1 h-1 bg-gray-300 rounded-full" />
-              <span>{stats.total} Usuarios</span>
-            </div>
           </div>
         </div>
 
-        {/* Integrated Search Bar in Header */}
-        <div className="flex-1 max-w-md px-4">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar usuarios por nombre, correo..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all text-sm font-medium"
-            />
-          </div>
-        </div>
+
 
         <div className="flex items-center gap-2">
           {canEdit() && (

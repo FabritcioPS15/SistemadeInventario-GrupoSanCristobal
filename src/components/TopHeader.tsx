@@ -1,30 +1,99 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, Settings, HelpCircle, LayoutGrid, Menu, Pin, PinOff } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Bell, Settings, HelpCircle, Menu, Pin, PinOff, Image as ImageIcon, Check, LayoutDashboard, User as UserIcon, LogOut, ChevronRight, Home, ChevronDown, Search, Plus, X } from 'lucide-react';
 import { supabase, SutranVisit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useHeaderVisible } from '../hooks/useHeaderVisible';
+
+const ROUTE_LABELS: Record<string, string> = {
+    'inventory': 'Inventario',
+    'camara': 'Cámaras',
+    'cameras': 'Cámaras',
+    'maintenance': 'Mantenimiento',
+    'sent': 'Enviados',
+    'sutran': 'Sutran',
+    'locations': 'Sedes',
+    'mtc': 'MTC Accesos',
+    'users': 'Usuarios',
+    'audit': 'Auditoría',
+    'integrity': 'Integridad',
+    'diagnostic': 'Diagnóstico',
+    'connection-test': 'Prueba de Conexión',
+    'quick-diagnostic': 'Diagnóstico Rápido',
+    'tickets': 'Mesa de Ayuda',
+    'dashboard': 'Dashboard General',
+    'mine': 'Mis Tickets',
+    'reports': 'Reportes',
+    'painpoint': 'Puntos Críticos',
+    'checklist': 'Checklist',
+    'vacations': 'Vacaciones',
+    'servers': 'Servidores',
+    'flota-vehicular': 'Flota Vehicular',
+    'spare-parts': 'Repuestos',
+    'all': 'Ver Todo',
+    'escon': 'ESCON',
+    'ecsal': 'ECSAL',
+    'citv': 'CITV',
+    'lima': 'Lima',
+    'provincias': 'Provincias',
+    'pending': 'Pendientes',
+    'in-progress': 'En Progreso',
+    'completed': 'Completados',
+};
 
 type TopHeaderProps = {
     onMobileMenuClick?: () => void;
 };
 
 export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
-    const { user } = useAuth();
+    const { user, updateProfile, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const pathnames = location.pathname.split('/').filter(x => x);
+    const showBreadcrumbs = location.pathname !== '/' && location.pathname !== '/login';
+    const isTicketsRoute = location.pathname.startsWith('/tickets');
+
+    // Actions panel state (for ticket routes)
+    const [showActions, setShowActions] = useState(false);
+    const [searchValue, setSearchValue] = useState('');
+    const actionsRef = useRef<HTMLDivElement>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
+    const [showUserSettings, setShowUserSettings] = useState(false);
     const [sutranNotifications, setSutranNotifications] = useState<SutranVisit[]>([]);
     const [userLocation, setUserLocation] = useState<string>('');
     const notificationRef = useRef<HTMLDivElement>(null);
+    const settingsRef = useRef<HTMLDivElement>(null);
+
+    // Close actions panel on route change
+    useEffect(() => { setShowActions(false); setSearchValue(''); }, [location.pathname]);
+
+    // Broadcast search to Tickets page
+    useEffect(() => {
+        if (!isTicketsRoute) return;
+        window.dispatchEvent(new CustomEvent('tickets:search', { detail: searchValue }));
+    }, [searchValue, isTicketsRoute]);
+
+    const handleNewTicket = useCallback(() => {
+        window.dispatchEvent(new CustomEvent('tickets:new'));
+        setShowActions(false);
+    }, []);
+
+    // Temp state for editing user profile
+    const [editName, setEditName] = useState(user?.full_name || '');
+    const [editAvatar, setEditAvatar] = useState(user?.avatar_url || '');
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            setEditName(user.full_name);
+            setEditAvatar(user.avatar_url || '');
+        }
+    }, [user]);
 
     // Pinning State
     const [isPinned, setIsPinned] = useState(() => {
         return localStorage.getItem('header_pinned') === 'true';
     });
-
-    const isVisible = useHeaderVisible(isPinned);
 
     const togglePin = () => {
         const newValue = !isPinned;
@@ -62,51 +131,16 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                 table: 'locations',
                 filter: `id=eq.${user?.location_id}`
             }, (payload) => {
-                console.log('Location updated:', payload);
                 if (payload.new && 'name' in payload.new) {
                     setUserLocation(payload.new.name as string);
                 }
             })
             .subscribe();
 
-        // Subscribe to user changes (in case location_id changes)
-        const userSubscription = supabase
-            .channel('user-changes')
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'users',
-                filter: `id=eq.${user?.id}`
-            }, (payload) => {
-                console.log('User updated:', payload);
-                // Refetch location if location_id changed
-                if (payload.new && 'location_id' in payload.new) {
-                    fetchUserLocation();
-                }
-            })
-            .subscribe();
-
         return () => {
             supabase.removeChannel(locationSubscription);
-            supabase.removeChannel(userSubscription);
         };
-    }, [user?.location_id, user?.id]);
-
-    // Helper to get readable title from path
-    const getPageTitle = (path: string) => {
-        if (path === '/') return 'Dashboard';
-        if (path.startsWith('/inventory')) return 'Inventario';
-        if (path.startsWith('/tickets')) return 'Mesa de Ayuda';
-        if (path.startsWith('/users')) return 'Usuarios';
-        if (path.startsWith('/flota')) return 'Flota Vehicular';
-        if (path.startsWith('/maintenance')) return 'Mantenimiento';
-        if (path.startsWith('/checklist')) return 'Checklists';
-        if (path.startsWith('/sutran')) return 'SUTRAN';
-        if (path.startsWith('/cameras')) return 'Camaras';
-        if (path.startsWith('/audit')) return 'Auditoría';
-        return 'Página del Sistema';
-    };
-
+    }, [user?.location_id]);
 
     // Fetch Sutran notifications
     useEffect(() => {
@@ -133,8 +167,6 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
         };
 
         fetchNotifications();
-
-        // Polling every minute
         const interval = setInterval(fetchNotifications, 60000);
         return () => clearInterval(interval);
     }, []);
@@ -145,19 +177,39 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
             if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
                 setShowNotifications(false);
             }
+            if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+                setShowUserSettings(false);
+            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const handleSearch = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            // Basic global search implementation: redirect to inventory with query
-            // In a real app, this might open a command palette or search across multiple tables
-            if (searchTerm.trim()) {
-                navigate(`/inventory?search=${encodeURIComponent(searchTerm)}`);
+    // Close actions panel on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
+                setShowActions(false);
             }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    const handleSaveProfile = async () => {
+        try {
+            setIsSaving(true);
+            await updateProfile({
+                full_name: editName,
+                avatar_url: editAvatar || undefined
+            });
+            setShowUserSettings(false);
+        } catch (error) {
+            console.error('Error saving profile:', error);
+            alert('Error al guardar el perfil');
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -166,10 +218,7 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
         today.setHours(0, 0, 0, 0);
         const targetDate = new Date(dateString);
         targetDate.setHours(0, 0, 0, 0);
-
-        const diffTime = targetDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+        const diffDays = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         if (diffDays === 0) return 'Hoy';
         if (diffDays === 1) return 'Mañana';
         return `en ${diffDays} días`;
@@ -177,39 +226,68 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
 
     return (
         <>
-            <header className={`h-14 bg-[#002855] text-white flex items-center justify-between px-6 sticky top-0 z-50 shadow-lg transition-transform duration-500 ease-in-out ${isVisible || isPinned ? 'translate-y-0' : '-translate-y-full'}`}>
-                <div className="flex items-center gap-4 lg:gap-6">
+            <header className={`h-14 bg-[#001529] text-white flex items-center justify-between px-6 sticky top-0 z-50 shadow-xl border-b border-white/5`}>
+                <div className="flex items-center gap-4 lg:gap-8 overflow-hidden">
                     <button
-                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors lg:hidden"
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors lg:hidden shrink-0"
                         onClick={onMobileMenuClick}
                     >
                         <Menu size={20} />
                     </button>
-                    <button className="p-1.5 hover:bg-white/10 rounded-lg transition-colors hidden lg:block">
-                        <LayoutGrid size={20} />
-                    </button>
 
-                    <div className="h-8 w-[1px] bg-white/20" />
-
-                    <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50 group-hover:text-white transition-colors" size={16} />
-                        <input
-                            type="text"
-                            placeholder="Buscar..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={handleSearch}
-                            className="bg-white/10 border-none rounded-md pl-10 pr-4 py-1.5 text-sm w-32 sm:w-48 lg:w-80 focus:ring-1 focus:ring-white/30 focus:bg-white/20 transition-all placeholder:text-white/40"
-                        />
+                    {/* Branding Section (Static) */}
+                    <div className="flex items-center gap-3 shrink-0 mr-4 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/')}>
+                        <div className="bg-white p-1 rounded-md">
+                            <LayoutDashboard size={18} className="text-[#002855]" />
+                        </div>
+                        <span className="font-black tracking-tighter text-[14px] sm:text-lg uppercase truncate max-w-[120px] sm:max-w-none">
+                            Sistema G.S.C.
+                        </span>
                     </div>
+
+                    <div className="h-8 w-[1px] bg-white/20 shrink-0 hidden sm:block" />
+
+                    {/* Breadcrumbs inline */}
+                    {showBreadcrumbs && (
+                        <nav className="hidden md:flex items-center gap-1.5 overflow-hidden">
+                            <Link
+                                to="/"
+                                className="flex items-center gap-1 text-white/40 hover:text-white/80 transition-colors shrink-0 p-1 rounded-md hover:bg-white/10"
+                            >
+                                <Home size={13} />
+                            </Link>
+                            {pathnames.length > 0 && <ChevronRight size={11} className="text-white/20 shrink-0" />}
+                            {pathnames.map((seg, idx) => {
+                                const last = idx === pathnames.length - 1;
+                                const to = `/${pathnames.slice(0, idx + 1).join('/')}`;
+                                const label = ROUTE_LABELS[seg.toLowerCase()] || seg.replace(/-/g, ' ');
+                                return (
+                                    <div key={to} className="flex items-center gap-1.5 shrink-0 min-w-0">
+                                        {last ? (
+                                            <span className="text-[10px] font-black text-white/90 uppercase tracking-widest bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 truncate max-w-[180px]">
+                                                {label}
+                                            </span>
+                                        ) : (
+                                            <Link
+                                                to={to}
+                                                className="text-[10px] font-black text-white/40 hover:text-white/80 uppercase tracking-widest transition-colors truncate max-w-[120px]"
+                                            >
+                                                {label}
+                                            </Link>
+                                        )}
+                                        {!last && <ChevronRight size={11} className="text-white/20 shrink-0" />}
+                                    </div>
+                                );
+                            })}
+                        </nav>
+                    )}
+
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {/* Mock currency info from the image */}
                     <div className="hidden xl:flex items-center gap-4 text-[11px] font-bold text-white/70 mr-4">
                         <div className="flex items-center gap-2">
-                            <span className="text-white/40"></span>
-                            <span>GRUPO SAN CRISTOBAL</span>
+                            <span>{user?.full_name}</span>
                             {userLocation && (
                                 <>
                                     <span className="text-white/30">•</span>
@@ -219,15 +297,59 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    {/* Ticket context actions dropdown */}
+                    {isTicketsRoute && (
+                        <div className="relative" ref={actionsRef}>
+                            <button
+                                onClick={() => setShowActions(v => !v)}
+                                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'}`}
+                            >
+                                <Plus size={13} />
+                                Acciones
+                                <ChevronDown size={13} className={`transition-transform duration-200 ${showActions ? 'rotate-180' : ''}`} />
+                            </button>
 
+                            {showActions && (
+                                <div className="absolute right-0 top-full mt-2 w-72 bg-[#001e3c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[200] animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="p-4 border-b border-white/10">
+                                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-3">Buscar tickets</p>
+                                        <div className="relative">
+                                            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                value={searchValue}
+                                                onChange={e => setSearchValue(e.target.value)}
+                                                placeholder="Buscar por título, usuario..."
+                                                className="w-full bg-white/10 border border-white/10 rounded-xl pl-8 pr-8 py-2.5 text-[11px] text-white placeholder-white/30 font-medium outline-none focus:border-blue-500/50 focus:bg-white/15 transition-all"
+                                            />
+                                            {searchValue && (
+                                                <button onClick={() => setSearchValue('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
+                                                    <X size={13} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="p-3">
+                                        <button
+                                            onClick={handleNewTicket}
+                                            className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/30"
+                                        >
+                                            <Plus size={15} />
+                                            Nuevo Ticket
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-1">
                         {/* Notifications */}
                         <div className="relative" ref={notificationRef}>
                             <button
                                 title="Notificaciones"
-                                onClick={() => {
-                                    setShowNotifications(!showNotifications);
-                                }}
+                                onClick={() => setShowNotifications(!showNotifications)}
                                 className={`p-2 hover:bg-white/10 rounded-lg transition-colors relative ${showNotifications ? 'bg-white/10' : ''}`}
                             >
                                 <Bell size={18} />
@@ -236,7 +358,6 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                                 )}
                             </button>
 
-                            {/* Notification Dropdown */}
                             {showNotifications && (
                                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
                                     <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
@@ -245,33 +366,22 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                                     </div>
                                     <div className="max-h-[300px] overflow-y-auto">
                                         {sutranNotifications.length === 0 ? (
-                                            <div className="p-6 text-center text-gray-400 text-xs">
-                                                No tienes notificaciones pendientes
-                                            </div>
+                                            <div className="p-6 text-center text-gray-400 text-xs">No tienes notificaciones pendientes</div>
                                         ) : (
                                             sutranNotifications.map((note) => (
                                                 <div
                                                     key={note.id}
-                                                    onClick={() => {
-                                                        navigate('/sutran');
-                                                        setShowNotifications(false);
-                                                    }}
+                                                    onClick={() => { navigate('/sutran'); setShowNotifications(false); }}
                                                     className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 transition-colors group"
                                                 >
                                                     <div className="flex items-start gap-3">
-                                                        <div className="bg-rose-100 p-2 rounded-lg text-rose-600 mt-0.5">
-                                                            <Bell size={14} />
-                                                        </div>
+                                                        <div className="bg-rose-100 p-2 rounded-lg text-rose-600 mt-0.5"><Bell size={14} /></div>
                                                         <div>
                                                             <p className="text-xs font-bold text-gray-800 group-hover:text-blue-700">Visita SUTRAN Programada</p>
                                                             <p className="text-[11px] text-gray-500 mt-0.5">{note.location_name}</p>
                                                             <div className="flex items-center gap-2 mt-1.5">
-                                                                <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
-                                                                    {getDaysRemaining(note.visit_date)}
-                                                                </span>
-                                                                <span className="text-[10px] text-gray-400">
-                                                                    {new Date(note.visit_date).toLocaleDateString('es-ES')}
-                                                                </span>
+                                                                <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">{getDaysRemaining(note.visit_date)}</span>
+                                                                <span className="text-[10px] text-gray-400">{new Date(note.visit_date).toLocaleDateString('es-ES')}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -280,15 +390,7 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                                         )}
                                     </div>
                                     <div className="p-2 border-t border-gray-100 bg-gray-50 text-center">
-                                        <button
-                                            onClick={() => {
-                                                navigate('/sutran');
-                                                setShowNotifications(false);
-                                            }}
-                                            className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest"
-                                        >
-                                            Ver todas
-                                        </button>
+                                        <button onClick={() => { navigate('/sutran'); setShowNotifications(false); }} className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest">Ver todas</button>
                                     </div>
                                 </div>
                             )}
@@ -308,16 +410,104 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
 
                         <div className="h-8 w-[1px] bg-white/20 mx-1" />
 
-                        <button className="flex items-center gap-2 p-1.5 hover:bg-white/10 rounded-lg transition-colors">
-                            <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold uppercase">
-                                {user?.full_name?.charAt(0)}
-                            </div>
-                            <Settings size={18} />
-                        </button>
+                        {/* User Profile Settings */}
+                        <div className="relative" ref={settingsRef}>
+                            <button
+                                onClick={() => setShowUserSettings(!showUserSettings)}
+                                className={`flex items-center gap-2 p-1.5 hover:bg-white/10 rounded-lg transition-colors ${showUserSettings ? 'bg-white/10' : ''}`}
+                            >
+                                <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold uppercase overflow-hidden border border-white/10">
+                                    {user?.avatar_url ? (
+                                        <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        user?.full_name?.charAt(0)
+                                    )}
+                                </div>
+                                <Settings size={18} className={`transition-transform duration-300 ${showUserSettings ? 'rotate-90' : ''}`} />
+                            </button>
+
+                            {showUserSettings && (
+                                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                    <div className="p-4 border-b border-gray-100 bg-gradient-to-br from-[#002855] to-[#004e92] text-white">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold uppercase overflow-hidden border border-white/20">
+                                                {user?.avatar_url ? (
+                                                    <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    user?.full_name?.charAt(0)
+                                                )}
+                                            </div>
+                                            <div className="overflow-hidden">
+                                                <h4 className="font-bold text-sm truncate">{user?.full_name}</h4>
+                                                <p className="text-[10px] opacity-80 truncate uppercase tracking-widest">{user?.role}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 space-y-4">
+                                        <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-widest">Mi Perfil</h3>
+
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Nombre Completo</label>
+                                                <div className="relative">
+                                                    <UserIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
+                                                    <input
+                                                        type="text"
+                                                        value={editName}
+                                                        onChange={(e) => setEditName(e.target.value)}
+                                                        className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs focus:ring-1 focus:ring-[#002855] focus:bg-white outline-none transition-all font-bold"
+                                                        placeholder="Nombre"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">URL Foto de Perfil</label>
+                                                <div className="relative">
+                                                    <ImageIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
+                                                    <input
+                                                        type="text"
+                                                        value={editAvatar}
+                                                        onChange={(e) => setEditAvatar(e.target.value)}
+                                                        className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-100 rounded-lg text-xs focus:ring-1 focus:ring-[#002855] focus:bg-white outline-none transition-all font-medium"
+                                                        placeholder="https://..."
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={handleSaveProfile}
+                                                disabled={isSaving}
+                                                className="w-full bg-[#002855] text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-[#003d80] transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-900/10 disabled:opacity-50"
+                                            >
+                                                {isSaving ? (
+                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                ) : (
+                                                    <>
+                                                        <Check size={14} />
+                                                        Actualizar Perfil
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-2 bg-gray-50 border-t border-gray-100">
+                                        <button
+                                            onClick={logout}
+                                            className="w-full py-2 text-[10px] font-bold text-rose-500 hover:bg-rose-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <LogOut size={12} />
+                                            Cerrar Sesión
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </header>
-
         </>
     );
 }

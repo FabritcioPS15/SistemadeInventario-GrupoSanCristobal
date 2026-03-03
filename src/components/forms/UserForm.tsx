@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, CheckCircle, Loader2, Eye, EyeOff, User, Mail, Phone, Shield, MapPin, FileText, Lock } from 'lucide-react';
+import { User, X, AlertCircle, CheckCircle, Loader2, Eye, EyeOff, Mail, Phone, Shield, MapPin, FileText, Lock } from 'lucide-react';
 import { supabase, Location } from '../../lib/supabase';
 
 type User = {

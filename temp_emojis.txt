@@ -1,0 +1,5 @@
+src\views\Cameras.tsx:474: {cam.status === 'active' ? '✓ Activo' : cam.status === 'maintenance' ? '⚠ Mantenimiento' : 'Inactivo'}
+src\views\Cameras.tsx:568: <span className="text-sm font-bold text-gray-700">💾 Almacenamiento</span>
+src\views\Cameras.tsx:611: {percentUsed > 75 ? '⚠️ Crítico (<25%)' : percentUsed > 50 ? '⚠️ Precaución (<50%)' : '✓ Normal (>50%)'}
+src\views\Cameras.tsx:756: {cam.status === 'active' ? '✓ Activo' : cam.status === 'maintenance' ? '⚠ Mantenimiento' : 'Inactivo'}
+src\views\Sedes.tsx:104: ? `⚠️ Esta sede tiene elementos asociados (${cameraCount} cámaras, ${assetsCount} assets, ${usersCount} usuarios).\n\n¿Estás seguro de que quieres eliminar la ubicación "${location.name}"? Los elementos quedarán con ubicación no definida.`

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Car, ChevronRight, Building2, Stethoscope, GraduationCap, FileText, Clock, ExternalLink, Edit, LayoutGrid, List, Search, Star, ChevronDown, Plus, X } from 'lucide-react';
+import { Car, ChevronRight, Building2, Stethoscope, GraduationCap, FileText, Clock, ExternalLink, Edit, LayoutGrid, List, Star, X } from 'lucide-react';
 import { supabase, Location } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,43 +7,46 @@ import LocationForm from '../components/forms/LocationForm';
 
 export default function Checklist({ type }: { type?: string }) {
     const navigate = useNavigate();
-    const { canEdit } = useAuth();
+    const { canEdit, user } = useAuth();
     const [locations, setLocations] = useState<Location[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm] = useState('');
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [showForm, setShowForm] = useState(false);
     const [editingLocation, setEditingLocation] = useState<Location | undefined>();
 
     const driveLinks: Record<string, string> = {
-        escon: 'https://drive.google.com/drive/folders/1L1QjeqULRD6g-ii0bRbAr1h4Z5IJqQdQ',
-        ecsal: 'https://drive.google.com/drive/folders/1cotQVjOIzK6BQkbe_fFXa1nQveCXglZ8?usp=drive_link',
+        escon: 'https://drive.google.com/drive/folders/170_fX-XqA6K8F8-R7Nn-T5R_N4L5lX_h?usp=drive_link',
+        ecsal: 'https://drive.google.com/drive/folders/1F-vTj-YV-R9Y8L8X8K7Nn-T5R_N4L5lX_h?usp=drive_link',
         citv: 'https://drive.google.com/drive/folders/11Q8PLtXgaL6T42LkcAb1y3MZjyIKOpUi?usp=drive_link'
     };
 
     const fetchLocations = async () => {
-        setLoading(true);
         try {
-            const { data, error } = await supabase
+            const { data: locationsData, error: locationsError } = await supabase
                 .from('locations')
                 .select('*')
                 .order('name');
 
-            if (error) {
-                throw error;
+            if (locationsError) throw locationsError;
+
+            let filteredResults = locationsData as Location[];
+
+            const privilegedRoles = ['systems', 'management', 'supervisor'];
+            const isPrivileged = user && privilegedRoles.includes(user.role);
+
+            if (!isPrivileged && user?.location_id) {
+                filteredResults = filteredResults.filter(loc => loc.id === user.location_id);
             }
 
-            setLocations(data as Location[]);
+            setLocations(filteredResults);
         } catch (err) {
             console.error('Error fetching locations:', err);
-        } finally {
-            setLoading(false);
         }
     };
 
     useEffect(() => {
         fetchLocations();
-    }, []);
+    }, [user?.location_id, user?.role]);
 
     const handleEditLinks = (location: Location) => {
         setEditingLocation(location);
@@ -57,111 +60,133 @@ export default function Checklist({ type }: { type?: string }) {
     };
 
     const getFilteredLocations = () => {
-        if (!type) return locations;
+        let filtered = locations;
 
-        return locations.filter(loc => {
-            if (type === 'escon') return loc.type === 'escuela_conductores';
-            if (type === 'ecsal') return loc.type === 'policlinico';
-            if (type === 'citv') return loc.type === 'revision';
-            return false;
-        }).filter(loc => loc.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        if (type) {
+            filtered = filtered.filter(loc => {
+                if (type === 'escon') return loc.type === 'escuela_conductores';
+                if (type === 'ecsal') return loc.type === 'policlinico';
+                if (type === 'citv') return loc.type === 'revision';
+                return false;
+            });
+        }
+
+        return filtered.filter(loc => loc.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    };
+
+    const canSeeSection = (sectionType: string) => {
+        const privilegedRoles = ['systems', 'management', 'supervisor'];
+        if (user && privilegedRoles.includes(user.role)) return true;
+
+        if (user?.location_id) {
+            const userLoc = locations.find(l => l.id === user.location_id);
+            if (!userLoc) return true;
+
+            if (sectionType === 'escon') return userLoc.type === 'escuela_conductores';
+            if (sectionType === 'ecsal') return userLoc.type === 'policlinico';
+            if (sectionType === 'citv') return userLoc.type === 'revision';
+        }
+
+        return true;
     };
 
     const renderGeneralView = () => (
-        <div>
+        <div className="animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                {/* ESCON Card */}
-                <button
-                    type="button"
-                    onClick={() => navigate('/checklist/escon')}
-                    className="group bg-white rounded-2xl border border-gray-200 shadow-lg p-8 text-left hover:border-blue-400 hover:shadow-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                >
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                                <GraduationCap size={32} />
+                {canSeeSection('escon') && (
+                    <button
+                        type="button"
+                        onClick={() => navigate('/checklist/escon')}
+                        className="group bg-white rounded-2xl border border-gray-200 shadow-lg p-8 text-left hover:border-blue-400 hover:shadow-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                                    <GraduationCap size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-700 transition-colors">ESCON</h3>
+                                    <p className="text-sm text-gray-500 font-medium tracking-tight">Escuelas de Conductores</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-700 transition-colors">ESCON</h3>
-                                <p className="text-sm text-gray-500 font-medium tracking-tight">Escuelas de Conductores</p>
-                            </div>
+                            <ChevronRight className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" size={24} />
                         </div>
-                        <ChevronRight className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" size={24} />
-                    </div>
 
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                            <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-widest">
-                                <Building2 size={16} className="text-blue-400" />
-                                <span>{locations.filter(l => l.type === 'escuela_conductores').length} sedes activas</span>
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                                <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-widest">
+                                    <Building2 size={16} className="text-blue-400" />
+                                    <span>{locations.filter(l => l.type === 'escuela_conductores').length} sedes activas</span>
+                                </div>
+                                <span className="text-xs font-black text-blue-600 uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Ir al panel</span>
                             </div>
-                            <span className="text-xs font-black text-blue-600 uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Ir al panel</span>
                         </div>
-                    </div>
-                </button>
+                    </button>
+                )}
 
-                {/* ECSAL Card */}
-                <button
-                    type="button"
-                    onClick={() => navigate('/checklist/ecsal')}
-                    className="group bg-white rounded-2xl border border-gray-200 shadow-lg p-8 text-left hover:border-emerald-400 hover:shadow-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-                >
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
-                                <Stethoscope size={32} />
+                {canSeeSection('ecsal') && (
+                    <button
+                        type="button"
+                        onClick={() => navigate('/checklist/ecsal')}
+                        className="group bg-white rounded-2xl border border-gray-200 shadow-lg p-8 text-left hover:border-emerald-400 hover:shadow-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+                                    <Stethoscope size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">ECSAL</h3>
+                                    <p className="text-sm text-gray-500 font-medium tracking-tight">Salud y Policlínicos</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">ECSAL</h3>
-                                <p className="text-sm text-gray-500 font-medium tracking-tight">Salud y Policlínicos</p>
-                            </div>
+                            <ChevronRight className="text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" size={24} />
                         </div>
-                        <ChevronRight className="text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" size={24} />
-                    </div>
 
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                            <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-widest">
-                                <Building2 size={16} className="text-emerald-400" />
-                                <span>{locations.filter(l => l.type === 'policlinico').length} sedes activas</span>
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                                <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-widest">
+                                    <Building2 size={16} className="text-emerald-400" />
+                                    <span>{locations.filter(l => l.type === 'policlinico').length} sedes activas</span>
+                                </div>
+                                <span className="text-xs font-black text-emerald-600 uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Ir al panel</span>
                             </div>
-                            <span className="text-xs font-black text-emerald-600 uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Ir al panel</span>
                         </div>
-                    </div>
-                </button>
+                    </button>
+                )}
 
-                {/* CITV Card */}
-                <button
-                    type="button"
-                    onClick={() => navigate('/checklist/citv')}
-                    className="group bg-white rounded-2xl border border-gray-200 shadow-lg p-8 text-left hover:border-orange-400 hover:shadow-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
-                >
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-16 h-16 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-all duration-300">
-                                <Car size={32} />
+                {canSeeSection('citv') && (
+                    <button
+                        type="button"
+                        onClick={() => navigate('/checklist/citv')}
+                        className="group bg-white rounded-2xl border border-gray-200 shadow-lg p-8 text-left hover:border-orange-400 hover:shadow-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-all duration-300">
+                                    <Car size={32} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-orange-700 transition-colors">CITV</h3>
+                                    <p className="text-sm text-gray-500 font-medium tracking-tight">Inspección Técnica Vehicular</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-gray-900 group-hover:text-orange-700 transition-colors">CITV</h3>
-                                <p className="text-sm text-gray-500 font-medium tracking-tight">Inspección Técnica Vehicular</p>
-                            </div>
+                            <ChevronRight className="text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" size={24} />
                         </div>
-                        <ChevronRight className="text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" size={24} />
-                    </div>
 
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                            <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-widest">
-                                <Building2 size={16} className="text-orange-400" />
-                                <span>{locations.filter(l => l.type === 'revision').length} sedes activas</span>
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                                <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-widest">
+                                    <Building2 size={16} className="text-orange-400" />
+                                    <span>{locations.filter(l => l.type === 'revision').length} sedes activas</span>
+                                </div>
+                                <span className="text-xs font-black text-orange-600 uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Ir al panel</span>
                             </div>
-                            <span className="text-xs font-black text-orange-600 uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Ir al panel</span>
                         </div>
-                    </div>
-                </button>
+                    </button>
+                )}
             </div>
 
-            {/* Footer Info */}
             <div className="mt-16 text-center">
                 <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-2xl p-8 border border-slate-200">
                     <div className="flex items-center justify-center gap-2 mb-4">
@@ -170,98 +195,69 @@ export default function Checklist({ type }: { type?: string }) {
                     </div>
                     <p className="text-slate-600 text-sm max-w-2xl mx-auto">
                         Todos los checklists se actualizan automáticamente en tiempo real.
-                        Los datos se sincronizan instantáneamente entre todas las sedes y el panel central.
                     </p>
                 </div>
             </div>
         </div>
     );
 
-    const renderSpecificView = (unitType: string, unitName: string, unitColor: string, icon: any) => {
+    const renderSpecificView = (unitType: string, unitColor: string, icon: any) => {
         const filteredLocations = getFilteredLocations();
 
         return (
-            <div>
-                {/* Barra de búsqueda */}
-                <div className="bg-white shadow-sm rounded-xl border border-gray-200 mb-6">
-                    <div className="px-6 py-4">
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-5 w-5 text-gray-400" />
-                            </div>
-                            <input
-                                type="text"
-                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                placeholder={`Buscar por sede ${unitName.toLowerCase()}...`}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Vista Grid */}
+            <div className="animate-in fade-in duration-500">
                 {viewMode === 'grid' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredLocations.map((location) => (
-                            <div key={location.id} className="group relative bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-2xl hover:border-blue-300 transition-all duration-500 text-left overflow-hidden">
-                                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/30 rounded-full -mr-12 -mt-12 group-hover:scale-150 transition-all duration-700" />
-
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-4 mb-6">
-                                        <div className={`bg-gray-50 w-14 h-14 rounded-xl flex items-center justify-center group-hover:${unitColor} group-hover:text-white shadow-sm transition-all duration-300`}>
+                            <div key={location.id} className="group bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-gray-200 transition-all duration-300 overflow-hidden">
+                                <div className="p-6">
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className={`p-3 rounded-2xl bg-${unitColor}-50 text-${unitColor}-600 group-hover:bg-${unitColor}-600 group-hover:text-white transition-all duration-300`}>
                                             {icon}
                                         </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <h3 className="text-lg font-black text-gray-900 group-hover:text-blue-700 transition-colors uppercase tracking-tight line-clamp-1">{location.name}</h3>
-                                                {canEdit() && (
-                                                    <button
-                                                        onClick={() => handleEditLinks(location)}
-                                                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                                        title="Editar links"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Sede Activa</p>
-                                            </div>
-                                        </div>
+                                        {canEdit() && (
+                                            <button
+                                                onClick={() => handleEditLinks(location)}
+                                                className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                                                title="Editar enlaces"
+                                            >
+                                                <Edit size={18} />
+                                            </button>
+                                        )}
                                     </div>
+
+                                    <h3 className="text-lg font-bold text-gray-900 uppercase tracking-tight mb-1">{location.name}</h3>
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6 italic">{location.address || 'Sin dirección registrada'}</p>
 
                                     <div className="space-y-3">
                                         <a
-                                            href={location.checklist_url || '#'}
+                                            href={(location as any)[`${unitType}_general`]}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className={`w-full inline-flex items-center justify-between px-4 py-3 text-[11px] font-bold text-white rounded-xl transition-all shadow-md group/btn ${!location.checklist_url
-                                                ? 'bg-gray-300 cursor-not-allowed opacity-50'
-                                                : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]'
-                                                }`}
+                                            className={`flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100 group/link hover:bg-${unitColor}-50 hover:border-${unitColor}-200 transition-all`}
                                         >
-                                            <span className="flex items-center gap-2">
-                                                <FileText size={16} />
-                                                {location.checklist_url ? 'INICIAR CHECKLIST' : 'NO DISPONIBLE'}
-                                            </span>
-                                            {location.checklist_url && <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />}
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 rounded-lg bg-white shadow-sm">
+                                                    <FileText size={16} className={`text-${unitColor}-500`} />
+                                                </div>
+                                                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Checklist General</span>
+                                            </div>
+                                            <ChevronRight size={18} className="text-gray-300 group-hover/link:translate-x-1 transition-all" />
                                         </a>
+
                                         <a
-                                            href={location.history_url || '#'}
+                                            href={(location as any)[`${unitType}_individual`]}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className={`w-full inline-flex items-center justify-between px-4 py-3 text-[11px] font-bold rounded-xl transition-all shadow-sm group/btn ${!location.history_url
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50'
-                                                : 'text-blue-600 bg-white border border-blue-100 hover:bg-blue-50 hover:border-blue-300 hover:shadow-md hover:scale-[1.02] active:scale-[0.98]'
-                                                }`}
+                                            className={`flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100 group/link hover:bg-${unitColor}-50 hover:border-${unitColor}-200 transition-all`}
                                         >
-                                            <span className="flex items-center gap-2">
-                                                <ExternalLink size={16} />
-                                                {location.history_url ? 'HISTORIAL' : 'NO DISPONIBLE'}
-                                            </span>
-                                            {location.history_url && <ChevronRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />}
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 rounded-lg bg-white shadow-sm">
+                                                    <ExternalLink size={16} className={`text-${unitColor}-500`} />
+                                                </div>
+                                                <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Carpeta Evidencias</span>
+                                            </div>
+                                            <ChevronRight size={18} className="text-gray-300 group-hover/link:translate-x-1 transition-all" />
                                         </a>
                                     </div>
                                 </div>
@@ -270,203 +266,142 @@ export default function Checklist({ type }: { type?: string }) {
                     </div>
                 )}
 
-                {/* Vista Lista */}
                 {viewMode === 'list' && (
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="bg-gray-50 border-b border-gray-100">
-                                        <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Sede / Planta</th>
-                                        <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Estado</th>
-                                        <th className="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Checklist</th>
-                                        <th className="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Historial</th>
-                                        {canEdit() && <th className="px-6 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Acciones</th>}
+                    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-gray-50 border-b border-gray-100">
+                                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Sede</th>
+                                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Documentación</th>
+                                    {canEdit() && <th className="px-6 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Acciones</th>}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {filteredLocations.map((location) => (
+                                    <tr key={location.id} className="hover:bg-gray-50/50 transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-xl bg-${unitColor}-50 text-${unitColor}-600`}>
+                                                    {icon}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-gray-900 uppercase tracking-tight">{location.name}</p>
+                                                    <p className="text-[9px] text-gray-400 uppercase font-black">{location.address || 'S/D'}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex gap-4">
+                                                <a
+                                                    href={(location as any)[`${unitType}_general`]}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-blue-600"
+                                                >
+                                                    <FileText size={14} /> General
+                                                </a>
+                                                <a
+                                                    href={(location as any)[`${unitType}_individual`]}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-blue-600"
+                                                >
+                                                    <ExternalLink size={14} /> Evidencias
+                                                </a>
+                                            </div>
+                                        </td>
+                                        {canEdit() && (
+                                            <td className="px-6 py-4 text-right">
+                                                <button
+                                                    onClick={() => handleEditLinks(location)}
+                                                    className="p-2 text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                            </td>
+                                        )}
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {filteredLocations.map((location) => (
-                                        <tr key={location.id} className="hover:bg-blue-50/30 transition-colors group">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`p-2 rounded-lg ${unitType === 'escuela_conductores' ? 'bg-blue-50 text-blue-600' :
-                                                        unitType === 'policlinico' ? 'bg-emerald-50 text-emerald-600' :
-                                                            'bg-orange-50 text-orange-600'
-                                                        }`}>
-                                                        {icon}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-bold text-gray-900">{location.name}</p>
-                                                        <p className="text-[10px] text-gray-400 uppercase tracking-tighter">{location.address || 'Sin dirección registrada'}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                                    <span className="text-xs font-bold text-gray-600">Activo</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <a
-                                                    href={location.checklist_url || '#'}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all ${location.checklist_url
-                                                        ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none'
-                                                        }`}
-                                                >
-                                                    <FileText size={14} />
-                                                    Iniciar
-                                                </a>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <a
-                                                    href={location.history_url || '#'}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-widest uppercase transition-all ${location.history_url
-                                                        ? 'bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:text-blue-600 shadow-sm'
-                                                        : 'bg-gray-50 text-gray-300 cursor-not-allowed pointer-events-none'
-                                                        }`}
-                                                >
-                                                    <ExternalLink size={14} />
-                                                    Ver
-                                                </a>
-                                            </td>
-                                            {canEdit() && (
-                                                <td className="px-6 py-4 text-center">
-                                                    <button
-                                                        onClick={() => handleEditLinks(location)}
-                                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                </td>
-                                            )}
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-
-                {/* Empty state */}
-                {filteredLocations.length === 0 && (
-                    <div className="text-center py-12">
-                        <div className="bg-gray-50 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
-                            <Search size={32} className="text-gray-400" />
-                        </div>
-                        <h3 className="text-lg font-bold text-gray-700 mb-2">No se encontraron sedes</h3>
-                        <p className="text-gray-500">No hay sedes {unitName.toLowerCase()} que coincidan con tu búsqueda.</p>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 )}
             </div>
         );
     };
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-        );
-    }
-
     return (
         <div className="flex flex-col h-full bg-[#f8f9fc]">
-            {/* Title / Tab Bar - Minimalist Executive Style */}
-            <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm">
-                <div className="flex items-center gap-4">
-                    <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
-                        {type === 'escon' ? <GraduationCap size={20} /> :
-                            type === 'ecsal' ? <Stethoscope size={20} /> :
-                                type === 'citv' ? <Car size={20} /> :
-                                    <FileText size={20} />}
-                    </div>
-                    <div>
-                        <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">
-                            {type ? `Checklists ${type.toUpperCase()}` : 'Checklists Operativos'}
-                        </h2>
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-                            <span>{type ? 'Gestión de Sedes' : 'Supervisión y Control'}</span>
-                            {type && (
-                                <>
-                                    <div className="w-1 h-1 bg-gray-300 rounded-full" />
-                                    <span>{getFilteredLocations().length} Sedes</span>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    {type && driveLinks[type] && (
-                        <a
-                            href={driveLinks[type]}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50 transition-all font-bold text-[9px] uppercase tracking-widest mr-2"
-                        >
-                            <ExternalLink size={12} />
-                            Drive {type.toUpperCase()}
-                        </a>
-                    )}
-
+            <div className="p-8 flex-1 overflow-y-auto">
+                <div className="max-w-7xl mx-auto">
+                    {/* Fila de Acciones Superior */}
                     {type && (
-                        <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
-                            <div className="flex bg-[#f1f5f9] p-1 rounded-lg">
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-3xl border border-slate-100 shadow-sm mb-8">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-slate-50 p-3 rounded-2xl text-[#002855]">
+                                    {type === 'escon' ? <GraduationCap size={20} /> :
+                                        type === 'ecsal' ? <Stethoscope size={20} /> :
+                                            type === 'citv' ? <Car size={20} /> :
+                                                <FileText size={20} />}
+                                </div>
+                                <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">
+                                    {`GESTIÓN ${type.toUpperCase()}`}
+                                </h2>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                {driveLinks[type] && (
+                                    <a
+                                        href={driveLinks[type]}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all font-black text-[10px] uppercase tracking-widest mr-2 border border-blue-100"
+                                    >
+                                        <ExternalLink size={14} />
+                                        Abrir Drive
+                                    </a>
+                                )}
+
+                                <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
+                                    <div className="flex bg-slate-50 p-1 rounded-xl">
+                                        <button
+                                            onClick={() => setViewMode('grid')}
+                                            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}
+                                        >
+                                            <LayoutGrid size={18} />
+                                        </button>
+                                        <button
+                                            onClick={() => setViewMode('list')}
+                                            className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}
+                                        >
+                                            <List size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <button
-                                    onClick={() => setViewMode('grid')}
-                                    className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                                    title="Vista Cuadrícula"
+                                    onClick={() => navigate('/checklist')}
+                                    className="px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition-all font-black text-[10px] uppercase tracking-widest shadow-md"
                                 >
-                                    <LayoutGrid size={16} />
-                                </button>
-                                <button
-                                    onClick={() => setViewMode('list')}
-                                    className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                                    title="Vista Lista"
-                                >
-                                    <List size={16} />
+                                    Volver
                                 </button>
                             </div>
                         </div>
                     )}
 
-                    {type && (
-                        <button
-                            onClick={() => navigate('/checklist')}
-                            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all font-bold text-[9px] uppercase tracking-widest mr-1 shadow-sm"
-                        >
-                            Volver
-                        </button>
-                    )}
-
-                    <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-                        <Star size={18} />
-                    </button>
-                    <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors">
-                        <X size={18} />
-                    </button>
-                </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-
-                <div className="max-w-7xl mx-auto">
                     {!type && renderGeneralView()}
-                    {type === 'escon' && renderSpecificView('escuela_conductores', 'ESCON', 'bg-blue-500', <GraduationCap size={16} />)}
-                    {type === 'ecsal' && renderSpecificView('policlinico', 'ECSAL', 'bg-emerald-500', <Stethoscope size={16} />)}
-                    {type === 'citv' && renderSpecificView('revision', 'CITV', 'bg-orange-500', <Car size={16} />)}
+                    {type === 'escon' && renderSpecificView('escon', 'blue', <GraduationCap size={24} />)}
+                    {type === 'ecsal' && renderSpecificView('ecsal', 'emerald', <Stethoscope size={24} />)}
+                    {type === 'citv' && renderSpecificView('citv', 'orange', <Car size={24} />)}
                 </div>
 
-                {showForm && (
+                {showForm && editingLocation && (
                     <LocationForm
                         editLocation={editingLocation}
-                        onClose={() => { setShowForm(false); setEditingLocation(undefined); }}
+                        onClose={() => {
+                            setShowForm(false);
+                            setEditingLocation(undefined);
+                        }}
                         onSave={handleSaveLinks}
                     />
                 )}

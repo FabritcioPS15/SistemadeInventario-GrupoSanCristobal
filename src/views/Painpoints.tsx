@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Zap, Plus, Search, Star, X } from 'lucide-react';
+import { Zap, Plus, Star, X } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
+import HeaderSearch from '../components/HeaderSearch';
 
 export default function Painpoints() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -24,19 +25,13 @@ export default function Painpoints() {
                     </div>
                 </div>
 
-                {/* Integrated Search Bar in Header */}
-                <div className="flex-1 max-w-md px-4">
-                    <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-amber-500 transition-colors" size={16} />
-                        <input
-                            type="text"
-                            placeholder="Buscar puntos críticos..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-100 focus:border-amber-400 transition-all text-sm font-medium"
-                        />
-                    </div>
-                </div>
+                <HeaderSearch
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    placeholder="Buscar puntos críticos..."
+                    variant="light"
+                />
+
 
                 <div className="flex items-center gap-2">
                     <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">

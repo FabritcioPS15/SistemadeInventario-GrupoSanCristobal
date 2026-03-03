@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 type MTCAcceso = {
@@ -244,177 +244,184 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-      <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between bg-slate-50/50">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
-            {editAcceso ? 'Editar Acceso MTC' : 'Nuevo Acceso MTC'}
-          </h2>
-          {editAcceso && hasChanges && (
-            <p className="text-xs text-orange-600 mt-0.5 font-bold uppercase tracking-wider flex items-center gap-1">
-              <AlertCircle size={12} />
-              Cambios sin guardar
-            </p>
-          )}
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-2xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 uppercase">
+              {editAcceso ? 'Editar Acceso MTC' : 'Nuevo Acceso MTC'}
+            </h2>
+            {editAcceso && hasChanges && (
+              <p className="text-xs text-orange-600 mt-0.5 font-bold uppercase tracking-wider flex items-center gap-1">
+                <AlertCircle size={12} />
+                Cambios sin guardar
+              </p>
+            )}
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
+            <X size={24} />
+          </button>
         </div>
-        {/* Close button removed or handled by parent if needed. For embedded form, we usually have 'Cancel' at bottom */}
-      </div>
 
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
-        {/* Mensaje de error general */}
-        {errors.submit && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm flex items-center gap-2 text-red-700">
-            <AlertCircle size={16} />
-            <p>{errors.submit}</p>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="col-span-1 md:col-span-2">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Nombre del Acceso *
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className={`${getFieldClasses('name')} text-sm placeholder:text-gray-300`}
-                placeholder="Ej: Portal MTC Principal"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {renderValidationIcon('name')}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Mensaje de error general */}
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm flex items-center gap-2 text-red-700">
+                <AlertCircle size={16} />
+                <p>{errors.submit}</p>
               </div>
-            </div>
-            {errors.name && (
-              <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.name}</p>
             )}
-          </div>
 
-          <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Tipo de Acceso *
-            </label>
-            <select
-              name="access_type"
-              value={formData.access_type}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all bg-white"
-            >
-              <option value="web">Web Service / Portal</option>
-              <option value="api">API Endpoint</option>
-              <option value="ftp">Servidor FTP</option>
-              <option value="ssh">Acceso SSH</option>
-              <option value="database">Base de Datos</option>
-              <option value="other">Otro</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-              URL de Destino *
-            </label>
-            <div className="relative">
-              <input
-                type="url"
-                name="url"
-                value={formData.url}
-                onChange={handleChange}
-                required
-                className={`${getFieldClasses('url')} text-sm placeholder:text-gray-300`}
-                placeholder="https://portal.mtc.gob.pe"
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                {renderValidationIcon('url')}
-              </div>
-            </div>
-            {errors.url && (
-              <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.url}</p>
-            )}
-          </div>
-
-          <div className="col-span-1 md:col-span-2 border-t border-gray-100 pt-6 mt-2">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
-              Credenciales de Acceso
-            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
+              <div className="col-span-1 md:col-span-2">
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Usuario / ID
+                  Nombre del Acceso *
                 </label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300"
-                  placeholder="usuario@mtc.gob.pe"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                    className={`${getFieldClasses('name')} text-sm placeholder:text-gray-300`}
+                    placeholder="Ej: Portal MTC Principal"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {renderValidationIcon('name')}
+                  </div>
+                </div>
+                {errors.name && (
+                  <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.name}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Contraseña / Token
+                  Tipo de Acceso *
                 </label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
+                <select
+                  name="access_type"
+                  value={formData.access_type}
                   onChange={handleChange}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300"
-                  placeholder="••••••••"
+                  required
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all bg-white"
+                >
+                  <option value="web">Web Service / Portal</option>
+                  <option value="api">API Endpoint</option>
+                  <option value="ftp">Servidor FTP</option>
+                  <option value="ssh">Acceso SSH</option>
+                  <option value="database">Base de Datos</option>
+                  <option value="other">Otro</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  URL de Destino *
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    name="url"
+                    value={formData.url}
+                    onChange={handleChange}
+                    required
+                    className={`${getFieldClasses('url')} text-sm placeholder:text-gray-300`}
+                    placeholder="https://portal.mtc.gob.pe"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {renderValidationIcon('url')}
+                  </div>
+                </div>
+                {errors.url && (
+                  <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.url}</p>
+                )}
+              </div>
+
+              <div className="col-span-1 md:col-span-2 border-t border-gray-100 pt-6 mt-2">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
+                  Credenciales de Acceso
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                      Usuario / ID
+                    </label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300"
+                      placeholder="usuario@mtc.gob.pe"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                      Contraseña / Token
+                    </label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-span-1 md:col-span-2">
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Notas y Observaciones
+                </label>
+                <textarea
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300 resize-none"
+                  placeholder="Información adicional sobre el acceso, restricciones, etc..."
                 />
               </div>
             </div>
+
           </div>
 
-          <div className="col-span-1 md:col-span-2">
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-              Notas y Observaciones
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300 resize-none"
-              placeholder="Información adicional sobre el acceso, restricciones, etc..."
-            />
+          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col sm:flex-row-reverse gap-3 z-10">
+            <button
+              type="submit"
+              disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
+              className="w-full sm:w-auto px-8 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 font-bold text-[10px] uppercase tracking-widest"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={16} />
+                  {editAcceso ? 'Actualizar' : 'Crear'} Registro
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="w-full sm:w-auto px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
+            >
+              Cancelar
+            </button>
           </div>
-        </div>
-
-        <div className="pt-6 border-t border-gray-100 flex gap-3 justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="px-6 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-slate-700 transition-colors disabled:opacity-50"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-            className="px-6 py-2.5 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-slate-800 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <CheckCircle size={14} />
-                {editAcceso ? 'Actualizar' : 'Crear'} Acceso
-              </>
-            )}
-          </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

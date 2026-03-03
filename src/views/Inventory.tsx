@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download, Upload, Package, ChevronUp, ChevronDown, Star, X } from 'lucide-react';
-import { useHeaderVisible } from '../hooks/useHeaderVisible';
+import { Plus, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download, Upload, Package, ChevronUp, ChevronDown, Star, X } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { supabase, AssetWithDetails, Location, AssetType } from '../lib/supabase';
@@ -10,7 +9,6 @@ import PCForm from '../components/forms/PCForm';
 import ExcelImportModal from '../components/ExcelImportModal';
 import Pagination from '../components/Pagination';
 import { useAuth } from '../contexts/AuthContext';
-import { div } from 'framer-motion/client';
 
 type InventoryProps = {
   categoryFilter?: string;
@@ -33,7 +31,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
@@ -41,7 +39,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
+  // isHeaderVisible no longer needed if not used in the UI
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -51,15 +49,6 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
     setSortConfig({ key, direction });
   };
 
-  // Calcular estadísticas
-  const stats = useMemo(() => {
-    const totalAssets = assets.length;
-    const activeCount = assets.filter(asset => asset.status === 'active').length;
-    const maintenanceCount = assets.filter(asset => asset.status === 'maintenance').length;
-    const withoutLocationCount = assets.filter(asset => !asset.location_id).length;
-
-    return { totalAssets, activeCount, maintenanceCount, withoutLocationCount };
-  }, [assets]);
 
   useEffect(() => {
     fetchData();
@@ -313,7 +302,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
         asset.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         asset.serial_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.asset_types?.name.toLowerCase().includes(searchTerm.toLowerCase());
+        asset.asset_types?.name?.toLowerCase().includes(searchTerm.toLowerCase());
 
       // Aplicar filtro de categoría desde el menú
       const categoryFromFilter = getCategoryFromFilter(categoryFilter);
@@ -663,36 +652,20 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
     <div className="flex flex-col h-full bg-[#f8f9fc]">
       {/* Title / Tab Bar - Minimalist Executive Style */}
       {/* Standard Application Header (h-14) */}
-      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out translate-y-0`}>
         <div className="flex items-center gap-4">
           <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
             <Package size={20} />
           </div>
           <div className="hidden lg:block">
             <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">
-              Inventario{categoryFromFilter ? ` - ${categoryFromFilter}` : ''}
+              Inventario {categoryFromFilter ? `- ${categoryFromFilter.toUpperCase()}` : ''}
             </h2>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span>Gestión de Activos</span>
-              <div className="w-1 h-1 bg-gray-300 rounded-full" />
-              <span>{stats.totalAssets} Items</span>
-            </div>
           </div>
         </div>
 
-        {/* Integrated Search Bar in Header */}
-        <div className="flex-1 max-w-md px-4">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar activos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-100 focus:border-slate-400 transition-all text-sm font-medium"
-            />
-          </div>
-        </div>
+
+
 
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && canEdit() && (
@@ -748,45 +721,8 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Total de activos</div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-slate-900">{stats.totalAssets}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Activos activos</div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-emerald-600">{stats.activeCount}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">En mantenimiento</div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-amber-600">{stats.maintenanceCount}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Sin ubicación</div>
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-2xl font-bold text-slate-700">{stats.withoutLocationCount}</div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 mb-6">
           <div className="flex flex-col gap-4">
@@ -1100,7 +1036,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
                 <div className="px-6 py-16 text-center">
                   <div className="flex flex-col items-center justify-center text-slate-400">
                     <div className="bg-slate-50 p-6 rounded-full mb-4">
-                      <Search size={40} className="opacity-50" />
+                      <Package size={40} className="opacity-50" />
                     </div>
                     <p className="text-lg font-bold text-slate-700 uppercase tracking-tight">Sin resultados</p>
                     <p className="text-sm mt-1">Intenta ajustar los filtros de búsqueda</p>

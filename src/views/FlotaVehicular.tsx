@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, Car, X, Download, LayoutGrid, List, MapPin, Shield, Activity, Info, Star } from 'lucide-react';
+import { Plus, Edit, Trash2, Car, X, Download, LayoutGrid, List, MapPin, Shield, Activity, Info, Star } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import VehicleImportModal from '../components/VehicleImportModal';
 import Pagination from '../components/Pagination';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
+import HeaderSearch from '../components/HeaderSearch';
 
 type Vehiculo = {
   id: string;
@@ -187,12 +188,13 @@ export default function FlotaVehicular() {
             <p className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">{filteredVehiculos.length} Unidades</p>
           </div>
         </div>
-        <div className="flex-1 max-w-md px-4">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input type="text" placeholder="Buscar unidad..." value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" />
-          </div>
-        </div>
+        <HeaderSearch
+          searchTerm={search}
+          setSearchTerm={setSearch}
+          placeholder="Buscar unidad..."
+          variant="light"
+        />
+
         <div className="flex items-center gap-2">
           {canEdit() && <button onClick={() => { resetForm(); setShowForm(true); }} className="p-2 text-gray-400 hover:text-[#002855]"><Plus size={22} /></button>}
           <button onClick={handleExportExcel} className="p-2 text-gray-400 hover:text-emerald-600"><Download size={18} /></button>

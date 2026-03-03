@@ -1,6 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Package, Key, Users, FileText, ChevronRight, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Wrench, AlertTriangle, Clock, CheckCircle, Send, MapPin, Building2, Menu, X, Shield, Car, ClipboardList, Calendar, LogOut, Info, Ticket } from 'lucide-react';
+import {
+  LayoutDashboard, Package, Key, Users, FileText, ChevronRight, Zap,
+  Wrench, Send, MapPin, Building2,
+  Car, ClipboardList, LogOut, Ticket,
+  Settings, Menu
+} from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { GrServerCluster } from 'react-icons/gr';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,18 +17,37 @@ type SidebarProps = {
   onCloseMobile?: () => void;
 };
 
+interface SubmenuItem {
+  id: string;
+  label: string;
+  path: string;
+}
+
+interface MenuItem {
+  id: string;
+  label: string;
+  icon: any;
+  path: string;
+  hasSubmenu?: boolean;
+  submenu?: SubmenuItem[];
+}
+
+interface Section {
+  title: string;
+  items: MenuItem[];
+}
+
 export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onCloseMobile }: SidebarProps) {
+  const { hasPermission, logout } = useAuth();
+  const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [menuTop, setMenuTop] = useState<number>(0);
-  const { user, hasPermission, logout } = useAuth();
-  const location = useLocation();
+  const [adjustedTop, setAdjustedTop] = useState(0);
+  const subMenuRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout>();
 
   const handleMouseEnter = (itemId: string, e: React.MouseEvent) => {
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-    }
-
+    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setMenuTop(rect.top);
     setHoveredItem(itemId);
@@ -32,311 +56,318 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
   const handleMouseLeave = () => {
     closeTimeoutRef.current = setTimeout(() => {
       setHoveredItem(null);
-    }, 300);
+    }, 200);
   };
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+  useEffect(() => {
+    if (hoveredItem && subMenuRef.current) {
+      const rect = subMenuRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      let top = menuTop;
+      if (top + rect.height > viewportHeight) {
+        top = viewportHeight - rect.height - 10;
+      }
+      if (top < 10) top = 10;
+      setAdjustedTop(top);
+    }
+  }, [hoveredItem, menuTop]);
+
+  const sections: Section[] = [
     {
-      id: 'inventory',
-      label: 'Inventario',
-      icon: Package,
-      path: '/inventory',
-      hasSubmenu: true,
-      submenu: [
-        { id: 'assets', label: 'Activos', icon: HardDrive, path: '/inventory' },
-        { id: 'asset-types', label: 'Tipos de Activos', icon: MemoryStick, path: '/inventory/types' },
-        { id: 'spare-parts', label: 'Repuestos', icon: Package, path: '/spare-parts' },
-        { id: 'inventory-pc', label: 'PCs', icon: Monitor, path: '/inventory/pc' },
-        { id: 'inventory-celular', label: 'Celulares', icon: Smartphone, path: '/inventory/celular' },
-        { id: 'inventory-dvr', label: 'DVRs', icon: HardDrive, path: '/inventory/dvr' },
-        { id: 'inventory-impresora', label: 'Impresoras', icon: Printer, path: '/inventory/impresora' },
-        { id: 'inventory-escaner', label: 'Escáneres', icon: Scan, path: '/inventory/escaner' },
-        { id: 'inventory-monitor', label: 'Monitores', icon: Monitor, path: '/inventory/monitor' },
-        { id: 'inventory-laptop', label: 'Laptops', icon: Laptop, path: '/inventory/laptop' },
-        { id: 'inventory-proyector', label: 'Proyectores', icon: Projector, path: '/inventory/proyector' },
-        { id: 'inventory-switch', label: 'Switch', icon: Network, path: '/inventory/switch' },
-        { id: 'inventory-chip', label: 'Chips de Celular', icon: CreditCard, path: '/inventory/chip' },
-        { id: 'inventory-tinte', label: 'Tintes', icon: Droplets, path: '/inventory/tinte' },
-        { id: 'inventory-fuente', label: 'Fuentes de Poder', icon: Zap, path: '/inventory/fuente' },
-        { id: 'inventory-ram', label: 'Memorias RAM', icon: MemoryStick, path: '/inventory/ram' },
-        { id: 'inventory-disco', label: 'Discos de Almacenamiento', icon: Database, path: '/inventory/disco' },
-        { id: 'inventory-disco-extraido', label: 'Discos Extraídos', icon: HardDriveIcon, path: '/inventory/disco-extraido' },
-        { id: 'inventory-otros', label: 'Otros', icon: Package, path: '/inventory/otros' },
-        { id: 'inventory-maquinaria', label: 'Maquinarias', icon: HardDrive, path: '/inventory/maquinaria' },
+      title: 'Principal',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/' },
+        {
+          id: 'tickets',
+          label: 'Mesa de Ayuda',
+          icon: Ticket,
+          path: '/tickets',
+          hasSubmenu: true,
+          submenu: [
+            { id: 'tickets-dashboard', label: 'Dashboard General', path: '/tickets/dashboard' },
+            { id: 'tickets-mine', label: 'Mis tickets', path: '/tickets/mine' },
+            { id: 'tickets-reports', label: 'Reportes', path: '/tickets/reports' },
+          ]
+        },
+        {
+          id: 'checklist',
+          label: 'Checklist',
+          icon: ClipboardList,
+          path: '/checklist',
+          hasSubmenu: true,
+          submenu: [
+            { id: 'checklist-escon', label: 'ESCON', path: '/checklist/escon' },
+            { id: 'checklist-ecsal', label: 'ECSAL', path: '/checklist/ecsal' },
+            { id: 'checklist-citv', label: 'CITV', path: '/checklist/citv' },
+          ]
+        },
       ]
     },
     {
-      id: 'cameras',
-      label: 'Vista Cámaras',
-      icon: GiCctvCamera,
-      path: '/cameras',
-      hasSubmenu: true,
-      submenu: [
-        { id: 'cameras-revision', label: 'Cámaras de Revisión', icon: GiCctvCamera, path: '/cameras/revision' },
-        { id: 'cameras-escuela', label: 'Cámaras de Escuela', icon: GiCctvCamera, path: '/cameras/escuela' },
-        { id: 'cameras-policlinico', label: 'Cámaras de Policlínico', icon: GiCctvCamera, path: '/cameras/policlinico' },
-        { id: 'cameras-circuito', label: 'Cámaras de Circuito', icon: GiCctvCamera, path: '/cameras/circuito' },
+      title: 'Operativo',
+      items: [
+        {
+          id: 'inventory',
+          label: 'Inventario',
+          icon: Package,
+          path: '/inventory',
+          hasSubmenu: true,
+          submenu: [
+            { id: 'spare-parts', label: 'Repuestos', path: '/spare-parts' },
+            { id: 'inventory-pc', label: 'PCs', path: '/inventory/pc' },
+            { id: 'inventory-celular', label: 'Celulares', path: '/inventory/celular' },
+            { id: 'inventory-dvr', label: 'DVRs', path: '/inventory/dvr' },
+            { id: 'inventory-impresora', label: 'Impresoras', path: '/inventory/impresora' },
+            { id: 'inventory-escaner', label: 'Escáneres', path: '/inventory/escaner' },
+            { id: 'inventory-monitor', label: 'Monitores', path: '/inventory/monitor' },
+            { id: 'inventory-laptop', label: 'Laptops', path: '/inventory/laptop' },
+            { id: 'inventory-proyector', label: 'Proyectores', path: '/inventory/proyector' },
+            { id: 'inventory-switch', label: 'Switch', path: '/inventory/switch' },
+            { id: 'inventory-chip', label: 'Chips de Celular', path: '/inventory/chip' },
+            { id: 'inventory-tinte', label: 'Tintes', path: '/inventory/tinte' },
+            { id: 'inventory-fuente', label: 'Fuentes de Poder', path: '/inventory/fuente' },
+            { id: 'inventory-ram', label: 'Memorias RAM', path: '/inventory/ram' },
+            { id: 'inventory-disco', label: 'Discos', path: '/inventory/disco' },
+            { id: 'inventory-disco-extraido', label: 'Discos Extraídos', path: '/inventory/disco-extraido' },
+            { id: 'inventory-maquinaria', label: 'Maquinarias', path: '/inventory/maquinaria' },
+          ]
+        },
+        {
+          id: 'cameras',
+          label: 'Cámaras',
+          icon: GiCctvCamera,
+          path: '/cameras',
+          hasSubmenu: true,
+          submenu: [
+            { id: 'cameras-revision', label: 'Revisión', path: '/cameras/revision' },
+            { id: 'cameras-escuela', label: 'Escuela', path: '/cameras/escuela' },
+            { id: 'cameras-policlinico', label: 'Policlínico', path: '/cameras/policlinico' },
+            { id: 'cameras-circuito', label: 'Circuito', path: '/cameras/circuito' },
+          ]
+        },
+        {
+          id: 'maintenance',
+          label: 'Mantenimiento',
+          icon: Wrench,
+          path: '/maintenance',
+          hasSubmenu: true,
+          submenu: [
+            { id: 'maintenance-pending', label: 'Pendientes', path: '/maintenance/pending' },
+            { id: 'maintenance-in-progress', label: 'En Progreso', path: '/maintenance/in-progress' },
+            { id: 'maintenance-completed', label: 'Completados', path: '/maintenance/completed' },
+          ]
+        },
+        { id: 'flota-vehicular', label: 'Flota Vehicular', icon: Car, path: '/flota-vehicular' },
       ]
     },
     {
-      id: 'maintenance',
-      label: 'Mantenimiento',
-      icon: Wrench,
-      path: '/maintenance',
-      hasSubmenu: true,
-      submenu: [
-        { id: 'maintenance-pending', label: 'Pendientes', icon: Clock, path: '/maintenance/pending' },
-        { id: 'maintenance-in-progress', label: 'En Progreso', icon: AlertTriangle, path: '/maintenance/in-progress' },
-        { id: 'maintenance-completed', label: 'Completados', icon: CheckCircle, path: '/maintenance/completed' },
-        { id: 'maintenance-preventive', label: 'Preventivo', icon: Wrench, path: '/maintenance/preventive' },
-        { id: 'maintenance-corrective', label: 'Correctivo', icon: AlertTriangle, path: '/maintenance/corrective' },
+      title: 'Administrativo',
+      items: [
+        { id: 'users', label: 'Usuarios', icon: Users, path: '/users' },
+        { id: 'locations', label: 'Sedes', icon: MapPin, path: '/locations' },
+        { id: 'sutran', label: 'Sutran', icon: Building2, path: '/sutran' },
+        { id: 'mtc', label: 'MTC Accesos', icon: Key, path: '/mtc' },
+        { id: 'servers', label: 'Servidores', icon: GrServerCluster, path: '/servers' },
+        { id: 'painpoint', label: 'Painpoints', icon: Zap, path: '/painpoint' },
+        {
+          id: 'sent',
+          label: 'Enviados',
+          icon: Send,
+          path: '/sent',
+          hasSubmenu: true,
+          submenu: [
+            { id: 'sent-lima', label: 'Lima', path: '/sent/lima' },
+            { id: 'sent-provincias', label: 'Provincias', path: '/sent/provincias' },
+          ]
+        },
       ]
     },
     {
-      id: 'sent',
-      label: 'Enviados',
-      icon: Send,
-      path: '/sent',
-      hasSubmenu: true,
-      submenu: [
-        { id: 'sent-lima', label: 'Lima', icon: Send, path: '/sent/lima' },
-        { id: 'sent-provincias', label: 'Provincias', icon: Send, path: '/sent/provincias' },
+      title: 'Sistema',
+      items: [
+        { id: 'audit', label: 'Auditoría', icon: FileText, path: '/audit' },
       ]
-    },
-    { id: 'sutran', label: 'Sutran', icon: Building2, path: '/sutran' },
-    { id: 'tickets', label: 'Mesa de Ayuda', icon: Ticket, path: '/tickets' },
-    {
-      id: 'checklist',
-      label: 'Checklist',
-      icon: ClipboardList,
-      path: '/checklist',
-      hasSubmenu: true,
-      submenu: [
-        { id: 'checklist-escon', label: 'ESCON', icon: ClipboardList, path: '/checklist/escon' },
-        { id: 'checklist-ecsal', label: 'ECSAL', icon: ClipboardList, path: '/checklist/ecsal' },
-        { id: 'checklist-citv', label: 'CITV', icon: ClipboardList, path: '/checklist/citv' },
-      ]
-    },
-    { id: 'locations', label: 'Sedes', icon: MapPin, path: '/locations' },
-    { id: 'mtc', label: 'MTC Accesos', icon: Key, path: '/mtc' },
-    { id: 'painpoint', label: 'Painpoints', icon: Zap, path: '/painpoint' },
-    { id: 'servers', label: 'Servidores', icon: GrServerCluster, path: '/servers' },
-    { id: 'flota-vehicular', label: 'Flota Vehicular', icon: Car, path: '/flota-vehicular' },
-    { id: 'users', label: 'Usuarios', icon: Users, path: '/users' },
-    { id: 'vacations', label: 'Vacaciones', icon: Calendar, path: '/vacations' },
-    { id: 'audit', label: 'Auditoría', icon: FileText, path: '/audit' },
-    { id: 'integrity', label: 'Integridad del Sistema', icon: Shield, path: '/integrity' },
+    }
   ];
 
-  const filteredMenuItems = menuItems.filter(item => {
-    if (!hasPermission(item.id)) return false;
-
-    if (item.hasSubmenu && item.submenu) {
-      const filteredSubmenu = item.submenu.filter(subItem => hasPermission(subItem.id));
-      if (filteredSubmenu.length === 0) return false;
-      item.submenu = filteredSubmenu;
-    }
-
-    return true;
-  });
-
-  const isPathActive = (path: string, exact = false) => {
-    if (exact) return location.pathname === path;
+  const isPathActive = (path: string) => {
     if (path === '/' && location.pathname !== '/') return false;
     return location.pathname.startsWith(path);
   };
 
-  const activeSubmenuItems = hoveredItem ? filteredMenuItems.find(i => i.id === hoveredItem)?.submenu : null;
+  const activeItem = sections.flatMap(s => s.items).find(i => i.id === hoveredItem);
+  const activeSubmenuItems = activeItem?.submenu;
 
   return (
     <>
       <style>
         {`
-          .sidebar-scroll::-webkit-scrollbar {
-            width: 4px;
-          }
-          .sidebar-scroll::-webkit-scrollbar-track {
-            background: #f4f7fa;
-          }
-          .sidebar-scroll::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-          }
-          .sidebar-scroll::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-          }
+          .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+          .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+          .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 4px; }
+          @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          .animate-spin-slow { animation: spin-slow 12s linear infinite; }
         `}
       </style>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden" onClick={onCloseMobile} />
+      )}
+
       <aside
         className={`
-          ${collapsed ? 'w-16' : 'w-72'} 
-          bg-[#f4f7fa] border-r border-[#e2e8f0] h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-50 flex flex-col overflow-y-auto sidebar-scroll
+          ${collapsed ? 'w-20' : 'w-72'} 
+          bg-[#001529] text-[#a6adb4] h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-[70] flex flex-col shadow-2xl overflow-hidden
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        {/* Logo Section */}
-        <div className={`h-14 bg-[#002855] text-white flex items-center ${collapsed ? 'justify-center px-0' : 'justify-between px-4'} sticky top-0 z-40`}>
-          {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div className="bg-white p-1 rounded-md">
-                <LayoutDashboard size={18} className="text-[#002855]" />
-              </div>
-              <span className="font-black tracking-tighter text-[15px] sm:text-lg uppercase truncate">Sistema G.S.C.</span>
+        {/* Toggle & Logo Header */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-white/5 shrink-0 overflow-hidden">
+          <div className={`flex items-center gap-3 transition-opacity duration-300 ${collapsed ? 'w-8' : 'w-auto'}`}>
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
+              <Settings size={18} className={!collapsed ? "animate-spin-slow" : ""} />
             </div>
-          )}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={onToggleCollapse}
-              className="p-1.5 hover:bg-white/10 rounded-md transition-colors hidden lg:block"
-            >
-              {collapsed ? <Menu size={18} /> : <X size={20} />}
-            </button>
-
-            {/* Mobile Close Button */}
-            {mobileOpen && (
-              <button
-                onClick={onCloseMobile}
-                className="p-1.5 hover:bg-white/10 rounded-md transition-colors lg:hidden"
-              >
-                <X size={20} />
-              </button>
+            {!collapsed && (
+              <span className="font-black text-white text-[13px] tracking-widest uppercase truncate animate-in fade-in duration-500">Sistema GSC</span>
             )}
           </div>
+
+          <button
+            onClick={onToggleCollapse}
+            className="p-1.5 hover:bg-white/5 rounded-lg transition-colors text-white/40 hover:text-white"
+          >
+            {collapsed ? <ChevronRight size={18} /> : <Menu size={18} />}
+          </button>
         </div>
 
-        {/* User Profile Section (Executive Look) */}
-        {!collapsed && user && (
-          <div className="p-6 pb-2 text-center border-b border-[#e2e8f0] mb-2">
-            <div className="relative mx-auto w-20 h-20 mb-4 group">
-              <div className="w-full h-full rounded-2xl bg-white shadow-md border border-[#e2e8f0] flex items-center justify-center overflow-hidden">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#002855] to-[#004e92] flex items-center justify-center text-white text-2xl font-black">
-                  {user.full_name?.charAt(0)}
-                </div>
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-2 border-[#f4f7fa] rounded-full shadow-sm" />
-            </div>
-            <h3 className="text-[#002855] font-black text-sm uppercase tracking-tight">{user.full_name}</h3>
-            <p className="text-[#64748b] text-[10px] font-bold uppercase tracking-[0.15em] mt-0.5">Grupo San Cristobal</p>
-          </div>
-        )}
+        {/* Navigation Content */}
+        <div className="flex-1 overflow-y-auto sidebar-scroll py-6 flex flex-col">
+          {sections.map((section) => {
+            const filteredItems = section.items.filter(item => {
+              if (!hasPermission(item.id)) return false;
+              if (item.submenu) return item.submenu.some(sub => hasPermission(sub.id));
+              return true;
+            });
 
-        <nav className={`${collapsed ? 'p-2' : 'p-3'} flex-1 space-y-0.5`}>
-          {filteredMenuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = isPathActive(item.path || '');
-            const isHovered = hoveredItem === item.id;
+            if (filteredItems.length === 0) return null;
 
             return (
-              <div key={item.id}
-                onMouseEnter={(e) => handleMouseEnter(item.id, e)}
-                onMouseLeave={handleMouseLeave}
-              >
-                <div className={`group relative flex items-center rounded-md transition-all duration-200 ${isActive || isHovered
-                  ? 'bg-white shadow-sm ring-1 ring-[#e2e8f0]'
-                  : 'hover:bg-[#e2e8f2]'
-                  }`}>
+              <div key={section.title} className="mb-6 last:mb-0">
+                {!collapsed && (
+                  <h3 className="px-6 mb-3 text-[10px] font-black uppercase tracking-[2.5px] text-white/20">
+                    {section.title}
+                  </h3>
+                )}
+                <div className="space-y-1.5 px-3">
+                  {filteredItems.map(item => {
+                    const Icon = item.icon;
+                    const isActive = isPathActive(item.path);
+                    const isHovered = hoveredItem === item.id;
 
-                  {(isActive || isHovered) && (
-                    <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-[#002855] rounded-r-full" />
-                  )}
-
-                  <NavLink
-                    to={item.path || '#'}
-                    className={`
-                      flex items-center gap-3 px-3.5 py-2.5 flex-1 text-left h-11
-                      ${isActive || isHovered ? 'text-[#002855] font-black' : 'text-[#4e5d78] font-bold'}
-                    `}
-                  >
-                    <Icon size={20} strokeWidth={isActive || isHovered ? 2.5 : 2} className={isActive || isHovered ? 'text-[#002855]' : 'text-[#64748b] group-hover:text-[#4e5d78]'} />
-                    {!collapsed && <span className="text-[13px] uppercase tracking-tight truncate">{item.label}</span>}
-
-                    {item.hasSubmenu && !collapsed && (
-                      <div className="ml-auto">
-                        <ChevronRight size={14} className={`text-[#64748b] transition-transform duration-200 ${isHovered ? 'rotate-0' : ''}`} />
+                    return (
+                      <div
+                        key={item.id}
+                        className="relative group"
+                        onMouseEnter={(e) => handleMouseEnter(item.id, e)}
+                        onMouseLeave={handleMouseLeave}
+                      >
+                        <NavLink
+                          to={item.path}
+                          onClick={() => window.innerWidth < 1024 && onCloseMobile?.()}
+                          className={`
+                            flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+                            ${isActive || isHovered ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-[#a6adb4] hover:text-white hover:bg-white/5'}
+                            ${collapsed ? 'justify-center px-0' : ''}
+                          `}
+                        >
+                          <Icon size={18} className={(isActive || isHovered) ? 'text-white' : 'group-hover:text-white'} />
+                          {!collapsed && (
+                            <>
+                              <span className="text-[13px] font-bold tracking-tight flex-1 truncate uppercase">{item.label}</span>
+                              {item.hasSubmenu && <ChevronRight size={14} className="opacity-40" />}
+                            </>
+                          )}
+                        </NavLink>
                       </div>
-                    )}
-                  </NavLink>
+                    );
+                  })}
                 </div>
               </div>
             );
           })}
-        </nav>
+        </div>
 
-        {/* Bottom Actions */}
-        <div className="p-3 bg-white/50 border-t border-[#e2e8f0]">
-          <div className="space-y-1">
-            <button className="w-full flex items-center gap-3 px-3.5 py-2 text-[#64748b] hover:text-[#002855] hover:bg-[#e2e8f2] rounded-md transition-all text-sm font-bold uppercase tracking-tight">
-              <Info size={18} />
-              {!collapsed && <span>Ayuda</span>}
+        {/* Footer */}
+        <div className="p-4 bg-black/30 border-t border-white/5 flex flex-col gap-4">
+          {!collapsed ? (
+            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5 shadow-inner">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-xs font-black ring-1 ring-white/20">GSC</div>
+              <div className="flex-1 min-w-0">
+                <button onClick={logout} className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all uppercase tracking-[2px]">
+                  <LogOut size={14} /> Salir
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={logout} className="mx-auto p-2 text-white/30 hover:text-rose-400 transition-colors">
+              <LogOut size={20} />
             </button>
-            <button
-              onClick={logout}
-              className="w-full flex items-center gap-3 px-3.5 py-2 text-rose-600 hover:bg-rose-50 rounded-md transition-all text-sm font-bold uppercase tracking-tight"
-            >
-              <LogOut size={18} />
-              {!collapsed && <span>Cerrar Sesión</span>}
-            </button>
-          </div>
+          )}
         </div>
       </aside>
 
-      {/* Flyout Submenu (for items WITH submenu) */}
-      {hoveredItem && activeSubmenuItems && activeSubmenuItems.length > 0 && (
+      {/* FLYOUT SUBMENU / TOOLTIP */}
+      {hoveredItem && (
         <div
-          className="fixed z-50 bg-white border border-[#e2e8f0] shadow-xl rounded-md py-1 min-w-[200px] animate-in fade-in zoom-in-95 duration-100"
+          ref={subMenuRef}
+          className={`
+            fixed z-[100] transition-all duration-200
+            ${activeSubmenuItems && activeSubmenuItems.length > 0
+              ? 'bg-[#1e293b] border border-blue-500/20 shadow-2xl rounded-2xl py-3 min-w-[240px]'
+              : 'bg-blue-600 text-white px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest shadow-xl border border-white/10'}
+          `}
           style={{
-            top: menuTop,
-            left: collapsed ? '4.5rem' : '18.5rem',
+            top: adjustedTop || menuTop,
+            left: collapsed ? '5.5rem' : '18.5rem',
+            opacity: hoveredItem ? 1 : 0,
+            transform: `translateX(${hoveredItem ? '0' : '-10px'})`
           }}
-          onMouseEnter={() => {
-            if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-          }}
+          onMouseEnter={() => { if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current); }}
           onMouseLeave={handleMouseLeave}
         >
-          <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
-            <h4 className="text-xs font-black text-[#002855] uppercase tracking-wider">
-              {filteredMenuItems.find(i => i.id === hoveredItem)?.label}
-            </h4>
-          </div>
-          <div className="py-1 max-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar">
-            {activeSubmenuItems.map((subItem) => {
-              const SubIcon = subItem.icon;
-              const isSubActive = isPathActive(subItem.path || '', true);
-
-              return (
-                <NavLink
-                  key={subItem.id}
-                  to={subItem.path || '#'}
-                  className={`
-                        flex items-center gap-3 px-4 py-2.5 text-[12px] font-bold uppercase tracking-tight transition-colors
-                        ${isSubActive
-                      ? 'text-[#002855] bg-blue-50 border-l-2 border-[#002855]'
-                      : 'text-[#64748b] hover:text-[#002855] hover:bg-gray-50'
-                    }
-                        `}
-                >
-                  <SubIcon size={16} className={isSubActive ? 'text-[#002855]' : 'text-[#94a3b8]'} />
-                  <span className="truncate">{subItem.label}</span>
-                </NavLink>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Custom Tooltip (for items WITHOUT submenu when collapsed) */}
-      {collapsed && hoveredItem && (!activeSubmenuItems || activeSubmenuItems.length === 0) && (
-        <div
-          className="fixed z-50 bg-white border border-[#e2e8f0] shadow-xl rounded-md py-2 px-4 min-w-[120px] animate-in fade-in zoom-in-95 duration-100 pointer-events-none"
-          style={{
-            top: menuTop + 6, // Slight offset to align with link center
-            left: '4.5rem',
-          }}
-        >
-          <span className="text-xs font-black text-[#002855] uppercase tracking-wider">
-            {filteredMenuItems.find(i => i.id === hoveredItem)?.label}
-          </span>
+          {activeSubmenuItems && activeSubmenuItems.length > 0 ? (
+            <>
+              <div className="px-5 py-2 border-b border-white/10 mb-2">
+                <h4 className="text-[11px] font-black text-blue-400 uppercase tracking-[2.5px] flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                  {activeItem?.label}
+                </h4>
+              </div>
+              <div className="max-h-[calc(100vh-60px)] overflow-y-auto sidebar-scroll px-2 space-y-0.5">
+                {activeSubmenuItems.filter((sub: any) => hasPermission(sub.id)).map((sub: any) => {
+                  const isSubActive = location.pathname === sub.path;
+                  return (
+                    <NavLink
+                      key={sub.id}
+                      to={sub.path}
+                      onClick={() => {
+                        window.innerWidth < 1024 && onCloseMobile?.();
+                        setHoveredItem(null);
+                      }}
+                      className={`
+                        flex items-center gap-3 px-4 py-2.5 text-[12px] font-bold uppercase tracking-tight rounded-xl transition-all
+                        ${isSubActive ? 'text-white bg-blue-500 shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                      `}
+                    >
+                      {sub.label}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <span>{activeItem?.label}</span>
+          )}
         </div>
       )}
     </>

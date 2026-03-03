@@ -1,8 +1,8 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, MapPin, X, Eye, Globe, Activity, Database, Server as ServerLucide, LayoutGrid, List, Star } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, Edit, Trash2, MapPin, X, Eye, Globe, Copy, Activity, Database, Server as ServerLucide, LayoutGrid, List, Star } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
-import { supabase, Server, Location } from '../lib/supabase';
+import { supabase, Server, Location, WindowsCredential } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Servers() {
@@ -11,13 +11,29 @@ export default function Servers() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Server | undefined>();
-  const [form, setForm] = useState({ name: '', location_id: '', ip_address: '', anydesk_id: '', username: '', password: '', notes: '' });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<{
+    name: string;
+    location_id: string;
+    ip_address: string;
+    anydesk_id: string;
+    username: string;
+    password: string;
+    notes: string;
+    windows_credentials: WindowsCredential[];
+  }>({
+    name: '',
+    location_id: '',
+    ip_address: '',
+    anydesk_id: '',
+    username: '',
+    password: '',
+    notes: '',
+    windows_credentials: []
+  });
   const [stats, setStats] = useState({ total: 0, withIp: 0, withAnydesk: 0, recentlyUpdated: 0 });
-  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [viewingServer, setViewingServer] = useState<Server | undefined>();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
@@ -53,13 +69,13 @@ export default function Servers() {
     if (data) setLocations(data);
   };
 
-  const resetForm = () => { setForm({ name: '', location_id: '', ip_address: '', anydesk_id: '', username: '', password: '', notes: '' }); setErrors({}); };
+  const resetForm = () => { setForm({ name: '', location_id: '', ip_address: '', anydesk_id: '', username: '', password: '', notes: '', windows_credentials: [] }); };
   const openCreate = () => { setEditing(undefined); resetForm(); setShowForm(true); };
-  const openEdit = (s: Server) => { setEditing(s); setForm({ name: s.name || '', location_id: s.location_id || '', ip_address: s.ip_address || '', anydesk_id: s.anydesk_id || '', username: s.username || '', password: s.password || '', notes: s.notes || '' }); setShowForm(true); };
+  const openEdit = (s: Server) => { setEditing(s); setForm({ name: s.name || '', location_id: s.location_id || '', ip_address: s.ip_address || '', anydesk_id: s.anydesk_id || '', username: s.username || '', password: s.password || '', notes: s.notes || '', windows_credentials: s.windows_credentials || [] }); setShowForm(true); };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return setErrors({ name: 'Requerido' });
+    if (!form.name.trim()) return;
     const payload = { ...form, updated_at: new Date().toISOString() };
     if (editing) await supabase.from('servers').update(payload).eq('id', editing.id);
     else await supabase.from('servers').insert(payload as any);
@@ -85,27 +101,10 @@ export default function Servers() {
           </div>
           <div className="hidden lg:block">
             <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Infraestructura</h2>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span>Data Center y Recursos</span>
-              <div className="w-1 h-1 bg-gray-300 rounded-full" />
-              <span>{stats.total} Equipos</span>
-            </div>
           </div>
         </div>
 
-        {/* Integrated Search Bar */}
-        <div className="flex-1 max-w-md px-4">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar por nombre, IP, AnyDesk o sede..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all text-sm font-medium"
-            />
-          </div>
-        </div>
+
 
         <div className="flex items-center gap-2">
           <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#f1f5f9] p-1 rounded-lg border border-[#e2e8f0] w-fit">
@@ -244,9 +243,42 @@ export default function Servers() {
                 <input placeholder="Host IP" value={form.ip_address} onChange={e => setForm({ ...form, ip_address: e.target.value })} className="px-4 py-2.5 rounded-xl border border-gray-200 font-mono text-xs" />
                 <input placeholder="AnyDesk ID" value={form.anydesk_id} onChange={e => setForm({ ...form, anydesk_id: e.target.value })} className="px-4 py-2.5 rounded-xl border border-gray-200 font-mono text-xs" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <input placeholder="Usuario" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs" />
-                <input type="password" placeholder="Contraseña" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs" />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Credenciales de Acceso</span>
+                  <button type="button" onClick={() => setForm({ ...form, windows_credentials: [...form.windows_credentials, { username: '', password: '', description: '' }] })} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"><Plus size={10} /> Añadir Usuario</button>
+                </div>
+                {form.windows_credentials.map((cred, i) => (
+                  <div key={i} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm space-y-2 relative group">
+                    <button type="button" onClick={() => {
+                      const newCreds = [...form.windows_credentials];
+                      newCreds.splice(i, 1);
+                      setForm({ ...form, windows_credentials: newCreds });
+                    }} className="absolute top-2 right-2 text-gray-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14} /></button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input placeholder="Usuario" value={cred.username} onChange={e => {
+                        const newCreds = [...form.windows_credentials];
+                        newCreds[i].username = e.target.value;
+                        setForm({ ...form, windows_credentials: newCreds });
+                      }} className="px-3 py-2 bg-slate-50 border border-gray-100 rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500" />
+                      <input type="password" placeholder="Contraseña" value={cred.password} onChange={e => {
+                        const newCreds = [...form.windows_credentials];
+                        newCreds[i].password = e.target.value;
+                        setForm({ ...form, windows_credentials: newCreds });
+                      }} className="px-3 py-2 bg-slate-50 border border-gray-100 rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500" />
+                    </div>
+                    <input placeholder="Descripción (ej: Administrador, SQL...)" value={cred.description} onChange={e => {
+                      const newCreds = [...form.windows_credentials];
+                      newCreds[i].description = e.target.value;
+                      setForm({ ...form, windows_credentials: newCreds });
+                    }} className="w-full px-3 py-2 bg-slate-50 border border-gray-100 rounded-lg text-[10px] outline-none focus:ring-1 focus:ring-blue-500" />
+                  </div>
+                ))}
+                {form.windows_credentials.length === 0 && (
+                  <div className="text-center py-4 bg-white rounded-xl border border-dashed border-gray-200">
+                    <p className="text-[10px] font-medium text-gray-400">No hay usuarios registrados</p>
+                  </div>
+                )}
               </div>
               <textarea placeholder="Notas técnicas..." value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs resize-none" />
               <div className="flex gap-3 pt-4"><button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 text-xs font-black uppercase text-gray-400">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#002855] text-white rounded-lg text-xs font-black uppercase shadow-lg shadow-blue-900/10">Guardar</button></div>
@@ -274,6 +306,39 @@ export default function Servers() {
                 <div className="bg-white p-4 rounded-xl border shadow-sm"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">IP LAN</label><p className="font-mono font-bold text-[#002855]">{viewingServer.ip_address || '—'}</p></div>
                 <div className="bg-white p-4 rounded-xl border shadow-sm"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">AnyDesk</label><p className="font-mono font-bold text-[#002855]">{viewingServer.anydesk_id || '—'}</p></div>
               </div>
+              {viewingServer.windows_credentials && viewingServer.windows_credentials.length > 0 && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Usuarios Registrados</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {viewingServer.windows_credentials.map((cred, i) => (
+                      <div key={i} className="bg-white p-4 rounded-xl border shadow-sm group">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">{cred.description || 'Usuario'}</span>
+                          <div className="flex gap-1.5">
+                            <button onClick={() => { navigator.clipboard.writeText(cred.username || ''); }} className="text-gray-300 hover:text-blue-500 transition-colors"><Copy size={12} /></button>
+                          </div>
+                        </div>
+                        <p className="text-xs font-black text-[#002855] break-all">{cred.username}</p>
+                        <div className="mt-2 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                            <span className="text-[10px] font-bold text-gray-400">Contraseña protegida</span>
+                          </div>
+                          <button onClick={() => {
+                            const passInput = document.createElement('input');
+                            passInput.value = cred.password || '';
+                            document.body.appendChild(passInput);
+                            passInput.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(passInput);
+                            alert('Contraseña copiada');
+                          }} className="text-[10px] font-black text-blue-600 hover:underline uppercase tracking-tighter transition-all">Copiar Pass</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {viewingServer.notes && <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100"><p className="text-sm font-medium italic text-amber-950 leading-relaxed">"{viewingServer.notes}"</p></div>}
             </div>
             <div className="p-6 bg-slate-50 border-t flex gap-3"><button onClick={() => setViewingServer(undefined)} className="flex-1 py-3 text-xs font-black uppercase text-gray-400 bg-white border border-gray-200 rounded-xl">Cerrar</button></div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Save } from 'lucide-react';
+import { Monitor, Loader2 } from 'lucide-react';
 import { supabase, Location } from '../../lib/supabase';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 type PCFormProps = {
   editPC?: any;
@@ -54,7 +55,6 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
     model: '',
     serial_number: '',
     notes: '',
-    // Campos del Excel
     item: '',
     descripcion: '',
     unidad_medida: '',
@@ -66,44 +66,15 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
     valor_estimado: '',
     estado_uso: ''
   });
+
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchLocations();
-    generateRandomCode();
-
-    if (editPC) {
-      setFormData({
-        code: editPC.code || '',
-        location_id: editPC.location_id || '',
-        area: editPC.area || '',
-        pc_laptop: editPC.pc_laptop || 'pc',
-        placa: editPC.placa || '',
-        bios_mode: editPC.bios_mode || '',
-        operating_system: editPC.operating_system || '',
-        ram: editPC.ram || '',
-        processor: editPC.processor || '',
-        ip_address: editPC.ip_address || '',
-        anydesk: editPC.anydesk || '',
-        brand: editPC.brand || '',
-        model: editPC.model || '',
-        serial_number: editPC.serial_number || '',
-        notes: editPC.notes || '',
-        // Campos del Excel
-        item: editPC.item || '',
-        descripcion: editPC.descripcion || '',
-        unidad_medida: editPC.unidad_medida || '',
-        cantidad: editPC.cantidad?.toString() || '1',
-        condicion: editPC.condicion || '',
-        color: editPC.color || '',
-        gama: editPC.gama || '',
-        fecha_adquisicion: editPC.fecha_adquisicion || '',
-        valor_estimado: editPC.valor_estimado || '',
-        estado_uso: editPC.estado_uso || ''
-      });
-    }
+    if (!editPC) generateRandomCode();
+    else setFormData(editPC);
   }, [editPC]);
 
   const fetchLocations = async () => {
@@ -119,551 +90,333 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-
-    // Limpiar error cuando el usuario empiece a escribir
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.code.trim()) newErrors.code = 'El código es requerido';
-    if (!formData.location_id) newErrors.location_id = 'La sede es requerida';
-    if (!formData.area.trim()) newErrors.area = 'El área es requerida';
-    if (!formData.placa.trim()) newErrors.placa = 'La placa es requerida';
-    if (!formData.bios_mode.trim()) newErrors.bios_mode = 'El modo de BIOS es requerido';
-    if (!formData.operating_system.trim()) newErrors.operating_system = 'El sistema operativo es requerido';
-    if (!formData.ram.trim()) newErrors.ram = 'La RAM es requerida';
-    if (!formData.processor.trim()) newErrors.processor = 'El procesador es requerido';
-    if (!formData.ip_address.trim()) newErrors.ip_address = 'La IP es requerida';
-    if (!formData.anydesk.trim()) newErrors.anydesk = 'El AnyDesk es requerido';
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) return;
-
     setLoading(true);
     try {
       const dataToSave = {
         ...formData,
-        asset_type_id: 'pc', // Asumiendo que existe este tipo en asset_types
+        asset_type_id: formData.pc_laptop === 'pc' ? 'pc-id' : 'laptop-id', // Use real IDs in prod
         status: 'active',
-        created_at: editPC ? editPC.created_at : new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
-
       if (editPC) {
-        const { error } = await supabase
-          .from('assets')
-          .update(dataToSave)
-          .eq('id', editPC.id);
-
+        const { error } = await supabase.from('assets').update(dataToSave).eq('id', editPC.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('assets')
-          .insert([dataToSave]);
-
+        const { error } = await supabase.from('assets').insert([dataToSave]);
         if (error) throw error;
       }
-
       onSave();
     } catch (error: any) {
-      console.error('Error saving PC:', error);
-      alert('Error al guardar: ' + error.message);
+      setErrors({ submit: error.message });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              {editPC ? 'Editar PC/Laptop' : 'Nueva PC/Laptop'}
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">Gestión de activos informáticos</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <X size={20} className="text-gray-400" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Código Aleatorio */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Código Aleatorio *
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  name="code"
-                  value={formData.code}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.code ? 'border-red-300' : 'border-gray-200'
-                    }`}
-                  placeholder="Código de 6 dígitos"
-                  maxLength={6}
-                  readOnly
-                />
-                <button
-                  type="button"
-                  onClick={generateRandomCode}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors uppercase"
-                >
-                  Generar
-                </button>
-              </div>
-              {errors.code && (
-                <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.code}</p>
-              )}
-            </div>
-
-            {/* Sede */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Sede *
-              </label>
-              <select
-                name="location_id"
-                value={formData.location_id}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.location_id ? 'border-red-300' : 'border-gray-200'
-                  }`}
+    <BaseForm
+      title={editPC ? 'Editar PC / Laptop' : 'Nueva PC / Laptop'}
+      subtitle="Hardware y Sistemas"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.submit}
+      maxWidth="5xl"
+      icon={<Monitor size={24} className="text-blue-600" />}
+    >
+      {/* SECTION 1: IDENTIFICACIÓN BÁSICA */}
+      <FormSection title="Identificación Básica" color="blue">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Código ID">
+            <div className="flex gap-2">
+              <FormInput 
+                type="text" 
+                name="code" 
+                value={formData.code} 
+                readOnly 
+                className="bg-gray-100"
+                error={errors.code}
+              />
+              <button 
+                type="button" 
+                onClick={generateRandomCode} 
+                className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 shadow-sm"
               >
-                <option value="">Seleccionar sede</option>
-                {locations.map(location => (
-                  <option key={location.id} value={location.id}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
-              {errors.location_id && (
-                <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.location_id}</p>
-              )}
+                <Loader2 size={18} />
+              </button>
             </div>
-
-            {/* Área */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Área *
-              </label>
-              <input
-                type="text"
-                name="area"
-                value={formData.area}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.area ? 'border-red-300' : 'border-gray-200'
-                  }`}
-                placeholder="Ej: Administración, Contabilidad"
-              />
-              {errors.area && (
-                <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.area}</p>
-              )}
-            </div>
-
-            {/* PC/Laptop */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Tipo de Equipo *
-              </label>
-              <select
-                name="pc_laptop"
-                value={formData.pc_laptop}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              >
-                <option value="pc">PC de Escritorio</option>
-                <option value="laptop">Laptop / Portátil</option>
-              </select>
-            </div>
-
-            {/* Placa */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Placa (Activo Fijo) *
-              </label>
-              <input
-                type="text"
-                name="placa"
-                value={formData.placa}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.placa ? 'border-red-300' : 'border-gray-200'
-                  }`}
-                placeholder="Ej: ABC-123"
-              />
-              {errors.placa && (
-                <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.placa}</p>
-              )}
-            </div>
-
-            {/* Modo de BIOS */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Modo de BIOS *
-              </label>
-              <select
-                name="bios_mode"
-                value={formData.bios_mode}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.bios_mode ? 'border-red-300' : 'border-gray-200'
-                  }`}
-              >
-                <option value="">Seleccionar modo</option>
-                <option value="legacy">Legacy</option>
-                <option value="uefi">UEFI</option>
-                <option value="mixed">Mixed</option>
-              </select>
-              {errors.bios_mode && (
-                <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.bios_mode}</p>
-              )}
-            </div>
-
-            {/* Sistema Operativo */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Sistema Operativo *
-              </label>
-              <input
-                type="text"
-                name="operating_system"
-                value={formData.operating_system}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.operating_system ? 'border-red-300' : 'border-gray-200'
-                  }`}
-                placeholder="Ej: Windows 11 Pro"
-              />
-              {errors.operating_system && (
-                <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.operating_system}</p>
-              )}
-            </div>
-
-            {/* RAM */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Memoria RAM *
-              </label>
-              <input
-                type="text"
-                name="ram"
-                value={formData.ram}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.ram ? 'border-red-300' : 'border-gray-200'
-                  }`}
-                placeholder="Ej: 16GB DDR4 3200MHz"
-              />
-              {errors.ram && (
-                <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.ram}</p>
-              )}
-            </div>
-
-            {/* Procesador */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Procesador *
-              </label>
-              <input
-                type="text"
-                name="processor"
-                value={formData.processor}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.processor ? 'border-red-300' : 'border-gray-200'
-                  }`}
-                placeholder="Ej: Intel Core i5-12400"
-              />
-              {errors.processor && (
-                <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.processor}</p>
-              )}
-            </div>
-
-            {/* IP Address */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Dirección IP *
-              </label>
-              <input
-                type="text"
-                name="ip_address"
-                value={formData.ip_address}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.ip_address ? 'border-red-300' : 'border-gray-200'
-                  }`}
-                placeholder="Ej: 192.168.1.xxx"
-              />
-              {errors.ip_address && (
-                <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.ip_address}</p>
-              )}
-            </div>
-
-            {/* AnyDesk */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                AnyDesk ID *
-              </label>
-              <input
-                type="text"
-                name="anydesk"
-                value={formData.anydesk}
-                onChange={handleChange}
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.anydesk ? 'border-red-300' : 'border-gray-200'
-                  }`}
-                placeholder="Ej: 123 456 789"
-              />
-              {errors.anydesk && (
-                <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.anydesk}</p>
-              )}
-            </div>
-
-            {/* Marca */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Marca
-              </label>
-              <input
-                type="text"
-                name="brand"
-                value={formData.brand}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="Ej: Lenovo, Dell, HP"
-              />
-            </div>
-
-            {/* Modelo */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Modelo
-              </label>
-              <input
-                type="text"
-                name="model"
-                value={formData.model}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="Ej: ThinkPad E14"
-              />
-            </div>
-
-            {/* Número de Serie */}
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                Número de Serie
-              </label>
-              <input
-                type="text"
-                name="serial_number"
-                value={formData.serial_number}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="S/N del equipo"
-              />
-            </div>
-
-            {/* Campos del Excel - Información General del Activo */}
-            <div className="col-span-2 border-t pt-4 mt-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Información General del Activo</h3>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                ITEM
-              </label>
-              <input
-                type="text"
-                name="item"
-                value={formData.item}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                DESCRIPCIÓN
-              </label>
-              <textarea
-                name="descripcion"
-                value={formData.descripcion}
-                onChange={handleChange}
-                rows={2}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                UNIDAD DE MEDIDA
-              </label>
-              <input
-                type="text"
-                name="unidad_medida"
-                value={formData.unidad_medida}
-                onChange={handleChange}
-                placeholder="ej: Unidad, Kit, Set, etc."
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                CANT.
-              </label>
-              <input
-                type="number"
-                name="cantidad"
-                value={formData.cantidad}
-                onChange={handleChange}
-                min={1}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                CONDICIÓN
-              </label>
-              <select
-                name="condicion"
-                value={formData.condicion}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              >
-                <option value="">Seleccionar...</option>
-                <option value="Nuevo">Nuevo</option>
-                <option value="Usado - Excelente">Usado - Excelente</option>
-                <option value="Usado - Bueno">Usado - Bueno</option>
-                <option value="Usado - Regular">Usado - Regular</option>
-                <option value="Para Reparación">Para Reparación</option>
-                <option value="Dañado">Dañado</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                COLOR
-              </label>
-              <input
-                type="text"
-                name="color"
-                value={formData.color}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                GAMA
-              </label>
-              <input
-                type="text"
-                name="gama"
-                value={formData.gama}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                FECHA ADQUISICIÓN
-              </label>
-              <input
-                type="date"
-                name="fecha_adquisicion"
-                value={formData.fecha_adquisicion}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                VALOR ESTIMADO
-              </label>
-              <input
-                type="number"
-                name="valor_estimado"
-                value={formData.valor_estimado}
-                onChange={handleChange}
-                step="0.01"
-                min={0}
-                placeholder="0.00"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                ESTADO USO
-              </label>
-              <select
-                name="estado_uso"
-                value={formData.estado_uso}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              >
-                <option value="">Seleccionar...</option>
-                <option value="Operativo">Operativo</option>
-                <option value="En Mantenimiento">En Mantenimiento</option>
-                <option value="Fuera de Servicio">Fuera de Servicio</option>
-                <option value="En Reparación">En Reparación</option>
-                <option value="Standby">Standby</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Notas */}
-          <div className="mt-6">
-            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-              Notas Adicionales
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-              placeholder="Observaciones o detalles adicionales..."
+          </FormField>
+          
+          <FormField label="Lugar / Sede" required error={errors.location_id}>
+            <FormSelect 
+              name="location_id" 
+              value={formData.location_id} 
+              onChange={handleChange} 
+              required
+              error={errors.location_id}
+            >
+              <option value="">Seleccionar...</option>
+              {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
+            </FormSelect>
+          </FormField>
+          
+          <FormField label="Área / Departamento">
+            <FormInput 
+              type="text" 
+              name="area" 
+              value={formData.area} 
+              onChange={handleChange} 
+              placeholder="Ej: Contabilidad"
+              error={errors.area}
             />
-          </div>
+          </FormField>
+          
+          <FormField label="Tipo de Equipo">
+            <FormSelect 
+              name="pc_laptop" 
+              value={formData.pc_laptop} 
+              onChange={handleChange}
+              error={errors.pc_laptop}
+            >
+              <option value="pc">PC de Escritorio</option>
+              <option value="laptop">Laptop / Portátil</option>
+            </FormSelect>
+          </FormField>
+        </div>
+      </FormSection>
 
-          {/* Botones */}
-          <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full sm:w-auto px-6 py-3 sm:py-2.5 text-[10px] font-bold text-slate-600 uppercase tracking-widest bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm order-2 sm:order-1"
+      {/* SECTION 2: ESPECIFICACIONES TÉCNICAS */}
+      <FormSection title="Especificaciones de Hardware" color="emerald">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <FormField label="Placa (Activo Fijo)">
+            <FormInput 
+              type="text" 
+              name="placa" 
+              value={formData.placa} 
+              onChange={handleChange} 
+              placeholder="Ej: ABC-123"
+              error={errors.placa}
+            />
+          </FormField>
+          
+          <FormField label="Modo BIOS">
+            <FormSelect 
+              name="bios_mode" 
+              value={formData.bios_mode} 
+              onChange={handleChange}
+              error={errors.bios_mode}
             >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full sm:w-auto px-8 py-3 sm:py-2.5 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest order-1 sm:order-2 flex-1 sm:flex-none"
+              <option value="">Seleccionar...</option>
+              <option value="legacy">Legacy</option>
+              <option value="uefi">UEFI</option>
+            </FormSelect>
+          </FormField>
+          
+          <FormField label="Sistema Operativo">
+            <FormInput 
+              type="text" 
+              name="operating_system" 
+              value={formData.operating_system} 
+              onChange={handleChange} 
+              placeholder="Ej: Windows 11 Pro"
+              error={errors.operating_system}
+            />
+          </FormField>
+          
+          <FormField label="Memoria RAM">
+            <FormInput 
+              type="text" 
+              name="ram" 
+              value={formData.ram} 
+              onChange={handleChange} 
+              placeholder="8GB / 16GB"
+              error={errors.ram}
+            />
+          </FormField>
+          
+          <FormField label="Procesador">
+            <FormInput 
+              type="text" 
+              name="processor" 
+              value={formData.processor} 
+              onChange={handleChange} 
+              placeholder="Intel Core i5"
+              error={errors.processor}
+            />
+          </FormField>
+          
+          <FormField label="Dirección IP">
+            <FormInput 
+              type="text" 
+              name="ip_address" 
+              value={formData.ip_address} 
+              onChange={handleChange} 
+              placeholder="192.168.1.100"
+              error={errors.ip_address}
+            />
+          </FormField>
+          
+          <FormField label="AnyDesk ID">
+            <FormInput 
+              type="text" 
+              name="anydesk" 
+              value={formData.anydesk} 
+              onChange={handleChange} 
+              placeholder="123 456 789"
+              error={errors.anydesk}
+            />
+          </FormField>
+          
+          <FormField label="Marca">
+            <FormInput 
+              type="text" 
+              name="brand" 
+              value={formData.brand} 
+              onChange={handleChange}
+              error={errors.brand}
+            />
+          </FormField>
+          
+          <FormField label="Modelo">
+            <FormInput 
+              type="text" 
+              name="model" 
+              value={formData.model} 
+              onChange={handleChange}
+              error={errors.model}
+            />
+          </FormField>
+        </div>
+      </FormSection>
+
+      {/* SECTION 3: DATOS DE INVENTARIO */}
+      <FormSection title="Información de Inventario" color="amber">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="ITEM">
+            <FormInput 
+              type="text" 
+              name="item" 
+              value={formData.item} 
+              onChange={handleChange}
+              error={errors.item}
+            />
+          </FormField>
+          
+          <FormField label="Descripción" className="md:col-span-2">
+            <FormInput 
+              type="text" 
+              name="descripcion" 
+              value={formData.descripcion} 
+              onChange={handleChange}
+              error={errors.descripcion}
+            />
+          </FormField>
+          
+          <FormField label="U. Medida">
+            <FormInput 
+              type="text" 
+              name="unidad_medida" 
+              value={formData.unidad_medida} 
+              onChange={handleChange} 
+              placeholder="UNID"
+              error={errors.unidad_medida}
+            />
+          </FormField>
+          
+          <FormField label="Cantidad">
+            <FormInput 
+              type="number" 
+              name="cantidad" 
+              value={formData.cantidad} 
+              onChange={handleChange}
+              error={errors.cantidad}
+            />
+          </FormField>
+          
+          <FormField label="Condición">
+            <FormSelect 
+              name="condicion" 
+              value={formData.condicion} 
+              onChange={handleChange}
+              error={errors.condicion}
             >
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-              ) : (
-                <Save size={16} />
-              )}
-              {editPC ? 'Guardar Cambios' : 'Registrar Equipo'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              <option value="">Seleccionar...</option>
+              <option value="Nuevo">Nuevo</option>
+              <option value="Usado - Excelente">Usado - Excelente</option>
+              <option value="Malo">Malo</option>
+            </FormSelect>
+          </FormField>
+          
+          <FormField label="Gama">
+            <FormInput 
+              type="text" 
+              name="gama" 
+              value={formData.gama} 
+              onChange={handleChange}
+              error={errors.gama}
+            />
+          </FormField>
+        </div>
+      </FormSection>
+
+      {/* SECTION 4: ADQUISICIÓN Y VALOR */}
+      <FormSection title="Adquisición y Valor" color="purple">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <FormField label="Fecha Adquisición">
+            <FormInput 
+              type="date" 
+              name="fecha_adquisicion" 
+              value={formData.fecha_adquisicion} 
+              onChange={handleChange}
+              error={errors.fecha_adquisicion}
+            />
+          </FormField>
+          
+          <FormField label="Valor Estimado ($)">
+            <FormInput 
+              type="number" 
+              name="valor_estimado" 
+              value={formData.valor_estimado} 
+              onChange={handleChange} 
+              step="0.01" 
+              placeholder="0.00"
+              error={errors.valor_estimado}
+            />
+          </FormField>
+          
+          <FormField label="Estado uso">
+            <FormSelect 
+              name="estado_uso" 
+              value={formData.estado_uso} 
+              onChange={handleChange}
+              error={errors.estado_uso}
+            >
+              <option value="">Seleccionar...</option>
+              <option value="Operativo">Operativo</option>
+              <option value="Fuera de Servicio">Fuera de Servicio</option>
+            </FormSelect>
+          </FormField>
+        </div>
+      </FormSection>
+
+      {/* SECTION 5: NOTAS */}
+      <FormSection title="Notas Adicionales" color="blue">
+        <FormField label="">
+          <FormTextarea 
+            name="notes" 
+            value={formData.notes} 
+            onChange={handleChange} 
+            rows={3} 
+            placeholder="Observaciones generales..."
+            error={errors.notes}
+          />
+        </FormField>
+      </FormSection>
+    </BaseForm>
   );
 }
-

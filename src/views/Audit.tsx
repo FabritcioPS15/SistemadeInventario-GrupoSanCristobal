@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, Trash2, Edit, List, ClipboardCheck, AlertCircle, CheckCircle2, Star, X } from 'lucide-react';
+import { Trash2, Edit, List, ClipboardCheck, AlertCircle, CheckCircle2, Star, X } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase, BranchAudit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import AuditForm from '../components/forms/AuditForm';
+import HeaderSearch from '../components/HeaderSearch';
 
 type ViewType = 'history' | 'form';
 
@@ -57,51 +58,35 @@ export default function Audit() {
 
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc] font-sans">
-      {/* Standard Application Header (h-14) */}
-      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
-            <ClipboardCheck size={20} />
-          </div>
-          <div className="hidden lg:block">
-            <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Auditoría</h2>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span>Control de Sedes</span>
-              <div className="w-1 h-1 bg-gray-300 rounded-full" />
-              <span>{audits.length} Reportes</span>
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+        {/* Fila de Acciones Superior */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+          <HeaderSearch
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            placeholder="Buscar por sede o auditor..."
+            variant="light"
+          />
+
+          <div className="flex items-center gap-2">
+            <div className="flex bg-[#f1f5f9] p-1 rounded-lg border border-[#e2e8f0]">
+              <button
+                onClick={() => { setView('history'); setEditingAudit(undefined); }}
+                className={`p-1.5 rounded-md transition-all ${view === 'history' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500'}`}
+              >
+                <List size={16} />
+              </button>
+              {canEdit() && (
+                <button
+                  onClick={() => setView('form')}
+                  className={`p-1.5 rounded-md transition-all ${view === 'form' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500'}`}
+                >
+                  <ClipboardCheck size={16} />
+                </button>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Integrated Search Bar */}
-        <div className="flex-1 max-w-md px-4">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar por sede o auditor..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-400 transition-all text-sm font-medium"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex bg-[#f1f5f9] p-1 rounded-lg border border-[#e2e8f0]">
-            <button onClick={() => { setView('history'); setEditingAudit(undefined); }} className={`p-1.5 rounded-md transition-all ${view === 'history' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500'}`}><List size={16} /></button>
-            {canEdit() && (
-              <button onClick={() => setView('form')} className={`p-1.5 rounded-md transition-all ${view === 'form' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-500'}`}><ClipboardCheck size={16} /></button>
-            )}
-          </div>
-
-          <div className="h-6 w-px bg-gray-200 mx-1" />
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"><Star size={18} /></button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors"><X size={18} /></button>
-        </div>
-      </div>
-
-      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
         {view === 'form' ? (
           <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
             <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-8">

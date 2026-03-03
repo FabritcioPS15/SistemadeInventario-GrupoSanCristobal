@@ -455,9 +455,9 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-2xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
           <div>
             <h2 className="text-xl font-semibold text-gray-800">
               {editCamera ? 'Editar Cámara' : 'Nueva Cámara'}
@@ -468,343 +468,346 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
               </p>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Mensaje de error general */}
-          {errors.submit && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-              <div className="flex items-center">
-                <AlertCircle size={20} className="text-red-500 mr-2" />
-                <p className="text-red-700">{errors.submit}</p>
-              </div>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre *
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className={getFieldClasses('name')}
-                  placeholder="Ej: Cámara Principal"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {renderValidationIcon('name')}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {/* Mensaje de error general */}
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+                <div className="flex items-center">
+                  <AlertCircle size={20} className="text-red-500 mr-2" />
+                  <p className="text-red-700">{errors.submit}</p>
                 </div>
               </div>
-              {errors.name && (
-                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estado *
-              </label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="active">Activa</option>
-                <option value="inactive">Inactiva</option>
-                <option value="maintenance">Mantenimiento</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ubicación
-            </label>
-            <select
-              name="location_id"
-              value={formData.location_id}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Sin ubicación específica</option>
-              {locations.map(location => (
-                <option key={location.id} value={location.id}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Acceso *
-            </label>
-            <select
-              name="access_type"
-              value={formData.access_type}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="url">URL Directa</option>
-              <option value="ivms">IVMS (Hikvision)</option>
-              <option value="esviz">ESVIZ (Dahua)</option>
-            </select>
-          </div>
-
-          {/* Campos de acceso según el tipo seleccionado */}
-          {formData.access_type === 'url' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                URL *
-              </label>
-              <div className="relative">
-                <input
-                  type="url"
-                  name="url"
-                  value={formData.url}
-                  onChange={handleChange}
-                  required
-                  className={getFieldClasses('url')}
-                  placeholder="http://192.168.1.100:8080"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {renderValidationIcon('url')}
-                </div>
-              </div>
-              {errors.url && (
-                <p className="text-red-500 text-sm mt-1">{errors.url}</p>
-              )}
-            </div>
-          )}
-
-
-          {/* Campos adicionales de IP y Puerto solo para URL Directa */}
-          {formData.access_type === 'url' && (
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  IP Address (Opcional)
+                  Nombre *
                 </label>
                 <div className="relative">
                   <input
                     type="text"
-                    name="ip_address"
-                    value={formData.ip_address}
+                    name="name"
+                    value={formData.name}
                     onChange={handleChange}
-                    className={getFieldClasses('ip_address')}
-                    placeholder="192.168.1.100"
+                    required
+                    className={getFieldClasses('name')}
+                    placeholder="Ej: Cámara Principal"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {renderValidationIcon('ip_address')}
+                    {renderValidationIcon('name')}
                   </div>
                 </div>
-                {errors.ip_address && (
-                  <p className="text-red-500 text-sm mt-1">{errors.ip_address}</p>
+                {errors.name && (
+                  <p className="text-red-500 text-sm mt-1">{errors.name}</p>
                 )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Puerto (Opcional)
+                  Estado *
+                </label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="active">Activa</option>
+                  <option value="inactive">Inactiva</option>
+                  <option value="maintenance">Mantenimiento</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Ubicación
+              </label>
+              <select
+                name="location_id"
+                value={formData.location_id}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Sin ubicación específica</option>
+                {locations.map(location => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Acceso *
+              </label>
+              <select
+                name="access_type"
+                value={formData.access_type}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="url">URL Directa</option>
+                <option value="ivms">IVMS (Hikvision)</option>
+                <option value="esviz">ESVIZ (Dahua)</option>
+              </select>
+            </div>
+
+            {/* Campos de acceso según el tipo seleccionado */}
+            {formData.access_type === 'url' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  URL *
+                </label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    name="url"
+                    value={formData.url}
+                    onChange={handleChange}
+                    required
+                    className={getFieldClasses('url')}
+                    placeholder="http://192.168.1.100:8080"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {renderValidationIcon('url')}
+                  </div>
+                </div>
+                {errors.url && (
+                  <p className="text-red-500 text-sm mt-1">{errors.url}</p>
+                )}
+              </div>
+            )}
+
+
+            {/* Campos adicionales de IP y Puerto solo para URL Directa */}
+            {formData.access_type === 'url' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    IP Address (Opcional)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="ip_address"
+                      value={formData.ip_address}
+                      onChange={handleChange}
+                      className={getFieldClasses('ip_address')}
+                      placeholder="192.168.1.100"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {renderValidationIcon('ip_address')}
+                    </div>
+                  </div>
+                  {errors.ip_address && (
+                    <p className="text-red-500 text-sm mt-1">{errors.ip_address}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Puerto (Opcional)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="port"
+                      value={formData.port}
+                      onChange={handleChange}
+                      className={getFieldClasses('port')}
+                      placeholder="8080"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {renderValidationIcon('port')}
+                    </div>
+                  </div>
+                  {errors.port && (
+                    <p className="text-red-500 text-sm mt-1">{errors.port}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Usuario
+                </label>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="admin"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Contraseña
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="••••••••"
+                />
+              </div>
+            </div>
+
+            {/* Campo de código de autenticación para IVMS y ESVIZ */}
+            {(formData.access_type === 'ivms' || formData.access_type === 'esviz') && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Código de Autenticación *
                 </label>
                 <div className="relative">
                   <input
                     type="text"
-                    name="port"
-                    value={formData.port}
+                    name="auth_code"
+                    value={formData.auth_code}
                     onChange={handleChange}
-                    className={getFieldClasses('port')}
-                    placeholder="8080"
+                    required
+                    className={getFieldClasses('auth_code')}
+                    placeholder="Código de autenticación"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {renderValidationIcon('port')}
+                    {renderValidationIcon('auth_code')}
                   </div>
                 </div>
-                {errors.port && (
-                  <p className="text-red-500 text-sm mt-1">{errors.port}</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Usuario
-              </label>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="admin"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contraseña
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-
-          {/* Campo de código de autenticación para IVMS y ESVIZ */}
-          {(formData.access_type === 'ivms' || formData.access_type === 'esviz') && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Código de Autenticación *
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="auth_code"
-                  value={formData.auth_code}
-                  onChange={handleChange}
-                  required
-                  className={getFieldClasses('auth_code')}
-                  placeholder="Código de autenticación"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {renderValidationIcon('auth_code')}
-                </div>
-              </div>
-              {errors.auth_code && (
-                <p className="text-red-500 text-sm mt-1">{errors.auth_code}</p>
-              )}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nº de vistas a visualizar
-              </label>
-              <input
-                type="number"
-                name="display_count"
-                value={formData.display_count}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: 4"
-                min={0}
-              />
-              {errors.display_count && (
-                <p className="text-red-500 text-sm mt-1">{errors.display_count}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Marca
-              </label>
-              <input
-                type="text"
-                name="brand"
-                value={formData.brand}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Hikvision"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Modelo
-              </label>
-              <input
-                type="text"
-                name="model"
-                value={formData.model}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="DS-2CD2142FWD-I"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notas
-            </label>
-            <textarea
-              name="notes"
-              value={formData.notes}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Información adicional..."
-            />
-          </div>
-
-          {/* Botón para gestionar discos */}
-          <div className="pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowDiskManager(!showDiskManager);
-              }}
-              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 font-medium flex items-center justify-center gap-2"
-            >
-              <CheckCircle size={16} />
-              {showDiskManager ? 'Ocultar' : 'Gestionar'} Discos de Almacenamiento
-            </button>
-
-            {showDiskManager && (
-              <div className="mt-4">
-                {editCamera ? (
-                  <CameraDiskManager
-                    cameraId={editCamera.id}
-                    onDisksChange={setCameraDisks}
-                  />
-                ) : (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-yellow-800">
-                      <AlertCircle className="h-5 w-5" />
-                      <span className="font-medium">Información</span>
-                    </div>
-                    <p className="text-yellow-700 text-sm mt-2">
-                      Para gestionar discos de almacenamiento, primero debes crear la cámara y luego editarla.
-                    </p>
-                  </div>
+                {errors.auth_code && (
+                  <p className="text-red-500 text-sm mt-1">{errors.auth_code}</p>
                 )}
               </div>
             )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nº de vistas a visualizar
+                </label>
+                <input
+                  type="number"
+                  name="display_count"
+                  value={formData.display_count}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: 4"
+                  min={0}
+                />
+                {errors.display_count && (
+                  <p className="text-red-500 text-sm mt-1">{errors.display_count}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Marca
+                </label>
+                <input
+                  type="text"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Hikvision"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Modelo
+                </label>
+                <input
+                  type="text"
+                  name="model"
+                  value={formData.model}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="DS-2CD2142FWD-I"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notas
+              </label>
+              <textarea
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Información adicional..."
+              />
+            </div>
+
+            {/* Botón para gestionar discos */}
+            <div className="pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowDiskManager(!showDiskManager);
+                }}
+                className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 font-medium flex items-center justify-center gap-2"
+              >
+                <CheckCircle size={16} />
+                {showDiskManager ? 'Ocultar' : 'Gestionar'} Discos de Almacenamiento
+              </button>
+
+              {showDiskManager && (
+                <div className="mt-4">
+                  {editCamera ? (
+                    <CameraDiskManager
+                      cameraId={editCamera.id}
+                      onDisksChange={setCameraDisks}
+                    />
+                  ) : (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-yellow-800">
+                        <AlertCircle className="h-5 w-5" />
+                        <span className="font-medium">Información</span>
+                      </div>
+                      <p className="text-yellow-700 text-sm mt-2">
+                        Para gestionar discos de almacenamiento, primero debes crear la cámara y luego editarla.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
+          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col sm:flex-row-reverse gap-3 z-10">
             <button
               type="submit"
               disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-              className="flex-1 bg-slate-800 text-white py-3 px-4 rounded-lg hover:bg-slate-900 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 order-1 sm:order-2"
+              className="flex-1 bg-slate-800 text-white py-3 px-8 rounded-lg hover:bg-slate-900 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                   Guardando...
                 </>
               ) : (
                 <>
-                  <CheckCircle size={14} />
-                  {editCamera ? 'Actualizar' : 'Crear'} Cámara
+                  <CheckCircle size={16} />
+                  {editCamera ? 'Guardar Cambios' : 'Registrar Cámara'}
                 </>
               )}
             </button>
@@ -812,7 +815,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="flex-1 bg-white text-slate-700 py-3 px-4 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm order-2 sm:order-1"
+              className="bg-white text-slate-700 py-3 px-8 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 font-bold text-[10px] uppercase tracking-widest shadow-sm"
             >
               Cancelar
             </button>

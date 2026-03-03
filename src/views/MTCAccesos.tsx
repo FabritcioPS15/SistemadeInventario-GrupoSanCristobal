@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, List, Star } from 'lucide-react';
+import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase } from '../lib/supabase';
 import MTCAccesoForm from '../components/forms/MTCAccesoForm';
+import { useAuth } from '../contexts/AuthContext';
 
 type MTCAcceso = {
   id: string;
@@ -18,6 +20,7 @@ type MTCAcceso = {
 type ViewType = 'list' | 'form';
 
 export default function MTCAccesos() {
+  const { canEdit } = useAuth();
   const [view, setView] = useState<ViewType>('list');
   const [accesos, setAccesos] = useState<MTCAcceso[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,82 +194,41 @@ export default function MTCAccesos() {
     return matchesSearch && matchesType;
   });
 
+  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
+
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
-      <div className="bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30">
-        <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl border border-[#e2e8f0]">
-            <Shield className="text-[#002855]" size={20} />
-          </div>
-          <div>
-            <h1 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">ACCESOS MTC</h1>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#64748b] uppercase tracking-widest mt-0.5">
-              <span className="flex items-center gap-1"><Shield size={10} /> CREDENCIALES Y PERMISOS</span>
-              <span className="text-[#cbd5e1]">|</span>
-              <span className="bg-[#f1f5f9] px-2 py-0.5 rounded text-[#002855]">{stats.total} Registros</span>
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+        {/* Fila de Acciones Superior */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+          <div className="flex items-center gap-4">
+            <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
+              <Shield size={20} />
+            </div>
+            <div className="hidden lg:block">
+              <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Gestión de Accesos MTC</h2>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={async () => {
-              console.log('🔍 Probando conexión con Supabase...');
-              try {
-                const { data, error } = await supabase
-                  .from('mtc_accesos')
-                  .select('count')
-                  .limit(1);
-
-                if (error) {
-                  console.error('❌ Error de conexión:', error);
-                  alert(`Error de conexión: ${error.message}`);
-                } else {
-                  console.log('✅ Conexión exitosa:', data);
-                  alert('Conexión con Supabase exitosa');
-                }
-              } catch (err) {
-                console.error('❌ Error inesperado:', err);
-                alert('Error inesperado: ' + err);
-              }
-            }}
-            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-[10px] font-bold uppercase tracking-widest shadow-sm h-9"
-          >
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="hidden sm:inline">Probar DB</span>
-          </button>
-
-          <div className="h-6 w-px bg-gray-200 mx-1" />
-
-          <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200">
-            <button
-              onClick={() => { setView('list'); setEditingAcceso(undefined); }}
-              className={`p-1.5 rounded-md transition-all ${view === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
-              title="Listado"
-            >
-              <List size={16} />
-            </button>
-            <button
-              onClick={() => { setView('form'); }}
-              className={`p-1.5 rounded-md transition-all ${view === 'form' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
-              title="Nuevo Acceso"
-            >
-              <Plus size={16} />
-            </button>
+          <div className="flex items-center gap-2">
+            {canEdit() && (
+              <div className="flex bg-[#f1f5f9] p-1 rounded-lg border border-[#e2e8f0]">
+                <button
+                  onClick={() => { setView('list'); setEditingAcceso(undefined); }}
+                  className={`p-1.5 rounded-md transition-all ${view === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
+                >
+                  <List size={16} />
+                </button>
+                <button
+                  onClick={() => { setView('form'); }}
+                  className={`p-1.5 rounded-md transition-all ${view === 'form' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-[#002855]'}`}
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+            )}
           </div>
-
-          <div className="h-6 w-px bg-gray-200 mx-1" />
-
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <Star size={18} />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <X size={18} />
-          </button>
         </div>
-      </div>
-
-      <div className="p-6 space-y-6">
 
         {view === 'form' ? (
           <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
@@ -287,6 +249,7 @@ export default function MTCAccesos() {
         ) : (
           <div className="space-y-6 animate-in fade-in duration-500">
             {/* Dashboard de estadísticas */}
+            {/* Removed stats dashboard as per instruction */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center gap-3">
@@ -341,14 +304,9 @@ export default function MTCAccesos() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Buscar por nombre, tipo o URL..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent transition-all placeholder:text-gray-400"
-                  />
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1 flex items-center gap-2">
+                    <Search size={10} /> Filtro de tipo
+                  </div>
                 </div>
                 <div>
                   <select
@@ -502,22 +460,24 @@ export default function MTCAccesos() {
                         <Eye size={14} />
                         DETALLES
                       </button>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditAcceso(acceso)}
-                          className="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-sm"
-                          title="Modificar acceso"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteAcceso(acceso)}
-                          className="p-2 bg-white text-rose-500 border border-rose-100 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"
-                          title="Eliminar acceso"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                      {canEdit() && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEditAcceso(acceso)}
+                            className="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-sm"
+                            title="Modificar acceso"
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAcceso(acceso)}
+                            className="p-2 bg-white text-rose-500 border border-rose-100 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"
+                            title="Eliminar acceso"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -636,15 +596,17 @@ export default function MTCAccesos() {
                     >
                       Cerrar
                     </button>
-                    <button
-                      onClick={() => {
-                        setViewingAcceso(undefined);
-                        handleEditAcceso(viewingAcceso);
-                      }}
-                      className="flex-1 px-4 py-3 text-xs font-black text-white uppercase tracking-widest bg-slate-800 rounded-xl hover:bg-slate-900 transition-all active:scale-95 shadow-lg"
-                    >
-                      Editar Acceso
-                    </button>
+                    {canEdit() && (
+                      <button
+                        onClick={() => {
+                          setViewingAcceso(undefined);
+                          handleEditAcceso(viewingAcceso);
+                        }}
+                        className="flex-1 px-4 py-3 text-xs font-black text-white uppercase tracking-widest bg-slate-800 rounded-xl hover:bg-slate-900 transition-all active:scale-95 shadow-lg"
+                      >
+                        Editar Acceso
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
