@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, Loader2, X } from 'lucide-react';
+import { useState } from 'react';
+import { Shield, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
-type MTCAcceso = {
+type MTCAccesoType = {
   id: string;
   name: string;
   url: string;
@@ -17,44 +18,25 @@ type MTCAcceso = {
 type MTCAccesoFormProps = {
   onClose: () => void;
   onSave: () => void;
-  editAcceso?: MTCAcceso;
+  editAcceso?: MTCAccesoType;
 };
 
 export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAccesoFormProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'checking' | null>>({});
-  const [hasChanges, setHasChanges] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: editAcceso?.name || '',
     url: editAcceso?.url || '',
     username: editAcceso?.username || '',
     password: editAcceso?.password || '',
-    access_type: editAcceso?.access_type || 'web',
+    access_type: editAcceso?.access_type || 'sistema',
     notes: editAcceso?.notes || '',
   });
 
-  // Detectar cambios en el formulario
-  useEffect(() => {
-    if (editAcceso) {
-      const originalData = {
-        name: editAcceso.name,
-        url: editAcceso.url,
-        username: editAcceso.username || '',
-        password: editAcceso.password || '',
-        access_type: editAcceso.access_type,
-        notes: editAcceso.notes || '',
-      };
-
-      const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
-      setHasChanges(hasFormChanges);
-    }
-  }, [formData, editAcceso]);
-
-  // Funciones de validación
   const validateURL = (url: string): boolean => {
-    if (!url) return false; // Campo requerido
+    if (!url) return false;
     try {
       new URL(url);
       return true;
@@ -63,78 +45,23 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
     }
   };
 
-  const checkDuplicateAccessName = async (name: string, currentAccessId?: string): Promise<boolean> => {
-    if (!name) return false; // Campo requerido
-
-    const { data, error } = await supabase
-      .from('mtc_accesos')
-      .select('id')
-      .eq('name', name);
-
-    if (error) return false;
-
-    // Si estamos editando, excluir el acceso actual
-    if (currentAccessId && data) {
-      return !data.some(access => access.id !== currentAccessId);
-    }
-
-    return data?.length === 0;
-  };
-
-  const validateField = async (fieldName: string, value: string) => {
-    setValidationStatus(prev => ({ ...prev, [fieldName]: 'checking' }));
-
-    let isValid = true;
-    let errorMessage = '';
-
-    switch (fieldName) {
-      case 'name':
-        if (!value.trim()) {
-          isValid = false;
-          errorMessage = 'El nombre es requerido';
-        } else if (value.trim().length < 2) {
-          isValid = false;
-          errorMessage = 'El nombre debe tener al menos 2 caracteres';
-        } else {
-          const isUnique = await checkDuplicateAccessName(value, editAcceso?.id);
-          if (!isUnique) {
-            isValid = false;
-            errorMessage = 'Este nombre de acceso ya está en uso';
-          }
-        }
-        break;
-
-      case 'url':
-        if (!value.trim()) {
-          isValid = false;
-          errorMessage = 'La URL es requerida';
-        } else if (!validateURL(value)) {
-          isValid = false;
-          errorMessage = 'URL inválida (debe incluir http:// o https://)';
-        }
-        break;
-    }
-
-    setValidationStatus(prev => ({ ...prev, [fieldName]: isValid ? 'valid' : 'invalid' }));
-    setErrors(prev => ({ ...prev, [fieldName]: errorMessage }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validar campos requeridos
-    const requiredFields = ['name', 'url', 'access_type'];
     const newErrors: Record<string, string> = {};
 
-    requiredFields.forEach(field => {
-      if (!formData[field as keyof typeof formData]) {
-        newErrors[field] = 'Este campo es requerido';
-      }
-    });
+    if (!formData.name.trim()) {
+      newErrors.name = 'El nombre del acceso es requerido';
+    }
 
-    // Validar campos con formato específico
-    if (formData.url && !validateURL(formData.url)) {
-      newErrors.url = 'URL inválida';
+    if (!formData.url.trim()) {
+      newErrors.url = 'La URL es requerida';
+    } else if (!validateURL(formData.url)) {
+      newErrors.url = 'Formato de URL inválido';
+    }
+
+    if (!formData.access_type) {
+      newErrors.access_type = 'El tipo de acceso es requerido';
     }
 
     setErrors(newErrors);
@@ -143,18 +70,15 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
       return;
     }
 
-    // Confirmar cambios si estamos editando
-    if (editAcceso && hasChanges) {
-      const confirmed = window.confirm(
-        '¿Estás seguro de que quieres guardar los cambios realizados?'
-      );
-      if (!confirmed) return;
-    }
-
     setLoading(true);
 
     const dataToSave = {
-      ...formData,
+      name: formData.name.trim(),
+      url: formData.url.trim(),
+      username: formData.username.trim() || null,
+      password: formData.password || null,
+      access_type: formData.access_type,
+      notes: formData.notes.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -166,7 +90,6 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
           .eq('id', editAcceso.id);
 
         if (error) {
-          console.error('Error al actualizar acceso MTC:', error);
           setErrors({ submit: 'Error al actualizar el acceso MTC: ' + error.message });
           setLoading(false);
           return;
@@ -177,7 +100,6 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
           .insert([dataToSave]);
 
         if (error) {
-          console.error('Error al crear acceso MTC:', error);
           setErrors({ submit: 'Error al crear el acceso MTC: ' + error.message });
           setLoading(false);
           return;
@@ -186,8 +108,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
 
       setLoading(false);
       onSave();
-    } catch (err) {
-      console.error('Error:', err);
+    } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });
       setLoading(false);
     }
@@ -201,227 +122,116 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
       [name]: value
     }));
 
-    // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
-
-    // Validar campos específicos en tiempo real (con debounce)
-    const fieldsToValidate = ['name', 'url'];
-    if (fieldsToValidate.includes(name)) {
-      // Debounce para evitar muchas validaciones
-      setTimeout(() => {
-        validateField(name, value);
-      }, 500);
-    }
-  };
-
-  // Función helper para renderizar el estado de validación
-  const renderValidationIcon = (fieldName: string) => {
-    const status = validationStatus[fieldName];
-    if (status === 'checking') {
-      return <Loader2 size={16} className="text-blue-500 animate-spin" />;
-    } else if (status === 'valid') {
-      return <CheckCircle size={16} className="text-green-500" />;
-    } else if (status === 'invalid') {
-      return <AlertCircle size={16} className="text-red-500" />;
-    }
-    return null;
-  };
-
-  // Función helper para obtener clases CSS del campo
-  const getFieldClasses = (fieldName: string) => {
-    const baseClasses = "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2";
-    const status = validationStatus[fieldName];
-
-    if (status === 'invalid' || errors[fieldName]) {
-      return `${baseClasses} border-red-300 focus:ring-red-500`;
-    } else if (status === 'valid') {
-      return `${baseClasses} border-green-300 focus:ring-green-500`;
-    }
-
-    return `${baseClasses} border-gray-300 focus:ring-blue-500`;
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-2xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 uppercase">
-              {editAcceso ? 'Editar Acceso MTC' : 'Nuevo Acceso MTC'}
-            </h2>
-            {editAcceso && hasChanges && (
-              <p className="text-xs text-orange-600 mt-0.5 font-bold uppercase tracking-wider flex items-center gap-1">
-                <AlertCircle size={12} />
-                Cambios sin guardar
-              </p>
-            )}
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
-            <X size={24} />
-          </button>
+    <BaseForm
+      title={editAcceso ? 'Editar Acceso MTC' : 'Nuevo Acceso MTC'}
+      subtitle="Módulo de Gestión de Accesos MTC"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.submit}
+      icon={<Shield size={24} className="text-blue-600" />}
+    >
+      {/* Section: Información Principal */}
+      <FormSection title="Información del Acceso" color="blue">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Nombre del Acceso" required error={errors.name}>
+            <FormInput
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Ej: Sistema Principal, Portal de Trámites"
+              required
+              error={errors.name}
+            />
+          </FormField>
+
+          <FormField label="URL del Sistema" required error={errors.url}>
+            <FormInput
+              type="url"
+              name="url"
+              value={formData.url}
+              onChange={handleChange}
+              placeholder="https://ejemplo.mtc.gob.pe"
+              required
+              error={errors.url}
+            />
+          </FormField>
+
+          <FormField label="Tipo de Acceso" required error={errors.access_type}>
+            <FormSelect
+              name="access_type"
+              value={formData.access_type}
+              onChange={handleChange}
+              required
+              error={errors.access_type}
+            >
+              <option value="sistema">Sistema Interno</option>
+              <option value="portal">Portal Web</option>
+              <option value="api">API/WS</option>
+              <option value="bd">Base de Datos</option>
+              <option value="externo">Acceso Externo</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Usuario" error={errors.username}>
+            <FormInput
+              type="text"
+              name="username"
+              value={formData.username}
+              onChange={handleChange}
+              placeholder="usuario@mtc.gob.pe"
+              error={errors.username}
+            />
+          </FormField>
         </div>
+      </FormSection>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Mensaje de error general */}
-            {errors.submit && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm flex items-center gap-2 text-red-700">
-                <AlertCircle size={16} />
-                <p>{errors.submit}</p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="col-span-1 md:col-span-2">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Nombre del Acceso *
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    className={`${getFieldClasses('name')} text-sm placeholder:text-gray-300`}
-                    placeholder="Ej: Portal MTC Principal"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {renderValidationIcon('name')}
-                  </div>
-                </div>
-                {errors.name && (
-                  <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.name}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Tipo de Acceso *
-                </label>
-                <select
-                  name="access_type"
-                  value={formData.access_type}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all bg-white"
-                >
-                  <option value="web">Web Service / Portal</option>
-                  <option value="api">API Endpoint</option>
-                  <option value="ftp">Servidor FTP</option>
-                  <option value="ssh">Acceso SSH</option>
-                  <option value="database">Base de Datos</option>
-                  <option value="other">Otro</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  URL de Destino *
-                </label>
-                <div className="relative">
-                  <input
-                    type="url"
-                    name="url"
-                    value={formData.url}
-                    onChange={handleChange}
-                    required
-                    className={`${getFieldClasses('url')} text-sm placeholder:text-gray-300`}
-                    placeholder="https://portal.mtc.gob.pe"
-                  />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {renderValidationIcon('url')}
-                  </div>
-                </div>
-                {errors.url && (
-                  <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.url}</p>
-                )}
-              </div>
-
-              <div className="col-span-1 md:col-span-2 border-t border-gray-100 pt-6 mt-2">
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
-                  Credenciales de Acceso
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                      Usuario / ID
-                    </label>
-                    <input
-                      type="text"
-                      name="username"
-                      value={formData.username}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300"
-                      placeholder="usuario@mtc.gob.pe"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                      Contraseña / Token
-                    </label>
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-span-1 md:col-span-2">
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Notas y Observaciones
-                </label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300 resize-none"
-                  placeholder="Información adicional sobre el acceso, restricciones, etc..."
-                />
-              </div>
+      {/* Section: Credenciales */}
+      <FormSection title="Credenciales de Acceso" color="emerald">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Contraseña" error={errors.password}>
+            <div className="relative">
+              <FormInput
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Contraseña del sistema"
+                error={errors.password}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
+          </FormField>
+        </div>
+      </FormSection>
 
-          </div>
-
-          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col sm:flex-row-reverse gap-3 z-10">
-            <button
-              type="submit"
-              disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-              className="w-full sm:w-auto px-8 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 font-bold text-[10px] uppercase tracking-widest"
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle size={16} />
-                  {editAcceso ? 'Actualizar' : 'Crear'} Registro
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="w-full sm:w-auto px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      {/* Section: Información Adicional */}
+      <FormSection title="Información Adicional" color="amber">
+        <FormField label="Notas y Observaciones" error={errors.notes}>
+          <FormTextarea
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            placeholder="Detalles adicionales sobre el acceso, restricciones, contactos, etc..."
+            rows={4}
+            error={errors.notes}
+          />
+        </FormField>
+      </FormSection>
+    </BaseForm>
   );
 }

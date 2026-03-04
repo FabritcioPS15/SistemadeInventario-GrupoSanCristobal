@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { supabase, Location } from '../../lib/supabase';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 type LocationFormProps = {
   onClose: () => void;
@@ -11,8 +12,6 @@ type LocationFormProps = {
 export default function LocationForm({ onClose, onSave, editLocation }: LocationFormProps) {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [hasChanges, setHasChanges] = useState(false);
-  const [validationStatus, setValidationStatus] = useState<Record<string, 'checking' | 'valid' | 'invalid' | undefined>>({});
 
   const [formData, setFormData] = useState({
     name: editLocation?.name || '',
@@ -24,110 +23,65 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
     history_url: editLocation?.history_url || '',
   });
 
-  // Detectar cambios en el formulario
   useEffect(() => {
-    if (editLocation) {
-      const originalData = {
-        name: editLocation.name,
-        type: editLocation.type,
-        address: editLocation.address || '',
-        notes: editLocation.notes || '',
-        region: editLocation.region || 'lima',
-        checklist_url: editLocation.checklist_url || '',
-        history_url: editLocation.history_url || '',
-      };
-
-      const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
-      setHasChanges(hasFormChanges);
+    // Validar nombre de ubicación en tiempo real
+    if (formData.name) {
+      validateLocationName(formData.name);
     }
-  }, [formData, editLocation]);
+  }, [formData.name]);
 
-  // Funciones de validación
-  const checkDuplicateLocationName = async (name: string, currentLocationId?: string): Promise<boolean> => {
-    if (!name) return false; // Campo requerido
+  const validateLocationName = async (name: string) => {
+    if (!name) return;
 
-    const { data, error } = await supabase
-      .from('locations')
-      .select('id')
-      .eq('name', name);
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('id')
+        .eq('name', name);
 
-    if (error) return false;
+      if (error) throw error;
 
-    // Si estamos editando, excluir la ubicación actual
-    if (currentLocationId && data) {
-      return !data.some(location => location.id !== currentLocationId);
+      const isDuplicate = data && data.length > 0 && (!editLocation || data[0].id !== editLocation.id);
+      
+      if (isDuplicate) {
+        setErrors(prev => ({ ...prev, name: 'Esta ubicación ya existe' }));
+      } else {
+        setErrors(prev => ({ ...prev, name: '' }));
+      }
+    } catch (err) {
+      console.error('Error validando nombre de ubicación:', err);
     }
-
-    return data?.length === 0;
-  };
-
-  const validateField = async (fieldName: string, value: string) => {
-    setValidationStatus(prev => ({ ...prev, [fieldName]: 'checking' }));
-
-    let isValid = true;
-    let errorMessage = '';
-
-    switch (fieldName) {
-      case 'name':
-        if (!value.trim()) {
-          isValid = false;
-          errorMessage = 'El nombre es requerido';
-        } else if (value.trim().length < 2) {
-          isValid = false;
-          errorMessage = 'El nombre debe tener al menos 2 caracteres';
-        } else {
-          const isUnique = await checkDuplicateLocationName(value, editLocation?.id);
-          if (!isUnique) {
-            isValid = false;
-            errorMessage = 'Este nombre de ubicación ya está en uso';
-          }
-        }
-        break;
-    }
-
-    setValidationStatus(prev => ({ ...prev, [fieldName]: isValid ? 'valid' : 'invalid' }));
-    setErrors(prev => ({ ...prev, [fieldName]: errorMessage }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validar campos requeridos
-    const requiredFields = ['name', 'type', 'region'];
     const newErrors: Record<string, string> = {};
 
-    requiredFields.forEach(field => {
-      if (!formData[field as keyof typeof formData]) {
-        newErrors[field] = 'Este campo es requerido';
-      }
-    });
+    if (!formData.name.trim()) {
+      newErrors.name = 'El nombre de la ubicación es requerido';
+    }
 
-    // Merge with existing errors from real-time validation
-    const allErrors = { ...errors, ...newErrors };
+    if (!formData.type) {
+      newErrors.type = 'El tipo de ubicación es requerido';
+    }
 
-    // Filter out empty error messages to get only active errors
-    const activeErrors = Object.entries(allErrors).filter(([, value]) =>
-      value && value.trim() !== ''
-    );
+    setErrors(newErrors);
 
-    if (activeErrors.length > 0) {
-      setErrors(allErrors); // Update state with all current errors
+    if (Object.keys(newErrors).length > 0) {
       return;
     }
-    // Confirmar cambios si estamos editando (opcional, removido para mejorar confiabilidad)
-    /* 
-    if (editLocation && hasChanges) {
-      const confirmed = window.confirm(
-        '¿Estás seguro de que quieres guardar los cambios realizados?'
-      );
-      if (!confirmed) return;
-    }
-    */
 
     setLoading(true);
 
     const dataToSave = {
-      ...formData,
+      name: formData.name.trim(),
+      type: formData.type,
+      address: formData.address.trim() || null,
+      notes: formData.notes.trim() || null,
+      region: formData.region,
+      checklist_url: formData.checklist_url.trim() || null,
+      history_url: formData.history_url.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -139,7 +93,6 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
           .eq('id', editLocation.id);
 
         if (error) {
-          console.error('Error al actualizar ubicación:', error);
           setErrors({ submit: 'Error al actualizar la ubicación: ' + error.message });
           setLoading(false);
           return;
@@ -150,7 +103,6 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
           .insert([dataToSave]);
 
         if (error) {
-          console.error('Error al crear ubicación:', error);
           setErrors({ submit: 'Error al crear la ubicación: ' + error.message });
           setLoading(false);
           return;
@@ -159,8 +111,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
 
       setLoading(false);
       onSave();
-    } catch (err) {
-      console.error('Error:', err);
+    } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });
       setLoading(false);
     }
@@ -174,222 +125,123 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
       [name]: value
     }));
 
-    // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
-
-    // Validar campos específicos en tiempo real (con debounce)
-    if (name === 'name') {
-      // Debounce para evitar muchas validaciones
-      setTimeout(() => {
-        validateField(name, value);
-      }, 500);
-    }
-  };
-
-  // Función helper para renderizar el estado de validación
-  const renderValidationIcon = (fieldName: string) => {
-    const status = validationStatus[fieldName];
-    if (status === 'checking') {
-      return <Loader2 size={16} className="text-blue-500 animate-spin" />;
-    } else if (status === 'valid') {
-      return <CheckCircle size={16} className="text-green-500" />;
-    } else if (status === 'invalid') {
-      return <AlertCircle size={16} className="text-red-500" />;
-    }
-    return null;
-  };
-
-  // Función helper para obtener clases CSS del campo
-  const getFieldClasses = (fieldName: string) => {
-    const baseClasses = "w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2";
-    const status = validationStatus[fieldName];
-
-    if (status === 'invalid' || errors[fieldName]) {
-      return `${baseClasses} border-red-300 focus:ring-red-500`;
-    } else if (status === 'valid') {
-      return `${baseClasses} border-green-300 focus:ring-green-500`;
-    }
-
-    return `${baseClasses} border-gray-300 focus:ring-blue-500`;
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-md sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 uppercase">
-              {editLocation ? 'Editar Ubicación' : 'Nueva Ubicación'}
-            </h2>
-            {editLocation && hasChanges && (
-              <p className="text-sm text-orange-600 mt-1">
-                ⚠️ Tienes cambios sin guardar
-              </p>
-            )}
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
-            <X size={24} />
-          </button>
+    <BaseForm
+      title={editLocation ? 'Editar Ubicación' : 'Nueva Ubicación'}
+      subtitle="Módulo de Gestión de Sedes"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.submit}
+      maxWidth="5xl"
+      icon={<MapPin size={24} className="text-blue-600" />}
+    >
+      {/* Section: Información Principal */}
+      <FormSection title="Información de la Sede" color="blue">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField label="Nombre de la Ubicación" required error={errors.name}>
+            <FormInput
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Ej: Oficina Principal, Almacén Central"
+              required
+              error={errors.name}
+            />
+          </FormField>
+
+          <FormField label="Tipo de Ubicación" required error={errors.type}>
+            <FormSelect
+              name="type"
+              value={formData.type}
+              onChange={handleChange}
+              required
+              error={errors.type}
+            >
+              <option value="revision">Centro de Revisión</option>
+              <option value="office">Oficina Administrativa</option>
+              <option value="warehouse">Almacén</option>
+              <option value="workshop">Taller</option>
+              <option value="branch">Sucursal</option>
+              <option value="other">Otro</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Región" error={errors.region}>
+            <FormSelect
+              name="region"
+              value={formData.region}
+              onChange={handleChange}
+              error={errors.region}
+            >
+              <option value="lima">Lima</option>
+              <option value="arequipa">Arequipa</option>
+              <option value="trujillo">Trujillo</option>
+              <option value="cusco">Cusco</option>
+              <option value="piura">Piura</option>
+              <option value="other">Otra Región</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Dirección" error={errors.address}>
+            <FormInput
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              placeholder="Av. Principal 123, Lima, Perú"
+              error={errors.address}
+            />
+          </FormField>
         </div>
+      </FormSection>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {/* Mensaje de error general */}
-            {errors.submit && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-                <div className="flex items-center">
-                  <AlertCircle size={20} className="text-red-500 mr-2" />
-                  <p className="text-red-700">{errors.submit}</p>
-                </div>
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nombre *
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className={getFieldClasses('name')}
-                  placeholder="Ej: Policlínico Lima Centro"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                  {renderValidationIcon('name')}
-                </div>
-              </div>
-              {errors.name && (
-                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-              )}
-            </div>
+      {/* Section: Configuración */}
+      <FormSection title="Configuración de Sistema" color="emerald">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField label="URL de Checklist" error={errors.checklist_url}>
+            <FormInput
+              type="url"
+              name="checklist_url"
+              value={formData.checklist_url}
+              onChange={handleChange}
+              placeholder="https://ejemplo.com/checklist"
+              error={errors.checklist_url}
+            />
+          </FormField>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo *
-              </label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="revision">Revisión</option>
-                <option value="policlinico">Policlínico</option>
-                <option value="escuela_conductores">Escuela de Conductores</option>
-                <option value="central">Central</option>
-                <option value="circuito">Circuito</option>
-              </select>
-            </div>
+          <FormField label="URL de Historial" error={errors.history_url}>
+            <FormInput
+              type="url"
+              name="history_url"
+              value={formData.history_url}
+              onChange={handleChange}
+              placeholder="https://ejemplo.com/history"
+              error={errors.history_url}
+            />
+          </FormField>
+        </div>
+      </FormSection>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Región *
-              </label>
-              <select
-                name="region"
-                value={formData.region}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="lima">Lima</option>
-                <option value="provincia">Provincias</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dirección
-              </label>
-              <input
-                type="text"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Ej: Av. Principal 123, Lima"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notas
-              </label>
-              <textarea
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Información adicional..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Link de Checklist (Google Sheets, etc.)
-              </label>
-              <input
-                type="text"
-                name="checklist_url"
-                value={formData.checklist_url}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="https://docs.google.com/spreadsheets/..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Link de Historial (Drive, etc.)
-              </label>
-              <input
-                type="text"
-                name="history_url"
-                value={formData.history_url}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="https://drive.google.com/drive/..."
-              />
-            </div>
-
-          </div>
-
-          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col sm:flex-row-reverse gap-3 z-10">
-            <button
-              type="submit"
-              disabled={loading || Object.keys(errors).some(key => key !== 'submit' && errors[key])}
-              className="w-full sm:w-auto px-8 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 font-bold text-[10px] uppercase tracking-widest"
-            >
-              {loading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle size={16} />
-                  {editLocation ? 'Actualizar' : 'Crear'} Registro
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="w-full sm:w-auto px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      {/* Section: Información Adicional */}
+      <FormSection title="Información Adicional" color="amber">
+        <FormField label="Notas y Observaciones" error={errors.notes}>
+          <FormTextarea
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            placeholder="Detalles adicionales sobre la ubicación, horarios, contactos, etc..."
+            rows={4}
+            error={errors.notes}
+          />
+        </FormField>
+      </FormSection>
+    </BaseForm>
   );
 }

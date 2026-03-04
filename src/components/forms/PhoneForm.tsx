@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
-import { X, Smartphone } from 'lucide-react';
+import { useState } from 'react';
+import { Smartphone } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 interface PhoneFormProps {
   editPhone?: any;
@@ -9,460 +10,431 @@ interface PhoneFormProps {
 }
 
 export default function PhoneForm({ editPhone, onClose, onSave }: PhoneFormProps) {
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   const [formData, setFormData] = useState({
-    code: '',
-    sede: '',
-    area: '',
-    marca: '',
-    modelo: '',
-    numero_serie: '',
-    imei: '',
-    numero_telefono: '',
-    operador: '',
-    plan_datos: '',
-    estado_fisico: '',
-    sistema_operativo: '',
-    version_so: '',
-    almacenamiento: '',
-    ram: '',
-    bateria_estado: '',
-    accesorios: '',
-    notas: ''
+    code: editPhone?.code || '',
+    sede: editPhone?.sede || '',
+    area: editPhone?.area || '',
+    marca: editPhone?.marca || '',
+    modelo: editPhone?.modelo || '',
+    numero_serie: editPhone?.numero_serie || '',
+    imei: editPhone?.imei || '',
+    numero_telefono: editPhone?.numero_telefono || '',
+    operador: editPhone?.operador || '',
+    plan_datos: editPhone?.plan_datos || '',
+    estado_fisico: editPhone?.estado_fisico || '',
+    sistema_operativo: editPhone?.sistema_operativo || '',
+    version_so: editPhone?.version_so || '',
+    almacenamiento: editPhone?.almacenamiento || '',
+    ram: editPhone?.ram || '',
+    bateria_estado: editPhone?.bateria_estado || '',
+    accesorios: editPhone?.accesorios || '',
+    notas: editPhone?.notas || ''
   });
 
-  const [loading, setLoading] = useState(false);
-  const [locations, setLocations] = useState<any[]>([]);
+  const operators = [
+    { value: 'claro', label: 'Claro' },
+    { value: 'movistar', label: 'Movistar' },
+    { value: 'entel', label: 'Entel' },
+    { value: 'bitel', label: 'Bitel' },
+    { value: 'wom', label: 'WOM' },
+    { value: 'other', label: 'Otro' },
+  ];
 
-  useEffect(() => {
-    fetchLocations();
-    if (editPhone) {
-      setFormData({
-        code: editPhone.code || '',
-        sede: editPhone.location_id || '',
-        area: editPhone.area || '',
-        marca: editPhone.brand || '',
-        modelo: editPhone.model || '',
-        numero_serie: editPhone.serial_number || '',
-        imei: editPhone.imei || '',
-        numero_telefono: editPhone.phone_number || '',
-        operador: editPhone.operator || '',
-        plan_datos: editPhone.data_plan || '',
-        estado_fisico: editPhone.physical_condition || '',
-        sistema_operativo: editPhone.operating_system || '',
-        version_so: editPhone.os_version || '',
-        almacenamiento: editPhone.storage || '',
-        ram: editPhone.ram || '',
-        bateria_estado: editPhone.battery_condition || '',
-        accesorios: editPhone.accessories || '',
-        notas: editPhone.notes || ''
-      });
-    } else {
-      generateRandomCode();
-    }
-  }, [editPhone]);
+  const dataPlans = [
+    { value: 'basico', label: 'Básico (1-5GB)' },
+    { value: 'medio', label: 'Medio (6-15GB)' },
+    { value: 'premium', label: 'Premium (16-50GB)' },
+    { value: 'ilimitado', label: 'Ilimitado' },
+    { value: 'corporativo', label: 'Corporativo' },
+    { value: 'sin_plan', label: 'Sin Plan' },
+  ];
 
-  const fetchLocations = async () => {
-    const { data } = await supabase
-      .from('locations')
-      .select('*')
-      .order('name');
-    if (data) setLocations(data);
-  };
+  const physicalStates = [
+    { value: 'excelente', label: 'Excelente' },
+    { value: 'bueno', label: 'Bueno' },
+    { value: 'regular', label: 'Regular' },
+    { value: 'malo', label: 'Malo' },
+    { value: 'danado', label: 'Dañado' },
+  ];
 
-  const generateRandomCode = () => {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setFormData(prev => ({ ...prev, code }));
-  };
+  const operatingSystems = [
+    { value: 'android', label: 'Android' },
+    { value: 'ios', label: 'iOS' },
+    { value: 'windows', label: 'Windows Phone' },
+    { value: 'other', label: 'Otro' },
+  ];
+
+  const batteryStates = [
+    { value: 'excelente', label: 'Excelente (>80%)' },
+    { value: 'bueno', label: 'Bueno (50-80%)' },
+    { value: 'regular', label: 'Regular (20-50%)' },
+    { value: 'malo', label: 'Malo (<20%)' },
+    { value: 'reemplazada', label: 'Reemplazada' },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.code.trim()) {
+      newErrors.code = 'El código es requerido';
+    }
+
+    if (!formData.sede.trim()) {
+      newErrors.sede = 'La sede es requerida';
+    }
+
+    if (!formData.marca.trim()) {
+      newErrors.marca = 'La marca es requerida';
+    }
+
+    if (!formData.modelo.trim()) {
+      newErrors.modelo = 'El modelo es requerido';
+    }
+
+    if (!formData.numero_telefono.trim()) {
+      newErrors.numero_telefono = 'El número de teléfono es requerido';
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
     setLoading(true);
 
-    try {
-      const dataToSave = {
-        code: formData.code,
-        location_id: formData.sede,
-        area: formData.area,
-        brand: formData.marca,
-        model: formData.modelo,
-        serial_number: formData.numero_serie,
-        imei: formData.imei,
-        phone_number: formData.numero_telefono,
-        operator: formData.operador,
-        data_plan: formData.plan_datos,
-        physical_condition: formData.estado_fisico,
-        operating_system: formData.sistema_operativo,
-        os_version: formData.version_so,
-        storage: formData.almacenamiento,
-        ram: formData.ram,
-        battery_condition: formData.bateria_estado,
-        accessories: formData.accesorios,
-        notes: formData.notas,
-        status: 'active',
-        asset_type_id: await getAssetTypeId('Celular')
-      };
+    const dataToSave = {
+      code: formData.code.trim(),
+      sede: formData.sede.trim(),
+      area: formData.area.trim() || null,
+      marca: formData.marca.trim(),
+      modelo: formData.modelo.trim(),
+      numero_serie: formData.numero_serie.trim() || null,
+      imei: formData.imei.trim() || null,
+      numero_telefono: formData.numero_telefono.trim(),
+      operador: formData.operador.trim() || null,
+      plan_datos: formData.plan_datos.trim() || null,
+      estado_fisico: formData.estado_fisico.trim() || null,
+      sistema_operativo: formData.sistema_operativo.trim() || null,
+      version_so: formData.version_so.trim() || null,
+      almacenamiento: formData.almacenamiento.trim() || null,
+      ram: formData.ram.trim() || null,
+      bateria_estado: formData.bateria_estado.trim() || null,
+      accesorios: formData.accesorios.trim() || null,
+      notas: formData.notas.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
 
-      if (editPhone) {
+    try {
+      if (editPhone?.id) {
         const { error } = await supabase
-          .from('assets')
+          .from('phones')
           .update(dataToSave)
           .eq('id', editPhone.id);
 
-        if (error) throw error;
+        if (error) {
+          setErrors({ submit: 'Error al actualizar el teléfono: ' + error.message });
+          setLoading(false);
+          return;
+        }
       } else {
         const { error } = await supabase
-          .from('assets')
+          .from('phones')
           .insert([dataToSave]);
 
-        if (error) throw error;
+        if (error) {
+          setErrors({ submit: 'Error al crear el teléfono: ' + error.message });
+          setLoading(false);
+          return;
+        }
       }
 
+      setLoading(false);
       onSave();
-    } catch (error) {
-      console.error('Error saving phone:', error);
-      alert('Error al guardar el celular');
-    } finally {
+    } catch (err: any) {
+      setErrors({ submit: 'Error inesperado: ' + err });
       setLoading(false);
     }
   };
 
-  const getAssetTypeId = async (typeName: string) => {
-    const { data } = await supabase
-      .from('asset_types')
-      .select('id')
-      .eq('name', typeName)
-      .single();
-    return data?.id;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-4xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <Smartphone className="text-blue-600" size={24} />
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 uppercase">
-                {editPhone ? 'Editar Celular' : 'Nuevo Celular'}
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-wide">Gestión de dispositivos móviles</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
-            <X size={24} />
-          </button>
+    <BaseForm
+      title={editPhone ? 'Editar Teléfono' : 'Nuevo Teléfono'}
+      subtitle="Módulo de Gestión de Teléfonos"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.submit}
+      icon={<Smartphone size={24} className="text-blue-600" />}
+    >
+      {/* Section: Información Básica */}
+      <FormSection title="Información Básica" color="blue">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Código" required error={errors.code}>
+            <FormInput
+              type="text"
+              name="code"
+              value={formData.code}
+              onChange={handleChange}
+              placeholder="Ej: TEL-001"
+              required
+              error={errors.code}
+            />
+          </FormField>
+
+          <FormField label="Sede" required error={errors.sede}>
+            <FormInput
+              type="text"
+              name="sede"
+              value={formData.sede}
+              onChange={handleChange}
+              placeholder="Ej: Lima, Arequipa"
+              required
+              error={errors.sede}
+            />
+          </FormField>
+
+          <FormField label="Área" error={errors.area}>
+            <FormInput
+              type="text"
+              name="area"
+              value={formData.area}
+              onChange={handleChange}
+              placeholder="Ej: Administración, Operaciones"
+              error={errors.area}
+            />
+          </FormField>
+
+          <FormField label="Número de Teléfono" required error={errors.numero_telefono}>
+            <FormInput
+              type="tel"
+              name="numero_telefono"
+              value={formData.numero_telefono}
+              onChange={handleChange}
+              placeholder="Ej: 987654321"
+              required
+              error={errors.numero_telefono}
+            />
+          </FormField>
         </div>
+      </FormSection>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Código */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Código *
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={formData.code}
-                    onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={generateRandomCode}
-                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Generar
-                  </button>
-                </div>
-              </div>
+      {/* Section: Especificaciones del Dispositivo */}
+      <FormSection title="Especificaciones del Dispositivo" color="emerald">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Marca" required error={errors.marca}>
+            <FormInput
+              type="text"
+              name="marca"
+              value={formData.marca}
+              onChange={handleChange}
+              placeholder="Ej: Samsung, Apple, Xiaomi"
+              required
+              error={errors.marca}
+            />
+          </FormField>
 
-              {/* Sede */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sede *
-                </label>
-                <select
-                  value={formData.sede}
-                  onChange={(e) => setFormData(prev => ({ ...prev, sede: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Seleccionar sede</option>
-                  {locations.map(location => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <FormField label="Modelo" required error={errors.modelo}>
+            <FormInput
+              type="text"
+              name="modelo"
+              value={formData.modelo}
+              onChange={handleChange}
+              placeholder="Ej: Galaxy S23, iPhone 14"
+              required
+              error={errors.modelo}
+            />
+          </FormField>
 
-              {/* Área */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Área
-                </label>
-                <input
-                  type="text"
-                  value={formData.area}
-                  onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: Administración, Ventas"
-                />
-              </div>
+          <FormField label="Número de Serie" error={errors.numero_serie}>
+            <FormInput
+              type="text"
+              name="numero_serie"
+              value={formData.numero_serie}
+              onChange={handleChange}
+              placeholder="Ej: A1B2C3D4E5F6"
+              error={errors.numero_serie}
+            />
+          </FormField>
 
-              {/* Marca */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Marca *
-                </label>
-                <input
-                  type="text"
-                  value={formData.marca}
-                  onChange={(e) => setFormData(prev => ({ ...prev, marca: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: Samsung, iPhone, Xiaomi"
-                  required
-                />
-              </div>
+          <FormField label="IMEI" error={errors.imei}>
+            <FormInput
+              type="text"
+              name="imei"
+              value={formData.imei}
+              onChange={handleChange}
+              placeholder="Ej: 123456789012345"
+              error={errors.imei}
+            />
+          </FormField>
+        </div>
+      </FormSection>
 
-              {/* Modelo */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Modelo *
-                </label>
-                <input
-                  type="text"
-                  value={formData.modelo}
-                  onChange={(e) => setFormData(prev => ({ ...prev, modelo: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: Galaxy S21, iPhone 13"
-                  required
-                />
-              </div>
-
-              {/* Número de Serie */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Número de Serie
-                </label>
-                <input
-                  type="text"
-                  value={formData.numero_serie}
-                  onChange={(e) => setFormData(prev => ({ ...prev, numero_serie: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* IMEI */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  IMEI *
-                </label>
-                <input
-                  type="text"
-                  value={formData.imei}
-                  onChange={(e) => setFormData(prev => ({ ...prev, imei: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="15 dígitos"
-                  required
-                />
-              </div>
-
-              {/* Número de Teléfono */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Número de Teléfono
-                </label>
-                <input
-                  type="text"
-                  value={formData.numero_telefono}
-                  onChange={(e) => setFormData(prev => ({ ...prev, numero_telefono: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="+51 999 999 999"
-                />
-              </div>
-
-              {/* Operador */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Operador
-                </label>
-                <select
-                  value={formData.operador}
-                  onChange={(e) => setFormData(prev => ({ ...prev, operador: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Seleccionar operador</option>
-                  <option value="Movistar">Movistar</option>
-                  <option value="Claro">Claro</option>
-                  <option value="Entel">Entel</option>
-                  <option value="Bitel">Bitel</option>
-                  <option value="Virgin Mobile">Virgin Mobile</option>
-                </select>
-              </div>
-
-              {/* Plan de Datos */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Plan de Datos
-                </label>
-                <input
-                  type="text"
-                  value={formData.plan_datos}
-                  onChange={(e) => setFormData(prev => ({ ...prev, plan_datos: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: 5GB, Ilimitado"
-                />
-              </div>
-
-              {/* Estado Físico */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Estado Físico
-                </label>
-                <select
-                  value={formData.estado_fisico}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estado_fisico: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Seleccionar estado</option>
-                  <option value="Excelente">Excelente</option>
-                  <option value="Bueno">Bueno</option>
-                  <option value="Regular">Regular</option>
-                  <option value="Malo">Malo</option>
-                  <option value="Dañado">Dañado</option>
-                </select>
-              </div>
-
-              {/* Sistema Operativo */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sistema Operativo
-                </label>
-                <select
-                  value={formData.sistema_operativo}
-                  onChange={(e) => setFormData(prev => ({ ...prev, sistema_operativo: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Seleccionar SO</option>
-                  <option value="Android">Android</option>
-                  <option value="iOS">iOS</option>
-                  <option value="Otro">Otro</option>
-                </select>
-              </div>
-
-              {/* Versión SO */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Versión SO
-                </label>
-                <input
-                  type="text"
-                  value={formData.version_so}
-                  onChange={(e) => setFormData(prev => ({ ...prev, version_so: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: Android 12, iOS 16"
-                />
-              </div>
-
-              {/* Almacenamiento */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Almacenamiento
-                </label>
-                <input
-                  type="text"
-                  value={formData.almacenamiento}
-                  onChange={(e) => setFormData(prev => ({ ...prev, almacenamiento: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: 128GB, 256GB"
-                />
-              </div>
-
-              {/* RAM */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  RAM
-                </label>
-                <input
-                  type="text"
-                  value={formData.ram}
-                  onChange={(e) => setFormData(prev => ({ ...prev, ram: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: 6GB, 8GB"
-                />
-              </div>
-
-              {/* Estado de Batería */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Estado de Batería
-                </label>
-                <select
-                  value={formData.bateria_estado}
-                  onChange={(e) => setFormData(prev => ({ ...prev, bateria_estado: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Seleccionar estado</option>
-                  <option value="Excelente">Excelente</option>
-                  <option value="Bueno">Bueno</option>
-                  <option value="Regular">Regular</option>
-                  <option value="Malo">Malo</option>
-                  <option value="Requiere cambio">Requiere cambio</option>
-                </select>
-              </div>
-
-              {/* Accesorios */}
-              <div className="md:col-span-2 lg:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Accesorios
-                </label>
-                <input
-                  type="text"
-                  value={formData.accesorios}
-                  onChange={(e) => setFormData(prev => ({ ...prev, accesorios: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: Cargador, Audífonos, Funda"
-                />
-              </div>
-
-              {/* Notas */}
-              <div className="md:col-span-2 lg:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notas
-                </label>
-                <textarea
-                  value={formData.notas}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Información adicional..."
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col sm:flex-row-reverse gap-3 z-10">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-8 py-3 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"
+      {/* Section: Sistema Operativo */}
+      <FormSection title="Sistema Operativo y Hardware" color="amber">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Sistema Operativo" error={errors.sistema_operativo}>
+            <FormSelect
+              name="sistema_operativo"
+              value={formData.sistema_operativo}
+              onChange={handleChange}
+              error={errors.sistema_operativo}
             >
-              {loading ? 'Guardando...' : (editPhone ? 'Actualizar' : 'Crear Registro')}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
+              <option value="">Seleccionar SO</option>
+              {operatingSystems.map((os) => (
+                <option key={os.value} value={os.value}>
+                  {os.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Versión del SO" error={errors.version_so}>
+            <FormInput
+              type="text"
+              name="version_so"
+              value={formData.version_so}
+              onChange={handleChange}
+              placeholder="Ej: 14.0, 13.1"
+              error={errors.version_so}
+            />
+          </FormField>
+
+          <FormField label="Almacenamiento" error={errors.almacenamiento}>
+            <FormInput
+              type="text"
+              name="almacenamiento"
+              value={formData.almacenamiento}
+              onChange={handleChange}
+              placeholder="Ej: 128GB, 256GB"
+              error={errors.almacenamiento}
+            />
+          </FormField>
+
+          <FormField label="RAM" error={errors.ram}>
+            <FormInput
+              type="text"
+              name="ram"
+              value={formData.ram}
+              onChange={handleChange}
+              placeholder="Ej: 4GB, 8GB"
+              error={errors.ram}
+            />
+          </FormField>
+        </div>
+      </FormSection>
+
+      {/* Section: Operador y Plan */}
+      <FormSection title="Operador y Plan de Datos" color="purple">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Operador" error={errors.operador}>
+            <FormSelect
+              name="operador"
+              value={formData.operador}
+              onChange={handleChange}
+              error={errors.operador}
             >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              <option value="">Seleccionar operador</option>
+              {operators.map((operator) => (
+                <option key={operator.value} value={operator.value}>
+                  {operator.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Plan de Datos" error={errors.plan_datos}>
+            <FormSelect
+              name="plan_datos"
+              value={formData.plan_datos}
+              onChange={handleChange}
+              error={errors.plan_datos}
+            >
+              <option value="">Seleccionar plan</option>
+              {dataPlans.map((plan) => (
+                <option key={plan.value} value={plan.value}>
+                  {plan.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Estado Físico" error={errors.estado_fisico}>
+            <FormSelect
+              name="estado_fisico"
+              value={formData.estado_fisico}
+              onChange={handleChange}
+              error={errors.estado_fisico}
+            >
+              <option value="">Seleccionar estado</option>
+              {physicalStates.map((state) => (
+                <option key={state.value} value={state.value}>
+                  {state.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Estado de Batería" error={errors.bateria_estado}>
+            <FormSelect
+              name="bateria_estado"
+              value={formData.bateria_estado}
+              onChange={handleChange}
+              error={errors.bateria_estado}
+            >
+              <option value="">Seleccionar estado</option>
+              {batteryStates.map((state) => (
+                <option key={state.value} value={state.value}>
+                  {state.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+        </div>
+      </FormSection>
+
+      {/* Section: Accesorios y Notas */}
+      <FormSection title="Accesorios y Notas" color="rose">
+        <FormField label="Accesorios" error={errors.accesorios}>
+          <FormTextarea
+            name="accesorios"
+            value={formData.accesorios}
+            onChange={handleChange}
+            placeholder="Cargador, audífonos, funda, cable USB, etc..."
+            rows={3}
+            error={errors.accesorios}
+          />
+        </FormField>
+
+        <FormField label="Notas y Observaciones" error={errors.notas}>
+          <FormTextarea
+            name="notas"
+            value={formData.notas}
+            onChange={handleChange}
+            placeholder="Notas adicionales sobre el teléfono, historial de reparaciones, problemas conocidos, etc..."
+            rows={4}
+            error={errors.notas}
+          />
+        </FormField>
+      </FormSection>
+    </BaseForm>
   );
 }

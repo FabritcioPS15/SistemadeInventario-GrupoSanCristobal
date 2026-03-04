@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Calendar, User, MapPin, FileText, X } from 'lucide-react';
+import { FileText, HelpCircle, X, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { SutranVisit, Location } from '../../lib/supabase';
+import { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 interface SutranVisitFormProps {
   visit?: SutranVisit;
@@ -10,134 +11,143 @@ interface SutranVisitFormProps {
 }
 
 export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitFormProps) {
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [locations, setLocations] = useState<Location[]>([]);
+
   const [formData, setFormData] = useState({
-    visit_date: '',
-    inspector_name: '',
-    inspector_email: '',
-    inspector_phone: '',
-    location_id: '',
-    location_name: '',
-    visit_type: 'programada' as SutranVisit['visit_type'],
-    status: 'pending' as SutranVisit['status'],
-    observations: '',
-    findings: '',
-    recommendations: '',
-    documents: [] as string[]
+    visit_date: visit?.visit_date || '',
+    visit_type: visit?.visit_type || '',
+    inspector_name: visit?.inspector_name || '',
+    inspector_email: visit?.inspector_email || '',
+    inspector_phone: visit?.inspector_phone || '',
+    status: visit?.status || 'scheduled',
+    location_id: visit?.location_id || '',
+    observations: visit?.observations || '',
+    findings: visit?.findings || '',
+    recommendations: visit?.recommendations || '',
+    documents: visit?.documents || []
   });
 
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(false);
   const [newDocument, setNewDocument] = useState('');
+
+  const visitTypes = [
+    { value: 'routine', label: 'Visita de Rutina' },
+    { value: 'special', label: 'Visita Especial' },
+    { value: 'follow_up', label: 'Seguimiento' },
+    { value: 'complaint', label: 'Por Denuncia' },
+    { value: 'emergency', label: 'Emergencia' }
+  ];
+
+  const statuses = [
+    { value: 'scheduled', label: 'Programada' },
+    { value: 'in_progress', label: 'En Progreso' },
+    { value: 'completed', label: 'Completada' },
+    { value: 'cancelled', label: 'Cancelada' }
+  ];
 
   useEffect(() => {
     fetchLocations();
-    if (visit) {
-      setFormData({
-        visit_date: visit.visit_date,
-        inspector_name: visit.inspector_name,
-        inspector_email: visit.inspector_email || '',
-        inspector_phone: visit.inspector_phone || '',
-        location_id: visit.location_id || '',
-        location_name: visit.location_name,
-        visit_type: visit.visit_type,
-        status: visit.status,
-        observations: visit.observations || '',
-        findings: visit.findings || '',
-        recommendations: visit.recommendations || '',
-        documents: visit.documents || []
-      });
-    } else {
-      // Resetear formulario para nueva visita
-      setFormData({
-        visit_date: '',
-        inspector_name: '',
-        inspector_email: '',
-        inspector_phone: '',
-        location_id: '',
-        location_name: '',
-        visit_type: 'programada',
-        status: 'pending',
-        observations: '',
-        findings: '',
-        recommendations: '',
-        documents: []
-      });
-    }
-  }, [visit]);
+  }, []);
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
-    if (data) setLocations(data);
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .order('name');
+
+      if (!error && data) {
+        setLocations(data);
+      }
+    } catch (error) {
+      console.error('Error al cargar ubicaciones:', error);
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.visit_date) {
+      newErrors.visit_date = 'La fecha de visita es requerida';
+    }
+
+    if (!formData.inspector_name.trim()) {
+      newErrors.inspector_name = 'El nombre del inspector es requerido';
+    }
+
+    if (!formData.inspector_email.trim()) {
+      newErrors.inspector_email = 'El email del inspector es requerido';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.inspector_email)) {
+      newErrors.inspector_email = 'El email no es válido';
+    }
+
+    if (!formData.inspector_phone.trim()) {
+      newErrors.inspector_phone = 'El teléfono del inspector es requerido';
+    } else if (!/^9\d{8}$/.test(formData.inspector_phone.replace(/\s/g, ''))) {
+      newErrors.inspector_phone = 'El teléfono debe tener 9 dígitos empezando con 9';
+    }
+
+    if (!formData.location_id) {
+      newErrors.location_id = 'La ubicación es requerida';
+    }
+
+    if (!formData.visit_type) {
+      newErrors.visit_type = 'El tipo de visita es requerido';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
+    setErrors({});
 
     try {
-      const visitData = {
+      const payload = {
         ...formData,
-        documents: formData.documents,
-        // Convertir cadena vacía a null para campos UUID
-        location_id: formData.location_id || null
+        updated_at: new Date().toISOString()
       };
 
-      console.log('💾 Guardando visita:', { visit, visitData });
-
       if (visit) {
-        console.log('✏️ Actualizando visita existente:', visit.id);
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('sutran_visits')
-          .update(visitData)
-          .eq('id', visit.id)
-          .select('*');
+          .update(payload)
+          .eq('id', visit.id);
 
-        console.log('📋 Resultado de actualización:', { data, error });
-
-        if (error) {
-          console.error('❌ Error al actualizar visita:', error);
-          throw error;
-        }
-
-        console.log('✅ Visita actualizada correctamente');
+        if (error) throw error;
       } else {
-        console.log('➕ Creando nueva visita');
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('sutran_visits')
-          .insert([visitData])
-          .select('*');
+          .insert([payload as any]);
 
-        console.log('📋 Resultado de inserción:', { data, error });
-
-        if (error) {
-          console.error('❌ Error al crear visita:', error);
-          throw error;
-        }
-
-        console.log('✅ Visita creada correctamente');
+        if (error) throw error;
       }
 
       onSave();
     } catch (error: any) {
-      console.error('❌ Error inesperado al guardar visita:', error);
-
-      let errorMessage = 'Error al guardar la visita';
-      if (error?.message) {
-        errorMessage += `: ${error.message}`;
-      }
-      if (error?.code) {
-        errorMessage += `\n\nCódigo: ${error.code}`;
-      }
-      if (error?.details) {
-        errorMessage += `\nDetalles: ${error.details}`;
-      }
-      if (error?.hint) {
-        errorMessage += `\nSugerencia: ${error.hint}`;
-      }
-
-      alert(errorMessage);
+      console.error('Error al guardar visita:', error);
+      setErrors({ submit: error.message || 'Error al guardar la visita' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChange = (name: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
@@ -158,248 +168,199 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
     }));
   };
 
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-2xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              {visit ? 'Editar Visita' : 'Nueva Visita de Sutran'}
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5">Gestión de fiscalizaciones y visitas</p>
+    <div className="fixed inset-0 bg-[#001529]/85 backdrop-blur-md flex items-start justify-start p-0 md:items-center md:justify-center md:p-8 z-[999] animate-in fade-in duration-300">
+      <div 
+        className="bg-white absolute top-0 left-0 w-screen h-screen md:relative md:w-full md:h-[85vh] md:top-auto md:left-auto md:m-auto max-w-full sm:max-w-6xl rounded-none shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-white/10"
+        style={{
+          margin: 0,
+          padding: 0,
+          boxSizing: 'border-box',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh'
+        }}
+      >
+        {/* Header Corporativo (Cuadrado) */}
+        <div className="bg-[#001529] px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-blue-500/10 rounded-none flex items-center justify-center border border-blue-500/20">
+              <FileText size={24} className="text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">
+                {visit ? 'Editar Visita SUTRAN' : 'Nueva Visita SUTRAN'}
+              </h2>
+              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-0.5">
+                Módulo de Gestión de Visitas SUTRAN
+              </p>
+            </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <X size={20} className="text-gray-400" />
+          <button 
+            onClick={onClose} 
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+            disabled={loading}
+          >
+            <X size={24} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Información Básica */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Calendar size={16} className="text-blue-600" />
-                Información Básica
-              </h3>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-gray-50/50">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8">
+            {/* Help Section */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <HelpCircle size={20} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-blue-900">Guía de Visitas SUTRAN</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• <strong>Fecha:</strong> Seleccione la fecha programada para la visita</li>
+                    <li>• <strong>Inspector:</strong> Incluya email válido y teléfono (9 dígitos)</li>
+                    <li>• <strong>Documentos:</strong> Agregue todos los documentos relevantes</li>
+                    <li>• <strong>Hallazgos:</strong> Documente no conformidades y oportunidades de mejora</li>
+                    <li>• <strong>Recomendaciones:</strong> Incluya acciones correctivas y plazos</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Error Message */}
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                <AlertCircle size={20} className="text-red-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Fecha de Visita *
-                  </label>
-                  <input
+                  <h4 className="font-semibold text-red-900">Error</h4>
+                  <p className="text-sm text-red-800">{errors.submit}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Section: Información de la Visita */}
+            <FormSection title="Información de la Visita" color="blue">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <FormField label="Fecha de Visita" required error={errors.visit_date}>
+                  <FormInput
                     type="date"
-                    required
+                    name="visit_date"
                     value={formData.visit_date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, visit_date: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                    onChange={handleChange}
+                    required
+                    error={errors.visit_date}
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Estado *
-                  </label>
-                  <select
-                    required
-                    value={formData.status}
-                    onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                  >
-                    <option value="pending">Pendiente</option>
-                    <option value="in_progress">En Progreso</option>
-                    <option value="completed">Completada</option>
-                    <option value="cancelled">Cancelada</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Tipo de Visita *
-                  </label>
-                  <select
-                    required
+                <FormField label="Tipo de Visita" required error={errors.visit_type}>
+                  <FormSelect
+                    name="visit_type"
                     value={formData.visit_type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, visit_type: e.target.value as any }))}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                  >
-                    <option value="programada">Programada</option>
-                    <option value="no_programada">No programada</option>
-                    <option value="de_gabinete">De gabinete</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Información del Inspector */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-bold text-green-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <User size={16} className="text-green-600" />
-                Información del Inspector
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Nombre del Inspector *
-                  </label>
-                  <input
-                    type="text"
+                    onChange={handleChange}
                     required
-                    value={formData.inspector_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, inspector_name: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                    placeholder="Ej: Juan Pérez"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Email del Inspector
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.inspector_email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, inspector_email: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                    placeholder="inspector@sutran.gob.pe"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Teléfono del Inspector
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.inspector_phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, inspector_phone: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                    placeholder="+51 999 999 999"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Ubicación */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-bold text-slate-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <MapPin size={16} className="text-slate-600" />
-                Ubicación
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Sede (Opcional)
-                  </label>
-                  <select
-                    value={formData.location_id}
-                    onChange={(e) => {
-                      const selectedLocation = locations.find(loc => loc.id === e.target.value);
-                      setFormData(prev => ({
-                        ...prev,
-                        location_id: e.target.value || '',
-                        location_name: selectedLocation?.name || ''
-                      }));
-                    }}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                    error={errors.visit_type}
                   >
-                    <option value="">Sin sede específica</option>
-                    {locations.map(location => (
-                      <option key={location.id} value={location.id}>
-                        {location.name}
+                    <option value="">Seleccionar tipo</option>
+                    {visitTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
                       </option>
                     ))}
-                  </select>
-                </div>
+                  </FormSelect>
+                </FormField>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Nombre de Ubicación *
-                  </label>
-                  <input
-                    type="text"
+                <FormField label="Estado" required error={errors.status}>
+                  <FormSelect
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
                     required
-                    value={formData.location_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, location_name: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                    placeholder="Ej: Oficina Principal - Lima"
-                  />
-                </div>
+                    error={errors.status}
+                  >
+                    {statuses.map((status) => (
+                      <option key={status.value} value={status.value}>
+                        {status.label}
+                      </option>
+                    ))}
+                  </FormSelect>
+                </FormField>
+
+                <FormField label="Ubicación" required error={errors.location_id}>
+                  <FormSelect
+                    name="location_id"
+                    value={formData.location_id}
+                    onChange={handleChange}
+                    required
+                    error={errors.location_id}
+                  >
+                    <option value="">Seleccionar ubicación</option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </FormSelect>
+                </FormField>
               </div>
-            </div>
+            </FormSection>
 
-            {/* Observaciones y Hallazgos */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-bold text-purple-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <FileText size={16} className="text-purple-600" />
-                Observaciones y Hallazgos
-              </h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Observaciones
-                  </label>
-                  <textarea
-                    value={formData.observations}
-                    onChange={(e) => setFormData(prev => ({ ...prev, observations: e.target.value }))}
-                    rows={3}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                    placeholder="Describe las observaciones generales de la visita..."
+            {/* Section: Información del Inspector */}
+            <FormSection title="Información del Inspector" color="emerald">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <FormField label="Nombre del Inspector" required error={errors.inspector_name}>
+                  <FormInput
+                    type="text"
+                    name="inspector_name"
+                    value={formData.inspector_name}
+                    onChange={handleChange}
+                    placeholder="Nombre completo del inspector"
+                    required
+                    error={errors.inspector_name}
                   />
-                </div>
+                </FormField>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Hallazgos
-                  </label>
-                  <textarea
-                    value={formData.findings}
-                    onChange={(e) => setFormData(prev => ({ ...prev, findings: e.target.value }))}
-                    rows={3}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                    placeholder="Describe los hallazgos específicos encontrados..."
+                <FormField label="Email del Inspector" required error={errors.inspector_email}>
+                  <FormInput
+                    type="email"
+                    name="inspector_email"
+                    value={formData.inspector_email}
+                    onChange={handleChange}
+                    placeholder="inspector@ejemplo.com"
+                    required
+                    error={errors.inspector_email}
                   />
-                </div>
+                  <p className="text-xs text-gray-500 mt-1">Email oficial del inspector SUTRAN</p>
+                </FormField>
 
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                    Recomendaciones
-                  </label>
-                  <textarea
-                    value={formData.recommendations}
-                    onChange={(e) => setFormData(prev => ({ ...prev, recommendations: e.target.value }))}
-                    rows={3}
-                    className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                    placeholder="Describe las recomendaciones y acciones a tomar..."
+                <FormField label="Teléfono del Inspector" required error={errors.inspector_phone}>
+                  <FormInput
+                    type="tel"
+                    name="inspector_phone"
+                    value={formData.inspector_phone}
+                    onChange={handleChange}
+                    placeholder="987654321"
+                    required
+                    error={errors.inspector_phone}
                   />
-                </div>
+                  <p className="text-xs text-gray-500 mt-1">Celular peruano (9 dígitos)</p>
+                </FormField>
               </div>
-            </div>
+            </FormSection>
 
-            {/* Documentos */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-bold text-orange-600 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <FileText size={16} className="text-orange-600" />
-                Documentos
-              </h3>
-
+            {/* Section: Documentos */}
+            <FormSection title="Documentos de la Visita" color="amber">
               <div className="space-y-4">
                 <div className="flex gap-2">
-                  <input
+                  <FormInput
                     type="text"
                     value={newDocument}
                     onChange={(e) => setNewDocument(e.target.value)}
                     placeholder="Nombre del documento..."
-                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="flex-1"
                   />
                   <button
                     type="button"
                     onClick={addDocument}
-                    className="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-lg hover:bg-slate-900 transition-colors uppercase tracking-wider"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     Agregar
                   </button>
@@ -407,40 +368,79 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
 
                 {formData.documents.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-xs font-bold text-gray-700 uppercase">Documentos adjuntos:</h4>
                     {formData.documents.map((doc, index) => (
-                      <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-100">
-                        <span className="text-sm text-gray-700">{doc}</span>
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium">{doc}</span>
                         <button
                           type="button"
                           onClick={() => removeDocument(index)}
-                          className="text-rose-500 hover:text-rose-700 transition-colors"
+                          className="text-red-500 hover:text-red-700"
                         >
-                          <X size={16} />
+                          Eliminar
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-            </div>
+            </FormSection>
+
+            {/* Section: Observaciones y Hallazgos */}
+            <FormSection title="Observaciones y Hallazgos" color="purple">
+              <div className="space-y-6">
+                <FormField label="Observaciones" error={errors.observations}>
+                  <FormTextarea
+                    name="observations"
+                    value={formData.observations}
+                    onChange={handleChange}
+                    placeholder="Observaciones generales de la visita, condiciones encontradas, etc..."
+                    rows={4}
+                    error={errors.observations}
+                  />
+                </FormField>
+
+                <FormField label="Hallazgos" error={errors.findings}>
+                  <FormTextarea
+                    name="findings"
+                    value={formData.findings}
+                    onChange={handleChange}
+                    placeholder="Hallazgos durante la inspección, no conformidades detectadas, etc..."
+                    rows={4}
+                    error={errors.findings}
+                  />
+                </FormField>
+
+                <FormField label="Recomendaciones" error={errors.recommendations}>
+                  <FormTextarea
+                    name="recommendations"
+                    value={formData.recommendations}
+                    onChange={handleChange}
+                    placeholder="Recomendaciones para corregir hallazgos, acciones correctivas, plazos, etc..."
+                    rows={4}
+                    error={errors.recommendations}
+                  />
+                </FormField>
+              </div>
+            </FormSection>
           </div>
 
-          {/* Botones - Sticky Footer */}
-          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col sm:flex-row-reverse gap-3 z-10 mt-auto">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full sm:w-auto px-8 py-3 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"
-            >
-              {loading ? 'Guardando...' : (visit ? 'Actualizar' : 'Crear Registro')}
-            </button>
+          {/* Submit Button */}
+          <div className="bg-white border-t border-gray-200 px-6 py-4 flex gap-3 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="w-full sm:w-auto px-6 py-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+              className="flex-1 py-3 text-sm font-bold text-gray-400 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              disabled={loading}
             >
               Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-3 text-sm font-bold text-white bg-[#001529] rounded-lg hover:bg-[#002855] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              disabled={loading}
+            >
+              {loading && <Loader2 size={16} className="animate-spin" />}
+              {visit ? 'Actualizar Visita' : 'Crear Visita'}
             </button>
           </div>
         </form>

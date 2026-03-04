@@ -37,6 +37,21 @@ export default function Users() {
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
+  // Debug logging before render
+  const canEditValue = canEdit();
+  console.log('🔍 About to render button - canEditValue:', canEditValue);
+
+  const handleNewUserClick = () => {
+    console.log('🔘 Botón Nuevo Usuario clickeado');
+    console.log('🔍 Before state change - showForm:', showForm);
+    console.log('🔍 Before state change - editingUser:', editingUser);
+    
+    setEditingUser(undefined);
+    setShowForm(true);
+    
+    console.log('🔍 After state change - showForm should be true');
+  };
+
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -209,13 +224,10 @@ export default function Users() {
 
 
         <div className="flex items-center gap-2">
-          {canEdit() && (
+          {canEditValue && (
             <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
               <button
-                onClick={() => {
-                  setEditingUser(undefined);
-                  setShowForm(true);
-                }}
+                onClick={handleNewUserClick}
                 className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
                 title="Nuevo Usuario"
               >

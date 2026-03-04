@@ -22,46 +22,37 @@ export default function BaseForm({
   loading = false, 
   children, 
   error,
-  maxWidth = '4xl',
+  maxWidth = '6xl',
   icon,
   showChangesWarning = false
 }: BaseFormProps) {
   const maxWidthClass = {
-    sm: 'sm:max-w-sm',
-    md: 'sm:max-w-md', 
-    lg: 'sm:max-w-lg',
-    xl: 'sm:max-w-xl',
-    '2xl': 'sm:max-w-2xl',
-    '3xl': 'sm:max-w-3xl',
-    '4xl': 'sm:max-w-4xl',
-    '5xl': 'sm:max-w-5xl',
-    '6xl': 'sm:max-w-6xl',
-    '7xl': 'sm:max-w-7xl'
+    sm: 'max-w-full sm:max-w-sm',
+    md: 'max-w-full sm:max-w-md', 
+    lg: 'max-w-full sm:max-w-lg',
+    xl: 'max-w-full sm:max-w-xl',
+    '2xl': 'max-w-full sm:max-w-2xl',
+    '3xl': 'max-w-full sm:max-w-3xl',
+    '4xl': 'max-w-full sm:max-w-4xl',
+    '5xl': 'max-w-full sm:max-w-5xl',
+    '6xl': 'max-w-full sm:max-w-6xl',
+    '7xl': 'max-w-full sm:max-w-7xl'
   }[maxWidth];
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div className={`bg-white w-full h-[95vh] sm:h-auto ${maxWidthClass} sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col`}>
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
+    <div className="fixed inset-0 bg-[#001529]/85 backdrop-blur-md flex items-center justify-center p-0 md:p-8 z-[100] animate-in fade-in duration-300">
+      <div className={`bg-white w-full h-full md:h-[85vh] ${maxWidthClass} rounded-none shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-white/10`}>
+        {/* Header Corporativo (Cuadrado) */}
+        <div className="bg-[#001529] px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
             {icon && (
-              <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
+              <div className="w-10 h-10 bg-blue-500/10 rounded-none flex items-center justify-center border border-blue-500/20">
                 {icon}
               </div>
             )}
             <div>
-              <h2 className="text-xl font-bold text-gray-900 uppercase tracking-tight">
-                {title}
-              </h2>
-              {subtitle && (
-                <p className="text-[11px] text-gray-500 font-medium uppercase tracking-[0.05em] mt-0.5">
-                  {subtitle}
-                </p>
-              )}
-              {showChangesWarning && (
-                <p className="text-[10px] text-amber-600 font-bold uppercase tracking-tight mt-0.5">⚠️ Cambios sin guardar</p>
-              )}
+              <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">{title}</h2>
+              {subtitle && <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-0.5">{subtitle}</p>}
             </div>
           </div>
           <button 

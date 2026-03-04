@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Save, Plus } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 type MaquinariaFormProps = {
   onClose: () => void;
@@ -16,48 +16,44 @@ type Location = {
 };
 
 export default function MaquinariaForm({ onClose, onSave, editingMaquinaria }: MaquinariaFormProps) {
-  const { canEdit } = useAuth();
   const [loading, setLoading] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
     // Campos básicos
-    item: '',
-    descripcion: '',
-    unidad_medida: '',
-    cantidad: 1,
-    condicion: 'bueno',
-    tipo_activo: 'Maquinaria',
-    ubicacion_activo: '',
-    color: '',
-    serie: '',
-    gama: '',
-    modelo: '',
-    marca: '',
-    fecha_adquisicion: '',
-    valor_estimado: '',
-    estado_uso: 'activo',
-
-    // Campos adicionales del sistema
-    status: 'active',
-    notes: '',
-    location_id: '',
-    created_at: '',
-    updated_at: '',
+    item: editingMaquinaria?.item || '',
+    descripcion: editingMaquinaria?.descripcion || '',
+    unidad_medida: editingMaquinaria?.unidad_medida || '',
+    cantidad: editingMaquinaria?.cantidad || 1,
+    condicion: editingMaquinaria?.condicion || 'bueno',
+    ubicacion: editingMaquinaria?.ubicacion || '',
+    marca: editingMaquinaria?.marca || '',
+    modelo: editingMaquinaria?.modelo || '',
+    serie: editingMaquinaria?.serie || '',
+    fecha_adquisicion: editingMaquinaria?.fecha_adquisicion || '',
+    fecha_ultimo_mantenimiento: editingMaquinaria?.fecha_ultimo_mantenimiento || '',
+    proximo_mantenimiento: editingMaquinaria?.proximo_mantenimiento || '',
+    responsable: editingMaquinaria?.responsable || '',
+    estado: editingMaquinaria?.estado || 'operativo',
+    observaciones: editingMaquinaria?.observaciones || '',
+    // Campos técnicos
+    potencia: editingMaquinaria?.potencia || '',
+    voltaje: editingMaquinaria?.voltaje || '',
+    frecuencia: editingMaquinaria?.frecuencia || '',
+    peso: editingMaquinaria?.peso || '',
+    dimensiones: editingMaquinaria?.dimensiones || '',
+    material: editingMaquinaria?.material || '',
+    capacidad: editingMaquinaria?.capacidad || '',
+    // Campos de costo
+    costo_adquisicion: editingMaquinaria?.costo_adquisicion || '',
+    valor_actual: editingMaquinaria?.valor_actual || '',
+    vida_util: editingMaquinaria?.vida_util || '',
   });
 
   useEffect(() => {
     fetchLocations();
-    if (editingMaquinaria) {
-      setFormData({
-        ...formData,
-        ...editingMaquinaria,
-        fecha_adquisicion: editingMaquinaria.fecha_adquisicion || '',
-        valor_estimado: editingMaquinaria.valor_estimado || '',
-      });
-    }
-  }, [editingMaquinaria]);
+  }, []);
 
   const fetchLocations = async () => {
     const { data } = await supabase
@@ -69,370 +65,399 @@ export default function MaquinariaForm({ onClose, onSave, editingMaquinaria }: M
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.item.trim()) {
+      newErrors.item = 'El nombre del equipo es requerido';
+    }
+
+    if (!formData.descripcion.trim()) {
+      newErrors.descripcion = 'La descripción es requerida';
+    }
+
+    if (!formData.estado) {
+      newErrors.estado = 'El estado es requerido';
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
     setLoading(true);
-    setErrors({});
+
+    const dataToSave = {
+      ...formData,
+      updated_at: new Date().toISOString(),
+    };
 
     try {
-      const payload = {
-        ...formData,
-        asset_type_id: await getAssetTypeId('Maquinaria'),
-        created_at: editingMaquinaria ? formData.created_at : new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
       if (editingMaquinaria) {
         const { error } = await supabase
-          .from('assets')
-          .update(payload)
+          .from('maquinaria')
+          .update(dataToSave)
           .eq('id', editingMaquinaria.id);
-        if (error) throw error;
+
+        if (error) {
+          setErrors({ submit: 'Error al actualizar la maquinaria: ' + error.message });
+          setLoading(false);
+          return;
+        }
       } else {
         const { error } = await supabase
-          .from('assets')
-          .insert([payload]);
-        if (error) throw error;
+          .from('maquinaria')
+          .insert([dataToSave]);
+
+        if (error) {
+          setErrors({ submit: 'Error al crear la maquinaria: ' + error.message });
+          setLoading(false);
+          return;
+        }
       }
 
+      setLoading(false);
       onSave();
-    } catch (error: any) {
-      console.error('Error saving maquinaria:', error);
-      setErrors({ submit: error.message });
-    } finally {
+    } catch (err: any) {
+      setErrors({ submit: 'Error inesperado: ' + err });
       setLoading(false);
     }
   };
 
-  const getAssetTypeId = async (typeName: string) => {
-    const { data } = await supabase
-      .from('asset_types')
-      .select('id')
-      .eq('name', typeName)
-      .single();
-    return data?.id || '';
-  };
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
 
-  const handleChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-4xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <div className="bg-slate-100 rounded-xl p-2.5">
-              <Plus size={24} className="text-slate-800" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 uppercase">
-                {editingMaquinaria ? 'Editar Maquinaria' : 'Nueva Maquinaria'}
-              </h2>
-              <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-wide">
-                {editingMaquinaria ? 'Modifica la información de la maquinaria' : 'Completa los datos para registrar un equipo'}
-              </p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
-            <X size={24} />
-          </button>
+    <BaseForm
+      title={editingMaquinaria ? 'Editar Maquinaria' : 'Nueva Maquinaria'}
+      subtitle="Módulo de Gestión de Maquinaria"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.submit}
+      icon={<Settings size={24} className="text-blue-600" />}
+    >
+      {/* Section: Información Principal */}
+      <FormSection title="Información del Equipo" color="blue">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Nombre del Equipo" required error={errors.item}>
+            <FormInput
+              type="text"
+              name="item"
+              value={formData.item}
+              onChange={handleChange}
+              placeholder="Ej: Excavadora, Compresor, Generador"
+              required
+              error={errors.item}
+            />
+          </FormField>
+
+          <FormField label="Descripción" required error={errors.descripcion}>
+            <FormInput
+              type="text"
+              name="descripcion"
+              value={formData.descripcion}
+              onChange={handleChange}
+              placeholder="Descripción detallada del equipo"
+              required
+              error={errors.descripcion}
+            />
+          </FormField>
+
+          <FormField label="Unidad de Medida" error={errors.unidad_medida}>
+            <FormInput
+              type="text"
+              name="unidad_medida"
+              value={formData.unidad_medida}
+              onChange={handleChange}
+              placeholder="Ej: Unidad, Set, Par"
+              error={errors.unidad_medida}
+            />
+          </FormField>
+
+          <FormField label="Cantidad" error={errors.cantidad}>
+            <FormInput
+              type="number"
+              name="cantidad"
+              value={formData.cantidad}
+              onChange={handleChange}
+              placeholder="1"
+              error={errors.cantidad}
+            />
+          </FormField>
+
+          <FormField label="Condición" error={errors.condicion}>
+            <FormSelect
+              name="condicion"
+              value={formData.condicion}
+              onChange={handleChange}
+              error={errors.condicion}
+            >
+              <option value="nuevo">Nuevo</option>
+              <option value="bueno">Bueno</option>
+              <option value="regular">Regular</option>
+              <option value="malo">Malo</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Ubicación" error={errors.ubicacion}>
+            <FormSelect
+              name="ubicacion"
+              value={formData.ubicacion}
+              onChange={handleChange}
+              error={errors.ubicacion}
+            >
+              <option value="">Seleccionar ubicación</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Estado" required error={errors.estado}>
+            <FormSelect
+              name="estado"
+              value={formData.estado}
+              onChange={handleChange}
+              required
+              error={errors.estado}
+            >
+              <option value="operativo">Operativo</option>
+              <option value="mantenimiento">En Mantenimiento</option>
+              <option value="descompuesto">Descompuesto</option>
+              <option value="dado_baja">Dado de Baja</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Responsable" error={errors.responsable}>
+            <FormInput
+              type="text"
+              name="responsable"
+              value={formData.responsable}
+              onChange={handleChange}
+              placeholder="Nombre del responsable"
+              error={errors.responsable}
+            />
+          </FormField>
         </div>
+      </FormSection>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Section: Especificaciones Técnicas */}
+      <FormSection title="Especificaciones Técnicas" color="emerald">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Marca" error={errors.marca}>
+            <FormInput
+              type="text"
+              name="marca"
+              value={formData.marca}
+              onChange={handleChange}
+              placeholder="Ej: Caterpillar, Komatsu"
+              error={errors.marca}
+            />
+          </FormField>
 
-              {/* ITEM */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ITEM <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.item}
-                  onChange={(e) => handleChange('item', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  placeholder="Código del item"
-                  required
-                />
-                {errors.item && <p className="text-red-500 text-xs mt-1">{errors.item}</p>}
-              </div>
+          <FormField label="Modelo" error={errors.modelo}>
+            <FormInput
+              type="text"
+              name="modelo"
+              value={formData.modelo}
+              onChange={handleChange}
+              placeholder="Ej: 320D, PC200-8"
+              error={errors.modelo}
+            />
+          </FormField>
 
-              {/* DESCRIPCIÓN */}
-              <div className="lg:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  DESCRIPCIÓN <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={formData.descripcion}
-                  onChange={(e) => handleChange('descripcion', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Descripción detallada de la maquinaria"
-                  required
-                />
-                {errors.descripcion && <p className="text-red-500 text-xs mt-1">{errors.descripcion}</p>}
-              </div>
+          <FormField label="Número de Serie" error={errors.serie}>
+            <FormInput
+              type="text"
+              name="serie"
+              value={formData.serie}
+              onChange={handleChange}
+              placeholder="Número de serie del equipo"
+              error={errors.serie}
+            />
+          </FormField>
 
-              {/* UNIDAD DE MEDIDA */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  UNIDAD DE MEDIDA <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.unidad_medida}
-                  onChange={(e) => handleChange('unidad_medida', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Seleccionar...</option>
-                  <option value="unidad">Unidad</option>
-                  <option value="par">Par</option>
-                  <option value="juego">Juego</option>
-                  <option value="conjunto">Conjunto</option>
-                  <option value="kit">Kit</option>
-                  <option value="metro">Metro</option>
-                  <option value="kilogramo">Kilogramo</option>
-                  <option value="litro">Litro</option>
-                </select>
-                {errors.unidad_medida && <p className="text-red-500 text-xs mt-1">{errors.unidad_medida}</p>}
-              </div>
+          <FormField label="Material" error={errors.material}>
+            <FormInput
+              type="text"
+              name="material"
+              value={formData.material}
+              onChange={handleChange}
+              placeholder="Ej: Acero, Aluminio"
+              error={errors.material}
+            />
+          </FormField>
 
-              {/* CANTIDAD */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CANT. <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.cantidad}
-                  onChange={(e) => handleChange('cantidad', parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  required
-                />
-                {errors.cantidad && <p className="text-red-500 text-xs mt-1">{errors.cantidad}</p>}
-              </div>
+          <FormField label="Potencia" error={errors.potencia}>
+            <FormInput
+              type="text"
+              name="potencia"
+              value={formData.potencia}
+              onChange={handleChange}
+              placeholder="Ej: 200 HP, 150 kW"
+              error={errors.potencia}
+            />
+          </FormField>
 
-              {/* CONDICIÓN */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CONDICIÓN <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.condicion}
-                  onChange={(e) => handleChange('condicion', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Seleccionar...</option>
-                  <option value="excelente">Excelente</option>
-                  <option value="bueno">Bueno</option>
-                  <option value="regular">Regular</option>
-                  <option value="malo">Malo</option>
-                  <option value="danado">Dañado</option>
-                </select>
-                {errors.condicion && <p className="text-red-500 text-xs mt-1">{errors.condicion}</p>}
-              </div>
+          <FormField label="Voltaje" error={errors.voltaje}>
+            <FormInput
+              type="text"
+              name="voltaje"
+              value={formData.voltaje}
+              onChange={handleChange}
+              placeholder="Ej: 220V, 440V"
+              error={errors.voltaje}
+            />
+          </FormField>
 
-              {/* UBICACIÓN DEL ACTIVO */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  UBICACIÓN DEL ACTIVO <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.ubicacion_activo}
-                  onChange={(e) => handleChange('ubicacion_activo', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Seleccionar...</option>
-                  {locations.map((location) => (
-                    <option key={location.id} value={location.name}>
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.ubicacion_activo && <p className="text-red-500 text-xs mt-1">{errors.ubicacion_activo}</p>}
-              </div>
+          <FormField label="Frecuencia" error={errors.frecuencia}>
+            <FormInput
+              type="text"
+              name="frecuencia"
+              value={formData.frecuencia}
+              onChange={handleChange}
+              placeholder="Ej: 60 Hz"
+              error={errors.frecuencia}
+            />
+          </FormField>
 
-              {/* COLOR */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  COLOR
-                </label>
-                <input
-                  type="text"
-                  value={formData.color}
-                  onChange={(e) => handleChange('color', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  placeholder="Color de la maquinaria"
-                />
-              </div>
+          <FormField label="Capacidad" error={errors.capacidad}>
+            <FormInput
+              type="text"
+              name="capacidad"
+              value={formData.capacidad}
+              onChange={handleChange}
+              placeholder="Ej: 20 toneladas, 5000 L"
+              error={errors.capacidad}
+            />
+          </FormField>
 
-              {/* SERIE */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  SERIE <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.serie}
-                  onChange={(e) => handleChange('serie', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  placeholder="Número de serie"
-                  required
-                />
-                {errors.serie && <p className="text-red-500 text-xs mt-1">{errors.serie}</p>}
-              </div>
+          <FormField label="Peso" error={errors.peso}>
+            <FormInput
+              type="text"
+              name="peso"
+              value={formData.peso}
+              onChange={handleChange}
+              placeholder="Ej: 25 toneladas"
+              error={errors.peso}
+            />
+          </FormField>
 
-              {/* GAMA */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  GAMA
-                </label>
-                <input
-                  type="text"
-                  value={formData.gama}
-                  onChange={(e) => handleChange('gama', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  placeholder="Gama o línea"
-                />
-              </div>
+          <FormField label="Dimensiones" error={errors.dimensiones}>
+            <FormInput
+              type="text"
+              name="dimensiones"
+              value={formData.dimensiones}
+              onChange={handleChange}
+              placeholder="Ej: 10m x 3m x 4m"
+              error={errors.dimensiones}
+            />
+          </FormField>
+        </div>
+      </FormSection>
 
-              {/* MODELO */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  MODELO <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.modelo}
-                  onChange={(e) => handleChange('modelo', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  placeholder="Modelo de la maquinaria"
-                  required
-                />
-                {errors.modelo && <p className="text-red-500 text-xs mt-1">{errors.modelo}</p>}
-              </div>
+      {/* Section: Fechas y Mantenimiento */}
+      <FormSection title="Fechas y Mantenimiento" color="amber">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Fecha de Adquisición" error={errors.fecha_adquisicion}>
+            <FormInput
+              type="date"
+              name="fecha_adquisicion"
+              value={formData.fecha_adquisicion}
+              onChange={handleChange}
+              error={errors.fecha_adquisicion}
+            />
+          </FormField>
 
-              {/* MARCA */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  MARCA <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.marca}
-                  onChange={(e) => handleChange('marca', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  placeholder="Marca del fabricante"
-                  required
-                />
-                {errors.marca && <p className="text-red-500 text-xs mt-1">{errors.marca}</p>}
-              </div>
+          <FormField label="Último Mantenimiento" error={errors.fecha_ultimo_mantenimiento}>
+            <FormInput
+              type="date"
+              name="fecha_ultimo_mantenimiento"
+              value={formData.fecha_ultimo_mantenimiento}
+              onChange={handleChange}
+              error={errors.fecha_ultimo_mantenimiento}
+            />
+          </FormField>
 
-              {/* FECHA ADQUISICIÓN */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  FECHA ADQUISICIÓN
-                </label>
-                <input
-                  type="date"
-                  value={formData.fecha_adquisicion}
-                  onChange={(e) => handleChange('fecha_adquisicion', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                />
-              </div>
+          <FormField label="Próximo Mantenimiento" error={errors.proximo_mantenimiento}>
+            <FormInput
+              type="date"
+              name="proximo_mantenimiento"
+              value={formData.proximo_mantenimiento}
+              onChange={handleChange}
+              error={errors.proximo_mantenimiento}
+            />
+          </FormField>
 
-              {/* VALOR ESTIMADO */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  VALOR ESTIMADO
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={formData.valor_estimado}
-                  onChange={(e) => handleChange('valor_estimado', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  placeholder="0.00"
-                />
-              </div>
+          <FormField label="Vida Útil (años)" error={errors.vida_util}>
+            <FormInput
+              type="number"
+              name="vida_util"
+              value={formData.vida_util}
+              onChange={handleChange}
+              placeholder="10"
+              error={errors.vida_util}
+            />
+          </FormField>
+        </div>
+      </FormSection>
 
-              {/* ESTADO USO */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ESTADO USO <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.estado_uso}
-                  onChange={(e) => handleChange('estado_uso', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Seleccionar...</option>
-                  <option value="activo">Activo</option>
-                  <option value="inactivo">Inactivo</option>
-                  <option value="en_mantenimiento">En Mantenimiento</option>
-                  <option value="en_reparacion">En Reparación</option>
-                  <option value="dado_de_baja">Dado de Baja</option>
-                </select>
-                {errors.estado_uso && <p className="text-red-500 text-xs mt-1">{errors.estado_uso}</p>}
-              </div>
+      {/* Section: Información Financiera */}
+      <FormSection title="Información Financiera" color="purple">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Costo de Adquisición" error={errors.costo_adquisicion}>
+            <FormInput
+              type="number"
+              step="0.01"
+              name="costo_adquisicion"
+              value={formData.costo_adquisicion}
+              onChange={handleChange}
+              placeholder="50000.00"
+              error={errors.costo_adquisicion}
+            />
+          </FormField>
 
-              {/* NOTAS */}
-              <div className="lg:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  NOTAS ADICIONALES
-                </label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(e) => handleChange('notes', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Observaciones adicionales sobre la maquinaria"
-                />
-              </div>
-            </div>
-          </div>
+          <FormField label="Valor Actual" error={errors.valor_actual}>
+            <FormInput
+              type="number"
+              step="0.01"
+              name="valor_actual"
+              value={formData.valor_actual}
+              onChange={handleChange}
+              placeholder="35000.00"
+              error={errors.valor_actual}
+            />
+          </FormField>
+        </div>
+      </FormSection>
 
-          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col gap-4 z-10">
-            {errors.submit && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600 text-sm font-medium">{errors.submit}</p>
-              </div>
-            )}
-
-            <div className="flex flex-col sm:flex-row-reverse gap-3">
-              {canEdit() && (
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-8 py-3 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"
-                >
-                  {loading ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                    <Save size={16} />
-                  )}
-                  {editingMaquinaria ? 'Actualizar Registro' : 'Guardar Maquinaria'}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
+      {/* Section: Observaciones */}
+      <FormSection title="Observaciones" color="rose">
+        <FormField label="Observaciones y Notas" error={errors.observaciones}>
+          <FormTextarea
+            name="observaciones"
+            value={formData.observaciones}
+            onChange={handleChange}
+            placeholder="Notas adicionales sobre el equipo, historial, recomendaciones, etc..."
+            rows={4}
+            error={errors.observaciones}
+          />
+        </FormField>
+      </FormSection>
+    </BaseForm>
   );
 }

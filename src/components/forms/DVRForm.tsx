@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { X, HardDrive } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { HardDrive } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 interface DVRFormProps {
   editDVR?: any;
@@ -9,282 +10,445 @@ interface DVRFormProps {
 }
 
 export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [locations, setLocations] = useState<any[]>([]);
+
   const [formData, setFormData] = useState({
-    code: '',
-    sede: '',
-    area: '',
-    marca: '',
-    modelo: '',
-    numero_serie: '',
-    canales: '',
-    resolucion_max: '',
-    almacenamiento_total: '',
-    discos_instalados: '',
-    ip: '',
-    puerto: '',
-    usuario: '',
-    password: '',
-    url_acceso: '',
-    estado_fisico: '',
-    notas: ''
+    code: editDVR?.code || '',
+    sede: editDVR?.sede || '',
+    area: editDVR?.area || '',
+    marca: editDVR?.marca || '',
+    modelo: editDVR?.modelo || '',
+    numero_serie: editDVR?.numero_serie || '',
+    canales: editDVR?.canales || '',
+    resolucion_max: editDVR?.resolucion_max || '',
+    almacenamiento_total: editDVR?.almacenamiento_total || '',
+    discos_instalados: editDVR?.discos_instalados || '',
+    ip: editDVR?.ip || '',
+    puerto: editDVR?.puerto || '',
+    usuario: editDVR?.usuario || '',
+    password: editDVR?.password || '',
+    url_acceso: editDVR?.url_acceso || '',
+    estado_fisico: editDVR?.estado_fisico || '',
+    notas: editDVR?.notas || ''
   });
 
-  const [loading, setLoading] = useState(false);
-  const [locations, setLocations] = useState<any[]>([]);
+  const channelOptions = [
+    { value: '4', label: '4 Canales' },
+    { value: '8', label: '8 Canales' },
+    { value: '16', label: '16 Canales' },
+    { value: '32', label: '32 Canales' },
+    { value: '64', label: '64 Canales' },
+    { value: '128', label: '128 Canales' },
+    { value: 'other', label: 'Otro' },
+  ];
+
+  const resolutions = [
+    { value: '720p', label: '720p HD' },
+    { value: '1080p', label: '1080p Full HD' },
+    { value: '1440p', label: '1440p QHD' },
+    { value: '2160p', label: '2160p 4K' },
+    { value: '4320p', label: '4320p 8K' },
+    { value: 'other', label: 'Otra' },
+  ];
+
+  const storageOptions = [
+    { value: '500gb', label: '500 GB' },
+    { value: '1tb', label: '1 TB' },
+    { value: '2tb', label: '2 TB' },
+    { value: '4tb', label: '4 TB' },
+    { value: '8tb', label: '8 TB' },
+    { value: '16tb', label: '16 TB' },
+    { value: '32tb', label: '32 TB' },
+    { value: 'other', label: 'Otro' },
+  ];
+
+  const physicalStates = [
+    { value: 'excelente', label: 'Excelente' },
+    { value: 'bueno', label: 'Bueno' },
+    { value: 'regular', label: 'Regular' },
+    { value: 'malo', label: 'Malo' },
+    { value: 'danado', label: 'Dañado' },
+  ];
 
   useEffect(() => {
     fetchLocations();
-    if (editDVR) {
-      setFormData({
-        code: editDVR.code || '',
-        sede: editDVR.location_id || '',
-        area: editDVR.area || '',
-        marca: editDVR.brand || '',
-        modelo: editDVR.model || '',
-        numero_serie: editDVR.serial_number || '',
-        canales: editDVR.channels || '',
-        resolucion_max: editDVR.max_resolution || '',
-        almacenamiento_total: editDVR.total_storage || '',
-        discos_instalados: editDVR.installed_disks || '',
-        ip: editDVR.ip_address || '',
-        puerto: editDVR.port || '',
-        usuario: editDVR.username || '',
-        password: editDVR.password || '',
-        url_acceso: editDVR.url || '',
-        estado_fisico: editDVR.physical_condition || '',
-        notas: editDVR.notes || ''
-      });
-    } else {
-      generateRandomCode();
-    }
-  }, [editDVR]);
+  }, []);
 
   const fetchLocations = async () => {
-    const { data } = await supabase
-      .from('locations')
-      .select('*')
-      .order('name');
-    if (data) setLocations(data);
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .order('name');
+
+      if (!error && data) {
+        setLocations(data);
+      }
+    } catch (error) {
+      console.error('Error al cargar ubicaciones:', error);
+    }
   };
 
-  const generateRandomCode = () => {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setFormData(prev => ({ ...prev, code }));
+  const validateIP = (ip: string): boolean => {
+    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return ipRegex.test(ip);
+  };
+
+  const validatePort = (port: string): boolean => {
+    const portNum = parseInt(port);
+    return !isNaN(portNum) && portNum >= 1 && portNum <= 65535;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      const dataToSave: any = {
-        code: formData.code,
-        location_id: formData.sede,
-        area: formData.area,
-        brand: formData.marca,
-        model: formData.modelo,
-        serial_number: formData.numero_serie,
-        channels: formData.canales,
-        max_resolution: formData.resolucion_max,
-        total_storage: formData.almacenamiento_total,
-        installed_disks: formData.discos_instalados,
-        ip_address: formData.ip,
-        port: formData.puerto,
-        username: formData.usuario,
-        password: formData.password,
-        url: formData.url_acceso,
-        physical_condition: formData.estado_fisico,
-        notes: formData.notas,
-        status: 'active',
-        asset_type_id: await getAssetTypeId('DVR')
-      };
 
-      if (editDVR) {
-        const { error } = await supabase.from('assets').update(dataToSave).eq('id', editDVR.id);
-        if (error) throw error;
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.code.trim()) {
+      newErrors.code = 'El código es requerido';
+    }
+
+    if (!formData.sede.trim()) {
+      newErrors.sede = 'La sede es requerida';
+    }
+
+    if (!formData.marca.trim()) {
+      newErrors.marca = 'La marca es requerida';
+    }
+
+    if (!formData.modelo.trim()) {
+      newErrors.modelo = 'El modelo es requerido';
+    }
+
+    if (formData.ip && !validateIP(formData.ip)) {
+      newErrors.ip = 'Formato de IP inválido';
+    }
+
+    if (formData.puerto && !validatePort(formData.puerto)) {
+      newErrors.puerto = 'El puerto debe estar entre 1 y 65535';
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
+    setLoading(true);
+
+    const dataToSave = {
+      code: formData.code.trim(),
+      sede: formData.sede.trim(),
+      area: formData.area.trim() || null,
+      marca: formData.marca.trim(),
+      modelo: formData.modelo.trim(),
+      numero_serie: formData.numero_serie.trim() || null,
+      canales: formData.canales.trim() || null,
+      resolucion_max: formData.resolucion_max.trim() || null,
+      almacenamiento_total: formData.almacenamiento_total.trim() || null,
+      discos_instalados: formData.discos_instalados.trim() || null,
+      ip: formData.ip.trim() || null,
+      puerto: formData.puerto.trim() || null,
+      usuario: formData.usuario.trim() || null,
+      password: formData.password.trim() || null,
+      url_acceso: formData.url_acceso.trim() || null,
+      estado_fisico: formData.estado_fisico.trim() || null,
+      notas: formData.notas.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      if (editDVR?.id) {
+        const { error } = await supabase
+          .from('dvrs')
+          .update(dataToSave)
+          .eq('id', editDVR.id);
+
+        if (error) {
+          setErrors({ submit: 'Error al actualizar el DVR: ' + error.message });
+          setLoading(false);
+          return;
+        }
       } else {
-        const { error } = await supabase.from('assets').insert([dataToSave]);
-        if (error) throw error;
+        const { error } = await supabase
+          .from('dvrs')
+          .insert([dataToSave]);
+
+        if (error) {
+          setErrors({ submit: 'Error al crear el DVR: ' + error.message });
+          setLoading(false);
+          return;
+        }
       }
+
+      setLoading(false);
       onSave();
-    } catch (error) {
-      console.error('Error saving DVR:', error);
-      alert('Error al guardar el DVR');
-    } finally {
+    } catch (err: any) {
+      setErrors({ submit: 'Error inesperado: ' + err });
       setLoading(false);
     }
   };
 
-  const getAssetTypeId = async (typeName: string) => {
-    const { data } = await supabase
-      .from('asset_types')
-      .select('id')
-      .eq('name', typeName)
-      .single();
-    return data?.id;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-4xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <HardDrive className="text-orange-600" size={24} />
-            <h2 className="text-xl font-bold text-gray-900 uppercase">
-              {editDVR ? 'Editar DVR' : 'Nuevo DVR'}
-            </h2>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
-            <X size={24} />
-          </button>
+    <BaseForm
+      title={editDVR ? 'Editar DVR' : 'Nuevo DVR'}
+      subtitle="Módulo de Gestión de DVR"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.submit}
+      icon={<HardDrive size={24} className="text-blue-600" />}
+    >
+      {/* Section: Información Básica */}
+      <FormSection title="Información Básica" color="blue">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Código" required error={errors.code}>
+            <FormInput
+              type="text"
+              name="code"
+              value={formData.code}
+              onChange={handleChange}
+              placeholder="Ej: DVR-001"
+              required
+              error={errors.code}
+            />
+          </FormField>
+
+          <FormField label="Sede" required error={errors.sede}>
+            <FormSelect
+              name="sede"
+              value={formData.sede}
+              onChange={handleChange}
+              required
+              error={errors.sede}
+            >
+              <option value="">Seleccionar sede</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Área" error={errors.area}>
+            <FormInput
+              type="text"
+              name="area"
+              value={formData.area}
+              onChange={handleChange}
+              placeholder="Ej: Seguridad, Operaciones"
+              error={errors.area}
+            />
+          </FormField>
+
+          <FormField label="Número de Serie" error={errors.numero_serie}>
+            <FormInput
+              type="text"
+              name="numero_serie"
+              value={formData.numero_serie}
+              onChange={handleChange}
+              placeholder="Ej: A1B2C3D4E5F6"
+              error={errors.numero_serie}
+            />
+          </FormField>
+        </div>
+      </FormSection>
+
+      {/* Section: Especificaciones del DVR */}
+      <FormSection title="Especificaciones del DVR" color="emerald">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Marca" required error={errors.marca}>
+            <FormInput
+              type="text"
+              name="marca"
+              value={formData.marca}
+              onChange={handleChange}
+              placeholder="Ej: Hikvision, Dahua, Axis"
+              required
+              error={errors.marca}
+            />
+          </FormField>
+
+          <FormField label="Modelo" required error={errors.modelo}>
+            <FormInput
+              type="text"
+              name="modelo"
+              value={formData.modelo}
+              onChange={handleChange}
+              placeholder="Ej: DS-7608NI-K2, NVR4216-16P-4KS2"
+              required
+              error={errors.modelo}
+            />
+          </FormField>
+
+          <FormField label="Canales" error={errors.canales}>
+            <FormSelect
+              name="canales"
+              value={formData.canales}
+              onChange={handleChange}
+              error={errors.canales}
+            >
+              <option value="">Seleccionar canales</option>
+              {channelOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Resolución Máxima" error={errors.resolucion_max}>
+            <FormSelect
+              name="resolucion_max"
+              value={formData.resolucion_max}
+              onChange={handleChange}
+              error={errors.resolucion_max}
+            >
+              <option value="">Seleccionar resolución</option>
+              {resolutions.map((res) => (
+                <option key={res.value} value={res.value}>
+                  {res.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Código *</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={formData.code}
-                    onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  <button type="button" onClick={generateRandomCode} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                    Generar
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Sede *</label>
-                <select
-                  value={formData.sede}
-                  onChange={(e) => setFormData(prev => ({ ...prev, sede: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Seleccionar sede</option>
-                  {locations.map(location => (
-                    <option key={location.id} value={location.id}>{location.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Área</label>
-                <input type="text" value={formData.area} onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Marca *</label>
-                <input type="text" value={formData.marca} onChange={(e) => setFormData(prev => ({ ...prev, marca: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Modelo *</label>
-                <input type="text" value={formData.modelo} onChange={(e) => setFormData(prev => ({ ...prev, modelo: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Número de Serie</label>
-                <input type="text" value={formData.numero_serie} onChange={(e) => setFormData(prev => ({ ...prev, numero_serie: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Canales</label>
-                <input type="number" min={0} value={formData.canales} onChange={(e) => setFormData(prev => ({ ...prev, canales: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Resolución Máxima</label>
-                <select value={formData.resolucion_max} onChange={(e) => setFormData(prev => ({ ...prev, resolucion_max: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Seleccionar</option>
-                  <option value="720p">720p</option>
-                  <option value="1080p">1080p</option>
-                  <option value="4MP">4MP</option>
-                  <option value="5MP">5MP</option>
-                  <option value="4K">4K</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Almacenamiento Total (GB)</label>
-                <input type="number" min={0} value={formData.almacenamiento_total} onChange={(e) => setFormData(prev => ({ ...prev, almacenamiento_total: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Discos Instalados</label>
-                <input type="number" min={0} value={formData.discos_instalados} onChange={(e) => setFormData(prev => ({ ...prev, discos_instalados: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
-              <div>
-                <label className="block text sm font-medium text-gray-700 mb-2">IP</label>
-                <input type="text" value={formData.ip} onChange={(e) => setFormData(prev => ({ ...prev, ip: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej: 192.168.1.10" />
-              </div>
-
-              <div>
-                <label className="block text sm font-medium text-gray-700 mb-2">Puerto</label>
-                <input type="text" value={formData.puerto} onChange={(e) => setFormData(prev => ({ ...prev, puerto: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej: 8000" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Usuario</label>
-                <input type="text" value={formData.usuario} onChange={(e) => setFormData(prev => ({ ...prev, usuario: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Contraseña</label>
-                <input type="text" value={formData.password} onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
-              <div className="md:col-span-2 lg:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">URL de Acceso</label>
-                <input type="text" value={formData.url_acceso} onChange={(e) => setFormData(prev => ({ ...prev, url_acceso: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="http://ip:puerto o https://dominio" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Estado Físico</label>
-                <select value={formData.estado_fisico} onChange={(e) => setFormData(prev => ({ ...prev, estado_fisico: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Seleccionar estado</option>
-                  <option value="Excelente">Excelente</option>
-                  <option value="Bueno">Bueno</option>
-                  <option value="Regular">Regular</option>
-                  <option value="Malo">Malo</option>
-                  <option value="Dañado">Dañado</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-2 lg:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Notas</label>
-                <textarea rows={3} value={formData.notas} onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Información adicional..." />
-              </div>
-            </div>
-
-          </div>
-
-          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col sm:flex-row-reverse gap-3 z-10">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full sm:w-auto px-8 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 font-bold text-[10px] uppercase tracking-widest"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+          <FormField label="Almacenamiento Total" error={errors.almacenamiento_total}>
+            <FormSelect
+              name="almacenamiento_total"
+              value={formData.almacenamiento_total}
+              onChange={handleChange}
+              error={errors.almacenamiento_total}
             >
-              {loading ? 'Guardando...' : (editDVR ? 'Actualizar' : 'Crear Registro')}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full sm:w-auto px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
+              <option value="">Seleccionar capacidad</option>
+              {storageOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Discos Instalados" error={errors.discos_instalados}>
+            <FormInput
+              type="text"
+              name="discos_instalados"
+              value={formData.discos_instalados}
+              onChange={handleChange}
+              placeholder="Ej: 2x 2TB Seagate Barracuda"
+              error={errors.discos_instalados}
+            />
+          </FormField>
+
+          <FormField label="Estado Físico" error={errors.estado_fisico}>
+            <FormSelect
+              name="estado_fisico"
+              value={formData.estado_fisico}
+              onChange={handleChange}
+              error={errors.estado_fisico}
             >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              <option value="">Seleccionar estado</option>
+              {physicalStates.map((state) => (
+                <option key={state.value} value={state.value}>
+                  {state.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+        </div>
+      </FormSection>
+
+      {/* Section: Configuración de Red */}
+      <FormSection title="Configuración de Red y Acceso" color="amber">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Dirección IP" error={errors.ip}>
+            <FormInput
+              type="text"
+              name="ip"
+              value={formData.ip}
+              onChange={handleChange}
+              placeholder="Ej: 192.168.1.100"
+              error={errors.ip}
+            />
+          </FormField>
+
+          <FormField label="Puerto" error={errors.puerto}>
+            <FormInput
+              type="text"
+              name="puerto"
+              value={formData.puerto}
+              onChange={handleChange}
+              placeholder="Ej: 80, 554, 8000"
+              error={errors.puerto}
+            />
+          </FormField>
+
+          <FormField label="Usuario" error={errors.usuario}>
+            <FormInput
+              type="text"
+              name="usuario"
+              value={formData.usuario}
+              onChange={handleChange}
+              placeholder="Usuario de acceso"
+              error={errors.usuario}
+            />
+          </FormField>
+
+          <FormField label="Contraseña" error={errors.password}>
+            <FormInput
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Contraseña de acceso"
+              error={errors.password}
+            />
+          </FormField>
+        </div>
+
+        <FormField label="URL de Acceso" error={errors.url_acceso}>
+          <FormInput
+            type="url"
+            name="url_acceso"
+            value={formData.url_acceso}
+            onChange={handleChange}
+            placeholder="Ej: http://192.168.1.100:80"
+            error={errors.url_acceso}
+          />
+        </FormField>
+      </FormSection>
+
+      {/* Section: Notas */}
+      <FormSection title="Notas Adicionales" color="purple">
+        <FormField label="Notas y Observaciones" error={errors.notas}>
+          <FormTextarea
+            name="notas"
+            value={formData.notas}
+            onChange={handleChange}
+            placeholder="Notas adicionales sobre el DVR, configuraciones especiales, problemas conocidos, mantenimientos realizados, etc..."
+            rows={4}
+            error={errors.notas}
+          />
+        </FormField>
+      </FormSection>
+    </BaseForm>
   );
 }
-
-
-

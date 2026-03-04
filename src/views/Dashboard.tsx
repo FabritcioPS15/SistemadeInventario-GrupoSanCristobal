@@ -19,7 +19,11 @@ import {
   Wrench,
   Building2,
   LayoutDashboard,
-  Star
+  Star,
+  Ticket,
+  CheckSquare,
+  AlertOctagon,
+  Car
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -47,6 +51,16 @@ interface DashboardStats {
   warningPoliza: number;
   expiredContrato: number;
   warningContrato: number;
+  // Nuevas métricas de tickets
+  totalTickets: number;
+  resolvedTickets: number;
+  pendingTickets: number;
+  inProgressTickets: number;
+  averageResolutionTime: number;
+  // Nuevas métricas de placas
+  platesWithExpiredDocuments: number;
+  platesWithWarningDocuments: number;
+  totalPlates: number;
 }
 
 interface SutranLocationAlert {
@@ -92,6 +106,15 @@ export default function Dashboard() {
     warningPoliza: 0,
     expiredContrato: 0,
     warningContrato: 0,
+    // Nuevas métricas
+    totalTickets: 0,
+    resolvedTickets: 0,
+    pendingTickets: 0,
+    inProgressTickets: 0,
+    averageResolutionTime: 0,
+    platesWithExpiredDocuments: 0,
+    platesWithWarningDocuments: 0,
+    totalPlates: 0,
   });
 
   // Filtro de sede para la sección de flota vehicular
@@ -101,6 +124,10 @@ export default function Dashboard() {
   // Alertas SUTRAN por sede
   const [sutranAlerts, setSutranAlerts] = useState<SutranLocationAlert[]>([]);
   const [activeSutranIndex, setActiveSutranIndex] = useState(0);
+
+  // Modal para detalles de placas
+  const [showPlateDetails, setShowPlateDetails] = useState(false);
+  const [plateDetails, setPlateDetails] = useState<any[]>([]);
 
 
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
@@ -138,7 +165,7 @@ export default function Dashboard() {
     try {
       const { data: vehicles } = await supabase
         .from('vehiculos')
-        .select('estado, soat_vencimiento, citv_vencimiento, poliza_vencimiento, contrato_alquiler_vencimiento, ubicacion_actual');
+        .select('estado, placa, soat_vencimiento, citv_vencimiento, poliza_vencimiento, contrato_alquiler_vencimiento, ubicacion_actual');
 
       const filteredVehicles = locationFilter === 'todos'
         ? (vehicles || [])
@@ -181,6 +208,60 @@ export default function Dashboard() {
         }
       });
 
+      // Calcular placas con documentos vencidos o por vencer
+      const platesWithExpiredDocuments = expiredSoat + expiredCitv + expiredPoliza + expiredContrato;
+      const platesWithWarningDocuments = warningSoat + warningCitv + warningPoliza + warningContrato;
+      const totalPlates = totalVehicles;
+
+      // Guardar detalles de placas para el modal
+      const plateDetailsData = filteredVehicles.map(vehicle => {
+        const getDocumentStatus = (vencimiento: string | null) => {
+          if (!vencimiento) return { status: 'ok', statusText: 'No aplica', daysUntil: null, color: 'text-gray-600' };
+          
+          const date = new Date(vencimiento);
+          const daysUntil = Math.ceil((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (date < today) {
+            return { status: 'expired', statusText: 'Vencido', daysUntil: Math.abs(daysUntil), color: 'text-red-600' };
+          } else if (date <= thirtyDaysFromNow) {
+            return { status: 'warning', statusText: 'Por vencer', daysUntil: daysUntil, color: 'text-orange-600' };
+          } else {
+            return { status: 'ok', statusText: 'Vigente', daysUntil: daysUntil, color: 'text-green-600' };
+          }
+        };
+
+        const soatStatus = getDocumentStatus(vehicle.soat_vencimiento);
+        const citvStatus = getDocumentStatus(vehicle.citv_vencimiento);
+        const polizaStatus = getDocumentStatus(vehicle.poliza_vencimiento);
+        const contratoStatus = getDocumentStatus(vehicle.contrato_alquiler_vencimiento);
+
+        return {
+          placa: vehicle.placa || 'Sin placa',
+          ubicacion: vehicle.ubicacion_actual || 'Sin ubicación',
+          estado: vehicle.estado || 'Sin estado',
+          documentos: {
+            soat: {
+              vencimiento: vehicle.soat_vencimiento,
+              ...soatStatus
+            },
+            citv: {
+              vencimiento: vehicle.citv_vencimiento,
+              ...citvStatus
+            },
+            poliza: {
+              vencimiento: vehicle.poliza_vencimiento,
+              ...polizaStatus
+            },
+            contrato: {
+              vencimiento: vehicle.contrato_alquiler_vencimiento,
+              ...contratoStatus
+            }
+          }
+        };
+      });
+
+      setPlateDetails(plateDetailsData);
+
       setStats(prev => ({
         ...prev,
         totalVehicles,
@@ -194,6 +275,10 @@ export default function Dashboard() {
         warningPoliza,
         expiredContrato,
         warningContrato,
+        // Nuevas métricas de placas
+        platesWithExpiredDocuments,
+        platesWithWarningDocuments,
+        totalPlates,
       }));
 
     } catch (err) {
@@ -231,6 +316,24 @@ export default function Dashboard() {
       const pendingShipments = shipments?.filter(s => s.status === 'pending').length || 0;
       const deliveredShipments = shipments?.filter(s => s.status === 'delivered').length || 0;
 
+      // 3. Fetch Ticket Stats
+      const { data: tickets } = await supabase.from('tickets').select('status, created_at, resolved_at');
+      const totalTickets = tickets?.length || 0;
+      const resolvedTickets = tickets?.filter(t => t.status === 'resolved').length || 0;
+      const pendingTickets = tickets?.filter(t => t.status === 'pending').length || 0;
+      const inProgressTickets = tickets?.filter(t => t.status === 'in_progress').length || 0;
+      
+      // Calcular tiempo promedio de resolución (en días)
+      const resolvedTicketsWithTime = tickets?.filter(t => t.status === 'resolved' && t.resolved_at && t.created_at) || [];
+      const averageResolutionTime = resolvedTicketsWithTime.length > 0 
+        ? resolvedTicketsWithTime.reduce((acc, ticket) => {
+            const created = new Date(ticket.created_at);
+            const resolved = new Date(ticket.resolved_at);
+            const daysDiff = Math.ceil((resolved.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+            return acc + daysDiff;
+          }, 0) / resolvedTicketsWithTime.length
+        : 0;
+
       // Importante: no tocar aquí las estadísticas de vehículos ni vencimientos,
       // esas las controla fetchVehicleData para respetar el filtro de sede.
       setStats(prev => ({
@@ -245,6 +348,12 @@ export default function Dashboard() {
         activeShipments,
         pendingShipments,
         deliveredShipments,
+        // Nuevas métricas de tickets
+        totalTickets,
+        resolvedTickets,
+        pendingTickets,
+        inProgressTickets,
+        averageResolutionTime,
       }));
 
       // 4. Fetch SUTRAN Info por sede
@@ -368,6 +477,16 @@ export default function Dashboard() {
       path: '/inventory'
     },
     {
+      title: 'Tickets Resueltos',
+      value: stats.resolvedTickets,
+      subtitle: `${stats.averageResolutionTime.toFixed(1)} días promedio`,
+      icon: CheckSquare,
+      color: 'green',
+      bgColor: 'bg-green-50',
+      textColor: 'text-green-600',
+      path: '/tickets'
+    },
+    {
       title: 'Flota Vehicular',
       value: stats.totalVehicles,
       subtitle: `${stats.activeVehicles} activas, ${stats.maintenanceVehicles} en proceso`,
@@ -378,24 +497,14 @@ export default function Dashboard() {
       path: '/flota'
     },
     {
-      title: 'Cámaras',
-      value: stats.totalCameras,
-      subtitle: `${stats.activeCameras} activas`,
-      icon: Camera,
-      color: 'green',
-      bgColor: 'bg-green-50',
-      textColor: 'text-green-600',
-      path: '/cameras'
-    },
-    {
-      title: 'Sedes',
-      value: stats.totalLocations,
-      subtitle: 'Ubicaciones',
-      icon: MapPin,
-      color: 'purple',
-      bgColor: 'bg-purple-50',
-      textColor: 'text-purple-600',
-      path: '/sedes'
+      title: 'Placas con Documentos',
+      value: stats.platesWithExpiredDocuments + stats.platesWithWarningDocuments,
+      subtitle: `${stats.platesWithExpiredDocuments} vencidos, ${stats.platesWithWarningDocuments} por vencer`,
+      icon: AlertOctagon,
+      color: 'orange',
+      bgColor: 'bg-orange-50',
+      textColor: 'text-orange-600',
+      path: '/flota'
     },
   ];
 
@@ -672,13 +781,6 @@ export default function Dashboard() {
                 <p className="text-sm text-gray-500 text-center py-4">No hay actividad reciente</p>
               )}
             </div>
-
-            <button
-              onClick={() => navigate('/audit')}
-              className="w-full mt-4 text-[11px] font-bold text-slate-600 uppercase tracking-widest hover:text-slate-800 py-3 rounded-lg hover:bg-slate-50 transition-colors border border-dashed border-slate-200 hover:border-slate-300"
-            >
-              Ver historial completo
-            </button>
           </div>
         </div>
 
@@ -916,6 +1018,169 @@ export default function Dashboard() {
                     className="flex-1 bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
                   >
                     Registrar Nueva Visita
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Plate Details Modal */}
+        {showPlateDetails && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+              <div className="bg-orange-50 border-b border-orange-100 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white p-2 rounded-lg">
+                      <Car className="text-orange-600" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Detalles de Documentos por Placa</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {plateDetails.length} vehículos • {vehicleLocationFilter === 'todos' ? 'Todas las sedes' : vehicleLocationFilter}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowPlateDetails(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left p-3 font-semibold text-gray-900 border-r border-gray-200">Placa</th>
+                        <th className="text-left p-3 font-semibold text-gray-900 border-r border-gray-200">Ubicación</th>
+                        <th className="text-left p-3 font-semibold text-gray-900 border-r border-gray-200">Estado</th>
+                        <th className="text-left p-3 font-semibold text-gray-900 border-r border-gray-200">SOAT</th>
+                        <th className="text-left p-3 font-semibold text-gray-900 border-r border-gray-200">Rev. Técnica</th>
+                        <th className="text-left p-3 font-semibold text-gray-900 border-r border-gray-200">Póliza</th>
+                        <th className="text-left p-3 font-semibold text-gray-900">Contrato</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {plateDetails.map((plate, index) => (
+                        <tr key={index} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="p-3 font-medium text-gray-900 border-r border-gray-100">{plate.placa}</td>
+                          <td className="p-3 text-gray-700 border-r border-gray-100">{plate.ubicacion}</td>
+                          <td className="p-3 border-r border-gray-100">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              plate.estado === 'activa' ? 'bg-green-100 text-green-800' :
+                              plate.estado === 'en_proceso' ? 'bg-orange-100 text-orange-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {plate.estado === 'activa' ? 'Activa' :
+                               plate.estado === 'en_proceso' ? 'En Proceso' :
+                               plate.estado || 'Sin estado'}
+                            </span>
+                          </td>
+                          <td className="p-3 border-r border-gray-100">
+                            <div className="space-y-1">
+                              <div className={`text-sm font-medium ${plate.documentos.soat.color}`}>
+                                {plate.documentos.soat.statusText}
+                              </div>
+                              {plate.documentos.soat.vencimiento && (
+                                <div className="text-xs text-gray-500">
+                                  {new Date(plate.documentos.soat.vencimiento).toLocaleDateString()}
+                                </div>
+                              )}
+                              {plate.documentos.soat.daysUntil !== null && (
+                                <div className="text-xs text-gray-600">
+                                  {plate.documentos.soat.status === 'expired' 
+                                    ? `Hace ${plate.documentos.soat.daysUntil} días`
+                                    : `Faltan ${plate.documentos.soat.daysUntil} días`
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3 border-r border-gray-100">
+                            <div className="space-y-1">
+                              <div className={`text-sm font-medium ${plate.documentos.citv.color}`}>
+                                {plate.documentos.citv.statusText}
+                              </div>
+                              {plate.documentos.citv.vencimiento && (
+                                <div className="text-xs text-gray-500">
+                                  {new Date(plate.documentos.citv.vencimiento).toLocaleDateString()}
+                                </div>
+                              )}
+                              {plate.documentos.citv.daysUntil !== null && (
+                                <div className="text-xs text-gray-600">
+                                  {plate.documentos.citv.status === 'expired' 
+                                    ? `Hace ${plate.documentos.citv.daysUntil} días`
+                                    : `Faltan ${plate.documentos.citv.daysUntil} días`
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3 border-r border-gray-100">
+                            <div className="space-y-1">
+                              <div className={`text-sm font-medium ${plate.documentos.poliza.color}`}>
+                                {plate.documentos.poliza.statusText}
+                              </div>
+                              {plate.documentos.poliza.vencimiento && (
+                                <div className="text-xs text-gray-500">
+                                  {new Date(plate.documentos.poliza.vencimiento).toLocaleDateString()}
+                                </div>
+                              )}
+                              {plate.documentos.poliza.daysUntil !== null && (
+                                <div className="text-xs text-gray-600">
+                                  {plate.documentos.poliza.status === 'expired' 
+                                    ? `Hace ${plate.documentos.poliza.daysUntil} días`
+                                    : `Faltan ${plate.documentos.poliza.daysUntil} días`
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="space-y-1">
+                              <div className={`text-sm font-medium ${plate.documentos.contrato.color}`}>
+                                {plate.documentos.contrato.statusText}
+                              </div>
+                              {plate.documentos.contrato.vencimiento && (
+                                <div className="text-xs text-gray-500">
+                                  {new Date(plate.documentos.contrato.vencimiento).toLocaleDateString()}
+                                </div>
+                              )}
+                              {plate.documentos.contrato.daysUntil !== null && (
+                                <div className="text-xs text-gray-600">
+                                  {plate.documentos.contrato.status === 'expired' 
+                                    ? `Hace ${plate.documentos.contrato.daysUntil} días`
+                                    : `Faltan ${plate.documentos.contrato.daysUntil} días`
+                                  }
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 border-t border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">{plateDetails.length}</span> vehículos mostrados
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigate('/flota-vehicular');
+                      setShowPlateDetails(false);
+                    }}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium text-sm"
+                  >
+                    Ir a Flota Vehicular
                   </button>
                 </div>
               </div>

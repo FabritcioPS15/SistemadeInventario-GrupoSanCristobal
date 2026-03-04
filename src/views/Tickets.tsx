@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Clock, History, ArrowRight, CheckCircle2, ShieldCheck, X, Lock, BarChart3, TrendingUp, Download, Activity, XCircle } from 'lucide-react';
+import { Clock, History, ArrowRight, CheckCircle2, ShieldCheck, X, Lock, BarChart3, TrendingUp, Download, Activity, XCircle, Archive } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { jsPDF } from 'jspdf';
@@ -79,7 +79,16 @@ export default function Tickets() {
         return () => clearInterval(interval);
     }, [tickets]);
 
+    // Función manual para forzar archivado (para pruebas)
+    const forceArchiveOldTickets = async () => {
+        console.log('🔧 FORZANDO ARCHIVADO MANUAL');
+        await handleAutomation();
+    };
+
     const handleAutomation = async (ticketsData: any[] = tickets) => {
+        console.log('🔄 INICIANDO AUTOMATIZACIÓN DE TICKETS');
+        console.log('Tickets totales:', ticketsData.length);
+        
         const now = new Date();
         const threeMinutes = 3 * 60 * 1000;
         const tenMinutes = 10 * 60 * 1000;
@@ -96,58 +105,74 @@ export default function Tickets() {
             const isClosed = t.status === 'closed';
             const hasClosedAt = t.closed_at;
             
-            // Usar solo closed_at para el archivado
-            const archiveTime = hasClosedAt ? t.closed_at : null;
-            const timeDiff = archiveTime ? (now.getTime() - new Date(archiveTime).getTime()) : 0;
-            const shouldArchive = isClosed && archiveTime && timeDiff >= tenMinutes;
-            
-            // Debug: mostrar información de tickets cerrados
-            if (isClosed) {
-                console.log('Ticket cerrado para archivar:', {
-                    id: t.id,
-                    status: t.status,
-                    created_at: t.created_at,
-                    closed_at: t.closed_at,
-                    archiveTime: archiveTime,
-                    timeDiff: Math.floor(timeDiff / 60000), // en minutos
-                    shouldArchive
-                });
-            }
-            
-            return shouldArchive;
-        });
-
-        console.log('Automation check:', {
-            totalTickets: ticketsData.length,
-            toClose: toClose.length,
-            toArchive: toArchive.length,
-            now: now.toISOString()
-        });
-
-        if (toClose.length > 0) {
-            console.log('Cerrando automáticamente tickets resueltos:', toClose.map(t => t.id));
-            
-            // Actualizar tickets resueltos a cerrados
-            for (const ticket of toClose) {
-                await supabase.from('tickets').update({
-                    status: 'closed',
-                    closed_at: new Date().toISOString()
-                }).eq('id', ticket.id);
+            if (isClosed && hasClosedAt) {
+                const closedTime = new Date(t.closed_at);
+                const timeDiff = now.getTime() - closedTime.getTime();
+                const minutesDiff = Math.floor(timeDiff / 60000);
                 
-                // Agregar comentario automático de cierre
-                await supabase.from('ticket_comments').insert([{
-                    ticket_id: ticket.id,
-                    user_id: '00000000-0000-0000-0000-000000000000', // ID del sistema
-                    content: `**SISTEMA**: Ticket cerrado automáticamente después de 3 minutos en estado "Resuelto"`,
-                }]);
+                console.log(`📋 Ticket ${t.id?.slice(0, 8)}: cerrado hace ${minutesDiff} minutos`);
+                
+                return minutesDiff >= 10;
             }
+            return false;
+        });
+
+        console.log(`📊 Resumen: ${toClose.length} para cerrar, ${toArchive.length} para archivar`);
+
+        // Procesar cierre automático
+        if (toClose.length > 0) {
+            console.log('🔒 Cerrando tickets resueltos:', toClose.map(t => t.id?.slice(0, 8)));
             
-            fetchTickets();
+            for (const ticket of toClose) {
+                try {
+                    const { error } = await supabase.from('tickets').update({
+                        status: 'closed',
+                        closed_at: new Date().toISOString()
+                    }).eq('id', ticket.id);
+                    
+                    if (error) {
+                        console.error('❌ Error cerrando ticket:', error);
+                        continue;
+                    }
+                    
+                    console.log(`✅ Ticket ${ticket.id?.slice(0, 8)} cerrado exitosamente`);
+                } catch (error) {
+                    console.error(`❌ Error procesando ticket ${ticket.id}:`, error);
+                }
+            }
         }
 
+        // Procesar archivado automático
         if (toArchive.length > 0) {
-            console.log('Archivando tickets:', toArchive.map(t => t.id));
-            await supabase.from('tickets').update({ status: 'archived' }).in('id', toArchive.map(t => t.id));
+            console.log('📁 Archivando tickets cerrados:', toArchive.map(t => t.id?.slice(0, 8)));
+            
+            for (const ticket of toArchive) {
+                try {
+                    const { error } = await supabase.from('tickets').update({ 
+                        status: 'archived' 
+                    }).eq('id', ticket.id);
+                    
+                    if (error) {
+                        console.error('❌ Error archivando ticket:', error);
+                        console.error('Detalles:', {
+                            ticketId: ticket.id,
+                            currentStatus: ticket.status,
+                            closedAt: ticket.closed_at
+                        });
+                        continue;
+                    }
+                    
+                    console.log(`✅ Ticket ${ticket.id?.slice(0, 8)} archivado exitosamente`);
+                    
+                } catch (error) {
+                    console.error(`❌ Error procesando archivado del ticket ${ticket.id}:`, error);
+                }
+            }
+        }
+        
+        // Refrescar datos si hubo cambios
+        if (toClose.length > 0 || toArchive.length > 0) {
+            console.log('🔄 Refrescando tickets...');
             fetchTickets();
         }
     };
@@ -318,6 +343,17 @@ export default function Tickets() {
                                     </div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pendientes y en proceso</p>
                                 </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex flex-wrap gap-4 mb-8">
+                                <button
+                                    onClick={() => navigate('/tickets/history')}
+                                    className="flex-1 md:flex-none px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                                >
+                                    <History size={18} />
+                                    Ver Tickets Archivados
+                                </button>
                             </div>
 
                             <div className="bg-gradient-to-br from-[#002855] to-[#001529] p-10 rounded-[3rem] text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
@@ -740,18 +776,18 @@ export default function Tickets() {
                             <div className="px-8 pb-32 mt-10 max-w-[1800px] mx-auto w-full">
                                 <div className="flex items-center justify-between mb-8 px-4">
                                     <div>
-                                        <h2 className="text-sm font-black text-[#002855] uppercase tracking-[0.2em] flex items-center gap-3">
-                                            Monitoreo de Actividad Reciente
-                                        </h2>
+                                        <h2 className="text-xl font-black text-[#002855]">Historial de tickets</h2>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Reporte detallado de las últimas interacciones</p>
                                     </div>
-                                    <button
-                                        onClick={() => navigate('/tickets/history')}
-                                        className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#002855] hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
-                                    >
-                                        Historial de tickets
-                                        <ArrowRight size={14} />
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => navigate('/tickets/history')}
+                                            className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#002855] hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                                        >
+                                            Historial de tickets
+                                            <ArrowRight size={14} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="bg-white rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.03)] border border-slate-50 overflow-hidden">

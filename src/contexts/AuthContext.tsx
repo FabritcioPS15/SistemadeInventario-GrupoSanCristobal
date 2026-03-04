@@ -157,7 +157,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const fullAccess = [
       'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'checklist', 'painpoint',
-      'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular', 'tickets', 'tickets-dashboard', 'tickets-mine', 'tickets-reports', 'my-chats', 'painpoint',
+      'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular', 'tickets', 'tickets-dashboard', 'tickets-mine', 'tickets-reports', 'my-chats', 'painpoint', 'sutran',
       'inventory-pc', 'inventory-celular', 'inventory-dvr', 'inventory-impresora', 'inventory-escaner',
       'inventory-monitor', 'inventory-laptop', 'inventory-proyector', 'inventory-switch', 'inventory-chip',
       'inventory-tinte', 'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
@@ -183,9 +183,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
 
   const canEdit = (): boolean => {
-    if (!user) return false;
-    const allowedRoles = ['systems', 'management', 'admin', 'technician'];
-    return allowedRoles.includes(user.role);
+    if (!user) {
+      console.log('❌ canEdit: No user found');
+      return false;
+    }
+    const allowedRoles = ['systems', 'management', 'admin', 'supervisor', 'technician'];
+    const hasPermission = allowedRoles.includes(user.role);
+    console.log('🔍 canEdit check:', {
+      userRole: user.role,
+      allowedRoles,
+      hasPermission,
+      userId: user.id,
+      userFullName: user.full_name
+    });
+    return hasPermission;
   };
 
   const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {

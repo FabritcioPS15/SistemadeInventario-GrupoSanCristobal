@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, User, Clock, AlertCircle, MessageSquare, ShieldCheck, MessageCircle, Copy, ArrowLeft } from 'lucide-react';
+import { Send, User, Clock, AlertCircle, MessageSquare, ShieldCheck, MessageCircle, Copy, ArrowLeft, Lock, Smile, Bold, Italic, List } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -14,6 +14,8 @@ export default function TicketDetail() {
     const [sending, setSending] = useState(false);
     const [loading, setLoading] = useState(true);
     const [copiedItem, setCopiedItem] = useState<string | null>(null);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [showFormatting, setShowFormatting] = useState(false);
     const commentsEndRef = useRef<HTMLDivElement>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
 
@@ -130,30 +132,134 @@ export default function TicketDetail() {
         }
     };
 
-    const handleSendComment = async (e: React.FormEvent) => {
+    const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newComment.trim()) return;
+        if (!newComment.trim() || sending) return;
 
+        setSending(true);
         try {
-            setSending(true);
             const { error } = await supabase
                 .from('ticket_comments')
-                .insert([
-                    {
-                        ticket_id: ticketId,
-                        user_id: user?.id,
-                        content: newComment.trim()
-                    }
-                ]);
+                .insert([{
+                    ticket_id: ticketId,
+                    user_id: user?.id,
+                    content: newComment.trim()
+                }]);
 
             if (error) throw error;
             setNewComment('');
-            fetchComments();
+            await fetchComments();
         } catch (error) {
-            console.error('Error sending comment:', error);
+            console.error('Error al enviar comentario:', error);
         } finally {
             setSending(false);
         }
+    };
+
+    // Funciones para emojis y formato
+    const commonEmojis = [
+        '😀', '😊', '😂', '❤️', '👍', '👎', '🎉', '🔥', '💯', '✅', 
+        '❌', '🚀', '💪', '🙏', '👏', '🤝', '💡', '⚡', '🌟', '✨',
+        '😎', '🤔', '😅', '🤗', '🎯', '💎', '🏆', '🌈', '🎨', '📌',
+        '🔔', '📢', '📝', '📋', '🔧', '⚙️', '🎯', '📊', '📈', '📉',
+        '⭐', '🌟', '💫', '🌙', '☀️', '🌺', '🦁', '🐧', '🦊', '🐼'
+    ];
+    
+    const addEmoji = (emoji: string) => {
+        setNewComment(prev => prev + emoji);
+        setShowEmojiPicker(false);
+    };
+
+    const addFormat = (format: string) => {
+        const textarea = document.getElementById('comment-input') as HTMLTextAreaElement;
+        if (!textarea) return;
+        
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const selectedText = newComment.substring(start, end);
+        let formattedText = '';
+        
+        switch (format) {
+            case 'bold':
+                formattedText = `**${selectedText || 'texto en negrita'}**`;
+                break;
+            case 'italic':
+                formattedText = `*${selectedText || 'texto en cursiva'}*`;
+                break;
+            case 'underline':
+                formattedText = `__${selectedText || 'texto subrayado'}__`;
+                break;
+            case 'strikethrough':
+                formattedText = `~~${selectedText || 'texto tachado'}~~`;
+                break;
+            case 'code':
+                formattedText = `\`${selectedText || 'código'}\``;
+                break;
+            case 'codeblock':
+                formattedText = `\`\`\`${selectedText || 'bloque de código'}\`\`\``;
+                break;
+            case 'quote':
+                formattedText = `> ${selectedText || 'cita'}`;
+                break;
+            case 'highlight':
+                formattedText = `==${selectedText || 'texto destacado'}==`;
+                break;
+            case 'list':
+                formattedText = `\n• ${selectedText || 'Item de lista'}`;
+                break;
+            case 'numberedlist':
+                formattedText = `\n1. ${selectedText || 'Primer item'}`;
+                break;
+            case 'checklist':
+                formattedText = `\n- [ ] ${selectedText || 'Tarea pendiente'}`;
+                break;
+            case 'title':
+                formattedText = `\n# ${selectedText || 'Título'}`;
+                break;
+            case 'subtitle':
+                formattedText = `\n## ${selectedText || 'Subtítulo'}`;
+                break;
+            default:
+                formattedText = selectedText;
+        }
+        
+        setNewComment(prev => prev.substring(0, start) + formattedText + prev.substring(end));
+        setShowFormatting(false);
+    };
+
+    // Función mejorada para renderizar markdown
+    const renderMarkdown = (text: string) => {
+        return text
+            // Formatos de texto
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **negrita**
+            .replace(/\*(.*?)\*/g, '<em>$1</em>') // *cursiva*
+            .replace(/__(.*?)__/g, '<u>$1</u>') // __subrayado__
+            .replace(/~~(.*?)~~/g, '<del>$1</del>') // ~~tachado~~
+            .replace(/==(.*?)==/g, '<mark>$1</mark>') // ==destacado==
+            
+            // Código
+            .replace(/`(.*?)`/g, '<code class="inline-code">$1</code>') // `código`
+            .replace(/```(.*?)```/gs, '<pre class="code-block"><code>$1</code></pre>') // ```código```
+            
+            // Citas
+            .replace(/^> (.*?)$/gm, '<blockquote class="quote">$1</blockquote>') // > cita
+            
+            // Encabezados
+            .replace(/^# (.*?)$/gm, '<h1 class="title">$1</h1>') // # Título
+            .replace(/^## (.*?)$/gm, '<h2 class="subtitle">$1</h2>') // ## Subtítulo
+            
+            // Listas
+            .replace(/^• (.*?)$/gm, '<li class="bullet-item">$1</li>') // • lista
+            .replace(/^\d+\. (.*?)$/gm, '<li class="numbered-item">$1</li>') // 1. lista numerada
+            .replace(/^-\s*\[\s*\] (.*?)$/gm, '<li class="checklist-item">☐ $1</li>') // - [ ] checklist
+            .replace(/^-\s*\[x\] (.*?)$/gm, '<li class="checklist-item">☑ $1</li>') // - [x] checklist completado
+            
+            // Envolver listas
+            .replace(/(<li class="bullet-item">.*<\/li>)/gs, '<ul class="bullet-list">$1</ul>')
+            .replace(/(<li class="numbered-item">.*<\/li>)/gs, '<ol class="numbered-list">$1</ol>')
+            .replace(/(<li class="checklist-item">.*<\/li>)/gs, '<ul class="checklist">$1</ul>')
+            
+            .replace(/\n/g, '<br>'); // saltos de línea
     };
 
     const handleDeleteTicket = async () => {
@@ -303,7 +409,7 @@ export default function TicketDetail() {
             return;
         }
         
-        // Verificar si ya está asignado
+        // Verificar si ya está asignado (evitar duplicados)
         const isAlreadyAssigned = ticket.ticket_assignments?.some((assignment: any) => assignment.user_id === user?.id);
         console.log('Is already assigned:', isAlreadyAssigned);
         
@@ -341,8 +447,20 @@ export default function TicketDetail() {
             
             console.log('Successfully joined ticket');
             
-            // Cambiar estado a in_progress
-            await handleStatusUpdate('in_progress');
+            // Cambiar estado a in_progress si es el primer participante
+            if (currentAssignments === 0) {
+                await handleStatusUpdate('in_progress');
+            }
+            
+            // Agregar notificación de unión al chat
+            await supabase.from('ticket_comments').insert([{
+                ticket_id: ticketId,
+                user_id: user?.id,
+                content: `**${user?.full_name?.split(' ')[0] || 'Un usuario'}** se ha unido al ticket.`
+            }]);
+            
+            // Actualizar el ticket para reflejar los cambios
+            await fetchTicket();
             
         } catch (error) {
             console.error('Error al unirse al ticket:', error);
@@ -351,20 +469,85 @@ export default function TicketDetail() {
     };
 
     const getAssignedUsers = () => {
-        if (!ticket?.ticket_assignments) return [];
-        return ticket.ticket_assignments.map((assignment: any) => ({
-            ...assignment,
-            user: assignment.user || {
-                id: assignment.user_id,
-                full_name: 'Usuario',
-                email: '',
-                avatar_url: null
-            },
-            isCurrentUser: assignment.user_id === user?.id
-        }));
+        console.log('getAssignedUsers - ticket:', ticket);
+        console.log('getAssignedUsers - ticket_assignments:', ticket?.ticket_assignments);
+        console.log('getAssignedUsers - user?.id:', user?.id);
+        
+        if (!ticket?.ticket_assignments) {
+            console.log('getAssignedUsers - no assignments, returning []');
+            return [];
+        }
+        
+        const result = ticket.ticket_assignments.map((assignment: any) => {
+            console.log('getAssignedUsers - processing assignment:', assignment);
+            return {
+                ...assignment,
+                user: assignment.user || {
+                    id: assignment.user_id,
+                    full_name: 'Usuario',
+                    email: '',
+                    avatar_url: null
+                },
+                isCurrentUser: assignment.user_id === user?.id
+            };
+        });
+        
+        console.log('getAssignedUsers - result:', result);
+        return result;
     };
 
-    const canJoinTicket = canManageStatus && ticket?.status === 'open' && !getAssignedUsers().some((u: any) => u.isCurrentUser) && getAssignedUsers().length < 3;
+    const handleFinalizeTicket = async () => {
+        if (!canManageStatus || statusUpdating) {
+            console.log('Cannot finalize ticket - insufficient permissions or already updating');
+            return;
+        }
+
+        if (!confirm('¿Está seguro de finalizar y archivar este ticket? Esta acción no se puede deshacer.')) {
+            return;
+        }
+
+        try {
+            setStatusUpdating(true);
+            console.log('Finalizando y archivando ticket:', ticketId);
+            
+            // Actualizar directamente a archivado con timestamp
+            const { error } = await supabase.from('tickets').update({
+                status: 'archived',
+                closed_at: new Date().toISOString()
+            }).eq('id', ticketId);
+            
+            if (error) {
+                console.error('Error al finalizar ticket:', error);
+                throw error;
+            }
+            
+            console.log('Ticket finalizado y archivado exitosamente');
+            
+            // Agregar comentario de finalización
+            await supabase.from('ticket_comments').insert([{
+                ticket_id: ticketId,
+                user_id: user?.id,
+                content: `**FINALIZADO**: Ticket finalizado y archivado manualmente por ${user?.full_name}`,
+            }]);
+            
+            fetchComments();
+        } catch (error) {
+            console.error('Error al finalizar ticket:', error);
+            alert('Error al finalizar ticket: ' + (error as any)?.message || 'Error desconocido');
+        } finally {
+            setStatusUpdating(false);
+        }
+    };
+
+    // Verificar si el usuario está asignado al ticket
+    const isUserAssigned = getAssignedUsers().some((u: any) => u.isCurrentUser);
+    const canFinalizeTicket = canManageStatus && ticket?.status !== 'archived';
+    
+    // Permitir unirse si el ticket está abierto o en progreso
+    const hasPermission = canManageStatus;
+    const isOpen = ticket?.status === 'open' || ticket?.status === 'in_progress';
+    const hasSpace = getAssignedUsers().length < 3;
+    const canJoinTicket = hasPermission && isOpen && hasSpace;
 
     const getStatusLabel = (status: string) => {
         switch (status) {
@@ -448,6 +631,60 @@ export default function TicketDetail() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            <style>{`
+                .inline-code {
+                    background-color: rgba(0, 0, 0, 0.1);
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-family: 'Courier New', monospace;
+                    font-size: 0.9em;
+                }
+                .code-block {
+                    background-color: rgba(0, 0, 0, 0.05);
+                    padding: 12px;
+                    border-radius: 8px;
+                    border-left: 4px solid #3b82f6;
+                    font-family: 'Courier New', monospace;
+                    font-size: 0.9em;
+                    overflow-x: auto;
+                    margin: 8px 0;
+                }
+                .quote {
+                    border-left: 3px solid #e5e7eb;
+                    padding-left: 12px;
+                    margin: 8px 0;
+                    font-style: italic;
+                    color: #6b7280;
+                }
+                .title {
+                    font-size: 1.5em;
+                    font-weight: bold;
+                    margin: 16px 0 8px 0;
+                    color: #1f2937;
+                }
+                .subtitle {
+                    font-size: 1.3em;
+                    font-weight: bold;
+                    margin: 12px 0 6px 0;
+                    color: #374151;
+                }
+                .bullet-list, .numbered-list, .checklist {
+                    margin: 8px 0;
+                    padding-left: 20px;
+                }
+                .bullet-item, .numbered-item, .checklist-item {
+                    margin: 4px 0;
+                    line-height: 1.5;
+                }
+                .checklist-item {
+                    list-style: none;
+                }
+                mark {
+                    background-color: #fef3c7;
+                    padding: 1px 2px;
+                    border-radius: 2px;
+                }
+            `}</style>
             {/* Header Fijo */}
             <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
                 <div className="bg-white border-b border-gray-200 px-8 py-4">
@@ -562,7 +799,17 @@ export default function TicketDetail() {
                                 {/* Gestión de Estado */}
                                 <div className="pt-6 border-t border-gray-200">
                                     <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Gestión de Estado</p>
-                                    {isTicketCreator ? (
+                                    {ticket?.status === 'archived' ? (
+                                        <div className="text-center py-8">
+                                            <div className="w-12 h-12 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center mx-auto mb-4">
+                                                <Lock size={24} className="text-gray-400" />
+                                            </div>
+                                            <h3 className="text-sm font-bold text-gray-700 mb-2">Estado Bloqueado</h3>
+                                            <p className="text-xs text-gray-500">
+                                                Este ticket está archivado y no permite cambios de estado.
+                                            </p>
+                                        </div>
+                                    ) : isTicketCreator ? (
                                         // Vista informativa para el creador del ticket
                                         <div className="space-y-3">
                                             {['open', 'in_progress', 'resolved', 'closed'].map(st => (
@@ -590,17 +837,6 @@ export default function TicketDetail() {
                                                     Rol: {user?.role} | Permisos: {canManageStatus ? '✅ Gestión' : '❌ Solo lectura'}
                                                 </p>
                                             </div>
-                                            
-                                            {/* Botón de prueba */}
-                                            <button
-                                                onClick={() => {
-                                                    console.log('TEST BUTTON CLICKED!');
-                                                    alert('Botón de prueba funciona!');
-                                                }}
-                                                className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-black uppercase"
-                                            >
-                                                🧪 PROBAR BOTÓN
-                                            </button>
                                             
                                             {['open', 'in_progress', 'resolved', 'closed'].map(st => (
                                                 <button
@@ -740,85 +976,298 @@ export default function TicketDetail() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50/50 to-white">
-                                {comments.length === 0 ? (
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50/50 to-white custom-scrollbar" style={{ height: '600px', maxHeight: '580px' }}>
+                                {isUserAssigned ? (
+                                    <>
+                                        {comments.length === 0 ? (
+                                            <div className="h-full flex flex-col items-center justify-center text-gray-300 space-y-4">
+                                                <div className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-white">
+                                                    <MessageSquare size={32} className="opacity-20" />
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-sm font-black uppercase tracking-widest opacity-30">Aún no hay mensajes</p>
+                                                    <p className="text-xs text-gray-400 mt-2">Sé el primero en responder</p>
+                                                </div>
+                                            </div>
+                                        ) : comments.map((c, index) => {
+                                            const isMe = c.user_id === user?.id;
+                                            const isSystem = c.content.includes('Cambió el estado');
+
+                                            if (isSystem) {
+                                                return (
+                                                    <div key={c.id} className="flex flex-col items-center animate-fadeIn">
+                                                        <div className="w-full flex items-center gap-4 my-4">
+                                                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent"></div>
+                                                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 px-4 py-2 rounded-full shadow-sm text-xs font-black text-blue-700 uppercase tracking-widest flex items-center gap-2">
+                                                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                                                                {c.content.replace(/\*\*/g, '')}
+                                                            </div>
+                                                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent"></div>
+                                                        </div>
+                                                        <span className="text-xs font-black text-blue-400 uppercase tracking-widest">
+                                                            {new Date(c.created_at).toLocaleString('es-PE', { 
+                                                                day: '2-digit', 
+                                                                month: 'short', 
+                                                                hour: '2-digit', 
+                                                                minute: '2-digit' 
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div key={c.id} className={`flex gap-4 ${isMe ? 'flex-row-reverse' : ''} group animate-slideIn`} style={{ animationDelay: `${index * 50}ms` }}>
+                                                    <div className={`w-10 h-10 rounded-xl overflow-hidden border-2 shadow-lg flex-shrink-0 transform transition-all group-hover:scale-110 ${isMe ? 'bg-blue-600 border-blue-700' : 'bg-[#002855] border-[#003366]'}`}>
+                                                        {c.author?.avatar_url ? (
+                                                            <img src={c.author.avatar_url} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-white font-black text-sm">
+                                                                {c.author?.full_name?.charAt(0)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]`}>
+                                                        <div className={`p-4 rounded-2xl shadow-sm text-sm leading-relaxed transition-all group-hover:shadow-md ${isMe ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-br-none' : 'bg-gray-50 text-gray-900 rounded-bl-none'}`}>
+                                                            <p 
+                                                                className="break-words mb-2" 
+                                                                dangerouslySetInnerHTML={{ __html: renderMarkdown(c.content) }}
+                                                            />
+                                                            <div className="text-xs opacity-70 font-medium">
+                                                                {new Date(c.created_at).toLocaleString('es-PE', { 
+                                                                    day: '2-digit', 
+                                                                    month: 'short',
+                                                                    hour: '2-digit', 
+                                                                    minute: '2-digit' 
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </>
+                                ) : (
                                     <div className="h-full flex flex-col items-center justify-center text-gray-300 space-y-4">
                                         <div className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-white">
                                             <MessageSquare size={32} className="opacity-20" />
                                         </div>
                                         <div className="text-center">
-                                            <p className="text-sm font-black uppercase tracking-widest opacity-30">Aún no hay mensajes</p>
-                                            <p className="text-xs text-gray-400 mt-2">Sé el primero en responder</p>
+                                            <p className="text-sm font-black uppercase tracking-widest opacity-30">No puedes ver los mensajes</p>
+                                            <p className="text-xs text-gray-400 mt-2">Debes unirte al ticket para ver la conversación</p>
                                         </div>
                                     </div>
-                                ) : comments.map((c, index) => {
-                                    const isMe = c.user_id === user?.id;
-                                    const isSystem = c.content.includes('Cambió el estado');
-
-                                    if (isSystem) {
-                                        return (
-                                            <div key={c.id} className="flex flex-col items-center animate-fadeIn">
-                                                <div className="w-full flex items-center gap-4 my-4">
-                                                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent"></div>
-                                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 px-4 py-2 rounded-full shadow-sm text-xs font-black text-blue-700 uppercase tracking-widest flex items-center gap-2">
-                                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                                                        {c.content.replace(/\*\*/g, '')}
-                                                    </div>
-                                                    <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent"></div>
-                                                </div>
-                                                <span className="text-xs font-black text-blue-400 uppercase tracking-widest">
-                                                    {new Date(c.created_at).toLocaleString('es-PE', { 
-                                                        day: '2-digit', 
-                                                        month: 'short', 
-                                                        hour: '2-digit', 
-                                                        minute: '2-digit' 
-                                                    })}
-                                                </span>
-                                            </div>
-                                        );
-                                    }
-
-                                    return (
-                                        <div key={c.id} className={`flex gap-4 ${isMe ? 'flex-row-reverse' : ''} group animate-slideIn`} style={{ animationDelay: `${index * 50}ms` }}>
-                                            <div className={`w-10 h-10 rounded-xl overflow-hidden border-2 shadow-lg flex-shrink-0 transform transition-all group-hover:scale-110 ${isMe ? 'bg-blue-600 border-blue-700' : 'bg-[#002855] border-[#003366]'}`}>
-                                                {c.author?.avatar_url ? (
-                                                    <img src={c.author.avatar_url} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-white font-black text-sm">
-                                                        {c.author?.full_name?.charAt(0)}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]`}>
-                                                <div className={`p-4 rounded-2xl shadow-sm text-sm leading-relaxed transition-all group-hover:shadow-md ${isMe ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-br-none' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-none hover:border-blue-300'}`}>
-                                                    <p className="break-words">{c.content}</p>
-                                                </div>
-                                                <div className="flex items-center gap-2 mt-2 px-1">
-                                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">{c.author?.full_name?.split(' ')[0]}</span>
-                                                    <span className="w-1 h-1 rounded-full bg-gray-300" />
-                                                    <span className="text-xs font-black text-gray-400 uppercase">{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                )}
                                 <div ref={commentsEndRef} />
                             </div>
 
                             <div className="p-4 bg-white border-t border-gray-100 bg-gradient-to-t from-gray-50 to-white">
-                                <form onSubmit={handleSendComment} className="relative">
-                                    <div className="relative">
-                                        <input
-                                            type="text"
-                                            value={newComment}
-                                            onChange={(e) => setNewComment(e.target.value)}
-                                            placeholder="Escribe un mensaje aquí..."
-                                            className="w-full h-12 pl-4 pr-16 bg-gray-50 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-bold text-gray-900 placeholder:text-gray-400 transition-all"
-                                        />
+                                {ticket?.status === 'archived' ? (
+                                    <div className="text-center py-8">
+                                        <div className="w-16 h-16 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center mx-auto mb-4">
+                                            <Lock size={32} className="text-gray-400" />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-gray-700 mb-2">Ticket Archivado</h3>
+                                        <p className="text-sm text-gray-500">
+                                            Este ticket ha sido archivado y no permite nuevas interacciones.
+                                            Solo está disponible como referencia histórica.
+                                        </p>
+                                    </div>
+                                ) : !isUserAssigned ? (
+                                    <div className="text-center py-8">
+                                        <div className="w-16 h-16 rounded-full bg-purple-100 border-2 border-dashed border-purple-300 flex items-center justify-center mx-auto mb-4">
+                                            <Lock size={32} className="text-purple-400" />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-purple-700 mb-2">Unión Requerida</h3>
+                                        <p className="text-sm text-purple-500">
+                                            Debes unirte al ticket para participar en la conversación.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <form onSubmit={handleCommentSubmit} className="flex gap-2">
+                                        <div className="flex-1 relative">
+                                            <textarea
+                                                id="comment-input"
+                                                value={newComment}
+                                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewComment(e.target.value)}
+                                                placeholder="Escribe tu mensaje..."
+                                                className="w-full px-4 py-3 pr-24 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                                                rows={1}
+                                                disabled={sending}
+                                            />
+                                            
+                                            {/* Botones de formato */}
+                                            <div className="absolute right-2 top-2 flex gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                                    className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+                                                    title="Agregar emoji"
+                                                >
+                                                    <Smile size={16} className="text-gray-600" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowFormatting(!showFormatting)}
+                                                    className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
+                                                    title="Opciones de formato"
+                                                >
+                                                    <Bold size={16} className="text-gray-600" />
+                                                </button>
+                                            </div>
+                                            
+                                            {/* Selector de emojis */}
+                                            {showEmojiPicker && (
+                                                <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-10 w-80">
+                                                    <div className="mb-2">
+                                                        <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Emojis Comunes</p>
+                                                        <div className="grid grid-cols-10 gap-1">
+                                                            {commonEmojis.slice(0, 30).map((emoji, index) => (
+                                                                <button
+                                                                    key={index}
+                                                                    type="button"
+                                                                    onClick={() => addEmoji(emoji)}
+                                                                    className="w-7 h-7 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-lg"
+                                                                >
+                                                                    {emoji}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Personalizados</p>
+                                                        <div className="grid grid-cols-10 gap-1">
+                                                            {commonEmojis.slice(30).map((emoji, index) => (
+                                                                <button
+                                                                    key={index + 30}
+                                                                    type="button"
+                                                                    onClick={() => addEmoji(emoji)}
+                                                                    className="w-7 h-7 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-lg"
+                                                                >
+                                                                    {emoji}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Selector de formato */}
+                                            {showFormatting && (
+                                                <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-2 z-10 w-56">
+                                                    <div className="grid grid-cols-2 gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('bold')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <Bold size={14} />
+                                                            <span>Negrita</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('italic')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <Italic size={14} />
+                                                            <span>Cursiva</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('underline')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <u className="text-xs font-bold">U</u>
+                                                            <span>Subrayado</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('strikethrough')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <del className="text-xs font-bold">S</del>
+                                                            <span>Tachado</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('code')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <code className="text-xs bg-gray-200 px-1 rounded">&lt;/&gt;</code>
+                                                            <span>Código</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('codeblock')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <code className="text-xs bg-gray-200 px-1">{}</code>
+                                                            <span>Bloque</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('quote')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <span className="text-xs">"</span>
+                                                            <span>Cita</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('highlight')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <mark className="text-xs bg-yellow-200 px-1">H</mark>
+                                                            <span>Destacar</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('list')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <List size={14} />
+                                                            <span>Lista</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('numberedlist')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <span className="text-xs font-bold">1.</span>
+                                                            <span>Numerada</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('checklist')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <span className="text-xs">☐</span>
+                                                            <span>Checklist</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('title')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <span className="text-xs font-bold">H1</span>
+                                                            <span>Título</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addFormat('subtitle')}
+                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                        >
+                                                            <span className="text-xs font-bold">H2</span>
+                                                            <span>Subtítulo</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                         <button
                                             type="submit"
-                                            disabled={!newComment.trim() || sending}
-                                            className="absolute right-2 top-2 w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-all disabled:opacity-30 disabled:scale-100"
+                                            disabled={sending || !newComment.trim()}
+                                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2 shadow-lg"
                                         >
                                             {sending ? (
                                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -826,8 +1275,8 @@ export default function TicketDetail() {
                                                 <Send size={16} />
                                             )}
                                         </button>
-                                    </div>
-                                </form>
+                                    </form>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -879,6 +1328,16 @@ export default function TicketDetail() {
                                     <p className="text-xs text-blue-500 uppercase mt-1">{ticket.locations?.name || 'Sede Central'}</p>
                                 </div>
 
+                       {canJoinTicket && (
+                                    <button
+                                        onClick={handleJoinTicket}
+                                        className="w-full p-2 bg-gradient-to-r from-blue-600 to-green-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-purple-700 hover:to-purple-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        <User size={18} />
+                                        Unirse al Ticket
+                                    </button>
+                                )}
+
                                 {/* Participantes Asignados */}
                                 {getAssignedUsers().length > 0 && (
                                     <div className="p-4 bg-gray-50 rounded-xl">
@@ -911,14 +1370,26 @@ export default function TicketDetail() {
                                     </div>
                                 )}
 
-                                {/* Botón Unirse al Ticket */}
-                                {canJoinTicket && (
+                                {/* Botón Finalizar Ticket */}
+                                {canFinalizeTicket && (
                                     <button
-                                        onClick={handleJoinTicket}
-                                        className="w-full p-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-purple-700 hover:to-purple-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                                        onClick={handleFinalizeTicket}
+                                        disabled={statusUpdating}
+                                        className="w-full p-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-red-700 hover:to-red-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <User size={18} />
-                                        Unirse al Ticket
+                                        {statusUpdating ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                Finalizando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
+                                                    <div className="w-3 h-3 bg-white rounded-full" />
+                                                </div>
+                                                Finalizar Ticket
+                                            </>
+                                        )}
                                     </button>
                                 )}
 

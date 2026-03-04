@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { X, Monitor } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Monitor } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 interface MonitorFormProps {
   editMonitor?: any;
@@ -9,237 +10,373 @@ interface MonitorFormProps {
 }
 
 export default function MonitorForm({ editMonitor, onClose, onSave }: MonitorFormProps) {
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [locations, setLocations] = useState<any[]>([]);
+
   const [formData, setFormData] = useState({
-    code: '',
-    sede: '',
-    area: '',
-    marca: '',
-    modelo: '',
-    numero_serie: '',
-    tamano_pulg: '',
-    resolucion: '',
-    tipo_panel: '',
-    tasa_refresco: '',
-    puertos: '',
-    estado_fisico: '',
-    notas: ''
+    code: editMonitor?.code || '',
+    sede: editMonitor?.sede || '',
+    area: editMonitor?.area || '',
+    marca: editMonitor?.marca || '',
+    modelo: editMonitor?.modelo || '',
+    numero_serie: editMonitor?.numero_serie || '',
+    tamano_pulg: editMonitor?.tamano_pulg || '',
+    resolucion: editMonitor?.resolucion || '',
+    tipo_panel: editMonitor?.tipo_panel || '',
+    tasa_refresco: editMonitor?.tasa_refresco || '',
+    puertos: editMonitor?.puertos || '',
+    estado_fisico: editMonitor?.estado_fisico || '',
+    notas: editMonitor?.notas || ''
   });
 
-  const [loading, setLoading] = useState(false);
-  const [locations, setLocations] = useState<any[]>([]);
+  const panelTypes = [
+    { value: 'ips', label: 'IPS' },
+    { value: 'tn', label: 'TN' },
+    { value: 'va', label: 'VA' },
+    { value: 'oled', label: 'OLED' },
+    { value: 'amoled', label: 'AMOLED' },
+    { value: 'other', label: 'Otro' },
+  ];
+
+  const refreshRates = [
+    { value: '60', label: '60 Hz' },
+    { value: '75', label: '75 Hz' },
+    { value: '120', label: '120 Hz' },
+    { value: '144', label: '144 Hz' },
+    { value: '165', label: '165 Hz' },
+    { value: '240', label: '240 Hz' },
+    { value: '360', label: '360 Hz' },
+    { value: 'other', label: 'Otro' },
+  ];
+
+  const resolutions = [
+    { value: '1366x768', label: 'HD (1366x768)' },
+    { value: '1920x1080', label: 'Full HD (1920x1080)' },
+    { value: '2560x1440', label: 'QHD (2560x1440)' },
+    { value: '3840x2160', label: '4K UHD (3840x2160)' },
+    { value: '5120x2880', label: '5K (5120x2880)' },
+    { value: '7680x4320', label: '8K UHD (7680x4320)' },
+    { value: 'other', label: 'Otra' },
+  ];
+
+  const physicalStates = [
+    { value: 'excelente', label: 'Excelente' },
+    { value: 'bueno', label: 'Bueno' },
+    { value: 'regular', label: 'Regular' },
+    { value: 'malo', label: 'Malo' },
+    { value: 'danado', label: 'Dañado' },
+  ];
 
   useEffect(() => {
     fetchLocations();
-    if (editMonitor) {
-      setFormData({
-        code: editMonitor.code || '',
-        sede: editMonitor.location_id || '',
-        area: editMonitor.area || '',
-        marca: editMonitor.brand || '',
-        modelo: editMonitor.model || '',
-        numero_serie: editMonitor.serial_number || '',
-        tamano_pulg: editMonitor.size_inches || '',
-        resolucion: editMonitor.resolution || '',
-        tipo_panel: editMonitor.panel_type || '',
-        tasa_refresco: editMonitor.refresh_rate || '',
-        puertos: editMonitor.ports || '',
-        estado_fisico: editMonitor.physical_condition || '',
-        notas: editMonitor.notes || ''
-      });
-    } else {
-      generateRandomCode();
-    }
-  }, [editMonitor]);
+  }, []);
 
   const fetchLocations = async () => {
-    const { data } = await supabase
-      .from('locations')
-      .select('*')
-      .order('name');
-    if (data) setLocations(data);
-  };
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .order('name');
 
-  const generateRandomCode = () => {
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setFormData(prev => ({ ...prev, code }));
+      if (!error && data) {
+        setLocations(data);
+      }
+    } catch (error) {
+      console.error('Error al cargar ubicaciones:', error);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    try {
-      const dataToSave: any = {
-        code: formData.code,
-        location_id: formData.sede,
-        area: formData.area,
-        brand: formData.marca,
-        model: formData.modelo,
-        serial_number: formData.numero_serie,
-        size_inches: formData.tamano_pulg,
-        resolution: formData.resolucion,
-        panel_type: formData.tipo_panel,
-        refresh_rate: formData.tasa_refresco,
-        ports: formData.puertos,
-        physical_condition: formData.estado_fisico,
-        notes: formData.notas,
-        status: 'active',
-        asset_type_id: await getAssetTypeId('Monitor')
-      };
 
-      if (editMonitor) {
-        const { error } = await supabase.from('assets').update(dataToSave).eq('id', editMonitor.id);
-        if (error) throw error;
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.code.trim()) {
+      newErrors.code = 'El código es requerido';
+    }
+
+    if (!formData.sede.trim()) {
+      newErrors.sede = 'La sede es requerida';
+    }
+
+    if (!formData.marca.trim()) {
+      newErrors.marca = 'La marca es requerida';
+    }
+
+    if (!formData.modelo.trim()) {
+      newErrors.modelo = 'El modelo es requerido';
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
+    setLoading(true);
+
+    const dataToSave = {
+      code: formData.code.trim(),
+      sede: formData.sede.trim(),
+      area: formData.area.trim() || null,
+      marca: formData.marca.trim(),
+      modelo: formData.modelo.trim(),
+      numero_serie: formData.numero_serie.trim() || null,
+      tamano_pulg: formData.tamano_pulg.trim() || null,
+      resolucion: formData.resolucion.trim() || null,
+      tipo_panel: formData.tipo_panel.trim() || null,
+      tasa_refresco: formData.tasa_refresco.trim() || null,
+      puertos: formData.puertos.trim() || null,
+      estado_fisico: formData.estado_fisico.trim() || null,
+      notas: formData.notas.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      if (editMonitor?.id) {
+        const { error } = await supabase
+          .from('monitors')
+          .update(dataToSave)
+          .eq('id', editMonitor.id);
+
+        if (error) {
+          setErrors({ submit: 'Error al actualizar el monitor: ' + error.message });
+          setLoading(false);
+          return;
+        }
       } else {
-        const { error } = await supabase.from('assets').insert([dataToSave]);
-        if (error) throw error;
+        const { error } = await supabase
+          .from('monitors')
+          .insert([dataToSave]);
+
+        if (error) {
+          setErrors({ submit: 'Error al crear el monitor: ' + error.message });
+          setLoading(false);
+          return;
+        }
       }
+
+      setLoading(false);
       onSave();
-    } catch (error) {
-      console.error('Error saving monitor:', error);
-      alert('Error al guardar el monitor');
-    } finally {
+    } catch (err: any) {
+      setErrors({ submit: 'Error inesperado: ' + err });
       setLoading(false);
     }
   };
 
-  const getAssetTypeId = async (typeName: string) => {
-    const { data } = await supabase
-      .from('asset_types')
-      .select('id')
-      .eq('name', typeName)
-      .single();
-    return data?.id;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-4xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <Monitor className="text-indigo-600" size={24} />
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 uppercase">{editMonitor ? 'Editar Monitor' : 'Nuevo Monitor'}</h2>
-              <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-wide">Gestión de activos de visualización</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
-            <X size={24} />
-          </button>
+    <BaseForm
+      title={editMonitor ? 'Editar Monitor' : 'Nuevo Monitor'}
+      subtitle="Módulo de Gestión de Monitores"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.submit}
+      icon={<Monitor size={24} className="text-blue-600" />}
+    >
+      {/* Section: Información Básica */}
+      <FormSection title="Información Básica" color="blue">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Código" required error={errors.code}>
+            <FormInput
+              type="text"
+              name="code"
+              value={formData.code}
+              onChange={handleChange}
+              placeholder="Ej: MON-001"
+              required
+              error={errors.code}
+            />
+          </FormField>
+
+          <FormField label="Sede" required error={errors.sede}>
+            <FormSelect
+              name="sede"
+              value={formData.sede}
+              onChange={handleChange}
+              required
+              error={errors.sede}
+            >
+              <option value="">Seleccionar sede</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Área" error={errors.area}>
+            <FormInput
+              type="text"
+              name="area"
+              value={formData.area}
+              onChange={handleChange}
+              placeholder="Ej: Administración, Operaciones"
+              error={errors.area}
+            />
+          </FormField>
+
+          <FormField label="Número de Serie" error={errors.numero_serie}>
+            <FormInput
+              type="text"
+              name="numero_serie"
+              value={formData.numero_serie}
+              onChange={handleChange}
+              placeholder="Ej: A1B2C3D4E5F6"
+              error={errors.numero_serie}
+            />
+          </FormField>
+        </div>
+      </FormSection>
+
+      {/* Section: Especificaciones del Monitor */}
+      <FormSection title="Especificaciones del Monitor" color="emerald">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Marca" required error={errors.marca}>
+            <FormInput
+              type="text"
+              name="marca"
+              value={formData.marca}
+              onChange={handleChange}
+              placeholder="Ej: Samsung, LG, Dell"
+              required
+              error={errors.marca}
+            />
+          </FormField>
+
+          <FormField label="Modelo" required error={errors.modelo}>
+            <FormInput
+              type="text"
+              name="modelo"
+              value={formData.modelo}
+              onChange={handleChange}
+              placeholder="Ej: Odyssey G7, UltraSharp U2720Q"
+              required
+              error={errors.modelo}
+            />
+          </FormField>
+
+          <FormField label="Tamaño (pulgadas)" error={errors.tamano_pulg}>
+            <FormInput
+              type="text"
+              name="tamano_pulg"
+              value={formData.tamano_pulg}
+              onChange={handleChange}
+              placeholder="Ej: 24, 27, 32"
+              error={errors.tamano_pulg}
+            />
+          </FormField>
+
+          <FormField label="Resolución" error={errors.resolucion}>
+            <FormSelect
+              name="resolucion"
+              value={formData.resolucion}
+              onChange={handleChange}
+              error={errors.resolucion}
+            >
+              <option value="">Seleccionar resolución</option>
+              {resolutions.map((res) => (
+                <option key={res.value} value={res.value}>
+                  {res.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Código *</label>
-                <div className="flex gap-2">
-                  <input type="text" value={formData.code} onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                  <button type="button" onClick={generateRandomCode} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">Generar</button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Sede *</label>
-                <select value={formData.sede} onChange={(e) => setFormData(prev => ({ ...prev, sede: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                  <option value="">Seleccionar sede</option>
-                  {locations.map(location => (<option key={location.id} value={location.id}>{location.name}</option>))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Área</label>
-                <input type="text" value={formData.area} onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Marca *</label>
-                <input type="text" value={formData.marca} onChange={(e) => setFormData(prev => ({ ...prev, marca: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Modelo *</label>
-                <input type="text" value={formData.modelo} onChange={(e) => setFormData(prev => ({ ...prev, modelo: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Número de Serie</label>
-                <input type="text" value={formData.numero_serie} onChange={(e) => setFormData(prev => ({ ...prev, numero_serie: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tamaño (pulgadas)</label>
-                <input type="number" min={0} value={formData.tamano_pulg} onChange={(e) => setFormData(prev => ({ ...prev, tamano_pulg: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ej: 24" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Resolución</label>
-                <select value={formData.resolucion} onChange={(e) => setFormData(prev => ({ ...prev, resolucion: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Seleccionar</option>
-                  <option value="HD">HD (1366x768)</option>
-                  <option value="FHD">FHD (1920x1080)</option>
-                  <option value="QHD">QHD (2560x1440)</option>
-                  <option value="4K">4K (3840x2160)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo de Panel</label>
-                <select value={formData.tipo_panel} onChange={(e) => setFormData(prev => ({ ...prev, tipo_panel: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Seleccionar</option>
-                  <option value="TN">TN</option>
-                  <option value="VA">VA</option>
-                  <option value="IPS">IPS</option>
-                  <option value="OLED">OLED</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tasa de Refresco (Hz)</label>
-                <input type="number" min={0} value={formData.tasa_refresco} onChange={(e) => setFormData(prev => ({ ...prev, tasa_refresco: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="60, 75, 144..." />
-              </div>
-
-              <div className="md:col-span-2 lg:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Puertos</label>
-                <input type="text" value={formData.puertos} onChange={(e) => setFormData(prev => ({ ...prev, puertos: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="HDMI, DisplayPort, VGA, USB" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Estado Físico</label>
-                <select value={formData.estado_fisico} onChange={(e) => setFormData(prev => ({ ...prev, estado_fisico: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="">Seleccionar estado</option>
-                  <option value="Excelente">Excelente</option>
-                  <option value="Bueno">Bueno</option>
-                  <option value="Regular">Regular</option>
-                  <option value="Malo">Malo</option>
-                  <option value="Dañado">Dañado</option>
-                </select>
-              </div>
-
-              <div className="md:col-span-2 lg:col-span-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Notas</label>
-                <textarea rows={3} value={formData.notas} onChange={(e) => setFormData(prev => ({ ...prev, notas: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Información adicional..." />
-              </div>
-            </div>
-          </div>
-
-          <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col sm:flex-row-reverse gap-3 z-10">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-8 py-3 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+          <FormField label="Tipo de Panel" error={errors.tipo_panel}>
+            <FormSelect
+              name="tipo_panel"
+              value={formData.tipo_panel}
+              onChange={handleChange}
+              error={errors.tipo_panel}
             >
-              {loading ? 'Guardando...' : (editMonitor ? 'Actualizar' : 'Crear Registro')}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
+              <option value="">Seleccionar tipo</option>
+              {panelTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Tasa de Refresco" error={errors.tasa_refresco}>
+            <FormSelect
+              name="tasa_refresco"
+              value={formData.tasa_refresco}
+              onChange={handleChange}
+              error={errors.tasa_refresco}
             >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+              <option value="">Seleccionar tasa</option>
+              {refreshRates.map((rate) => (
+                <option key={rate.value} value={rate.value}>
+                  {rate.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Estado Físico" error={errors.estado_fisico}>
+            <FormSelect
+              name="estado_fisico"
+              value={formData.estado_fisico}
+              onChange={handleChange}
+              error={errors.estado_fisico}
+            >
+              <option value="">Seleccionar estado</option>
+              {physicalStates.map((state) => (
+                <option key={state.value} value={state.value}>
+                  {state.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+        </div>
+      </FormSection>
+
+      {/* Section: Puertos y Conectividad */}
+      <FormSection title="Puertos y Conectividad" color="amber">
+        <FormField label="Puertos Disponibles" error={errors.puertos}>
+          <FormTextarea
+            name="puertos"
+            value={formData.puertos}
+            onChange={handleChange}
+            placeholder="Ej: 1x HDMI, 1x DisplayPort, 1x USB-C, 2x USB 3.0"
+            rows={3}
+            error={errors.puertos}
+          />
+        </FormField>
+      </FormSection>
+
+      {/* Section: Notas */}
+      <FormSection title="Notas Adicionales" color="purple">
+        <FormField label="Notas y Observaciones" error={errors.notas}>
+          <FormTextarea
+            name="notas"
+            value={formData.notas}
+            onChange={handleChange}
+            placeholder="Notas adicionales sobre el monitor, problemas conocidos, historial de reparaciones, etc..."
+            rows={4}
+            error={errors.notas}
+          />
+        </FormField>
+      </FormSection>
+    </BaseForm>
   );
 }

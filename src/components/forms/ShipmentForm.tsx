@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { AlertCircle, CheckCircle, Loader2, Package, MapPin, Calendar, User, Truck, Search } from 'lucide-react';
+import { Truck, Search } from 'lucide-react';
 import { supabase, AssetWithDetails, Location } from '../../lib/supabase';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
-type Shipment = {
+type ShipmentType = {
   id: string;
   asset_id: string;
   from_location_id?: string;
@@ -21,28 +22,22 @@ type Shipment = {
 type ShipmentFormProps = {
   onClose: () => void;
   onSave: () => void;
-  editShipment?: Shipment;
+  editShipment?: ShipmentType;
 };
 
 export default function ShipmentForm({ onClose, onSave, editShipment }: ShipmentFormProps) {
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
   const [filteredAssets, setFilteredAssets] = useState<AssetWithDetails[]>([]);
-  const [assetTypes, setAssetTypes] = useState<any[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const [hasChanges, setHasChanges] = useState(false);
-  const [selectedAssetType, setSelectedAssetType] = useState<string>('');
-  const [assetSearchTerm, setAssetSearchTerm] = useState<string>('');
-  const [centralLocation, setCentralLocation] = useState<Location | null>(null);
-  const [tinteQuantity, setTinteQuantity] = useState<string>('');
+  const [assetSearch, setAssetSearch] = useState('');
 
   const [formData, setFormData] = useState({
     asset_id: editShipment?.asset_id || '',
     from_location_id: editShipment?.from_location_id || '',
     to_location_id: editShipment?.to_location_id || '',
-    shipment_date: editShipment?.shipment_date ? editShipment.shipment_date.split('T')[0] : '',
+    shipment_date: editShipment?.shipment_date || new Date().toISOString().split('T')[0],
     shipped_by: editShipment?.shipped_by || '',
     received_by: editShipment?.received_by || '',
     tracking_number: editShipment?.tracking_number || '',
@@ -51,783 +46,381 @@ export default function ShipmentForm({ onClose, onSave, editShipment }: Shipment
     notes: editShipment?.notes || '',
   });
 
+  const statuses = [
+    { value: 'shipped', label: 'Enviado' },
+    { value: 'in_transit', label: 'En Tránsito' },
+    { value: 'delivered', label: 'Entregado' },
+    { value: 'returned', label: 'Devuelto' },
+  ];
+
+  const carriers = [
+    { value: 'serpost', label: 'Serpost' },
+    { value: 'olva', label: 'Olva Courier' },
+    { value: 'shippo', label: 'Shippo Express' },
+    { value: 'dhl', label: 'DHL' },
+    { value: 'fedex', label: 'FedEx' },
+    { value: 'ups', label: 'UPS' },
+    { value: 'local', label: 'Transporte Local' },
+    { value: 'other', label: 'Otro' },
+  ];
+
   useEffect(() => {
-    fetchData();
+    fetchAssets();
+    fetchLocations();
   }, []);
 
-  // Detectar cambios en el formulario
-  useEffect(() => {
-    if (editShipment) {
-      const originalData = {
-        asset_id: editShipment.asset_id,
-        from_location_id: editShipment.from_location_id || '',
-        to_location_id: editShipment.to_location_id,
-        shipment_date: editShipment.shipment_date ? editShipment.shipment_date.split('T')[0] : '',
-        shipped_by: editShipment.shipped_by || '',
-        received_by: editShipment.received_by || '',
-        tracking_number: editShipment.tracking_number || '',
-        carrier: editShipment.carrier || '',
-        status: editShipment.status,
-        notes: editShipment.notes || '',
-      };
-
-      const hasFormChanges = JSON.stringify(originalData) !== JSON.stringify(formData);
-      setHasChanges(hasFormChanges);
-    }
-  }, [formData, editShipment]);
-
-  // Filtrar activos cuando cambia el tipo seleccionado o el término de búsqueda
-  useEffect(() => {
-    let filtered = assets;
-
-    // Filtrar por tipo de activo
-    if (selectedAssetType) {
-      filtered = filtered.filter(asset => asset.asset_types?.id === selectedAssetType);
-    }
-
-    // Filtrar por término de búsqueda
-    if (assetSearchTerm) {
-      const searchLower = assetSearchTerm.toLowerCase();
-      filtered = filtered.filter(asset =>
-        asset.brand?.toLowerCase().includes(searchLower) ||
-        asset.model?.toLowerCase().includes(searchLower) ||
-        asset.serial_number?.toLowerCase().includes(searchLower) ||
-        asset.asset_types?.name?.toLowerCase().includes(searchLower) ||
-        asset.locations?.name?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    setFilteredAssets(filtered);
-  }, [selectedAssetType, assetSearchTerm, assets]);
-
-  const fetchData = async () => {
-    await Promise.all([fetchAssets(), fetchAssetTypes(), fetchLocations()]);
-  };
-
   const fetchAssets = async () => {
-    console.log('🔄 Cargando activos...');
     try {
       const { data, error } = await supabase
         .from('assets')
-        .select('*, asset_types(*), locations(*)')
-        .order('brand');
+        .select(`
+          *,
+          location:location_id(name),
+          category:category_id(name)
+        `)
+        .eq('status', 'active');
 
-      if (error) {
-        console.error('❌ Error al cargar activos:', error);
-        throw error;
+      if (!error && data) {
+        setAssets(data);
+        setFilteredAssets(data);
       }
-
-      if (data) {
-        console.log(`✅ ${data.length} activos cargados`);
-        setAssets(data as AssetWithDetails[]);
-        setFilteredAssets(data as AssetWithDetails[]);
-      }
-    } catch (err) {
-      console.error('❌ Error inesperado al cargar activos:', err);
-    }
-  };
-
-  const fetchAssetTypes = async () => {
-    console.log('🔄 Cargando tipos de activos...');
-    try {
-      const { data, error } = await supabase
-        .from('asset_types')
-        .select('*')
-        .order('name');
-
-      if (error) {
-        console.error('❌ Error al cargar tipos de activos:', error);
-        throw error;
-      }
-
-      if (data) {
-        console.log(`✅ ${data.length} tipos de activos cargados`);
-        setAssetTypes(data);
-      }
-    } catch (err) {
-      console.error('❌ Error inesperado al cargar tipos de activos:', err);
+    } catch (error) {
+      console.error('Error al cargar activos:', error);
     }
   };
 
   const fetchLocations = async () => {
-    console.log('🔄 Cargando ubicaciones...');
     try {
       const { data, error } = await supabase
         .from('locations')
         .select('*')
         .order('name');
 
-      if (error) {
-        console.error('❌ Error al cargar ubicaciones:', error);
-        throw error;
-      }
-
-      if (data) {
-        console.log(`✅ ${data.length} ubicaciones cargadas`);
+      if (!error && data) {
         setLocations(data);
-
-        // Buscar sede central (por tipo "central" o por nombre que contenga "central", "principal" o "lima")
-        const central = data.find(loc =>
-          loc.type === 'central' ||
-          loc.name.toLowerCase().includes('central') ||
-          loc.name.toLowerCase().includes('principal') ||
-          loc.name.toLowerCase().includes('lima')
-        );
-
-        if (central) {
-          console.log('🏢 Sede central identificada:', central.name);
-          setCentralLocation(central);
-
-          // Si no hay envío en edición, establecer la sede central como origen por defecto
-          if (!editShipment) {
-            setFormData(prev => ({ ...prev, from_location_id: central.id }));
-          }
-        }
       }
-    } catch (err) {
-      console.error('❌ Error inesperado al cargar ubicaciones:', err);
+    } catch (error) {
+      console.error('Error al cargar ubicaciones:', error);
     }
   };
 
-  // Funciones de validación
-  const validateDate = (date: string): boolean => {
-    if (!date) return false; // Campo requerido
-    const dateObj = new Date(date);
-    return dateObj instanceof Date && !isNaN(dateObj.getTime());
-  };
-
-  const validateTrackingNumber = (tracking: string): boolean => {
-    if (!tracking) return true; // Campo opcional
-    // Validar que tenga al menos 5 caracteres y contenga letras y números
-    return tracking.length >= 5 && /^[A-Za-z0-9]+$/.test(tracking);
-  };
-
-  const validateField = async (fieldName: string, value: string) => {
-
-
-    let isValid = true;
-    let errorMessage = '';
-
-    switch (fieldName) {
-      case 'asset_id':
-        if (!value) {
-          isValid = false;
-          errorMessage = 'Debe seleccionar un activo';
-        }
-        break;
-
-      case 'to_location_id':
-        if (!value) {
-          isValid = false;
-          errorMessage = 'Debe seleccionar una ubicación de destino';
-        }
-        break;
-
-      case 'shipment_date':
-        if (!value) {
-          isValid = false;
-          errorMessage = 'La fecha de envío es requerida';
-        } else if (!validateDate(value)) {
-          isValid = false;
-          errorMessage = 'Fecha de envío inválida';
-        }
-        break;
-
-      case 'tracking_number':
-        if (value && !validateTrackingNumber(value)) {
-          isValid = false;
-          errorMessage = 'Número de seguimiento inválido (mínimo 5 caracteres alfanuméricos)';
-        }
-        break;
-
-      case 'shipped_by':
-        if (value && value.trim().length < 2) {
-          isValid = false;
-          errorMessage = 'El nombre debe tener al menos 2 caracteres';
-        }
-        break;
-
-      case 'received_by':
-        if (value && value.trim().length < 2) {
-          isValid = false;
-          errorMessage = 'El nombre debe tener al menos 2 caracteres';
-        }
-        break;
-
-      case 'carrier':
-        if (value && value.trim().length < 2) {
-          isValid = false;
-          errorMessage = 'El nombre de la empresa debe tener al menos 2 caracteres';
-        }
-        break;
+  useEffect(() => {
+    if (assetSearch) {
+      const filtered = assets.filter(asset =>
+        (asset.name?.toLowerCase() || '').includes(assetSearch.toLowerCase()) ||
+        (asset.serial_number?.toLowerCase() || '').includes(assetSearch.toLowerCase())
+      );
+      setFilteredAssets(filtered);
+    } else {
+      setFilteredAssets(assets);
     }
-
-
-    setErrors(prev => ({ ...prev, [fieldName]: errorMessage }));
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Limpiar error cuando el usuario empiece a escribir
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-
-    // Validar campo después de un pequeño delay
-    setTimeout(() => {
-      validateField(field, value);
-    }, 500);
-  };
+  }, [assetSearch, assets]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.asset_id) {
+      newErrors.asset_id = 'El activo es requerido';
+    }
+
+    if (!formData.to_location_id) {
+      newErrors.to_location_id = 'La ubicación de destino es requerida';
+    }
+
+    if (!formData.shipment_date) {
+      newErrors.shipment_date = 'La fecha de envío es requerida';
+    }
+
+    if (!formData.status) {
+      newErrors.status = 'El estado es requerido';
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
+
     setLoading(true);
-    setErrors({});
+
+    const dataToSave = {
+      asset_id: formData.asset_id,
+      from_location_id: formData.from_location_id || null,
+      to_location_id: formData.to_location_id,
+      shipment_date: formData.shipment_date,
+      shipped_by: formData.shipped_by.trim() || null,
+      received_by: formData.received_by.trim() || null,
+      tracking_number: formData.tracking_number.trim() || null,
+      carrier: formData.carrier.trim() || null,
+      status: formData.status,
+      notes: formData.notes.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
 
     try {
-      console.log('📦 Guardando envío:', { editShipment, formData });
-
-      // Validar campos requeridos
-      const requiredFields = ['asset_id', 'to_location_id', 'shipment_date'];
-      let hasErrors = false;
-
-      for (const field of requiredFields) {
-        if (!formData[field as keyof typeof formData]) {
-          setErrors(prev => ({ ...prev, [field]: 'Este campo es requerido' }));
-          hasErrors = true;
-        }
-      }
-
-      if (hasErrors) {
-        setLoading(false);
-        return;
-      }
-
-      const selectedAsset = assets.find(a => a.id === formData.asset_id);
-      const isTinte = selectedAsset?.asset_types?.name === 'Tinte';
-
-      // Validaciones específicas para Tinte
-      if (isTinte) {
-        if (!centralLocation || formData.from_location_id !== centralLocation.id) {
-          setLoading(false);
-          alert('Los envíos de Tinte deben salir desde la Sede Central.');
-          return;
-        }
-        const qty = Number(tinteQuantity);
-        if (!tinteQuantity || Number.isNaN(qty) || qty <= 0) {
-          setLoading(false);
-          alert('Ingrese una cantidad válida para el envío de Tinte.');
-          return;
-        }
-        const available = Number(selectedAsset?.capacity || '0');
-        if (Number.isNaN(available) || qty > available) {
-          setLoading(false);
-          alert(`Cantidad insuficiente. Disponible: ${available}`);
-          return;
-        }
-      }
-
-      const shipmentData = {
-        ...formData,
-        from_location_id: formData.from_location_id || null
-      };
-
-      if (editShipment) {
-        console.log('✏️ Actualizando envío existente:', editShipment.id);
-        const { data, error } = await supabase
+      if (editShipment?.id) {
+        const { error } = await supabase
           .from('shipments')
-          .update(shipmentData)
-          .eq('id', editShipment.id)
-          .select('*');
-
-        console.log('📋 Resultado de actualización:', { data, error });
+          .update(dataToSave)
+          .eq('id', editShipment.id);
 
         if (error) {
-          console.error('❌ Error al actualizar envío:', error);
-          throw error;
+          setErrors({ submit: 'Error al actualizar el envío: ' + error.message });
+          setLoading(false);
+          return;
         }
-
-        console.log('✅ Envío actualizado correctamente');
       } else {
-        console.log('➕ Creando nuevo envío');
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('shipments')
-          .insert([shipmentData])
-          .select('*');
-
-        console.log('📋 Resultado de inserción:', { data, error });
+          .insert([dataToSave]);
 
         if (error) {
-          console.error('❌ Error al crear envío:', error);
-          throw error;
-        }
-
-        console.log('✅ Envío creado correctamente');
-
-        const selectedAsset = assets.find(a => a.id === formData.asset_id);
-        const isTinte = selectedAsset?.asset_types?.name === 'Tinte';
-        if (isTinte) {
-          const current = Number(selectedAsset?.capacity || '0');
-          const qty = Number(tinteQuantity || '0');
-          const newQty = Math.max(0, current - qty);
-          console.log('🟡 Deduciendo stock de Tinte:', { actual: current, envio: qty, nuevo: newQty });
-          const { error: assetError } = await supabase
-            .from('assets')
-            .update({
-              capacity: String(newQty),
-              updated_at: new Date().toISOString(),
-              // Mantener ubicación en Central
-              location_id: centralLocation ? centralLocation.id : selectedAsset?.location_id || null
-            })
-            .eq('id', formData.asset_id);
-          if (assetError) {
-            console.error('❌ Error al deducir stock de Tinte:', assetError);
-          } else {
-            console.log('✅ Stock de Tinte actualizado');
-          }
-        } else {
-          // Flujo original para otros activos: marcar enviado y despegar ubicación
-          console.log('📦 Actualizando estado del activo a enviado...');
-          const { error: assetError } = await supabase
-            .from('assets')
-            .update({
-              status: 'shipped',
-              location_id: null
-            })
-            .eq('id', formData.asset_id);
-          if (assetError) {
-            console.error('❌ Error al actualizar estado del activo:', assetError);
-          } else {
-            console.log('✅ Estado del activo actualizado a enviado');
-          }
+          setErrors({ submit: 'Error al crear el envío: ' + error.message });
+          setLoading(false);
+          return;
         }
       }
 
+      setLoading(false);
       onSave();
-    } catch (error: any) {
-      console.error('❌ Error inesperado al guardar envío:', error);
-
-      let errorMessage = 'Error al guardar el envío';
-      if (error?.message) {
-        errorMessage += `: ${error.message}`;
-      }
-      if (error?.code) {
-        errorMessage += `\n\nCódigo: ${error.code}`;
-      }
-      if (error?.details) {
-        errorMessage += `\nDetalles: ${error.details}`;
-      }
-      if (error?.hint) {
-        errorMessage += `\nSugerencia: ${error.hint}`;
-      }
-
-      alert(errorMessage);
-    } finally {
+    } catch (err: any) {
+      setErrors({ submit: 'Error inesperado: ' + err });
       setLoading(false);
     }
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
 
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
 
-  const selectedAsset = assets.find(a => a.id === formData.asset_id);
-  const isTinte = selectedAsset?.asset_types?.name === 'Tinte';
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleAssetSelect = (assetId: string) => {
+    setFormData(prev => ({ ...prev, asset_id: assetId }));
+    setAssetSearch('');
+    setFilteredAssets(assets);
+  };
+
+  const getSelectedAsset = () => {
+    return assets.find(asset => asset.id === formData.asset_id);
+  };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-      <div className="border-b border-gray-100 px-6 py-4 flex items-center justify-between bg-slate-50/50">
-        <div>
-          <h2 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
-            {editShipment ? 'Editar Envío de Activo' : 'Nuevo Envío de Activo'}
-          </h2>
-          {hasChanges && (
-            <p className="text-xs text-orange-600 mt-0.5 font-bold uppercase tracking-wider flex items-center gap-1">
-              <AlertCircle size={12} />
-              Cambios sin guardar
-            </p>
-          )}
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="p-6 space-y-8">
-        {/* Información del Activo */}
-        <div>
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <span className="w-1 h-4 bg-blue-500 rounded-full"></span>
-            <Package size={16} className="text-blue-500" />
-            Información del Activo
-          </h3>
-
-          <div className="bg-gray-50/50 p-6 rounded-xl border border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Tipo de Activo
-                </label>
-                <select
-                  value={selectedAssetType}
-                  onChange={(e) => {
-                    setSelectedAssetType(e.target.value);
-                    setFormData(prev => ({ ...prev, asset_id: '' })); // Limpiar selección de activo
-                  }}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all bg-white"
-                >
-                  <option value="">Todos los tipos</option>
-                  {assetTypes.map(type => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
+    <BaseForm
+      title={editShipment ? 'Editar Envío' : 'Nuevo Envío'}
+      subtitle="Módulo de Gestión de Envíos"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.submit}
+      icon={<Truck size={24} className="text-blue-600" />}
+    >
+      {/* Section: Información del Envío */}
+      <FormSection title="Información del Envío" color="blue">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Activo a Enviar" required error={errors.asset_id}>
+            <div className="relative">
+              <div className="relative">
+                <FormInput
+                  type="text"
+                  value={assetSearch}
+                  onChange={(e) => setAssetSearch(e.target.value)}
+                  placeholder="Buscar activo..."
+                  className="pr-10"
+                />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              </div>
+              
+              {assetSearch && filteredAssets.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20">
+                  {filteredAssets.map((asset) => (
+                    <button
+                      key={asset.id}
+                      type="button"
+                      onClick={() => handleAssetSelect(asset.id)}
+                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900">{asset.name || 'Sin nombre'}</div>
+                          <div className="text-sm text-gray-500">
+                            {asset.serial_number || 'Sin código'}
+                          </div>
+                        </div>
+                        <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          {(asset as any).category?.name || 'Sin categoría'}
+                        </div>
+                      </div>
+                    </button>
                   ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Buscar Activo
-                </label>
-                <div className="relative">
-                  <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={assetSearchTerm}
-                    onChange={(e) => {
-                      setAssetSearchTerm(e.target.value);
-                      setFormData(prev => ({ ...prev, asset_id: '' })); // Limpiar selección al buscar
-                    }}
-                    placeholder="Buscar por marca, modelo, serie..."
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300"
-                  />
                 </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                Seleccionar Activo *
-              </label>
-              <select
-                required
-                value={formData.asset_id}
-                onChange={(e) => handleInputChange('asset_id', e.target.value)}
-                className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all bg-white ${errors.asset_id ? 'border-red-300 focus:ring-red-200' : 'border-gray-200'
-                  }`}
-              >
-                <option value="">Seleccionar activo del inventario...</option>
-                {filteredAssets.map(asset => (
-                  <option key={asset.id} value={asset.id}>
-                    {asset.brand} {asset.model} - {asset.serial_number}
-                    {asset.locations && ` (${asset.locations.name})`}
-                    {asset.status && ` [${asset.status}]`}
-                  </option>
-                ))}
-              </select>
-              {errors.asset_id && (
-                <p className="mt-1 text-[10px] text-red-500 font-bold uppercase tracking-wide">{errors.asset_id}</p>
               )}
-              <div className="mt-2 flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                <span>
-                  {selectedAssetType || assetSearchTerm
-                    ? `Mostrando ${filteredAssets.length} activos`
-                    : `Total: ${assets.length} activos`
-                  }
-                </span>
-                {(selectedAssetType || assetSearchTerm) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedAssetType('');
-                      setAssetSearchTerm('');
-                      setFormData(prev => ({ ...prev, asset_id: '' }));
-                    }}
-                    className="text-blue-600 hover:text-blue-800 transition-colors"
-                  >
-                    Limpiar filtros
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {isTinte && (
-              <div className="mt-4 bg-blue-50 p-4 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-2">
-                <label className="block text-xs font-bold text-blue-700 uppercase tracking-wider mb-2">
-                  Cantidad a enviar (Galones) *
-                </label>
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={tinteQuantity}
-                      onChange={(e) => setTinteQuantity(e.target.value)}
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      className="w-32 px-4 py-2.5 border border-blue-200 rounded-lg text-sm text-blue-900 focus:ring-2 focus:ring-blue-500 bg-white placeholder-blue-200 font-bold"
-                      required
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-blue-300">GAL</span>
-                  </div>
-                  <div className="text-xs text-blue-600 bg-blue-100/50 px-3 py-2 rounded-lg border border-blue-200/50">
-                    <span className="font-bold uppercase tracking-wider text-[10px] mr-1">Disponible:</span>
-                    <span className="font-mono text-sm font-bold">{selectedAsset?.capacity || '0'}</span> Galones
+              
+              {formData.asset_id && getSelectedAsset() && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-blue-900">{getSelectedAsset()?.name || 'Sin nombre'}</div>
+                      <div className="text-sm text-blue-700">
+                        {getSelectedAsset()?.serial_number || 'Sin código'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, asset_id: '' }))}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      Cambiar
+                    </button>
                   </div>
                 </div>
-                <p className="mt-2 text-[10px] text-blue-500 flex items-center gap-1.5 font-medium">
-                  <AlertCircle size={12} />
-                  El stock se descontará del inventario de la sede central al guardar.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Ubicaciones */}
-        <div>
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <span className="w-1 h-4 bg-green-500 rounded-full"></span>
-            <MapPin size={16} className="text-green-500" />
-            Ruta de Envío
-          </h3>
-
-          <div className="bg-gray-50/50 p-6 rounded-xl border border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Ubicación de Origen
-                  {centralLocation && (
-                    <span className="ml-2 text-green-600 font-black">(Sede Central)</span>
-                  )}
-                </label>
-                <select
-                  value={formData.from_location_id}
-                  onChange={(e) => handleInputChange('from_location_id', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all bg-white"
-                >
-                  <option value="">Sin ubicación específica</option>
-                  {locations.map(location => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                      {centralLocation && location.id === centralLocation.id && ' (Central)'}
-                    </option>
-                  ))}
-                </select>
-                {centralLocation && formData.from_location_id === centralLocation.id && (
-                  <p className="mt-1.5 text-[10px] font-bold text-green-600 uppercase tracking-wide flex items-center gap-1">
-                    <CheckCircle size={12} />
-                    Envío desde Sede Central
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Ubicación de Destino *
-                </label>
-                <select
-                  required
-                  value={formData.to_location_id}
-                  onChange={(e) => handleInputChange('to_location_id', e.target.value)}
-                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all bg-white ${errors.to_location_id ? 'border-red-300 focus:ring-red-200' : 'border-gray-200'
-                    }`}
-                >
-                  <option value="">Seleccionar destino...</option>
-                  {locations.map(location => (
-                    <option key={location.id} value={location.id}>
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.to_location_id && (
-                  <p className="mt-1 text-[10px] text-red-500 font-bold uppercase tracking-wide">{errors.to_location_id}</p>
-                )}
-              </div>
+              )}
             </div>
-          </div>
-        </div>
+          </FormField>
 
-        {/* Información del Envío */}
-        <div>
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <span className="w-1 h-4 bg-purple-500 rounded-full"></span>
-            <Calendar size={16} className="text-purple-500" />
-            Detalles Logísticos
-          </h3>
+          <FormField label="Ubicación de Origen" error={errors.from_location_id}>
+            <FormSelect
+              name="from_location_id"
+              value={formData.from_location_id}
+              onChange={handleChange}
+              error={errors.from_location_id}
+            >
+              <option value="">Seleccionar origen</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
 
-          <div className="bg-gray-50/50 p-6 rounded-xl border border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Fecha de Envío *
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.shipment_date}
-                  onChange={(e) => handleInputChange('shipment_date', e.target.value)}
-                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all bg-white ${errors.shipment_date ? 'border-red-300 focus:ring-red-200' : 'border-gray-200'
-                    }`}
-                />
-                {errors.shipment_date && (
-                  <p className="mt-1 text-[10px] text-red-500 font-bold uppercase tracking-wide">{errors.shipment_date}</p>
-                )}
-              </div>
+          <FormField label="Ubicación de Destino" required error={errors.to_location_id}>
+            <FormSelect
+              name="to_location_id"
+              value={formData.to_location_id}
+              onChange={handleChange}
+              required
+              error={errors.to_location_id}
+            >
+              <option value="">Seleccionar destino</option>
+              {locations.map((loc) => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Estado Actual
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => handleInputChange('status', e.target.value)}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all bg-white"
-                >
-                  <option value="shipped">ENVIADO</option>
-                  <option value="in_transit">EN TRÁNSITO</option>
-                  <option value="delivered">ENTREGADO</option>
-                  <option value="returned">DEVUELTO</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Información de Seguimiento */}
-        <div>
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <span className="w-1 h-4 bg-orange-500 rounded-full"></span>
-            <Truck size={16} className="text-orange-500" />
-            Transporte y Seguimiento
-          </h3>
-
-          <div className="bg-gray-50/50 p-6 rounded-xl border border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Número de Guía / Tracking
-                </label>
-                <input
-                  type="text"
-                  value={formData.tracking_number}
-                  onChange={(e) => handleInputChange('tracking_number', e.target.value)}
-                  placeholder="Ej: TRK123456789"
-                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300 ${errors.tracking_number ? 'border-red-300 focus:ring-red-200' : 'border-gray-200'
-                    }`}
-                />
-                {errors.tracking_number && (
-                  <p className="mt-1 text-[10px] text-red-500 font-bold uppercase tracking-wide">{errors.tracking_number}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Empresa de Transporte
-                </label>
-                <input
-                  type="text"
-                  value={formData.carrier}
-                  onChange={(e) => handleInputChange('carrier', e.target.value)}
-                  placeholder="Ej: Serpost, Olva, Shalom..."
-                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300 ${errors.carrier ? 'border-red-300 focus:ring-red-200' : 'border-gray-200'
-                    }`}
-                />
-                {errors.carrier && (
-                  <p className="mt-1 text-[10px] text-red-500 font-bold uppercase tracking-wide">{errors.carrier}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Información de Personas */}
-        <div>
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <span className="w-1 h-4 bg-indigo-500 rounded-full"></span>
-            <User size={16} className="text-indigo-500" />
-            Responsables
-          </h3>
-
-          <div className="bg-gray-50/50 p-6 rounded-xl border border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Enviado por
-                </label>
-                <input
-                  type="text"
-                  value={formData.shipped_by}
-                  onChange={(e) => handleInputChange('shipped_by', e.target.value)}
-                  placeholder="Nombre del remitente"
-                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300 ${errors.shipped_by ? 'border-red-300 focus:ring-red-200' : 'border-gray-200'
-                    }`}
-                />
-                {errors.shipped_by && (
-                  <p className="mt-1 text-[10px] text-red-500 font-bold uppercase tracking-wide">{errors.shipped_by}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  Recibido por (Si ya se entregó)
-                </label>
-                <input
-                  type="text"
-                  value={formData.received_by}
-                  onChange={(e) => handleInputChange('received_by', e.target.value)}
-                  placeholder="Nombre del receptor"
-                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300 ${errors.received_by ? 'border-red-300 focus:ring-red-200' : 'border-gray-200'
-                    }`}
-                />
-                {errors.received_by && (
-                  <p className="mt-1 text-[10px] text-red-500 font-bold uppercase tracking-wide">{errors.received_by}</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Notas */}
-        <div>
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
-            <span className="w-1 h-4 bg-gray-500 rounded-full"></span>
-            <AlertCircle size={16} className="text-gray-500" />
-            Observaciones
-          </h3>
-
-          <div>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => handleInputChange('notes', e.target.value)}
-              rows={3}
-              placeholder="Información adicional relevante sobre el estado del paquete o instrucciones..."
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all placeholder:text-gray-300 resize-none"
+          <FormField label="Fecha de Envío" required error={errors.shipment_date}>
+            <FormInput
+              type="date"
+              name="shipment_date"
+              value={formData.shipment_date}
+              onChange={handleChange}
+              required
+              error={errors.shipment_date}
             />
-          </div>
+          </FormField>
         </div>
+      </FormSection>
 
-        {/* Botones */}
-        <div className="pt-6 border-t border-gray-100 flex gap-3 justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-6 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-slate-700 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-2.5 bg-slate-900 text-white text-[10px] font-bold rounded-lg hover:bg-slate-800 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              editShipment ? 'Actualizar Envío' : 'Registrar Envío'
-            )}
-          </button>
+      {/* Section: Estado y Transportista */}
+      <FormSection title="Estado y Transportista" color="emerald">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Estado del Envío" required error={errors.status}>
+            <FormSelect
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              required
+              error={errors.status}
+            >
+              {statuses.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Transportista" error={errors.carrier}>
+            <FormSelect
+              name="carrier"
+              value={formData.carrier}
+              onChange={handleChange}
+              error={errors.carrier}
+            >
+              <option value="">Seleccionar transportista</option>
+              {carriers.map((carrier) => (
+                <option key={carrier.value} value={carrier.value}>
+                  {carrier.label}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Número de Seguimiento" error={errors.tracking_number}>
+            <FormInput
+              type="text"
+              name="tracking_number"
+              value={formData.tracking_number}
+              onChange={handleChange}
+              placeholder="Ej: 1234567890"
+              error={errors.tracking_number}
+            />
+          </FormField>
+
+          <FormField label="Enviado por" error={errors.shipped_by}>
+            <FormInput
+              type="text"
+              name="shipped_by"
+              value={formData.shipped_by}
+              onChange={handleChange}
+              placeholder="Nombre del responsable del envío"
+              error={errors.shipped_by}
+            />
+          </FormField>
         </div>
-      </form>
-    </div>
+      </FormSection>
+
+      {/* Section: Recepción */}
+      <FormSection title="Información de Recepción" color="amber">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <FormField label="Recibido por" error={errors.received_by}>
+            <FormInput
+              type="text"
+              name="received_by"
+              value={formData.received_by}
+              onChange={handleChange}
+              placeholder="Nombre del receptor"
+              error={errors.received_by}
+            />
+          </FormField>
+        </div>
+      </FormSection>
+
+      {/* Section: Notas */}
+      <FormSection title="Notas Adicionales" color="purple">
+        <FormField label="Notas y Observaciones" error={errors.notes}>
+          <FormTextarea
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            placeholder="Notas adicionales sobre el envío, instrucciones especiales, condiciones del paquete, etc..."
+            rows={4}
+            error={errors.notes}
+          />
+        </FormField>
+      </FormSection>
+    </BaseForm>
   );
 }

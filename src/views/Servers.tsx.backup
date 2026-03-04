@@ -15,6 +15,26 @@ export default function Servers() {
   const [search] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Server | undefined>();
+  const [form, setForm] = useState<{
+    name: string;
+    location_id: string;
+    ip_address: string;
+    anydesk_id: string;
+    username: string;
+    password: string;
+    notes: string;
+    windows_credentials: WindowsCredential[];
+  }>({
+    name: '',
+    location_id: '',
+    ip_address: '',
+    anydesk_id: '',
+    username: '',
+    password: '',
+    notes: '',
+    windows_credentials: []
+  });
+  const [stats, setStats] = useState({ total: 0, withIp: 0, withAnydesk: 0, recentlyUpdated: 0 });
   const [viewingServer, setViewingServer] = useState<Server | undefined>();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
 
@@ -42,6 +62,7 @@ export default function Servers() {
       if (s.anydesk_id) withAnydesk++;
       if (new Date(s.updated_at) > oneWeekAgo) recentlyUpdated++;
     });
+    setStats({ total: srvData.length, withIp, withAnydesk, recentlyUpdated });
   };
 
   const fetchLocations = async () => {
@@ -49,8 +70,18 @@ export default function Servers() {
     if (data) setLocations(data);
   };
 
-  const openCreate = () => { setEditing(undefined); setShowForm(true); };
-  const openEdit = (s: Server) => { setEditing(s); setShowForm(true); };
+  const resetForm = () => { setForm({ name: '', location_id: '', ip_address: '', anydesk_id: '', username: '', password: '', notes: '', windows_credentials: [] }); };
+  const openCreate = () => { setEditing(undefined); resetForm(); setShowForm(true); };
+  const openEdit = (s: Server) => { setEditing(s); setForm({ name: s.name || '', location_id: s.location_id || '', ip_address: s.ip_address || '', anydesk_id: s.anydesk_id || '', username: s.username || '', password: s.password || '', notes: s.notes || '', windows_credentials: s.windows_credentials || [] }); setShowForm(true); };
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    const payload = { ...form, updated_at: new Date().toISOString() };
+    if (editing) await supabase.from('servers').update(payload).eq('id', editing.id);
+    else await supabase.from('servers').insert(payload as any);
+    setShowForm(false); await fetchServers();
+  };
 
   const del = async (s: Server) => {
     if (confirm(`¿Eliminar servidor "${s.name}"?`)) { await supabase.from('servers').delete().eq('id', s.id); await fetchServers(); }
@@ -60,8 +91,6 @@ export default function Servers() {
     const q = search.toLowerCase();
     return s.name?.toLowerCase().includes(q) || s.ip_address?.toLowerCase().includes(q) || s.anydesk_id?.toLowerCase().includes(q) || s.locations?.name?.toLowerCase().includes(q);
   });
-
-  const stats = { total: servers.length, withIp: servers.filter(s => s.ip_address).length, withAnydesk: servers.filter(s => s.anydesk_id).length, recentlyUpdated: 0 };
 
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc] font-sans">
@@ -75,6 +104,8 @@ export default function Servers() {
             <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Infraestructura</h2>
           </div>
         </div>
+
+
 
         <div className="flex items-center gap-2">
           <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#f1f5f9] p-1 rounded-lg border border-[#e2e8f0] w-fit">
@@ -209,6 +240,36 @@ export default function Servers() {
           }}
           editServer={editing}
         />
+                    <div className="grid grid-cols-2 gap-2">
+                      <input placeholder="Usuario" value={cred.username} onChange={e => {
+                        const newCreds = [...form.windows_credentials];
+                        newCreds[i].username = e.target.value;
+                        setForm({ ...form, windows_credentials: newCreds });
+                      }} className="px-3 py-2 bg-slate-50 border border-gray-100 rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500" />
+                      <input type="password" placeholder="Contraseña" value={cred.password} onChange={e => {
+                        const newCreds = [...form.windows_credentials];
+                        newCreds[i].password = e.target.value;
+                        setForm({ ...form, windows_credentials: newCreds });
+                      }} className="px-3 py-2 bg-slate-50 border border-gray-100 rounded-lg text-xs font-bold outline-none focus:ring-1 focus:ring-blue-500" />
+                    </div>
+                    <input placeholder="Descripción (ej: Administrador, SQL...)" value={cred.description} onChange={e => {
+                      const newCreds = [...form.windows_credentials];
+                      newCreds[i].description = e.target.value;
+                      setForm({ ...form, windows_credentials: newCreds });
+                    }} className="w-full px-3 py-2 bg-slate-50 border border-gray-100 rounded-lg text-[10px] outline-none focus:ring-1 focus:ring-blue-500" />
+                  </div>
+                ))}
+                {form.windows_credentials.length === 0 && (
+                  <div className="text-center py-4 bg-white rounded-xl border border-dashed border-gray-200">
+                    <p className="text-[10px] font-medium text-gray-400">No hay usuarios registrados</p>
+                  </div>
+                )}
+              </div>
+              <textarea placeholder="Notas técnicas..." value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} rows={3} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-xs resize-none" />
+              <div className="flex gap-3 pt-4"><button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2.5 text-xs font-black uppercase text-gray-400">Cancelar</button><button type="submit" className="flex-1 py-2.5 bg-[#002855] text-white rounded-lg text-xs font-black uppercase shadow-lg shadow-blue-900/10">Guardar</button></div>
+            </form>
+          </div>
+        </div>
       )}
 
       {viewingServer && (

@@ -1,12 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, History, ShieldCheck, Lock, Search, Calendar, Clock, Filter, Plus, BarChart3, Download, Activity } from 'lucide-react';
+import { ArrowLeft, History, ShieldCheck, Lock, Search, Calendar, Clock, Filter, RefreshCw, Archive } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
 
 interface Ticket {
     id: string;
     title: string;
+    description?: string;
     status: string;
     priority: string;
     created_at: string;
@@ -34,9 +34,10 @@ const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: strin
 
 export default function TicketHistory() {
     const navigate = useNavigate();
-    const { user } = useAuth();
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [archiving, setArchiving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterPriority, setFilterPriority] = useState('all');
     const [filterDateRange, setFilterDateRange] = useState('all');
@@ -47,6 +48,8 @@ export default function TicketHistory() {
 
     const fetchArchivedTickets = async () => {
         try {
+            console.log('🔍 Fetching archived tickets...');
+            
             const { data, error } = await supabase
                 .from('tickets')
                 .select(`
@@ -56,12 +59,20 @@ export default function TicketHistory() {
                     locations(name)
                 `)
                 .eq('status', 'archived')
-                .order('updated_at', { ascending: false });
+                .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            console.log('📊 Archived tickets response:', { data, error });
+            console.log('📈 Number of archived tickets found:', data?.length || 0);
+
+            if (error) {
+                console.error('❌ Error fetching archived tickets:', error);
+                throw error;
+            }
+            
             setTickets(data || []);
+            console.log('✅ Archived tickets loaded successfully:', data?.length || 0, 'tickets');
         } catch (error) {
-            console.error('Error fetching archived tickets:', error);
+            console.error('❌ Error in fetchArchivedTickets:', error);
         } finally {
             setLoading(false);
         }
@@ -111,6 +122,87 @@ export default function TicketHistory() {
         return `${days} días`;
     };
 
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        await fetchArchivedTickets();
+        setRefreshing(false);
+    };
+
+    const handleDiagnose = async () => {
+        try {
+            console.log('🔧 Running diagnosis...');
+            
+            // Check all tickets
+            const { data: allTickets, error: allError } = await supabase
+                .from('tickets')
+                .select('id, title, status, created_at, closed_at')
+                .order('created_at', { ascending: false })
+                .limit(10);
+            
+            console.log('📋 All recent tickets:', allTickets);
+            console.log('❌ All tickets error:', allError);
+            
+            // Check specifically for archived tickets
+            const { data: archivedTickets, error: archivedError } = await supabase
+                .from('tickets')
+                .select('id, title, status, created_at, closed_at')
+                .eq('status', 'archived');
+            
+            console.log('📁 Archived tickets:', archivedTickets);
+            console.log('❌ Archived tickets error:', archivedError);
+            
+            // Check closed tickets
+            const { data: closedTickets, error: closedError } = await supabase
+                .from('tickets')
+                .select('id, title, status, created_at, closed_at')
+                .eq('status', 'closed');
+            
+            console.log('🔒 Closed tickets:', closedTickets);
+            console.log('❌ Closed tickets error:', closedError);
+            
+            alert(`Diagnóstico completado. Revisa la consola para detalles.
+            
+Total tickets recientes: ${allTickets?.length || 0}
+Tickets archivados: ${archivedTickets?.length || 0}
+Tickets cerrados: ${closedTickets?.length || 0}`);
+            
+        } catch (error) {
+            console.error('❌ Diagnosis error:', error);
+            alert('Error en diagnóstico: ' + (error as any)?.message);
+        }
+    };
+
+    const handleForceArchive = async () => {
+        setArchiving(true);
+        try {
+            // Fetch all closed tickets that should be archived
+            const { data: closedTickets, error } = await supabase
+                .from('tickets')
+                .select('*')
+                .eq('status', 'closed')
+                .lte('closed_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
+
+            if (error) throw error;
+
+            if (closedTickets && closedTickets.length > 0) {
+                // Archive all eligible tickets
+                for (const ticket of closedTickets) {
+                    await supabase.from('tickets').update({ status: 'archived' }).eq('id', ticket.id);
+                }
+                
+                alert(`Se archivaron ${closedTickets.length} tickets exitosamente`);
+                await fetchArchivedTickets();
+            } else {
+                alert('No hay tickets elegibles para archivar');
+            }
+        } catch (error) {
+            console.error('Error al forzar archivado:', error);
+            alert('Error al forzar archivado');
+        } finally {
+            setArchiving(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-[#f8f9fc] flex items-center justify-center">
@@ -146,6 +238,29 @@ export default function TicketHistory() {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={handleDiagnose}
+                            className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                        >
+                            <Filter size={20} />
+                            <span className="font-medium">Diagnóstico</span>
+                        </button>
+                        <button
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                            className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-[#002855] hover:bg-slate-50 rounded-lg transition-all disabled:opacity-50"
+                        >
+                            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+                            <span className="font-medium">Actualizar</span>
+                        </button>
+                        <button
+                            onClick={handleForceArchive}
+                            disabled={archiving}
+                            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 rounded-lg transition-all disabled:opacity-50"
+                        >
+                            <Archive size={20} />
+                            <span className="font-medium">{archiving ? 'Archivando...' : 'Forzar Archivado'}</span>
+                        </button>
                         <div className="text-sm text-slate-500">
                             <span className="font-bold text-[#002855]">{filteredTickets.length}</span> tickets archivados
                         </div>
@@ -225,10 +340,13 @@ export default function TicketHistory() {
                                 <tr className="bg-slate-50/30">
                                     <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">ID Ticket</th>
                                     <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Incidente</th>
+                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Descripción</th>
                                     <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Estado</th>
                                     <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Solicitante</th>
                                     <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Atendido por</th>
                                     <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Prioridad</th>
+                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha Creación</th>
+                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha Cierre</th>
                                     <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Tiempo cierre</th>
                                 </tr>
                             </thead>
@@ -246,6 +364,11 @@ export default function TicketHistory() {
                                                     <p className="text-[12px] font-black text-slate-700 uppercase tracking-tight line-clamp-1">{ticket.title}</p>
                                                     <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{ticket.locations?.name || 'Central'}</p>
                                                 </div>
+                                            </td>
+                                            <td className="px-6 py-6">
+                                                <p className="text-[10px] text-slate-600 line-clamp-2 max-w-[200px]">
+                                                    {ticket.description || 'Sin descripción'}
+                                                </p>
                                             </td>
                                             <td className="px-6 py-6 text-center">
                                                 <span className="px-4 py-1.5 rounded-lg bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border border-slate-100">
@@ -286,6 +409,30 @@ export default function TicketHistory() {
                                                 <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${prio.color} border-current/10`}>
                                                     <div className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
                                                     <span className="text-[10px] font-black uppercase tracking-widest">{prio.label}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-6">
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                                                    <Calendar size={12} />
+                                                    {new Date(ticket.created_at).toLocaleDateString('es-PE', { 
+                                                        day: '2-digit', 
+                                                        month: 'short', 
+                                                        year: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-6">
+                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                                                    <Calendar size={12} />
+                                                    {ticket.closed_at ? new Date(ticket.closed_at).toLocaleDateString('es-PE', { 
+                                                        day: '2-digit', 
+                                                        month: 'short', 
+                                                        year: 'numeric',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    }) : 'N/A'}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-6">

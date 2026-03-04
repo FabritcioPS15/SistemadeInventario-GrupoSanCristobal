@@ -87,6 +87,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             { id: 'tickets-dashboard', label: 'Dashboard General', path: '/tickets/dashboard' },
             { id: 'tickets-mine', label: 'Mis tickets', path: '/tickets/mine' },
             { id: 'tickets-reports', label: 'Reportes', path: '/tickets/reports' },
+            { id: 'tickets-history', label: 'Historial de Tickets', path: '/tickets/history' },
           ]
         },
         {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, CheckCircle, Loader2, Plus, Trash2, Edit2 } from 'lucide-react';
+import { Wrench, Plus, Trash2 } from 'lucide-react';
 import { supabase, AssetWithDetails } from '../../lib/supabase';
-import { div } from 'framer-motion/client';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 type PartUsed = {
   id?: string;
@@ -28,631 +28,437 @@ type MaintenanceRecord = {
   solution_applied?: string;
   work_hours?: number;
   parts_used?: PartUsed[];
-  next_maintenance_date?: string;
-  maintenance_frequency?: number;
-  total_cost?: number;
-  warranty_claim?: boolean;
-  warranty_details?: string;
-  location_id?: string;
-  assets?: any;
 };
 
 type MaintenanceFormProps = {
   onClose: () => void;
   onSave: () => void;
-  editRecord?: MaintenanceRecord;
+  editMaintenance?: MaintenanceRecord;
+  assetId?: string;
 };
 
-export default function MaintenanceForm({ onClose, onSave, editRecord }: MaintenanceFormProps) {
+export default function MaintenanceForm({ onClose, onSave, editMaintenance, assetId }: MaintenanceFormProps) {
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
-  const [locations, setLocations] = useState<any[]>([]);
-  const [filteredAssets, setFilteredAssets] = useState<AssetWithDetails[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isAssetDropdownOpen, setIsAssetDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [partsUsed, setPartsUsed] = useState<PartUsed[]>(editMaintenance?.parts_used || []);
 
   const [formData, setFormData] = useState({
-    asset_id: editRecord?.asset_id || '',
-    maintenance_type: editRecord?.maintenance_type || 'preventive',
-    status: editRecord?.status || 'pending',
-    description: editRecord?.description || '',
-    scheduled_date: editRecord?.scheduled_date || '',
-    completed_date: editRecord?.completed_date || '',
-    technician: editRecord?.technician || '',
-    notes: editRecord?.notes || '',
-    failure_cause: editRecord?.failure_cause || '',
-    solution_applied: editRecord?.solution_applied || '',
-    work_hours: editRecord?.work_hours || 0,
-    parts_used: editRecord?.parts_used || [],
-    next_maintenance_date: editRecord?.next_maintenance_date || '',
-    maintenance_frequency: editRecord?.maintenance_frequency || 30,
-    total_cost: editRecord?.total_cost || 0,
-    warranty_claim: editRecord?.warranty_claim || false,
-    warranty_details: editRecord?.warranty_details || '',
-    location_id: editRecord?.location_id || ''
+    asset_id: editMaintenance?.asset_id || assetId || '',
+    maintenance_type: editMaintenance?.maintenance_type || 'preventive',
+    status: editMaintenance?.status || 'pending',
+    description: editMaintenance?.description || '',
+    scheduled_date: editMaintenance?.scheduled_date || '',
+    completed_date: editMaintenance?.completed_date || '',
+    technician: editMaintenance?.technician || '',
+    notes: editMaintenance?.notes || '',
+    failure_cause: editMaintenance?.failure_cause || '',
+    solution_applied: editMaintenance?.solution_applied || '',
+    work_hours: editMaintenance?.work_hours?.toString() || '',
   });
-
-  const [newPart, setNewPart] = useState<Omit<PartUsed, 'total_cost'>>({
-    name: '',
-    quantity: 1,
-    unit: 'unidad',
-    unit_price: 0
-  });
-  const [showPartForm, setShowPartForm] = useState(false);
-  const [editingPartIndex, setEditingPartIndex] = useState<number | null>(null);
-
-  const fetchAssets = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('assets')
-        .select('*, asset_types(*), locations(*)')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (data) {
-        setAssets(data as AssetWithDetails[]);
-        setFilteredAssets(data as AssetWithDetails[]);
-
-        if (editRecord?.asset_id) {
-          data.find((a: any) => a.id === editRecord.asset_id);
-        }
-      }
-    } catch (error) {
-      console.error('Error al cargar los activos:', error);
-      setErrors(prev => ({ ...prev, fetch: 'Error al cargar la lista de activos' }));
-    }
-  };
-
-  const fetchLocations = async () => {
-    try {
-      const { data, error } = await supabase.from('locations').select('*').order('name');
-      if (error) throw error;
-      if (data) setLocations(data);
-    } catch (error) {
-      console.error('Error fetching locations:', error);
-    }
-  };
 
   useEffect(() => {
     fetchAssets();
-    fetchLocations();
   }, []);
 
-  const handleAssetSelect = (asset: AssetWithDetails) => {
-    if (!asset) return;
-    setFormData(prev => ({
-      ...prev,
-      asset_id: asset.id,
-      location_id: prev.location_id || asset.location_id || ''
-    }));
-    setSearchTerm(`${asset.brand || ''} ${asset.model || ''} ${asset.serial_number ? `- ${asset.serial_number}` : ''}`.trim());
-    setIsAssetDropdownOpen(false);
-    setErrors(prev => ({ ...prev, asset_id: '' }));
-    validateField('asset_id', asset.id);
+  const fetchAssets = async () => {
+    const { data } = await supabase
+      .from('assets')
+      .select(`
+        *,
+        asset_types(name),
+        locations(name)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (data) setAssets(data as AssetWithDetails[]);
   };
 
-  useEffect(() => {
-    let filtered = assets;
-
-    // Filter by Location if selected
-    if (formData.location_id) {
-      filtered = filtered.filter(asset => asset.location_id === formData.location_id);
-    }
-
-    if (searchTerm.trim() !== '') {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter(asset => (
-        asset.brand?.toLowerCase().includes(searchLower) ||
-        asset.model?.toLowerCase().includes(searchLower) ||
-        asset.serial_number?.toLowerCase().includes(searchLower) ||
-        asset.asset_types?.name?.toLowerCase().includes(searchLower) ||
-        asset.locations?.name?.toLowerCase().includes(searchLower)
-      ));
-    }
-
-    setFilteredAssets(filtered);
-  }, [searchTerm, assets, formData.location_id]);
-
-  const validateDateRange = (startDate: string, endDate: string) => {
-    if (!startDate || !endDate) return true;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    return end >= start;
-  };
-
-  const validateDate = (dateString: string) => {
-    if (!dateString) return true;
-    const date = new Date(dateString);
-    return !isNaN(date.getTime());
-  };
-
-  const validateField = async (fieldName: string, value: string) => {
-    let errorMessage = '';
-
-    switch (fieldName) {
-      case 'asset_id':
-        if (!value) {
-          errorMessage = 'Debe seleccionar un activo';
-        }
-        break;
-      case 'description':
-        if (!value.trim()) {
-          errorMessage = 'La descripción es requerida';
-        } else if (value.trim().length < 5) {
-          errorMessage = 'La descripción debe tener al menos 5 caracteres';
-        }
-        break;
-      case 'scheduled_date':
-        if (value && !validateDate(value)) {
-          errorMessage = 'Fecha programada inválida';
-        }
-        break;
-      case 'completed_date':
-        if (value && !validateDate(value)) {
-          errorMessage = 'Fecha de completado inválida';
-        } else if (value && formData.scheduled_date && !validateDateRange(formData.scheduled_date, value)) {
-          errorMessage = 'La fecha de completado no puede ser anterior a la fecha programada';
-        }
-        break;
-    }
-
-    setErrors(prev => ({ ...prev, [fieldName]: errorMessage }));
-  };
-
-  const calculateTotalCost = (parts: PartUsed[]) => {
-    return parts.reduce((total, part) => total + (part.unit_price * part.quantity), 0);
-  };
-
-  const handleAddPart = () => {
-    if (!newPart.name || newPart.quantity <= 0) return;
-
-    const partWithTotal: PartUsed = {
-      ...newPart,
-      total_cost: newPart.quantity * newPart.unit_price
+  const addPart = () => {
+    const newPart: PartUsed = {
+      name: '',
+      quantity: 1,
+      unit: 'unidad',
+      unit_price: 0,
+      total_cost: 0,
     };
+    setPartsUsed([...partsUsed, newPart]);
+  };
 
-    const updatedParts = editingPartIndex !== null
-      ? formData.parts_used.map((p, i) => i === editingPartIndex ? partWithTotal : p)
-      : [...formData.parts_used, partWithTotal];
-
-    setFormData(prev => ({
-      ...prev,
-      parts_used: updatedParts,
-      total_cost: calculateTotalCost(updatedParts)
-    }));
-
-    setNewPart({ name: '', quantity: 1, unit: 'unidad', unit_price: 0 });
-    setShowPartForm(false);
-    setEditingPartIndex(null);
+  const updatePart = (index: number, field: keyof PartUsed, value: string | number) => {
+    const updatedParts = [...partsUsed];
+    updatedParts[index] = { ...updatedParts[index], [field]: value };
+    
+    // Recalculate total cost
+    if (field === 'quantity' || field === 'unit_price') {
+      updatedParts[index].total_cost = updatedParts[index].quantity * updatedParts[index].unit_price;
+    }
+    
+    setPartsUsed(updatedParts);
   };
 
   const removePart = (index: number) => {
-    const updatedParts = formData.parts_used.filter((_, i) => i !== index);
-    setFormData(prev => ({
-      ...prev,
-      parts_used: updatedParts,
-      total_cost: calculateTotalCost(updatedParts)
-    }));
+    setPartsUsed(partsUsed.filter((_, i) => i !== index));
+  };
+
+  const calculateTotalCost = () => {
+    return partsUsed.reduce((total, part) => total + part.total_cost, 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const requiredFields = ['asset_id', 'maintenance_type', 'status', 'description'];
     const newErrors: Record<string, string> = {};
 
-    requiredFields.forEach(field => {
-      if (!formData[field as keyof typeof formData]) {
-        newErrors[field] = 'Este campo es requerido';
-      }
-    });
+    if (!formData.asset_id) {
+      newErrors.asset_id = 'El activo es requerido';
+    }
+
+    if (!formData.maintenance_type) {
+      newErrors.maintenance_type = 'El tipo de mantenimiento es requerido';
+    }
+
+    if (!formData.status) {
+      newErrors.status = 'El estado es requerido';
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'La descripción es requerida';
+    }
+
+    setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
       return;
     }
 
     setLoading(true);
 
     const dataToSave = {
-      ...formData,
+      asset_id: formData.asset_id,
+      maintenance_type: formData.maintenance_type,
+      status: formData.status,
+      description: formData.description.trim(),
       scheduled_date: formData.scheduled_date || null,
       completed_date: formData.completed_date || null,
-      next_maintenance_date: formData.next_maintenance_date || null,
+      technician: formData.technician.trim() || null,
+      notes: formData.notes.trim() || null,
+      failure_cause: formData.failure_cause.trim() || null,
+      solution_applied: formData.solution_applied.trim() || null,
+      work_hours: formData.work_hours ? parseFloat(formData.work_hours) : null,
+      parts_used: partsUsed.length > 0 ? partsUsed : null,
       updated_at: new Date().toISOString(),
     };
 
     try {
-      if (editRecord) {
+      if (editMaintenance) {
         const { error } = await supabase
           .from('maintenance_records')
           .update(dataToSave)
-          .eq('id', editRecord.id);
+          .eq('id', editMaintenance.id);
 
-        if (error) throw error;
+        if (error) {
+          setErrors({ submit: 'Error al actualizar el mantenimiento: ' + error.message });
+          setLoading(false);
+          return;
+        }
       } else {
         const { error } = await supabase
           .from('maintenance_records')
           .insert([dataToSave]);
 
-        if (error) throw error;
+        if (error) {
+          setErrors({ submit: 'Error al crear el mantenimiento: ' + error.message });
+          setLoading(false);
+          return;
+        }
       }
 
+      setLoading(false);
       onSave();
     } catch (err: any) {
-      console.error('Error saving maintenance record:', err);
-      setErrors({ submit: 'Error al guardar el registro: ' + err.message });
+      setErrors({ submit: 'Error inesperado: ' + err });
       setLoading(false);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked :
-      type === 'number' ? parseFloat(value) : value;
+    const { name, value } = e.target;
 
-    setFormData(prev => ({ ...prev, [name]: val }));
-    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
-      <div className="bg-white w-full h-[95vh] sm:h-auto sm:max-w-4xl sm:max-h-[90vh] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 uppercase">
-              {editRecord ? 'Editar Registro de Mantenimiento' : 'Nuevo Registro de Mantenimiento'}
-            </h2>
-            <p className="text-xs text-gray-500 mt-0.5 uppercase tracking-wide">Completa los detalles técnicos del servicio</p>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
-            <X size={24} />
-          </button>
+    <BaseForm
+      title={editMaintenance ? 'Editar Mantenimiento' : 'Nuevo Mantenimiento'}
+      subtitle="Módulo de Gestión de Mantenimiento"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.submit}
+      icon={<Wrench size={24} className="text-blue-600" />}
+    >
+      {/* Section: Información Principal */}
+      <FormSection title="Información del Mantenimiento" color="blue">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <FormField label="Activo" required error={errors.asset_id}>
+            <FormSelect
+              name="asset_id"
+              value={formData.asset_id}
+              onChange={handleChange}
+              required
+              error={errors.asset_id}
+            >
+              <option value="">Seleccionar activo</option>
+              {assets.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.asset_types?.name} - {asset.brand} {asset.model}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Tipo de Mantenimiento" required error={errors.maintenance_type}>
+            <FormSelect
+              name="maintenance_type"
+              value={formData.maintenance_type}
+              onChange={handleChange}
+              required
+              error={errors.maintenance_type}
+            >
+              <option value="preventive">Preventivo</option>
+              <option value="corrective">Correctivo</option>
+              <option value="technical_review">Revisión Técnica</option>
+              <option value="repair">Reparación</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Estado" required error={errors.status}>
+            <FormSelect
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+              required
+              error={errors.status}
+            >
+              <option value="pending">Pendiente</option>
+              <option value="in_progress">En Progreso</option>
+              <option value="completed">Completado</option>
+              <option value="waiting_parts">Esperando Repuestos</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Técnico Asignado" error={errors.technician}>
+            <FormInput
+              type="text"
+              name="technician"
+              value={formData.technician}
+              onChange={handleChange}
+              placeholder="Nombre del técnico"
+              error={errors.technician}
+            />
+          </FormField>
+
+          <FormField label="Fecha Programada" error={errors.scheduled_date}>
+            <FormInput
+              type="datetime-local"
+              name="scheduled_date"
+              value={formData.scheduled_date}
+              onChange={handleChange}
+              error={errors.scheduled_date}
+            />
+          </FormField>
+
+          <FormField label="Fecha de Completado" error={errors.completed_date}>
+            <FormInput
+              type="datetime-local"
+              name="completed_date"
+              value={formData.completed_date}
+              onChange={handleChange}
+              error={errors.completed_date}
+            />
+          </FormField>
+
+          <FormField label="Horas de Trabajo" error={errors.work_hours}>
+            <FormInput
+              type="number"
+              step="0.5"
+              name="work_hours"
+              value={formData.work_hours}
+              onChange={handleChange}
+              placeholder="8.5"
+              error={errors.work_hours}
+            />
+          </FormField>
         </div>
+      </FormSection>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <section className="space-y-4">
-                  <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Información General</h3>
+      {/* Section: Descripción */}
+      <FormSection title="Descripción del Trabajo" color="emerald">
+        <FormField label="Descripción" required error={errors.description}>
+          <FormTextarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            placeholder="Descripción detallada del mantenimiento a realizar..."
+            rows={4}
+            required
+            error={errors.description}
+          />
+        </FormField>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Sede (Opcional)</label>
-                      <select
-                        name="location_id"
-                        value={formData.location_id}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all"
-                      >
-                        <option value="">Todas las Sedes</option>
-                        {locations.map(loc => (
-                          <option key={loc.id} value={loc.id}>{loc.name}</option>
-                        ))}
-                      </select>
-                    </div>
+        {formData.maintenance_type === 'corrective' && (
+          <>
+            <FormField label="Causa del Fallo" error={errors.failure_cause}>
+              <FormTextarea
+                name="failure_cause"
+                value={formData.failure_cause}
+                onChange={handleChange}
+                placeholder="Describir la causa del problema o fallo detectado..."
+                rows={3}
+                error={errors.failure_cause}
+              />
+            </FormField>
 
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Activo *</label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={searchTerm}
-                          onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            setIsAssetDropdownOpen(true);
-                          }}
-                          onFocus={() => setIsAssetDropdownOpen(true)}
-                          placeholder="Buscar activo..."
-                          className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.asset_id ? 'border-red-300' : 'border-gray-200'}`}
-                        />
-                        {isAssetDropdownOpen && (
-                          <div className="absolute z-30 mt-1 w-full bg-white shadow-2xl rounded-lg border border-gray-100 max-h-60 overflow-y-auto">
-                            {filteredAssets.length > 0 ? (
-                              filteredAssets.map(asset => (
-                                <div
-                                  key={asset.id}
-                                  className="px-4 py-2.5 hover:bg-blue-50 cursor-pointer border-b last:border-0"
-                                  onClick={() => handleAssetSelect(asset)}
-                                >
-                                  <p className="text-sm font-bold text-gray-900">{asset.brand} {asset.model}</p>
-                                  <div className="flex items-center justify-between mt-0.5">
-                                    <p className="text-[10px] text-gray-500 font-mono">{asset.serial_number}</p>
-                                    <p className="text-[9px] font-black text-blue-500 uppercase tracking-tighter">{asset.locations?.name}</p>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="px-4 py-3 text-center text-gray-400 text-xs italic">
-                                No hay activos en esta sede
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      {errors.asset_id && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.asset_id}</p>}
-                    </div>
-                  </div>
+            <FormField label="Solución Aplicada" error={errors.solution_applied}>
+              <FormTextarea
+                name="solution_applied"
+                value={formData.solution_applied}
+                onChange={handleChange}
+                placeholder="Describir la solución aplicada para resolver el problema..."
+                rows={3}
+                error={errors.solution_applied}
+              />
+            </FormField>
+          </>
+        )}
+      </FormSection>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo *</label>
-                      <select
-                        name="maintenance_type"
-                        value={formData.maintenance_type}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="preventive">Preventivo</option>
-                        <option value="corrective">Correctivo</option>
-                        <option value="technical_review">Revisión Técnica</option>
-                        <option value="repair">Reparación</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Estado *</label>
-                      <select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="pending">Pendiente</option>
-                        <option value="in_progress">En Progreso</option>
-                        <option value="completed">Completado</option>
-                        <option value="waiting_parts">Esperando Repuestos</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descripción del Servicio *</label>
-                    <textarea
-                      name="description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      rows={2}
-                      className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 transition-all ${errors.description ? 'border-red-300' : 'border-gray-200'}`}
-                      placeholder="Detalla el trabajo realizado..."
-                    />
-                    {errors.description && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors.description}</p>}
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Fechas y Tiempos</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Prog. Inicia</label>
-                      <input
-                        type="date"
-                        name="scheduled_date"
-                        value={formData.scheduled_date}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Completado</label>
-                      <input
-                        type="date"
-                        name="completed_date"
-                        value={formData.completed_date}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Próx. Mantenimiento</label>
-                      <input
-                        type="date"
-                        name="next_maintenance_date"
-                        value={formData.next_maintenance_date}
-                        onChange={handleChange}
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Horas Hombre</label>
-                      <input
-                        type="number"
-                        name="work_hours"
-                        value={formData.work_hours}
-                        onChange={handleChange}
-                        step="0.5"
-                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </section>
-              </div>
-
-              <div className="space-y-6">
-                <section className="space-y-4">
-                  <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Detalle Técnico</h3>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Causa de Falla</label>
-                    <textarea
-                      name="failure_cause"
-                      value={formData.failure_cause}
-                      onChange={handleChange}
-                      rows={2}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                      placeholder="¿Por qué ocurrió el problema?"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Solución Aplicada</label>
-                    <textarea
-                      name="solution_applied"
-                      value={formData.solution_applied}
-                      onChange={handleChange}
-                      rows={2}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                      placeholder="Pasos realizados para corregir..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Técnico Responsable</label>
-                    <input
-                      type="text"
-                      name="technician"
-                      value={formData.technician}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
-                      placeholder="Nombre del técnico"
-                    />
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Repuestos y Costos</h3>
-                    <button
-                      type="button"
-                      onClick={() => setShowPartForm(!showPartForm)}
-                      className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-800"
-                    >
-                      <Plus size={14} /> Añadir Repuesto
-                    </button>
-                  </div>
-
-                  {showPartForm && (
-                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
-                      <input
-                        type="text"
-                        placeholder="Nombre del repuesto"
-                        value={newPart.name}
-                        onChange={e => setNewPart({ ...newPart, name: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                      />
-                      <div className="grid grid-cols-2 gap-3">
-                        <input
-                          type="number"
-                          placeholder="Cantidad"
-                          value={newPart.quantity || ''}
-                          onChange={e => setNewPart({ ...newPart, quantity: parseFloat(e.target.value) })}
-                          className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                        />
-                        <input
-                          type="number"
-                          placeholder="Precio Unit."
-                          value={newPart.unit_price || ''}
-                          onChange={e => setNewPart({ ...newPart, unit_price: parseFloat(e.target.value) })}
-                          className="px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={handleAddPart}
-                          className="flex-1 px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700"
-                        >
-                          {editingPartIndex !== null ? 'Actualizar' : 'Añadir'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowPartForm(false);
-                            setEditingPartIndex(null);
-                          }}
-                          className="px-3 py-2 bg-white text-gray-600 text-xs font-bold rounded-lg border border-gray-200"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    {formData.parts_used.map((part, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg text-sm group">
-                        <div className="flex-1">
-                          <p className="font-bold text-gray-900">{part.name}</p>
-                          <p className="text-xs text-gray-500">{part.quantity} x S/ {part.unit_price.toFixed(2)}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="font-bold text-blue-600">S/ {part.total_cost.toFixed(2)}</span>
-                          <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setNewPart({ ...part });
-                                setEditingPartIndex(index);
-                                setShowPartForm(true);
-                              }}
-                              className="p-1.5 text-gray-400 hover:text-blue-600"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => removePart(index)}
-                              className="p-1.5 text-gray-400 hover:text-rose-600"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-between">
-                    <span className="text-xs font-bold text-blue-800 uppercase italic">Costo Total Estimado</span>
-                    <span className="text-lg font-black text-blue-800 font-mono">S/ {formData.total_cost.toFixed(2)}</span>
-                  </div>
-                </section>
-              </div>
-            </div>
-
-            <div className="sticky bottom-0 bg-gray-50 border-t p-4 sm:p-6 flex flex-col gap-4 z-10">
-              {errors.submit && (
-                <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-rose-800">
-                  <AlertCircle size={20} />
-                  <p className="text-sm font-medium">{errors.submit}</p>
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="warranty_claim"
-                    name="warranty_claim"
-                    checked={formData.warranty_claim}
-                    onChange={handleChange}
-                    className="w-4 h-4 text-blue-600 rounded"
-                  />
-                  <label htmlFor="warranty_claim" className="text-xs font-bold text-gray-700 uppercase cursor-pointer">Requerir Garantía</label>
-                </div>
-                <div className="flex flex-col sm:flex-row-reverse gap-3">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex-1 px-8 py-3 bg-slate-800 text-white text-[10px] font-bold rounded-lg hover:bg-slate-900 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 uppercase tracking-widest"
-                  >
-                    {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                    {editRecord ? 'Guardar Cambios' : 'Crear Registro'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-6 py-3 border border-gray-200 text-slate-600 rounded-lg hover:bg-gray-100 transition-all font-bold text-[10px] uppercase tracking-widest"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </div>
+      {/* Section: Repuestos Utilizados */}
+      <FormSection title="Repuestos Utilizados" color="amber">
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h4 className="text-sm font-medium text-gray-700">
+              Lista de repuestos utilizados en el mantenimiento
+            </h4>
+            <button
+              type="button"
+              onClick={addPart}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus size={16} />
+              Agregar Repuesto
+            </button>
           </div>
-        </form>
-      </div>
-    </div>
+
+          {partsUsed.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+              <p className="text-gray-500">No se han agregado repuestos</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {partsUsed.map((part, index) => (
+                <div key={index} className="bg-white border rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <FormField label="Nombre del Repuesto">
+                      <FormInput
+                        type="text"
+                        value={part.name}
+                        onChange={(e) => updatePart(index, 'name', e.target.value)}
+                        placeholder="Nombre del repuesto"
+                      />
+                    </FormField>
+
+                    <FormField label="Cantidad">
+                      <FormInput
+                        type="number"
+                        min="1"
+                        value={part.quantity}
+                        onChange={(e) => updatePart(index, 'quantity', parseInt(e.target.value) || 1)}
+                      />
+                    </FormField>
+
+                    <FormField label="Unidad">
+                      <FormSelect
+                        value={part.unit}
+                        onChange={(e) => updatePart(index, 'unit', e.target.value)}
+                      >
+                        <option value="unidad">Unidad</option>
+                        <option value="metro">Metro</option>
+                        <option value="kg">Kilogramo</option>
+                        <option value="litro">Litro</option>
+                        <option value="par">Par</option>
+                      </FormSelect>
+                    </FormField>
+
+                    <FormField label="Precio Unitario">
+                      <FormInput
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={part.unit_price}
+                        onChange={(e) => updatePart(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                      />
+                    </FormField>
+
+                    <FormField label="Costo Total">
+                      <FormInput
+                        type="number"
+                        step="0.01"
+                        value={part.total_cost}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </FormField>
+
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => removePart(index)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {partsUsed.length > 0 && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-blue-900">Costo Total de Repuestos:</span>
+                <span className="text-xl font-bold text-blue-900">
+                  S/. {calculateTotalCost().toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </FormSection>
+
+      {/* Section: Notas */}
+      <FormSection title="Notas Adicionales" color="purple">
+        <FormField label="Notas y Observaciones" error={errors.notes}>
+          <FormTextarea
+            name="notes"
+            value={formData.notes}
+            onChange={handleChange}
+            placeholder="Notas adicionales sobre el mantenimiento, observaciones, recomendaciones..."
+            rows={4}
+            error={errors.notes}
+          />
+        </FormField>
+      </FormSection>
+    </BaseForm>
   );
 }

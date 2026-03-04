@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Plus, Edit, Trash2, Car, X, Download, LayoutGrid, List, MapPin, Shield, Activity, Info, Star } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import VehicleImportModal from '../components/VehicleImportModal';
+import FlotaVehicularForm from '../components/forms/FlotaVehicularForm';
 import Pagination from '../components/Pagination';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -86,9 +87,37 @@ export default function FlotaVehicular() {
   };
 
   const getEstadoBadge = (estado: string) => {
-    const symbols = { activa: 'Activa', en_proceso: 'En proceso', inactiva: 'Inactiva' };
-    const colors = { activa: 'bg-green-100 text-green-800', en_proceso: 'bg-yellow-100 text-yellow-800', inactiva: 'bg-gray-100 text-gray-800' };
-    return <span className={`px-2 py-1 text-[10px] font-black uppercase tracking-tight rounded-full ${colors[estado as keyof typeof colors]}`}>{symbols[estado as keyof typeof symbols]}</span>;
+    const colors = {
+      activa: 'bg-emerald-100 text-emerald-800',
+      inactiva: 'bg-rose-100 text-rose-800',
+      en_proceso: 'bg-amber-100 text-amber-800'
+    };
+    return <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${colors[estado as keyof typeof colors] || 'bg-gray-100 text-gray-800'}`}>
+      {estado === 'en_proceso' ? 'En Proceso' : estado === 'activa' ? 'Activa' : estado === 'inactiva' ? 'Inactiva' : estado}
+    </span>;
+  };
+
+  // Función para determinar el color de la fecha de vencimiento
+  const getDateColor = (vencimiento: string | undefined) => {
+    if (!vencimiento) return 'text-gray-500';
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const vencDate = new Date(vencimiento);
+    vencDate.setHours(0, 0, 0, 0);
+    
+    const daysUntil = Math.ceil((vencDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntil <= 1) {
+      return 'text-red-600 font-bold bg-red-50 px-2 py-1 rounded'; // Rojo: vencido o a 1 día
+    } else if (daysUntil <= 15) {
+      return 'text-orange-600 font-bold bg-orange-50 px-2 py-1 rounded'; // Naranja: menos de 15 días
+    } else if (daysUntil <= 30) {
+      return 'text-yellow-600 font-bold bg-yellow-50 px-2 py-1 rounded'; // Amarillo: menos de 30 días
+    }
+    
+    return 'text-gray-700'; // Normal: más de 30 días
   };
 
   const getEscuelaNombre = (ubicacionActual: string) => {
@@ -273,10 +302,26 @@ export default function FlotaVehicular() {
                     <td className="px-6 py-4"><div className="flex flex-col"><span className="text-sm font-bold">{v.placa}</span><span className="text-[10px] text-slate-400">{v.marca} {v.modelo}</span></div></td>
                     <td className="px-6 py-4">{getEstadoBadge(v.estado)}</td>
                     <td className="px-6 py-4 text-[10px] font-bold uppercase">{getEscuelaNombre(v.ubicacion_actual)}</td>
-                    <td className="px-6 py-4 text-[11px] font-medium">{v.citv_vencimiento ? new Date(v.citv_vencimiento).toLocaleDateString() : '-'}</td>
-                    <td className="px-6 py-4 text-[11px] font-medium">{v.soat_vencimiento ? new Date(v.soat_vencimiento).toLocaleDateString() : '-'}</td>
-                    <td className="px-6 py-4 text-[11px] font-medium">{v.poliza_vencimiento ? new Date(v.poliza_vencimiento).toLocaleDateString() : '-'}</td>
-                    <td className="px-6 py-4 text-[11px] font-medium">{v.contrato_alquiler_vencimiento ? new Date(v.contrato_alquiler_vencimiento).toLocaleDateString() : '-'}</td>
+                    <td className="px-6 py-4 text-[11px] font-medium">
+                      <span className={getDateColor(v.citv_vencimiento)}>
+                        {v.citv_vencimiento ? new Date(v.citv_vencimiento).toLocaleDateString() : '-'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-[11px] font-medium">
+                      <span className={getDateColor(v.soat_vencimiento)}>
+                        {v.soat_vencimiento ? new Date(v.soat_vencimiento).toLocaleDateString() : '-'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-[11px] font-medium">
+                      <span className={getDateColor(v.poliza_vencimiento)}>
+                        {v.poliza_vencimiento ? new Date(v.poliza_vencimiento).toLocaleDateString() : '-'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-[11px] font-medium">
+                      <span className={getDateColor(v.contrato_alquiler_vencimiento)}>
+                        {v.contrato_alquiler_vencimiento ? new Date(v.contrato_alquiler_vencimiento).toLocaleDateString() : '-'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
                         <button onClick={() => handleEdit(v)} className="p-2 text-slate-400 hover:text-blue-600"><Edit size={16} /></button>
@@ -291,19 +336,16 @@ export default function FlotaVehicular() {
         )}
         {sortedVehiculos.length > itemsPerPage && <Pagination currentPage={currentPage} totalPages={Math.ceil(sortedVehiculos.length / itemsPerPage)} totalItems={sortedVehiculos.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} onItemsPerPageChange={setItemsPerPage} />}
       </div>
-
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div className="bg-[#002855] px-8 py-5 flex items-center justify-between"><h2 className="text-lg font-black text-white uppercase">{editing ? 'Editar' : 'Nueva'} Unidad</h2><button onClick={() => setShowForm(false)} className="text-white/70 hover:text-white"><X size={24} /></button></div>
-            <form onSubmit={handleSubmit} className="p-8 space-y-4 overflow-y-auto bg-slate-50 flex-1">
-              <input placeholder="Placa" value={form.placa} onChange={e => setForm({ ...form, placa: e.target.value.toUpperCase() })} className="w-full px-4 py-2 rounded-lg border outline-none font-bold" required />
-              <div className="grid grid-cols-2 gap-4"><input placeholder="Marca" value={form.marca} onChange={e => setForm({ ...form, marca: e.target.value })} className="w-full px-4 py-2 rounded-lg border outline-none" required /><input placeholder="Modelo" value={form.modelo} onChange={e => setForm({ ...form, modelo: e.target.value })} className="w-full px-4 py-2 rounded-lg border outline-none" required /></div>
-              <select value={form.ubicacion_actual} onChange={e => setForm({ ...form, ubicacion_actual: e.target.value })} className="w-full px-4 py-2 rounded-lg border font-bold" required>{schools.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}</select>
-              <div className="flex gap-3 pt-4"><button type="button" onClick={() => setShowForm(false)} className="flex-1 py-2 text-xs font-black uppercase text-gray-400">Cancelar</button><button type="submit" className="flex-1 py-2 bg-[#002855] text-white rounded-lg text-xs font-black uppercase">Guardar</button></div>
-            </form>
-          </div>
-        </div>
+        <FlotaVehicularForm
+          onClose={() => setShowForm(false)}
+          onSave={() => {
+            fetchVehiculos();
+            setShowForm(false);
+            setEditing(undefined);
+          }}
+          editVehicle={editing}
+        />
       )}
       <VehicleImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onSuccess={fetchVehiculos} locations={schools} />
     </div>
