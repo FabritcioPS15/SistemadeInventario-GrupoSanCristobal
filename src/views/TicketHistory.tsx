@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, History, ShieldCheck, Lock, Search, Calendar, Clock, Filter, RefreshCw, Archive } from 'lucide-react';
+import { ArrowLeft, History, ShieldCheck, Lock, Search, Calendar, Clock, Filter, RefreshCw, Archive, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Ticket {
     id: string;
@@ -26,10 +28,10 @@ interface Ticket {
 }
 
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string }> = {
-    critical: { label: 'Crítico', color: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
-    high: { label: 'Alta', color: 'text-orange-600 bg-orange-50', dot: 'bg-orange-500' },
-    medium: { label: 'Media', color: 'text-blue-600 bg-blue-50', dot: 'bg-blue-500' },
-    low: { label: 'Baja', color: 'text-slate-600 bg-slate-50', dot: 'bg-slate-500' }
+    critical: { label: 'P1 - Crítica', color: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
+    high: { label: 'P2 - Alta', color: 'text-orange-600 bg-orange-50', dot: 'bg-orange-500' },
+    medium: { label: 'P3 - Media', color: 'text-blue-600 bg-blue-50', dot: 'bg-blue-500' },
+    low: { label: 'P4 - Baja', color: 'text-slate-600 bg-slate-50', dot: 'bg-slate-500' }
 };
 
 export default function TicketHistory() {
@@ -48,7 +50,6 @@ export default function TicketHistory() {
 
     const fetchArchivedTickets = async () => {
         try {
-            console.log('🔍 Fetching archived tickets...');
             
             const { data, error } = await supabase
                 .from('tickets')
@@ -61,8 +62,6 @@ export default function TicketHistory() {
                 .eq('status', 'archived')
                 .order('created_at', { ascending: false });
 
-            console.log('📊 Archived tickets response:', { data, error });
-            console.log('📈 Number of archived tickets found:', data?.length || 0);
 
             if (error) {
                 console.error('❌ Error fetching archived tickets:', error);
@@ -70,7 +69,6 @@ export default function TicketHistory() {
             }
             
             setTickets(data || []);
-            console.log('✅ Archived tickets loaded successfully:', data?.length || 0, 'tickets');
         } catch (error) {
             console.error('❌ Error in fetchArchivedTickets:', error);
         } finally {
@@ -128,9 +126,46 @@ export default function TicketHistory() {
         setRefreshing(false);
     };
 
+    const generateHistoryPDF = () => {
+        const doc = new jsPDF();
+
+        // Title & Header
+        doc.setFontSize(20);
+        doc.setTextColor(0, 40, 85);
+        doc.text('Historial Completo de Tickets', 14, 22);
+
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generado el: ${new Date().toLocaleDateString()} a las ${new Date().toLocaleTimeString()}`, 14, 30);
+        doc.text(`Total de tickets archivados: ${filteredTickets.length}`, 14, 37);
+
+        // Tickets Table
+        const tableBody = filteredTickets.map(t => [
+            `TK-${t.id.slice(0, 6).toUpperCase()}`,
+            t.title,
+            t.requester?.full_name || 'N/A',
+            t.attendant?.full_name || 'Sin asignar',
+            t.priority === 'critical' ? 'P1 - Crítica' : t.priority === 'high' ? 'P2 - Alta' : t.priority === 'medium' ? 'P3 - Media' : 'P4 - Baja',
+            new Date(t.created_at).toLocaleDateString(),
+            t.closed_at ? new Date(t.closed_at).toLocaleDateString() : 'N/A',
+            getTimeToClose(t)
+        ]);
+
+        autoTable(doc, {
+            startY: 50,
+            head: [['ID', 'Título', 'Solicitante', 'Atendido por', 'Prioridad', 'Fecha Creación', 'Fecha Cierre', 'Tiempo de Cierre']],
+            body: tableBody,
+            headStyles: { fillColor: [0, 40, 85] },
+            alternateRowStyles: { fillColor: [240, 245, 250] },
+            margin: { top: 50 },
+            styles: { fontSize: 8, cellPadding: 2 }
+        });
+
+        doc.save(`Historial_Tickets_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
     const handleDiagnose = async () => {
         try {
-            console.log('🔧 Running diagnosis...');
             
             // Check all tickets
             const { data: allTickets, error: allError } = await supabase
@@ -139,8 +174,6 @@ export default function TicketHistory() {
                 .order('created_at', { ascending: false })
                 .limit(10);
             
-            console.log('📋 All recent tickets:', allTickets);
-            console.log('❌ All tickets error:', allError);
             
             // Check specifically for archived tickets
             const { data: archivedTickets, error: archivedError } = await supabase
@@ -148,8 +181,6 @@ export default function TicketHistory() {
                 .select('id, title, status, created_at, closed_at')
                 .eq('status', 'archived');
             
-            console.log('📁 Archived tickets:', archivedTickets);
-            console.log('❌ Archived tickets error:', archivedError);
             
             // Check closed tickets
             const { data: closedTickets, error: closedError } = await supabase
@@ -157,8 +188,6 @@ export default function TicketHistory() {
                 .select('id, title, status, created_at, closed_at')
                 .eq('status', 'closed');
             
-            console.log('🔒 Closed tickets:', closedTickets);
-            console.log('❌ Closed tickets error:', closedError);
             
             alert(`Diagnóstico completado. Revisa la consola para detalles.
             
@@ -239,11 +268,12 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                     </div>
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={handleDiagnose}
-                            className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                            onClick={generateHistoryPDF}
+                            disabled={filteredTickets.length === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Filter size={20} />
-                            <span className="font-medium">Diagnóstico</span>
+                            <Download size={20} />
+                            <span className="font-medium">Descargar PDF</span>
                         </button>
                         <button
                             onClick={handleRefresh}
@@ -293,10 +323,10 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                                 className="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] focus:border-transparent text-sm"
                             >
                                 <option value="all">Todas las prioridades</option>
-                                <option value="critical">Crítico</option>
-                                <option value="high">Alta</option>
-                                <option value="medium">Media</option>
-                                <option value="low">Baja</option>
+                                <option value="critical">P1 - Crítica</option>
+                                <option value="high">P2 - Alta</option>
+                                <option value="medium">P3 - Media</option>
+                                <option value="low">P4 - Baja</option>
                             </select>
                         </div>
 

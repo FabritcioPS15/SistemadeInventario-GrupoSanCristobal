@@ -81,13 +81,10 @@ export default function Tickets() {
 
     // Función manual para forzar archivado (para pruebas)
     const forceArchiveOldTickets = async () => {
-        console.log('🔧 FORZANDO ARCHIVADO MANUAL');
         await handleAutomation();
     };
 
     const handleAutomation = async (ticketsData: any[] = tickets) => {
-        console.log('🔄 INICIANDO AUTOMATIZACIÓN DE TICKETS');
-        console.log('Tickets totales:', ticketsData.length);
         
         const now = new Date();
         const threeMinutes = 3 * 60 * 1000;
@@ -110,18 +107,15 @@ export default function Tickets() {
                 const timeDiff = now.getTime() - closedTime.getTime();
                 const minutesDiff = Math.floor(timeDiff / 60000);
                 
-                console.log(`📋 Ticket ${t.id?.slice(0, 8)}: cerrado hace ${minutesDiff} minutos`);
                 
                 return minutesDiff >= 10;
             }
             return false;
         });
 
-        console.log(`📊 Resumen: ${toClose.length} para cerrar, ${toArchive.length} para archivar`);
 
         // Procesar cierre automático
         if (toClose.length > 0) {
-            console.log('🔒 Cerrando tickets resueltos:', toClose.map(t => t.id?.slice(0, 8)));
             
             for (const ticket of toClose) {
                 try {
@@ -135,7 +129,6 @@ export default function Tickets() {
                         continue;
                     }
                     
-                    console.log(`✅ Ticket ${ticket.id?.slice(0, 8)} cerrado exitosamente`);
                 } catch (error) {
                     console.error(`❌ Error procesando ticket ${ticket.id}:`, error);
                 }
@@ -144,7 +137,6 @@ export default function Tickets() {
 
         // Procesar archivado automático
         if (toArchive.length > 0) {
-            console.log('📁 Archivando tickets cerrados:', toArchive.map(t => t.id?.slice(0, 8)));
             
             for (const ticket of toArchive) {
                 try {
@@ -162,7 +154,6 @@ export default function Tickets() {
                         continue;
                     }
                     
-                    console.log(`✅ Ticket ${ticket.id?.slice(0, 8)} archivado exitosamente`);
                     
                 } catch (error) {
                     console.error(`❌ Error procesando archivado del ticket ${ticket.id}:`, error);
@@ -172,7 +163,6 @@ export default function Tickets() {
         
         // Refrescar datos si hubo cambios
         if (toClose.length > 0 || toArchive.length > 0) {
-            console.log('🔄 Refrescando tickets...');
             fetchTickets();
         }
     };
@@ -279,7 +269,7 @@ export default function Tickets() {
             `TK-${t.id.slice(0, 6).toUpperCase()}`,
             t.title,
             t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado',
-            t.priority === 'critical' ? 'Crítico' : t.priority === 'high' ? 'Alta' : t.priority === 'medium' ? 'Media' : 'Baja',
+            t.priority === 'critical' ? 'P1 - Crítica' : t.priority === 'high' ? 'P2 - Alta' : t.priority === 'medium' ? 'P3 - Media' : 'P4 - Baja',
             new Date(t.created_at).toLocaleDateString()
         ]);
 
@@ -304,74 +294,39 @@ export default function Tickets() {
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {activeTab === 'reports' ? (
                         <div className="px-8 mt-10 pb-32 max-w-[1800px] mx-auto w-full animate-in slide-in-from-bottom-4 duration-500">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                                <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                                            <TrendingUp size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Tasa de Resolución</h3>
-                                            <p className="text-3xl font-black text-[#002855]">{metricsData.resolutionRate}</p>
-                                        </div>
+                            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+                                <h2 className="text-2xl font-black text-[#002855] mb-8">Reportes de Tickets</h2>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                    <div className="text-center p-6 bg-blue-50 rounded-2xl">
+                                        <div className="text-3xl font-black text-blue-600 mb-2">{metricsData.total}</div>
+                                        <div className="text-sm font-bold text-blue-700 uppercase tracking-widest">Total Tickets</div>
                                     </div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{metricsData.resolved} resueltos de {metricsData.total} totales</p>
+                                    <div className="text-center p-6 bg-emerald-50 rounded-2xl">
+                                        <div className="text-3xl font-black text-emerald-600 mb-2">{metricsData.resolved}</div>
+                                        <div className="text-sm font-bold text-emerald-700 uppercase tracking-widest">Resueltos</div>
+                                    </div>
+                                    <div className="text-center p-6 bg-amber-50 rounded-2xl">
+                                        <div className="text-3xl font-black text-amber-600 mb-2">{metricsData.activeTickets}</div>
+                                        <div className="text-sm font-bold text-amber-700 uppercase tracking-widest">Activos</div>
+                                    </div>
                                 </div>
 
-                                <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                            <Clock size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Tiempo Promedio</h3>
-                                            <p className="text-3xl font-black text-[#002855]">{metricsData.avgResponseTime}</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tiempo hasta primera respuesta</p>
-                                </div>
-
-                                <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm flex flex-col justify-between">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                                            <Activity size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Tickets Activos</h3>
-                                            <p className="text-3xl font-black text-[#002855]">{metricsData.activeTickets}</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pendientes y en proceso</p>
-                                </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex flex-wrap gap-4 mb-8">
-                                <button
-                                    onClick={() => navigate('/tickets/history')}
-                                    className="flex-1 md:flex-none px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
-                                >
-                                    <History size={18} />
-                                    Ver Tickets Archivados
-                                </button>
-                            </div>
-
-                            <div className="bg-gradient-to-br from-[#002855] to-[#001529] p-10 rounded-[3rem] text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8">
-                                <div className="relative z-10 max-w-2xl">
-                                    <h3 className="text-2xl font-black mb-2 uppercase tracking-tight">Generar Reporte Completo</h3>
-                                    <p className="text-white/60 text-xs uppercase tracking-widest font-bold mb-6">
-                                        Descarga un consolidado detallado de todas las métricas, operaciones y el historial reciente de incidencias en formato PDF.
-                                    </p>
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <button
+                                        onClick={() => navigate('/tickets/history')}
+                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        <History size={18} />
+                                        Ver Historial Completo
+                                    </button>
                                     <button
                                         onClick={generatePDF}
-                                        className="px-6 py-3 bg-white text-[#002855] rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2 active:scale-95"
+                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-emerald-700 hover:to-emerald-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
                                     >
-                                        <Download size={16} />
+                                        <Download size={18} />
                                         Descargar Reporte PDF
                                     </button>
-                                </div>
-                                <div className="relative z-10 hidden lg:block">
-                                    <BarChart3 size={120} className="text-white/10" />
                                 </div>
                             </div>
                         </div>

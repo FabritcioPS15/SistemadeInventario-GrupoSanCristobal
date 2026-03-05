@@ -82,39 +82,32 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
         location_id: formData.location_id || null
       };
 
-      console.log('💾 Guardando visita:', { visit, visitData });
 
       if (visit) {
-        console.log('✏️ Actualizando visita existente:', visit.id);
         const { data, error } = await supabase
           .from('sutran_visits')
           .update(visitData)
           .eq('id', visit.id)
           .select('*');
 
-        console.log('📋 Resultado de actualización:', { data, error });
 
         if (error) {
           console.error('❌ Error al actualizar visita:', error);
           throw error;
         }
 
-        console.log('✅ Visita actualizada correctamente');
       } else {
-        console.log('➕ Creando nueva visita');
         const { data, error } = await supabase
           .from('sutran_visits')
           .insert([visitData])
           .select('*');
 
-        console.log('📋 Resultado de inserción:', { data, error });
 
         if (error) {
           console.error('❌ Error al crear visita:', error);
           throw error;
         }
 
-        console.log('✅ Visita creada correctamente');
       }
 
       onSave();

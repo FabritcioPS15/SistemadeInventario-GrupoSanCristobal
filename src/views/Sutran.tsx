@@ -32,14 +32,12 @@ export default function Sutran() {
   }, []);
 
   const fetchVisits = async () => {
-    console.log('🔄 Cargando visitas de Sutran...');
     try {
       const { data, error } = await supabase
         .from('sutran_visits')
         .select('*, locations(*)')
         .order('visit_date', { ascending: false });
 
-      console.log('📋 Resultado de fetchVisits:', { data, error });
 
       if (error) {
         console.error('❌ Error al cargar visitas:', error);
@@ -48,11 +46,9 @@ export default function Sutran() {
       }
 
       if (data) {
-        console.log(`✅ ${data.length} visitas cargadas`);
         setVisits(data);
         calculateStats(data);
       } else {
-        console.log('⚠️ No se recibieron datos de visitas');
         setVisits([]);
         calculateStats([]);
       }
@@ -147,18 +143,15 @@ export default function Sutran() {
   };
 
   const handleEditVisit = (visit: SutranVisit) => {
-    console.log('✏️ Editando visita:', visit);
     setEditingVisit(visit);
     setShowForm(true);
   };
 
   const handleViewVisit = (visit: SutranVisit) => {
-    console.log('👁️ Viendo visita:', visit);
     setViewingVisit(visit);
   };
 
   const handleDeleteVisit = async (id: string) => {
-    console.log('🗑️ Iniciando eliminación de visita:', id);
 
     if (window.confirm('¿Está seguro de eliminar esta visita? Esta acción no se puede deshacer.')) {
       try {
@@ -168,14 +161,12 @@ export default function Sutran() {
           .eq('id', id)
           .select();
 
-        console.log('📋 Resultado de eliminación:', { data, error });
 
         if (error) {
           console.error('❌ Error al eliminar visita:', error);
           alert(`Error al eliminar la visita: ${error.message}\n\nCódigo: ${error.code}\nDetalles: ${error.details}`);
         } else {
-          console.log('✅ Visita eliminada correctamente');
-          // Pequeño delay para asegurar que la base de datos se actualice
+            // Pequeño delay para asegurar que la base de datos se actualice
           setTimeout(async () => {
             await fetchVisits();
           }, 100);
@@ -189,14 +180,12 @@ export default function Sutran() {
   };
 
   const handleSaveVisit = async () => {
-    console.log('💾 Guardando visita...');
     setShowForm(false);
     setEditingVisit(undefined);
     // Pequeño delay para asegurar que la base de datos se actualice
     setTimeout(async () => {
       await fetchVisits();
     }, 100);
-    console.log('✅ Visita guardada y datos actualizados');
   };
 
   const handleCloseForm = () => {
@@ -254,8 +243,36 @@ export default function Sutran() {
       </div>
 
       <div className="p-6 space-y-6">
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        {/* Tarjeta unificada para modo responsive */}
+        <div className="lg:hidden bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-black text-[#002855] uppercase tracking-widest">Resumen de Visitas</h3>
+            <div className="p-2 rounded-lg bg-gray-100 text-gray-600">
+              <Building2 size={16} />
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div>
+              <p className="text-lg font-black text-gray-900">{stats.total}</p>
+              <p className="text-[6px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-emerald-600">{stats.completed}</p>
+              <p className="text-[6px] font-bold text-emerald-400 uppercase tracking-widest">Completadas</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-yellow-600">{stats.pending}</p>
+              <p className="text-[6px] font-bold text-yellow-400 uppercase tracking-widest">Pendientes</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-blue-600">{stats.recentlyAdded}</p>
+              <p className="text-[6px] font-bold text-blue-400 uppercase tracking-widest">Recientes</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tarjetas separadas para modo desktop */}
+        <div className="hidden lg:grid grid-cols-4 gap-4 mb-4">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Visitas</div>
             <div className="flex items-end justify-between">

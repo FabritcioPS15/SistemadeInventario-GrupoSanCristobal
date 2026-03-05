@@ -10,7 +10,7 @@ type TicketFormProps = {
 };
 
 const FREQUENT_ISSUES = [
-  { title: 'Impresora no enciende / no imprime', category: 'hardware', priority: 'medium', description: 'La impresora de la sede no responde a los comandos de impresión o está apagada.' },
+  { title: 'Impresora no enciende / no imprime', category: 'hardware', priority: 'critical', description: 'La impresora de la sede no responde a los comandos de impresión o está apagada.' },
   { title: 'Olvidé mi contraseña de acceso del MTC / Correo', category: 'access', priority: 'high', description: 'Requiero un reset de contraseña para ingresar al sistema.' },
   { title: 'Sistema ERP está lento o se cierra', category: 'software', priority: 'high', description: 'El sistema principal presenta lentitud extrema o cierres inesperados.' },
   { title: 'Sin conexión a Internet en recepción', category: 'network', priority: 'critical', description: 'Toda el área de recepción está sin conexión a red.' },
@@ -31,14 +31,15 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     description: '',
     priority: 'medium',
     category: 'hardware',
-    location_id: ''
+    location_id: user?.location_id || '',
+    anydesk: ''
   });
 
   const priorities = [
-    { value: 'low', label: 'Baja' },
-    { value: 'medium', label: 'Media' },
-    { value: 'high', label: 'Alta' },
-    { value: 'critical', label: 'Crítica' },
+    { value: 'critical', label: 'P1 - Crítica' },
+    { value: 'high', label: 'P2 - Alta' },
+    { value: 'medium', label: 'P3 - Media' },
+    { value: 'low', label: 'P4 - Baja' },
   ];
 
   const categories = [
@@ -52,6 +53,16 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
   useEffect(() => {
     fetchLocations();
   }, []);
+
+  // Auto-asignar la sede del usuario
+  useEffect(() => {
+    if (user?.location_id && !formData.location_id) {
+      setFormData(prev => ({
+        ...prev,
+        location_id: user.location_id || ''
+      }));
+    }
+  }, [user?.location_id]);
 
   const fetchLocations = async () => {
     try {
@@ -166,28 +177,53 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
   };
 
   return (
-    <BaseForm
-      title="Nuevo Reporte de Incidencia"
-      subtitle="Mesa de Ayuda Técnica"
-      onClose={onClose}
-      onSubmit={handleSubmit}
-      loading={loading}
-      error={errors.submit}
-      icon={<Send size={24} className="text-blue-600" />}
-    >
+    <div className="relative">
+      {/* Información de usuario y ubicación fija en esquina superior derecha */}
+      <div className="absolute top-4 right-4 z-10 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+          <span className="text-xs font-semibold text-blue-700">Usuario:</span>
+          <span className="text-xs font-bold text-blue-900">{user?.full_name}</span>
+        </div>
+        {user?.location_id ? (
+          <div className="flex items-center gap-2 mt-1">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span className="text-xs font-semibold text-blue-700">Sede:</span>
+            <span className="text-xs font-bold text-blue-900">
+              {locations.find(loc => loc.id === user.location_id)?.name || 'Cargando...'}
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 mt-1">
+            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+            <span className="text-xs font-semibold text-orange-700">Sin sede asignada</span>
+          </div>
+        )}
+      </div>
+
+      <BaseForm
+        title="Nuevo Reporte de Incidencia"
+        subtitle="Mesa de Ayuda Técnica"
+        onClose={onClose}
+        onSubmit={handleSubmit}
+        loading={loading}
+        error={errors.submit}
+        icon={<Send size={24} className="text-blue-600" />}
+      >
       {/* Section: Información del Ticket */}
       <FormSection title="Información del Ticket" color="blue">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <FormField label="Asunto de la Incidencia" required error={errors.title}>
-            <div className="relative" ref={suggestionRef}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <FormField label="Asunto de la Incidencia" required error={errors.title} className="h-12 pt-0">
+            <div className="relative h-full mt-4" ref={suggestionRef}>
               <FormInput
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                placeholder="EJ. NO FUNCIONA EL SISTEMA DE VENTAS..."
+                placeholder="Ej. No funciona el sistema de ventas..."
                 required
                 error={errors.title}
+                className="h-full pt-2"
               />
 
               {showSuggestions && formData.title && filteredSuggestions.length > 0 && (
@@ -240,23 +276,26 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             </FormSelect>
           </FormField>
 
-          <FormField label="Ubicación" required error={errors.location_id}>
-            <FormSelect
-              name="location_id"
-              value={formData.location_id}
+          <FormField label="AnyDesk" error={errors.anydesk}>
+            <FormInput
+              type="text"
+              name="anydesk"
+              value={formData.anydesk}
               onChange={handleChange}
-              required
-              error={errors.location_id}
-            >
-              <option value="">+ Seleccionar Sede</option>
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.name}
-                </option>
-              ))}
-            </FormSelect>
+              placeholder="ID de AnyDesk (opcional)"
+              error={errors.anydesk}
+            />
           </FormField>
         </div>
+      </FormSection>
+
+      {/* Section: Información de Ubicación */}
+      <FormSection title="Información de Ubicación" color="emerald">
+        <FormField label="Sede Asignada">
+          <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
+            {locations.find(loc => loc.id === formData.location_id)?.name || 'Cargando...'}
+          </div>
+        </FormField>
       </FormSection>
 
       {/* Section: Descripción */}
@@ -274,5 +313,6 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
         </FormField>
       </FormSection>
     </BaseForm>
+    </div>
   );
 }

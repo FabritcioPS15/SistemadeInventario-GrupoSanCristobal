@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MessageSquare, Clock, User, AlertCircle, ExternalLink } from 'lucide-react';
+import { MessageSquare} from 'lucide-react';
 import TicketDetailModal from '../components/TicketDetailModal';
 
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string }> = {
-    critical: { label: 'Crítica', color: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
-    high: { label: 'Alta', color: 'text-orange-600 bg-orange-50', dot: 'bg-orange-500' },
-    medium: { label: 'Media', color: 'text-blue-600 bg-blue-50', dot: 'bg-blue-500' },
-    low: { label: 'Baja', color: 'text-emerald-600 bg-emerald-50', dot: 'bg-emerald-500' }
+    critical: { label: 'P1 - Crítica', color: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
+    high: { label: 'P2 - Alta', color: 'text-orange-600 bg-orange-50', dot: 'bg-orange-500' },
+    medium: { label: 'P3 - Media', color: 'text-blue-600 bg-blue-50', dot: 'bg-blue-500' },
+    low: { label: 'P4 - Baja', color: 'text-emerald-600 bg-emerald-50', dot: 'bg-emerald-500' }
 };
 
 export default function MyChats() {
@@ -20,7 +20,11 @@ export default function MyChats() {
     const [activeFilter, setActiveFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved'>('all');
 
     useEffect(() => {
-        fetchMyTickets();
+        const initializeData = async () => {
+            await fetchMyTickets();
+        };
+        
+        void initializeData();
         
         const subscription = supabase
             .channel('my-tickets-updates')
@@ -28,7 +32,7 @@ export default function MyChats() {
                 event: '*', 
                 schema: 'public', 
                 table: 'tickets' 
-            }, () => fetchMyTickets())
+            }, () => { fetchMyTickets(); })
             .subscribe();
 
         return () => supabase.removeChannel(subscription);

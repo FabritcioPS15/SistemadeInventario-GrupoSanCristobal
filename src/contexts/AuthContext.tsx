@@ -73,7 +73,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         schema: 'public',
         table: 'users',
         filter: `id=eq.${user.id}`
-      }, async (payload) => {
+      }, async () => {
         // Fetch the complete updated user data
         const { data: updatedUser } = await supabase
           .from('users')
@@ -301,8 +301,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'sent-lima-view', 'sent-provincias-view'
       ],
       
-      // Personalizado: Sin permisos por defecto, se configuran individualmente
-      personalizado: []
+      // Personalizado: Permisos básicos de tickets por defecto
+      personalizado: ['tickets-view', 'tickets-edit']
     };
 
     return rolePermissions[user.role as keyof typeof rolePermissions]?.includes(permission) || false;
@@ -311,21 +311,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const canEdit = (): boolean => {
     if (!user) {
-      console.log('❌ canEdit: No user found');
       return false;
     }
     
     // Roles que pueden editar según la nueva jerarquía
     const allowedRoles = ['super_admin', 'gerencia', 'sistemas', 'supervisores'];
     const hasPermission = allowedRoles.includes(user.role);
-    
-    console.log('🔍 canEdit check:', {
-      userRole: user.role,
-      allowedRoles,
-      hasPermission,
-      userId: user.id,
-      userFullName: user.full_name
-    });
     
     return hasPermission;
   };

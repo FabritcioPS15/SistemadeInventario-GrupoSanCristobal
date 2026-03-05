@@ -495,6 +495,14 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
       newErrors.email = 'Formato de email inválido';
     }
 
+    // Validar email duplicado
+    if (formData.email) {
+      const isEmailAvailable = await checkDuplicateEmail(formData.email, editUser?.id);
+      if (!isEmailAvailable) {
+        newErrors.email = 'Este email ya está registrado en el sistema';
+      }
+    }
+
     if (formData.password && !validatePassword(formData.password)) {
       newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
     } else if (!editUser && !formData.password) {
@@ -821,7 +829,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
               <FormInput
                 type={showPassword ? 'text' : 'password'}
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
                 placeholder="Confirmar contraseña"
                 error={errors.confirmPassword}
               />

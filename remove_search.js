@@ -14,7 +14,6 @@ files.forEach(file => {
     if (newText !== text) {
         fs.writeFileSync(file, newText);
         successCount++;
-        console.log(`Updated ${file}`);
     }
 });
 
@@ -28,7 +27,6 @@ files.forEach(file => {
     if (newText !== text) {
         fs.writeFileSync(file, newText);
         successCount++;
-        console.log(`Updated ${file}`);
     }
 });
 
@@ -39,7 +37,5 @@ let newTicketsText = ticketsText.replace(rxTickets, '');
 if (newTicketsText !== ticketsText) {
     fs.writeFileSync(ticketsFile, newTicketsText);
     successCount++;
-    console.log(`Updated ${ticketsFile}`);
 }
 
-console.log(`Total replaced: ${successCount}`);

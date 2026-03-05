@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Bell, Settings, HelpCircle, Menu, Image as ImageIcon, Check, LayoutDashboard, User as UserIcon, LogOut, ChevronRight, Home, ChevronDown, Search, Plus, X } from 'lucide-react';
+import { useState, useEffect, useRef} from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Bell, Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, FileText, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Building, Users as UsersIcon, Clipboard } from 'lucide-react';
 import { supabase, SutranVisit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { div } from 'framer-motion/client';
 
 const ROUTE_LABELS: Record<string, string> = {
     'inventory': 'Inventario',
@@ -53,6 +52,145 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
     const pathnames = location.pathname.split('/').filter(x => x);
     const showBreadcrumbs = location.pathname !== '/' && location.pathname !== '/login';
     const isTicketsRoute = location.pathname.startsWith('/tickets');
+    const currentPath = location.pathname;
+    
+    // Detectar página actual para acciones específicas
+    const getPageActions = () => {
+        if (currentPath === '/' || currentPath === '/dashboard') {
+            return {
+                show: true,
+                title: 'Acciones Dashboard',
+                searchPlaceholder: 'Buscar...',
+                actions: [
+                    { icon: <FileText size={16} />, label: 'Reportes', action: () => navigate('/tickets/reports') },
+                    { icon: <RefreshCw size={16} />, label: 'Actualizar', action: () => window.location.reload() },
+                    { icon: <BarChart3 size={16} />, label: 'Estadísticas', action: () => alert('Estadísticas en desarrollo') }
+                ]
+            };
+        }
+        
+        if (currentPath.startsWith('/tickets')) {
+            return {
+                show: true,
+                title: 'Acciones Tickets',
+                searchPlaceholder: 'Buscar tickets...',
+                actions: [
+                    { icon: <Plus size={16} />, label: 'Nuevo Ticket', action: () => window.dispatchEvent(new CustomEvent('tickets:new')) },
+                    { icon: <FileText size={16} />, label: 'Reportes', action: () => navigate('/tickets/reports') },
+                    { icon: <Clipboard size={16} />, label: 'Historial', action: () => navigate('/tickets/history') }
+                ]
+            };
+        }
+        
+        if (currentPath.startsWith('/inventory')) {
+            return {
+                show: true,
+                title: 'Acciones Inventario',
+                searchPlaceholder: 'Buscar equipos...',
+                actions: [
+                    { icon: <Plus size={16} />, label: 'Agregar Equipo', action: () => window.dispatchEvent(new CustomEvent('inventory:new')) },
+                    { icon: <Package size={16} />, label: 'Repuestos', action: () => navigate('/spare-parts') },
+                    { icon: <Wrench size={16} />, label: 'Mantenimiento', action: () => navigate('/maintenance') }
+                ]
+            };
+        }
+        
+        if (currentPath.startsWith('/users')) {
+            return {
+                show: true,
+                title: 'Acciones Usuarios',
+                searchPlaceholder: 'Buscar usuarios...',
+                actions: [
+                    { icon: <Plus size={16} />, label: 'Nuevo Usuario', action: () => window.dispatchEvent(new CustomEvent('users:new')) },
+                    { icon: <Settings size={16} />, label: 'Permisos', action: () => alert('Permisos en desarrollo') },
+                    { icon: <FileText size={16} />, label: 'Reporte', action: () => alert('Reporte en desarrollo') }
+                ]
+            };
+        }
+        
+        if (currentPath.startsWith('/flota-vehicular')) {
+            return {
+                show: true,
+                title: 'Acciones Flota',
+                searchPlaceholder: 'Buscar vehículos...',
+                actions: [
+                    { icon: <Plus size={16} />, label: 'Agregar Vehículo', action: () => window.dispatchEvent(new CustomEvent('flota:new')) },
+                    { icon: <FileText size={16} />, label: 'Reporte', action: () => window.dispatchEvent(new CustomEvent('flota:report')) },
+                    { icon: <Wrench size={16} />, label: 'Mantenimiento', action: () => navigate('/maintenance') }
+                ]
+            };
+        }
+        
+        if (currentPath.startsWith('/sutran')) {
+            return {
+                show: true,
+                title: 'Acciones Sutran',
+                searchPlaceholder: 'Buscar visitas...',
+                actions: [
+                    { icon: <Plus size={16} />, label: 'Nueva Visita', action: () => window.dispatchEvent(new CustomEvent('sutran:new')) },
+                    { icon: <Calendar size={16} />, label: 'Calendario', action: () => alert('Calendario en desarrollo') },
+                    { icon: <FileText size={16} />, label: 'Reporte', action: () => window.dispatchEvent(new CustomEvent('sutran:report')) }
+                ]
+            };
+        }
+        
+        if (currentPath.startsWith('/maintenance')) {
+            return {
+                show: true,
+                title: 'Acciones Mantenimiento',
+                searchPlaceholder: 'Buscar mantenimientos...',
+                actions: [
+                    { icon: <Plus size={16} />, label: 'Nueva Orden', action: () => window.dispatchEvent(new CustomEvent('maintenance:new')) },
+                    { icon: <Clipboard size={16} />, label: 'Checklist', action: () => navigate('/checklist') },
+                    { icon: <Package size={16} />, label: 'Inventario', action: () => navigate('/inventory') }
+                ]
+            };
+        }
+        
+        if (currentPath.startsWith('/cameras')) {
+            return {
+                show: true,
+                title: 'Acciones Cámaras',
+                searchPlaceholder: 'Buscar cámaras...',
+                actions: [
+                    { icon: <Plus size={16} />, label: 'Agregar Cámara', action: () => window.dispatchEvent(new CustomEvent('cameras:new')) },
+                    { icon: <Camera size={16} />, label: 'Revisión', action: () => navigate('/cameras/revision') },
+                    { icon: <Building size={16} />, label: 'Sedes', action: () => navigate('/locations') }
+                ]
+            };
+        }
+        
+        if (currentPath.startsWith('/locations') || currentPath.startsWith('/sedes')) {
+            return {
+                show: true,
+                title: 'Acciones Sedes',
+                searchPlaceholder: 'Buscar sedes...',
+                actions: [
+                    { icon: <Plus size={16} />, label: 'Nueva Sede', action: () => window.dispatchEvent(new CustomEvent('locations:new')) },
+                    { icon: <Camera size={16} />, label: 'Cámaras', action: () => navigate('/cameras') },
+                    { icon: <UsersIcon size={16} />, label: 'Usuarios', action: () => navigate('/users') }
+                ]
+            };
+        }
+        
+        if (currentPath.startsWith('/servers')) {
+            return {
+                show: true,
+                title: 'Acciones Servidores',
+                searchPlaceholder: 'Buscar servidores...',
+                actions: [
+                    { icon: <Plus size={16} />, label: 'Agregar Servidor', action: () => window.dispatchEvent(new CustomEvent('servers:new')) },
+                    { icon: <Settings size={16} />, label: 'Configuración', action: () => alert('Configuración en desarrollo') },
+                    { icon: <FileText size={16} />, label: 'Reporte', action: () => window.dispatchEvent(new CustomEvent('servers:report')) }
+                ]
+            };
+        }
+        
+        // Para otras páginas, no mostrar acciones por ahora
+        return { show: false };
+    };
+    
+    const pageActions = getPageActions();
     
     // Estado para forzar actualización del breadcrumb
     const [breadcrumbKey, setBreadcrumbKey] = useState(0);
@@ -61,7 +199,6 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
     const [showActions, setShowActions] = useState(false);
     const [searchValue, setSearchValue] = useState('');
     const actionsRef = useRef<HTMLDivElement>(null);
-    const [searchTerm, setSearchTerm] = useState('');
     const [showNotifications, setShowNotifications] = useState(false);
     const [showUserSettings, setShowUserSettings] = useState(false);
     const [sutranNotifications, setSutranNotifications] = useState<SutranVisit[]>([]);
@@ -83,11 +220,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
         window.dispatchEvent(new CustomEvent('tickets:search', { detail: searchValue }));
     }, [searchValue, isTicketsRoute]);
 
-    const handleNewTicket = useCallback(() => {
-        window.dispatchEvent(new CustomEvent('tickets:new'));
-        setShowActions(false);
-    }, []);
-
+    
     // Temp state for editing user profile
     const [editName, setEditName] = useState(user?.full_name || '');
     const [editAvatar, setEditAvatar] = useState(user?.avatar_url || '');
@@ -99,18 +232,6 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
             setEditAvatar(user.avatar_url || '');
         }
     }, [user]);
-
-    // Pinning State
-    const [isPinned, setIsPinned] = useState(() => {
-        return localStorage.getItem('header_pinned') === 'true';
-    });
-
-    const togglePin = () => {
-        const newValue = !isPinned;
-        setIsPinned(newValue);
-        localStorage.setItem('header_pinned', String(newValue));
-    };
-
 
     // Fetch user's location name with Realtime updates
     useEffect(() => {
@@ -235,10 +356,10 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
     };
 
     return (
-            <header className={`h-14 bg-[#001529] text-white flex items-center justify-between sticky top-0 z-[100] shadow-xl border-b border-white/5 transition-all duration-300 ${sidebarCollapsed ? 'lg:px-6 px-6' : 'lg:px-6 px-6'}`}>
+            <header className={`h-14 bg-white text-gray-800 flex items-center justify-between sticky top-0 z-[100] shadow-lg border-b border-gray-200 transition-all duration-300 ${sidebarCollapsed ? 'lg:px-6 px-6' : 'lg:px-6 px-6'}`}>
                 <div className="flex items-center gap-4 lg:gap-8 overflow-hidden">
                     <button
-                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors lg:hidden shrink-0"
+                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors lg:hidden shrink-0 text-gray-700"
                         onClick={onMobileMenuClick}
                     >
                         <Menu size={20} />
@@ -255,18 +376,18 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                     return (
                                         <div key={`${to}-${breadcrumbKey}`} className="flex items-center gap-1.5 shrink-0 min-w-0">
                                             {last ? (
-                                                <span className="text-[10px] font-black text-white/90 uppercase tracking-widest bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 truncate max-w-[200px]">
+                                                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 truncate max-w-[200px]">
                                                     {label}
                                                 </span>
                                             ) : (
                                                 <>
                                                     <button
                                                         onClick={() => navigate(to)}
-                                                        className="text-[10px] font-black text-white/60 uppercase tracking-widest hover:text-white/80 transition-colors truncate max-w-[120px]"
+                                                        className="text-[10px] font-black text-gray-600 uppercase tracking-widest hover:text-gray-900 transition-colors truncate max-w-[120px]"
                                                     >
                                                         {label}
                                                     </button>
-                                                    <ChevronRight size={12} className="text-white/40 shrink-0" />
+                                                    <ChevronRight size={12} className="text-gray-400 shrink-0" />
                                                 </>
                                             )}
                                         </div>
@@ -279,12 +400,12 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
             </div>
 
             <div className="flex items-center gap-2">
-                {/* Ticket context actions dropdown */}
-                {isTicketsRoute && (
+                {/* Dynamic Page Actions Dropdown */}
+                {pageActions.show && (
                     <div className="relative" ref={actionsRef}>
                         <button
                             onClick={() => setShowActions(v => !v)}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-white/10 text-white/70 hover:bg-white/20 hover:text-white'}`}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'}`}
                         >
                             <Plus size={13} />
                             Acciones
@@ -294,7 +415,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                         {showActions && (
                             <div className="absolute right-0 top-full mt-2 w-72 bg-[#001e3c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[200] animate-in fade-in slide-in-from-top-2 duration-200">
                                 <div className="p-4 border-b border-white/10">
-                                    <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-3">Buscar tickets</p>
+                                    <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-3">{pageActions.title}</p>
                                     <div className="relative">
                                         <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
                                         <input
@@ -302,7 +423,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                             type="text"
                                             value={searchValue}
                                             onChange={e => setSearchValue(e.target.value)}
-                                            placeholder="Buscar por título, usuario..."
+                                            placeholder={pageActions.searchPlaceholder}
                                             className="w-full bg-white/10 border border-white/10 rounded-xl pl-8 pr-8 py-2.5 text-[11px] text-white placeholder-white/30 font-medium outline-none focus:border-blue-500/50 focus:bg-white/15 transition-all"
                                         />
                                         {searchValue && (
@@ -312,14 +433,17 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                         )}
                                     </div>
                                 </div>
-                                <div className="p-3">
-                                    <button
-                                        onClick={handleNewTicket}
-                                        className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/30"
-                                    >
-                                        <Plus size={15} />
-                                        Nuevo Ticket
-                                    </button>
+                                <div className="p-3 space-y-2">
+                                    {pageActions.actions?.map((action, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => { action.action(); setShowActions(false); }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/30"
+                                        >
+                                            {action.icon}
+                                            {action.label}
+                                        </button>
+                                    )) || []}
                                 </div>
                             </div>
                         )}
@@ -332,11 +456,11 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                         <button
                             title="Notificaciones"
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className={`p-2 hover:bg-white/10 rounded-lg transition-colors relative ${showNotifications ? 'bg-white/10' : ''}`}
+                            className={`p-2 hover:bg-gray-100 rounded-lg transition-colors relative ${showNotifications ? 'bg-gray-100' : ''} text-gray-700`}
                         >
                             <Bell size={18} />
                             {sutranNotifications.length > 0 && (
-                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#002855]" />
+                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
                             )}
                         </button>
 
@@ -379,30 +503,30 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                     </div>
 
                     {/* Help Button - Después de notificaciones */}
-                    <button title="Ayuda" onClick={() => alert('Soporte no disponible')} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                    <button title="Ayuda" onClick={() => alert('Soporte no disponible')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700">
                         <HelpCircle size={18} />
                     </button>
 
-                    <div className="h-8 w-[1px] bg-white/20 mx-1" />
+                    <div className="h-8 w-[1px] bg-gray-300 mx-1" />
 
                     {/* User Info - Nombre y Sede - Oculto en móvil */}
                     <div className="flex items-center gap-2 mr-3">
                         {userLocation && (
                             <>
-                                <span className="text-white/80 text-xs hidden lg:block">{userLocation}</span>
-                                <div className="w-1 h-1 bg-white/40 rounded-full hidden lg:block" />
+                                <span className="text-gray-600 text-xs hidden lg:block">{userLocation}</span>
+                                <div className="w-1 h-1 bg-gray-400 rounded-full hidden lg:block" />
                             </>
                         )}
-                        <span className="text-white/90 text-xs font-medium hidden lg:block">{user?.full_name}</span>
+                        <span className="text-gray-700 text-xs font-medium hidden lg:block">{user?.full_name}</span>
                     </div>
 
                     {/* User Profile Settings */}
                     <div className="relative" ref={settingsRef}>
                         <button
                             onClick={() => setShowUserSettings(!showUserSettings)}
-                            className={`flex items-center gap-2 p-1.5 hover:bg-white/10 rounded-lg transition-colors ${showUserSettings ? 'bg-white/10' : ''}`}
+                            className={`flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors ${showUserSettings ? 'bg-gray-100' : ''}`}
                         >
-                            <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center text-xs font-bold uppercase overflow-hidden border border-white/10">
+                            <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold uppercase overflow-hidden border border-gray-200 text-gray-700">
                                 {user?.avatar_url ? (
                                     <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                                 ) : (

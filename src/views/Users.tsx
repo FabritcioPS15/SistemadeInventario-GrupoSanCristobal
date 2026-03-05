@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, LayoutGrid, List, Lock, Star, Settings, TrendingUp, User as UserIcon, HelpCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, Shield, Crown, LayoutGrid, List, Lock, Star, Settings, TrendingUp, User as UserIcon, HelpCircle } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase } from '../lib/supabase';
 import UserForm from '../components/forms/UserForm';
@@ -41,17 +41,12 @@ export default function Users() {
 
   // Debug logging before render
   const canEditValue = canEdit();
-  console.log('🔍 About to render button - canEditValue:', canEditValue);
 
   const handleNewUserClick = () => {
-    console.log('🔘 Botón Nuevo Usuario clickeado');
-    console.log('🔍 Before state change - showForm:', showForm);
-    console.log('🔍 Before state change - editingUser:', editingUser);
     
     setEditingUser(undefined);
     setShowForm(true);
     
-    console.log('🔍 After state change - showForm should be true');
   };
 
   const [stats, setStats] = useState({
@@ -352,8 +347,40 @@ export default function Users() {
       </div>
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Tarjeta unificada para modo responsive */}
+        <div className="lg:hidden bg-white border border-[#e2e8f0] rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-black text-[#002855] uppercase tracking-widest">Resumen de Usuarios</h3>
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+              <UsersIcon size={16} />
+            </div>
+          </div>
+          <div className="grid grid-cols-5 gap-1 text-center">
+            <div>
+              <p className="text-lg font-black text-blue-600">{stats.active}</p>
+              <p className="text-[6px] font-bold text-blue-400 uppercase tracking-widest">Activos</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-purple-600">{stats.byRole.super_admin || 0}</p>
+              <p className="text-[6px] font-bold text-purple-400 uppercase tracking-widest">Admin</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-amber-600">{stats.byRole.gerencia || 0}</p>
+              <p className="text-[6px] font-bold text-amber-400 uppercase tracking-widest">Gerencia</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-rose-600">{stats.byRole.sistemas || 0}</p>
+              <p className="text-[6px] font-bold text-rose-400 uppercase tracking-widest">Sistemas</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-indigo-600">{stats.recentlyAdded}</p>
+              <p className="text-[6px] font-bold text-indigo-400 uppercase tracking-widest">Nuevos</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tarjetas separadas para modo desktop */}
+        <div className="hidden lg:grid grid-cols-5 gap-4">
           {[
             { label: 'Total Activos', value: stats.active, icon: UsersIcon, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Super Admin', value: stats.byRole.super_admin || 0, icon: Crown, color: 'text-purple-600', bg: 'bg-purple-50' },

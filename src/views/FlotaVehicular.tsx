@@ -233,7 +233,36 @@ export default function FlotaVehicular() {
       </div>
 
       <div className="p-6 space-y-6 overflow-y-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Tarjeta unificada para modo responsive */}
+        <div className="lg:hidden bg-white border rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-black text-[#002855] uppercase tracking-widest">Resumen de Flota</h3>
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+              <Car size={16} />
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div>
+              <p className="text-lg font-black text-[#002855]">{stats.total}</p>
+              <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-emerald-600">{stats.active}</p>
+              <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest">Activas</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-rose-600">{stats.inactive}</p>
+              <p className="text-[8px] font-bold text-rose-400 uppercase tracking-widest">Inactivas</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-amber-600">{stats.en_proceso}</p>
+              <p className="text-[8px] font-bold text-amber-400 uppercase tracking-widest">Proceso</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tarjetas separadas para modo desktop */}
+        <div className="hidden lg:grid grid-cols-4 gap-4">
           {[
             { label: 'Total', value: stats.total, icon: Car, bg: 'bg-blue-50', color: 'text-blue-600' },
             { label: 'Activas', value: stats.active, icon: Activity, bg: 'bg-emerald-50', color: 'text-emerald-600' },

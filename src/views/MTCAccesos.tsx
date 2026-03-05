@@ -85,7 +85,6 @@ export default function MTCAccesos() {
   };
 
   const handleEditAcceso = (acceso: MTCAcceso) => {
-    console.log('✏️ Editando acceso MTC:', acceso);
     setEditingAcceso(acceso);
     setView('form');
   };
@@ -95,25 +94,21 @@ export default function MTCAccesos() {
   };
 
   const handleDeleteAcceso = async (acceso: MTCAcceso) => {
-    console.log('🗑️ Iniciando eliminación de acceso MTC:', acceso);
 
     if (window.confirm(`¿Estás seguro de que quieres eliminar el acceso "${acceso.name}"?`)) {
       try {
-        console.log(`🗑️ Eliminando acceso: ${acceso.name} (ID: ${acceso.id})`);
         const { data, error } = await supabase
           .from('mtc_accesos')
           .delete()
           .eq('id', acceso.id)
           .select();
 
-        console.log('📋 Resultado de eliminación:', { data, error });
 
         if (error) {
           console.error('❌ Error al eliminar acceso MTC:', error);
           alert(`Error al eliminar el acceso MTC: ${error.message}\n\nCódigo: ${error.code}\nDetalles: ${error.details}`);
         } else {
-          console.log('✅ Acceso MTC eliminado correctamente');
-          await fetchAccesos();
+            await fetchAccesos();
           alert('Acceso MTC eliminado correctamente');
         }
       } catch (err) {
@@ -124,11 +119,9 @@ export default function MTCAccesos() {
   };
 
   const handleSaveAcceso = async () => {
-    console.log('💾 Guardando acceso MTC...');
     setView('list');
     setEditingAcceso(undefined);
     await fetchAccesos();
-    console.log('✅ Acceso MTC guardado y datos actualizados');
   };
 
   const handleCloseForm = () => {
@@ -248,9 +241,36 @@ export default function MTCAccesos() {
           </div>
         ) : (
           <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Dashboard de estadísticas */}
-            {/* Removed stats dashboard as per instruction */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Tarjeta unificada para modo responsive */}
+            <div className="lg:hidden bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-black text-[#002855] uppercase tracking-widest">Resumen de Accesos</h3>
+                <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                  <Shield className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div>
+                  <p className="text-lg font-black text-gray-900">{stats.total}</p>
+                  <p className="text-[6px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
+                </div>
+                <div>
+                  <p className="text-lg font-black text-green-600">{stats.withCredentials}</p>
+                  <p className="text-[6px] font-bold text-green-400 uppercase tracking-widest">Cred</p>
+                </div>
+                <div>
+                  <p className="text-lg font-black text-purple-600">{stats.byType.web || 0}</p>
+                  <p className="text-[6px] font-bold text-purple-400 uppercase tracking-widest">Web</p>
+                </div>
+                <div>
+                  <p className="text-lg font-black text-orange-600">{stats.recentlyAdded}</p>
+                  <p className="text-[6px] font-bold text-orange-400 uppercase tracking-widest">Recientes</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tarjetas separadas para modo desktop */}
+            <div className="hidden lg:grid grid-cols-4 gap-4">
               <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
                 <div className="flex items-center gap-3">
                   <div className="bg-blue-100 p-2 rounded-lg">

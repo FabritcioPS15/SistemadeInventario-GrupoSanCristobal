@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import {
   Package,
-  Camera,
-  MapPin,
   TrendingUp,
   AlertCircle,
   Truck,
@@ -20,7 +18,6 @@ import {
   Building2,
   LayoutDashboard,
   Star,
-  Ticket,
   CheckSquare,
   AlertOctagon,
   Car

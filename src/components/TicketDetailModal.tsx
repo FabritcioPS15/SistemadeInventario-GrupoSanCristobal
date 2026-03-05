@@ -191,6 +191,16 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
+    const getPriorityLabel = (priority: string) => {
+        switch (priority) {
+            case 'critical': return 'P1 - Crítica';
+            case 'high': return 'P2 - Alta';
+            case 'medium': return 'P3 - Media';
+            case 'low': return 'P4 - Baja';
+            default: return priority;
+        }
+    };
+
     const getPriorityStyle = (priority: string) => {
         switch (priority) {
             case 'critical': return 'text-rose-600 bg-rose-50 border-rose-100';
@@ -268,7 +278,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                         <div className="flex items-center justify-between mb-6 sm:mb-8 md:mb-10">
                             <span className="text-[8px] sm:text-[9px] md:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em]">#TK-{currentTicket.id.slice(0, 8)}</span>
                             <div className={`px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[7px] sm:text-[8px] md:text-[9px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] border ${getPriorityStyle(currentTicket.priority)}`}>
-                                Prioridad {currentTicket.priority}
+                                {getPriorityLabel(currentTicket.priority)}
                             </div>
                         </div>
 

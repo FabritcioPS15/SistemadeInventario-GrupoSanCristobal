@@ -83,7 +83,6 @@ export default function Sedes() {
         .eq('location_id', location.id);
       assetsCount = assetsData?.length || 0;
     } catch (err) {
-      console.log('⚠️ No se pudo verificar assets:', err);
     }
 
     // Verificar usuarios asociados
@@ -95,7 +94,6 @@ export default function Sedes() {
         .eq('location_id', location.id);
       usersCount = usersData?.length || 0;
     } catch (err) {
-      console.log('⚠️ No se pudo verificar usuarios:', err);
     }
 
     const totalAssociated = cameraCount + assetsCount + usersCount;
@@ -246,8 +244,40 @@ export default function Sedes() {
       </div>
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-        {/* Statistics Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Tarjeta unificada para modo responsive */}
+        <div className="lg:hidden bg-white border border-[#e2e8f0] rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-black text-[#002855] uppercase tracking-widest">Resumen de Sedes</h3>
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+              <Building size={16} />
+            </div>
+          </div>
+          <div className="grid grid-cols-5 gap-1 text-center">
+            <div>
+              <p className="text-lg font-black text-blue-600">{locations.filter(loc => loc.type !== 'circuito').length}</p>
+              <p className="text-[6px] font-bold text-blue-400 uppercase tracking-widest">Sedes</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-rose-600">{locations.filter(loc => loc.type === 'circuito').length}</p>
+              <p className="text-[6px] font-bold text-rose-400 uppercase tracking-widest">Circuitos</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-emerald-600">{Object.values(cameraCounts).reduce((sum, count) => sum + count, 0)}</p>
+              <p className="text-[6px] font-bold text-emerald-400 uppercase tracking-widest">Cámaras</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-purple-600">{locations.filter(loc => loc.type !== 'circuito').length > 0 ? Math.round(Object.values(cameraCounts).reduce((sum, count) => sum + count, 0) / locations.filter(loc => loc.type !== 'circuito').length) : 0}</p>
+              <p className="text-[6px] font-bold text-purple-400 uppercase tracking-widest">Prom</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-orange-600">{locations.filter(loc => loc.type !== 'circuito').length > 0 ? Math.round((Object.keys(cameraCounts).length / locations.filter(loc => loc.type !== 'circuito').length) * 100) : 0}%</p>
+              <p className="text-[6px] font-bold text-orange-400 uppercase tracking-widest">Cobertura</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tarjetas separadas para modo desktop */}
+        <div className="hidden lg:grid grid-cols-5 gap-4">
           {[
             { label: 'Total Sedes', value: locations.filter(loc => loc.type !== 'circuito').length, icon: Building, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Circuitos', value: locations.filter(loc => loc.type === 'circuito').length, icon: MapPin, color: 'text-rose-600', bg: 'bg-rose-50' },

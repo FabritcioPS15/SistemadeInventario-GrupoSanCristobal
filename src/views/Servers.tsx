@@ -94,7 +94,36 @@ export default function Servers() {
       </div>
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Tarjeta unificada para modo responsive */}
+        <div className="lg:hidden bg-white border border-[#e2e8f0] rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-black text-[#002855] uppercase tracking-widest">Resumen de Servidores</h3>
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+              <ServerLucide size={16} />
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div>
+              <p className="text-lg font-black text-blue-600">{stats.total}</p>
+              <p className="text-[6px] font-bold text-blue-400 uppercase tracking-widest">Total</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-emerald-600">{stats.withIp}</p>
+              <p className="text-[6px] font-bold text-emerald-400 uppercase tracking-widest">IP</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-rose-600">{stats.withAnydesk}</p>
+              <p className="text-[6px] font-bold text-rose-400 uppercase tracking-widest">AnyDesk</p>
+            </div>
+            <div>
+              <p className="text-lg font-black text-amber-600">{stats.recentlyUpdated}</p>
+              <p className="text-[6px] font-bold text-amber-400 uppercase tracking-widest">Actualizados</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tarjetas separadas para modo desktop */}
+        <div className="hidden lg:grid grid-cols-4 gap-4">
           {[
             { label: 'Total Servidores', value: stats.total, icon: ServerLucide, bg: 'bg-blue-50', color: 'text-blue-600' },
             { label: 'Conectividad IP', value: stats.withIp, icon: Globe, bg: 'bg-emerald-50', color: 'text-emerald-600' },

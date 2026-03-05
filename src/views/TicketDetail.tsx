@@ -271,7 +271,7 @@ export default function TicketDetail() {
         const createdDate = new Date(ticket.created_at);
         const minutesDiff = (now.getTime() - createdDate.getTime()) / (1000 * 60);
         const isOwner = user?.id === ticket.requester_id;
-        const isStaff = user?.role === 'systems' || user?.role === 'management' || user?.role === 'supervisor';
+        const isStaff = user?.role === 'super_admin' || user?.role === 'systems' || user?.role === 'management' || user?.role === 'supervisor';
         const canDelete = isStaff || (isOwner && minutesDiff <= 3);
 
         if (!canDelete) {
@@ -294,27 +294,17 @@ export default function TicketDetail() {
     };
 
     const handleStatusUpdate = async (newStatus: string) => {
-        console.log('handleStatusUpdate called:', {
-            newStatus,
-            userRole: user?.role,
-            canManageStatus,
-            statusUpdating,
-            ticketId
-        });
         
         if (!canManageStatus) {
-            console.log('Cannot manage status - insufficient permissions');
             return;
         }
 
         if (statusUpdating) {
-            console.log('Status is currently updating, please wait...');
             return;
         }
 
         try {
             setStatusUpdating(true);
-            console.log('Starting status update to:', newStatus);
             
             const updatePayload: any = { status: newStatus };
             
@@ -327,16 +317,13 @@ export default function TicketDetail() {
                 updatePayload.closed_at = new Date().toISOString();
             }
 
-            console.log('Update payload:', updatePayload);
 
             const { error } = await supabase.from('tickets').update(updatePayload).eq('id', ticketId);
             
             if (error) {
-                console.error('Error updating ticket status:', error);
                 throw error;
             }
             
-            console.log('Status updated successfully');
 
             await supabase.from('ticket_comments').insert([{
                 ticket_id: ticketId,
@@ -344,14 +331,11 @@ export default function TicketDetail() {
                 content: `Cambió el estado a: **${getStatusLabel(newStatus).toUpperCase()}**`,
             }]);
 
-            console.log('Comment added successfully');
             fetchComments();
         } catch (error) {
-            console.error('Complete error in handleStatusUpdate:', error);
             alert('Error al actualizar el estado: ' + (error as any)?.message || 'Error desconocido');
         } finally {
             setStatusUpdating(false);
-            console.log('Status updating finished');
         }
     };
 
@@ -382,25 +366,13 @@ export default function TicketDetail() {
             setCopiedItem(itemType);
             setTimeout(() => setCopiedItem(null), 2000);
         } catch (error) {
-            console.error('Error al copiar:', error);
         }
     };
 
-    const canManageStatus = user?.role === 'systems' || user?.role === 'management' || user?.role === 'supervisor' || user?.role === 'admin' || user?.role === 'staff';
-
-    // Debug: mostrar información del usuario y permisos
-    console.log('User permissions check:', {
-        userRole: user?.role,
-        userId: user?.id,
-        canManageStatus,
-        ticketId,
-        ticketStatus: ticket?.status,
-        ticketRequesterId: ticket?.requester_id
-    });
+    const canManageStatus = user?.role === 'super_admin' || user?.role === 'systems' || user?.role === 'management' || user?.role === 'supervisor' || user?.role === 'admin' || user?.role === 'staff' || user?.role === 'personalizado';
 
     const handleAttendTicket = async () => {
         if (!canAttendTicket || statusUpdating) {
-            console.log('Cannot attend ticket - insufficient permissions or already updating');
             return;
         }
 
@@ -410,7 +382,6 @@ export default function TicketDetail() {
 
         try {
             setStatusUpdating(true);
-            console.log('Atendiendo ticket:', ticketId);
             
             // Actualizar a en_progreso y asignar como técnico responsable
             const { error } = await supabase.from('tickets').update({
@@ -420,11 +391,9 @@ export default function TicketDetail() {
             }).eq('id', ticketId);
             
             if (error) {
-                console.error('Error al atender ticket:', error);
                 throw error;
             }
             
-            console.log('Ticket atendido exitosamente');
             
             // Agregar comentario de atención
             await supabase.from('ticket_comments').insert([{
@@ -435,7 +404,6 @@ export default function TicketDetail() {
             
             fetchComments();
         } catch (error) {
-            console.error('Error al atender ticket:', error);
             alert('Error al atender ticket: ' + (error as any)?.message || 'Error desconocido');
         } finally {
             setStatusUpdating(false);
@@ -443,42 +411,28 @@ export default function TicketDetail() {
     };
 
     const handleJoinTicket = async () => {
-        console.log('handleJoinTicket called:', {
-            userRole: user?.role,
-            canManageStatus,
-            ticketId,
-            ticketStatus: ticket?.status,
-            currentAssignments: ticket?.ticket_assignments?.length || 0,
-            userId: user?.id
-        });
         
         if (!canManageStatus || !ticket) {
-            console.log('Cannot join ticket - insufficient permissions or no ticket');
             return;
         }
         
         // Verificar si ya está asignado (evitar duplicados)
         const isAlreadyAssigned = ticket.ticket_assignments?.some((assignment: any) => assignment.user_id === user?.id);
-        console.log('Is already assigned:', isAlreadyAssigned);
         
         if (isAlreadyAssigned) {
-            console.log('User already assigned to this ticket');
             alert('Ya estás asignado a este ticket');
             return;
         }
         
-        // Verificar límite de 3 personas
+        // Verificar límite de 4 personas
         const currentAssignments = ticket.ticket_assignments?.length || 0;
-        console.log('Current assignments count:', currentAssignments);
         
-        if (currentAssignments >= 3) {
-            console.log('Maximum assignments reached');
-            alert('Máximo de 3 personas asignadas a este ticket');
+        if (currentAssignments >= 4) {
+            alert('Máximo de 4 personas asignadas a este ticket');
             return;
         }
         
         try {
-            console.log('Attempting to join ticket...');
             
             const { error } = await supabase
                 .from('ticket_assignments')
@@ -489,16 +443,11 @@ export default function TicketDetail() {
                 }]);
             
             if (error) {
-                console.error('Error joining ticket:', error);
                 throw error;
             }
             
-            console.log('Successfully joined ticket');
             
-            // Cambiar estado a in_progress si es el primer participante
-            if (currentAssignments === 0) {
-                await handleStatusUpdate('in_progress');
-            }
+            // No cambiar estado automáticamente - solo participar sin atender
             
             // Agregar notificación de unión al chat
             await supabase.from('ticket_comments').insert([{
@@ -511,23 +460,16 @@ export default function TicketDetail() {
             await fetchTicket();
             
         } catch (error) {
-            console.error('Error al unirse al ticket:', error);
-            alert('Error al unirse al ticket');
         }
     };
 
     const getAssignedUsers = () => {
-        console.log('getAssignedUsers - ticket:', ticket);
-        console.log('getAssignedUsers - ticket_assignments:', ticket?.ticket_assignments);
-        console.log('getAssignedUsers - user?.id:', user?.id);
         
         if (!ticket?.ticket_assignments) {
-            console.log('getAssignedUsers - no assignments, returning []');
             return [];
         }
         
         const result = ticket.ticket_assignments.map((assignment: any) => {
-            console.log('getAssignedUsers - processing assignment:', assignment);
             return {
                 ...assignment,
                 user: assignment.user || {
@@ -540,13 +482,11 @@ export default function TicketDetail() {
             };
         });
         
-        console.log('getAssignedUsers - result:', result);
         return result;
     };
 
     const handleFinalizeTicket = async () => {
         if (!canManageStatus || statusUpdating) {
-            console.log('Cannot finalize ticket - insufficient permissions or already updating');
             return;
         }
 
@@ -556,7 +496,6 @@ export default function TicketDetail() {
 
         try {
             setStatusUpdating(true);
-            console.log('Finalizando y archivando ticket:', ticketId);
             
             // Actualizar directamente a archivado con timestamp
             const { error } = await supabase.from('tickets').update({
@@ -565,11 +504,9 @@ export default function TicketDetail() {
             }).eq('id', ticketId);
             
             if (error) {
-                console.error('Error al finalizar ticket:', error);
                 throw error;
             }
             
-            console.log('Ticket finalizado y archivado exitosamente');
             
             // Agregar comentario de finalización
             await supabase.from('ticket_comments').insert([{
@@ -580,7 +517,6 @@ export default function TicketDetail() {
             
             fetchComments();
         } catch (error) {
-            console.error('Error al finalizar ticket:', error);
             alert('Error al finalizar ticket: ' + (error as any)?.message || 'Error desconocido');
         } finally {
             setStatusUpdating(false);
@@ -594,8 +530,18 @@ export default function TicketDetail() {
     // Permitir unirse si el ticket está abierto o en progreso
     const hasPermission = canManageStatus;
     const isOpen = ticket?.status === 'open' || ticket?.status === 'in_progress';
-    const hasSpace = getAssignedUsers().length < 3;
+    const hasSpace = getAssignedUsers().length < 4;
     const canJoinTicket = hasPermission && isOpen && hasSpace;
+    
+
+    // Auto-unir al ticket si es el creador y no está asignado
+    useEffect(() => {
+        
+        if (ticket && user && !isUserAssigned && user.id === ticket.requester_id && canJoinTicket) {
+            handleJoinTicket();
+        } else {
+        }
+    }, [ticket, user, isUserAssigned, canJoinTicket]);
 
     const getStatusLabel = (status: string) => {
         switch (status) {
@@ -604,6 +550,16 @@ export default function TicketDetail() {
             case 'resolved': return 'Resuelto';
             case 'closed': return 'Cerrado';
             default: return status;
+        }
+    };
+
+    const getPriorityLabel = (priority: string) => {
+        switch (priority) {
+            case 'critical': return 'P1 - Crítica';
+            case 'high': return 'P2 - Alta';
+            case 'medium': return 'P3 - Media';
+            case 'low': return 'P4 - Baja';
+            default: return priority;
         }
     };
 
@@ -757,7 +713,7 @@ export default function TicketDetail() {
                             <div className="flex items-center justify-between mb-6">
                                 <span className="text-xs font-black text-gray-400 uppercase tracking-widest">#TK-{ticket.id.slice(0, 8)}</span>
                                 <div className={`px-3 py-1 rounded-lg text-xs font-black uppercase border ${getPriorityStyle(ticket.priority)}`}>
-                                    Prioridad {ticket.priority}
+                                    {getPriorityLabel(ticket.priority)}
                                 </div>
                             </div>
 
@@ -884,7 +840,6 @@ export default function TicketDetail() {
                                                 <button
                                                     key={st}
                                                     onClick={() => {
-                                                        console.log('STATUS BUTTON CLICKED:', st);
                                                         handleStatusUpdate(st);
                                                     }}
                                                     disabled={!canManageStatus || statusUpdating}
@@ -1393,7 +1348,7 @@ export default function TicketDetail() {
                                 {getAssignedUsers().length > 0 && (
                                     <div className="p-4 bg-gray-50 rounded-xl">
                                         <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3 text-center">
-                                            Participantes ({getAssignedUsers().length}/3)
+                                            Participantes ({getAssignedUsers().length}/4)
                                         </p>
                                         <div className="space-y-2">
                                             {getAssignedUsers().map((assignment: any) => (
@@ -1421,7 +1376,7 @@ export default function TicketDetail() {
                                     </div>
                                 )}
                                                                     {/* Botón Unirse al Ticket */}
-                                    {canJoinTicket && (
+                                    {canJoinTicket && !isUserAssigned && (
                                         <button
                                             onClick={handleJoinTicket}
                                             className="w-full p-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-purple-700 hover:to-purple-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"

@@ -438,9 +438,4 @@ export const checkAppAvailability = async (protocol: string): Promise<boolean> =
 
 // Función para configurar protocolos personalizados (requiere permisos del sistema)
 export const setupCustomProtocols = (): void => {
-  console.log('Para configurar protocolos personalizados:');
-  console.log('1. IVMS: ivms://');
-  console.log('2. ESVIZ: esviz://');
-  console.log('3. Estos protocolos deben estar registrados en el sistema operativo');
-  console.log('4. Consulta la documentación de IVMS-4200 y ESVIZ para más detalles');
 };

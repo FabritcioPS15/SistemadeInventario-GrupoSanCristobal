@@ -32,9 +32,7 @@ files.forEach(f => {
 
     if (newText !== text) {
         fs.writeFileSync(p, newText);
-        console.log('Updated ' + f);
         updatedCount++;
     }
 });
 
-console.log('Total files updated: ' + updatedCount);

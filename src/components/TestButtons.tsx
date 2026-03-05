@@ -6,7 +6,6 @@ export default function TestButtons() {
 
   const testDelete = async () => {
     try {
-      console.log('Probando eliminación...');
       const { data, error } = await supabase
         .from('assets')
         .select('id, brand, model')
@@ -19,7 +18,6 @@ export default function TestButtons() {
 
       if (data && data.length > 0) {
         const asset = data[0];
-        console.log('Eliminando activo:', asset);
         
         const { error: deleteError } = await supabase
           .from('assets')
@@ -41,7 +39,6 @@ export default function TestButtons() {
 
   const testUpdate = async () => {
     try {
-      console.log('Probando actualización...');
       const { data, error } = await supabase
         .from('assets')
         .select('id, brand, model')
@@ -54,7 +51,6 @@ export default function TestButtons() {
 
       if (data && data.length > 0) {
         const asset = data[0];
-        console.log('Actualizando activo:', asset);
         
         const { error: updateError } = await supabase
           .from('assets')
