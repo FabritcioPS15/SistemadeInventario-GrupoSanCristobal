@@ -43,9 +43,10 @@ const ROUTE_LABELS: Record<string, string> = {
 
 type TopHeaderProps = {
     onMobileMenuClick?: () => void;
+    sidebarCollapsed?: boolean;
 };
 
-export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
+export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHeaderProps) {
     const { user, updateProfile, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -234,7 +235,7 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
     };
 
     return (
-            <header className={`h-14 bg-[#001529] text-white flex items-center justify-between px-6 sticky top-0 z-[100] shadow-xl border-b border-white/5`}>
+            <header className={`h-14 bg-[#001529] text-white flex items-center justify-between sticky top-0 z-[100] shadow-xl border-b border-white/5 transition-all duration-300 ${sidebarCollapsed ? 'lg:px-6 px-6' : 'lg:px-6 px-6'}`}>
                 <div className="flex items-center gap-4 lg:gap-8 overflow-hidden">
                     <button
                         className="p-1.5 hover:bg-white/10 rounded-lg transition-colors lg:hidden shrink-0"
@@ -243,16 +244,8 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                         <Menu size={20} />
                     </button>
 
-                    {/* Branding Section (Static) - Completamente oculto en móvil */}
-                    <div className="hidden lg:flex items-center gap-3 shrink-0 mr-4 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/')}>
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                            <LayoutDashboard size={18} />
-                        </div>
-                        <span className="font-black text-white text-[13px] tracking-widest uppercase">Sistema GSC</span>
-                    </div>
-
-                    {/* Breadcrumbs - Se adapta al espacio disponible */}
-                    <div key={breadcrumbKey} className="flex items-center gap-1.5 overflow-hidden min-w-0">
+                    {/* Breadcrumbs - Se adapta al espacio disponible según el estado del sidebar */}
+                    <div key={breadcrumbKey} className={`flex items-center gap-1.5 overflow-hidden min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-0' : 'lg:ml-0'}`}>
                         {showBreadcrumbs && pathnames.length > 0 && (
                             <>
                                 {pathnames.map((name, index) => {

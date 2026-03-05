@@ -218,29 +218,29 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       </style>
 
       {mobileOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden" onClick={onCloseMobile} />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] lg:hidden" onClick={onCloseMobile} />
       )}
 
       <aside
         className={`
           ${collapsed ? 'w-20' : 'w-72'} 
-          bg-[#001529] text-[#a6adb4] h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-[90] flex flex-col shadow-2xl overflow-hidden
+          bg-[#001529] text-[#a6adb4] h-screen transition-all duration-300 ease-in-out fixed left-0 top-0 z-[110] flex flex-col shadow-2xl overflow-hidden
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Toggle & Logo Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-white/5 shrink-0 overflow-hidden">
-          <div className={`flex items-center gap-3 transition-opacity duration-300 ${collapsed ? 'w-8' : 'w-auto'}`}>
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
-              <Settings size={18} className={!collapsed ? "animate-spin-slow" : ""} />
+          {!collapsed && (
+            <div className="flex items-center gap-3 transition-opacity duration-300">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
+                <Settings size={18} className="animate-spin-slow" />
+              </div>
+              <span className="font-black text-white text-[15px] tracking-widest uppercase truncate animate-in fade-in duration-500">Sistema GSC</span>
             </div>
-            {!collapsed && (
-              <span className="font-black text-white text-[13px] tracking-widest uppercase truncate animate-in fade-in duration-500">Sistema GSC</span>
-            )}
-          </div>
+          )}
 
           {/* Botón de Colapsar Mejorado */}
-          <div className="relative">
+          <div className={`relative ${collapsed ? 'mx-auto' : ''}`}>
             <button
               onClick={onToggleCollapse}
               className="p-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-300 text-white/70 hover:text-white group border border-white/20 hover:border-white/30 shadow-lg"
@@ -252,9 +252,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                 ) : (
                   <ChevronLeft size={18} className="transition-transform duration-300 group-hover:-translate-x-1 group-hover:text-white" />
                 )}
-                
-                {/* Indicador visual más prominente */}
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400 rounded-full animate-pulse opacity-80 group-hover:opacity-100 transition-opacity duration-300 shadow-lg shadow-blue-400/50" />
               </div>
             </button>
             
@@ -280,11 +277,16 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             if (filteredItems.length === 0) return null;
 
             return (
-              <div key={section.title} className="mb-6 last:mb-0">
+              <div key={section.title} className="mb-4 last:mb-0">
                 {!collapsed && (
-                  <h3 className="px-6 mb-3 text-[10px] font-black uppercase tracking-[2.5px] text-white/20">
+                  <h3 className="px-6 mb-2 text-[10px] font-black uppercase tracking-[2.5px] text-white/40">
                     {section.title}
                   </h3>
+                )}
+                {collapsed && section.title !== 'Principal' && (
+                  <div className="px-3 mb-2">
+                    <div className="h-px bg-white/10"></div>
+                  </div>
                 )}
                 <div className="space-y-1.5 px-3">
                   {filteredItems.map(item => {
@@ -308,10 +310,10 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                           className={`
                             flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
                             ${isActive || isHovered ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-[#a6adb4] hover:text-white hover:bg-white/5'}
-                            ${collapsed ? 'justify-center px-0' : ''}
+                            ${collapsed ? 'justify-center px-3' : ''}
                           `}
                         >
-                          <Icon size={18} className={(isActive || isHovered) ? 'text-white' : 'group-hover:text-white'} />
+                          <Icon size={collapsed ? 20 : 18} className={(isActive || isHovered) ? 'text-white' : 'group-hover:text-white'} />
                           {!collapsed && (
                             <>
                               <span className="text-[13px] font-bold tracking-tight flex-1 truncate uppercase">{item.label}</span>
@@ -332,7 +334,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
         <div className="p-4 bg-black/30 border-t border-white/5 flex flex-col gap-4">
           {!collapsed ? (
             <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5 shadow-inner">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-xs font-black ring-1 ring-white/20">GSC</div>
               <div className="flex-1 min-w-0">
                 <button onClick={logout} className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all uppercase tracking-[2px]">
                   <LogOut size={14} /> Salir
@@ -352,7 +353,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
         <div
           ref={subMenuRef}
           className={`
-            fixed z-[100] transition-all duration-200
+            fixed z-[120] transition-all duration-200
             ${activeSubmenuItems && activeSubmenuItems.length > 0
               ? 'bg-[#1e293b] border border-blue-500/20 shadow-2xl rounded-2xl py-3 min-w-[240px]'
               : 'bg-blue-600 text-white px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest shadow-xl border border-white/10'}

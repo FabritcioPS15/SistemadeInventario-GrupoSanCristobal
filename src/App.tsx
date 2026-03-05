@@ -158,8 +158,8 @@ function AppContent() {
       )}
 
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'}`}>
-        <div className="fixed top-0 left-0 right-0 z-[100]">
-          <TopHeader onMobileMenuClick={() => setIsMobileSidebarOpen(true)} />
+        <div className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'lg:left-20' : 'lg:left-72'}`}>
+          <TopHeader onMobileMenuClick={() => setIsMobileSidebarOpen(true)} sidebarCollapsed={sidebarCollapsed} />
         </div>
         <main className="flex-1 overflow-x-hidden overflow-y-auto mt-14">
           <Routes>

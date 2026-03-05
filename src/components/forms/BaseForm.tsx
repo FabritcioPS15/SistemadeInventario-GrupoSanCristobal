@@ -107,12 +107,14 @@ export function FormSection({
   title, 
   children, 
   color = 'blue',
-  className = ''
+  className = '',
+  titleRight
 }: { 
   title: string; 
   children: ReactNode; 
   color?: 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'indigo';
   className?: string;
+  titleRight?: ReactNode;
 }) {
   const colorClasses = {
     blue: 'bg-blue-600',
@@ -125,9 +127,16 @@ export function FormSection({
 
   return (
     <section className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6 ${className}`}>
-      <div className="flex items-center gap-2 border-b border-gray-50 pb-4">
-        <div className={`w-1.5 h-6 ${colorClasses[color]} rounded-full`}></div>
-        <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest">{title}</h3>
+      <div className="flex items-center justify-between border-b border-gray-50 pb-4">
+        <div className="flex items-center gap-2">
+          <div className={`w-1.5 h-6 ${colorClasses[color]} rounded-full`}></div>
+          <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest">{title}</h3>
+        </div>
+        {titleRight && (
+          <div className="flex items-center">
+            {titleRight}
+          </div>
+        )}
       </div>
       {children}
     </section>

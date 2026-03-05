@@ -152,30 +152,157 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Si el usuario tiene permisos específicos definidos, usarlos con prioridad
     if (user.permissions && user.permissions.length > 0) {
+      // Para usuarios personalizados, verificar si tiene el permiso específico
+      if (user.role === 'personalizado') {
+        // Verificar permiso exacto (ej: 'tickets-view', 'tickets-edit')
+        if (user.permissions.includes(permission)) {
+          return true;
+        }
+        
+        // Si solicita un permiso de submenú (ej: 'tickets-dashboard'), verificar si tiene acceso al módulo principal
+        const modulePermission = permission.includes('-') ? permission.split('-')[0] : permission;
+        if (user.permissions.includes(`${modulePermission}-view`) || user.permissions.includes(`${modulePermission}-edit`)) {
+          return true;
+        }
+        
+        return false;
+      }
+      
+      // Para otros roles con permisos personalizados, usar lógica normal
       return user.permissions.includes(permission);
     }
 
-    const fullAccess = [
-      'dashboard', 'inventory', 'cameras', 'maintenance', 'sent', 'checklist', 'painpoint',
-      'locations', 'mtc', 'users', 'vacations', 'servers', 'audit', 'integrity', 'flota-vehicular', 'tickets', 'tickets-dashboard', 'tickets-mine', 'tickets-reports', 'my-chats', 'painpoint', 'sutran',
-      'inventory-pc', 'inventory-celular', 'inventory-dvr', 'inventory-impresora', 'inventory-escaner',
-      'inventory-monitor', 'inventory-laptop', 'inventory-proyector', 'inventory-switch', 'inventory-chip',
-      'inventory-tinte', 'inventory-fuente', 'inventory-ram', 'inventory-disco', 'inventory-disco-extraido',
-      'inventory-maquinaria', 'inventory-otros', 'spare-parts',
-      'cameras-revision', 'cameras-escuela', 'cameras-policlinico', 'cameras-circuito',
-      'maintenance-pending', 'maintenance-in-progress', 'maintenance-completed',
-      'maintenance-preventive', 'maintenance-corrective',
-      'sent-lima', 'sent-provincias',
-      'checklist-escon', 'checklist-ecsal', 'checklist-citv'
-    ];
+    // Super Administrador tiene acceso absoluto a todo
+    if (user.role === 'super_admin') {
+      return true;
+    }
 
+    // Definir permisos por rol según la nueva jerarquía
     const rolePermissions: Record<string, string[]> = {
-      systems: fullAccess,
-      management: fullAccess,
-      admin: fullAccess,
-      supervisor: fullAccess,
-      user: fullAccess,
-      custom: []
+      // Super Admin: Acceso absoluto a todo
+      super_admin: [
+        'dashboard-view', 'dashboard-edit',
+        'tickets-view', 'tickets-create', 'tickets-edit', 'tickets-delete',
+        'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
+        'checklist-view', 'checklist-edit', 'checklist-create',
+        'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
+        'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
+        'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
+        'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
+        'inventory-chip-view', 'inventory-tinte-view', 'inventory-fuente-view', 'inventory-ram-view', 'inventory-disco-view',
+        'inventory-disco-extraido-view', 'inventory-maquinaria-view',
+        'cameras-view', 'cameras-edit',
+        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
+        'maintenance-view', 'maintenance-create', 'maintenance-edit',
+        'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
+        'flota-view', 'flota-edit',
+        'users-view', 'users-create', 'users-edit', 'users-delete',
+        'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
+        'sutran-view', 'sutran-edit',
+        'mtc-view', 'mtc-edit',
+        'servers-view', 'servers-edit',
+        'painpoint-view', 'painpoint-create', 'painpoint-edit',
+        'sent-view', 'sent-create', 'sent-edit',
+        'sent-lima-view', 'sent-provincias-view',
+        'audit-view', 'audit-export'
+      ],
+      
+      // Gerencia: Acceso completo a todo excepto configuración crítica del sistema
+      gerencia: [
+        'dashboard-view', 'dashboard-edit',
+        'tickets-view', 'tickets-create', 'tickets-edit', 'tickets-delete',
+        'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
+        'checklist-view', 'checklist-edit', 'checklist-create',
+        'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
+        'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
+        'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
+        'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
+        'inventory-chip-view', 'inventory-tinte-view', 'inventory-fuente-view', 'inventory-ram-view', 'inventory-disco-view',
+        'inventory-disco-extraido-view', 'inventory-maquinaria-view',
+        'cameras-view', 'cameras-edit',
+        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
+        'maintenance-view', 'maintenance-create', 'maintenance-edit',
+        'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
+        'flota-view', 'flota-edit',
+        'users-view', 'users-create', 'users-edit', 'users-delete',
+        'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
+        'sutran-view', 'sutran-edit',
+        'mtc-view', 'mtc-edit',
+        'painpoint-view', 'painpoint-create', 'painpoint-edit',
+        'sent-view', 'sent-create', 'sent-edit',
+        'sent-lima-view', 'sent-provincias-view',
+        'audit-view', 'audit-export'
+      ],
+      
+      // Sistemas: Acceso completo a todo lo técnico y configuración
+      sistemas: [
+        'dashboard-view', 'dashboard-edit',
+        'tickets-view', 'tickets-create', 'tickets-edit', 'tickets-delete',
+        'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
+        'checklist-view', 'checklist-edit', 'checklist-create',
+        'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
+        'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
+        'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
+        'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
+        'inventory-chip-view', 'inventory-tinte-view', 'inventory-fuente-view', 'inventory-ram-view', 'inventory-disco-view',
+        'inventory-disco-extraido-view', 'inventory-maquinaria-view',
+        'cameras-view', 'cameras-edit',
+        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
+        'maintenance-view', 'maintenance-create', 'maintenance-edit',
+        'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
+        'flota-view', 'flota-edit',
+        'users-view', 'users-create', 'users-edit', 'users-delete',
+        'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
+        'sutran-view', 'sutran-edit',
+        'mtc-view', 'mtc-edit',
+        'servers-view', 'servers-edit',
+        'painpoint-view', 'painpoint-create', 'painpoint-edit',
+        'sent-view', 'sent-create', 'sent-edit',
+        'sent-lima-view', 'sent-provincias-view',
+        'audit-view', 'audit-export'
+      ],
+      
+      // Supervisores: Acceso a operaciones básicas y gestión de su equipo
+      supervisores: [
+        'dashboard-view',
+        'tickets-view', 'tickets-create', 'tickets-edit',
+        'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view',
+        'checklist-view', 'checklist-edit',
+        'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
+        'inventory-view', 'inventory-create', 'inventory-edit',
+        'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
+        'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
+        'cameras-view', 'cameras-edit',
+        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view',
+        'maintenance-view', 'maintenance-create', 'maintenance-edit',
+        'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
+        'flota-view', 'flota-edit',
+        'locations-view', 'sutran-view', 'mtc-view',
+        'sent-view', 'sent-create', 'sent-edit',
+        'sent-lima-view', 'sent-provincias-view'
+      ],
+      
+      // Administradores: Acceso a gestión básica
+      administradores: [
+        'dashboard-view',
+        'tickets-view', 'tickets-create',
+        'tickets-mine-view',
+        'checklist-view', 'checklist-edit',
+        'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
+        'inventory-view', 'inventory-create', 'inventory-edit',
+        'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
+        'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view',
+        'cameras-view', 'cameras-edit',
+        'cameras-revision-view', 'cameras-escuela-view',
+        'maintenance-view', 'maintenance-create', 'maintenance-edit',
+        'maintenance-pending-view', 'maintenance-in-progress-view',
+        'locations-view', 'mtc-view',
+        'sent-view', 'sent-create', 'sent-edit',
+        'sent-lima-view', 'sent-provincias-view'
+      ],
+      
+      // Personalizado: Sin permisos por defecto, se configuran individualmente
+      personalizado: []
     };
 
     return rolePermissions[user.role as keyof typeof rolePermissions]?.includes(permission) || false;
@@ -187,8 +314,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('❌ canEdit: No user found');
       return false;
     }
-    const allowedRoles = ['systems', 'management', 'admin', 'supervisor', 'technician'];
+    
+    // Roles que pueden editar según la nueva jerarquía
+    const allowedRoles = ['super_admin', 'gerencia', 'sistemas', 'supervisores'];
     const hasPermission = allowedRoles.includes(user.role);
+    
     console.log('🔍 canEdit check:', {
       userRole: user.role,
       allowedRoles,
@@ -196,6 +326,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       userId: user.id,
       userFullName: user.full_name
     });
+    
     return hasPermission;
   };
 

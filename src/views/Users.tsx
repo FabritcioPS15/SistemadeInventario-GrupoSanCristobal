@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, LayoutGrid, List, Lock, Star } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, UserCheck, Shield, Crown, LayoutGrid, List, Lock, Star, Settings, TrendingUp, User as UserIcon, HelpCircle } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase } from '../lib/supabase';
 import UserForm from '../components/forms/UserForm';
@@ -15,6 +15,7 @@ type User = {
   status: 'active' | 'inactive';
   notes?: string;
   permissions?: string[];
+  avatar_url?: string;
   created_at: string;
   updated_at: string;
   locations?: {
@@ -36,6 +37,7 @@ export default function Users() {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [showRoleInfo, setShowRoleInfo] = useState(false);
 
   // Debug logging before render
   const canEditValue = canEdit();
@@ -71,6 +73,10 @@ export default function Users() {
   };
 
   const handleEditUser = (user: User) => {
+    if (user.role === 'super_admin') {
+      alert('🔒 No se puede editar al Super Administrador. Este usuario está protegido y no se pueden modificar sus datos.');
+      return;
+    }
     setEditingUser(user);
     setShowForm(true);
   };
@@ -80,7 +86,16 @@ export default function Users() {
   };
 
   const handleDeleteUser = async (user: User) => {
-    if (window.confirm(`¿Estás seguro de que quieres eliminar al usuario "${user.full_name}"?`)) {
+    if (user.role === 'super_admin') {
+      alert('❌ No se puede eliminar al Super Administrador. Este rol es protegido y exclusivo del sistema.');
+      return;
+    }
+
+    const confirmMessage = user.role === 'gerencia' || user.role === 'sistemas' 
+      ? `⚠️ ADVERTENCIA: Estás a punto de eliminar a un usuario con rol de ${user.role === 'gerencia' ? 'Gerencia' : 'Sistemas'}. Esta acción es crítica.\n\n¿Estás seguro de que quieres eliminar al usuario "${user.full_name}"?`
+      : `¿Estás seguro de que quieres eliminar al usuario "${user.full_name}"?`;
+
+    if (window.confirm(confirmMessage)) {
       try {
         const { error } = await supabase
           .from('users')
@@ -90,10 +105,10 @@ export default function Users() {
         if (error) throw error;
 
         await fetchUsers();
-        alert('Usuario eliminado correctamente');
+        alert('✅ Usuario eliminado correctamente');
       } catch (err: any) {
         console.error('Error al eliminar usuario:', err);
-        alert('Error: ' + err.message);
+        alert('❌ Error: ' + err.message);
       }
     }
   };
@@ -155,34 +170,36 @@ export default function Users() {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'systems': return <Lock className="h-4 w-4" />;
-      case 'management': return <Crown className="h-4 w-4" />;
-      case 'admin': return <Shield className="h-4 w-4" />;
-      case 'supervisor': return <UserCheck className="h-4 w-4" />;
-      case 'user': return <UsersIcon className="h-4 w-4" />;
-      default: return <UsersIcon className="h-4 w-4" />;
+      case 'super_admin': return <Crown className="h-4 w-4" />;
+      case 'gerencia': return <TrendingUp className="h-4 w-4" />;
+      case 'sistemas': return <Lock className="h-4 w-4" />;
+      case 'supervisores': return <Shield className="h-4 w-4" />;
+      case 'administradores': return <UsersIcon className="h-4 w-4" />;
+      case 'personalizado': return <Settings className="h-4 w-4" />;
+      default: return <UserIcon className="h-4 w-4" />;
     }
   };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'systems': return 'bg-rose-50 text-rose-700 border-rose-200';
-      case 'management': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'admin': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'supervisor': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'user': return 'bg-gray-50 text-gray-700 border-gray-200';
+      case 'super_admin': return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'gerencia': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'sistemas': return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'supervisores': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'administradores': return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'personalizado': return 'bg-gray-50 text-gray-700 border-gray-200';
       default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'systems': return 'Sistemas';
-      case 'management': return 'Gerencia';
-      case 'admin': return 'Administrador';
-      case 'supervisor': return 'Supervisor';
-      case 'user': return 'Usuario';
-      case 'custom': return 'Personalizado';
+      case 'super_admin': return 'Super Admin';
+      case 'gerencia': return 'Gerencia';
+      case 'sistemas': return 'Sistemas';
+      case 'supervisores': return 'Supervisores';
+      case 'administradores': return 'Administradores';
+      case 'personalizado': return 'Personalizado';
       default: return role;
     }
   };
@@ -195,6 +212,96 @@ export default function Users() {
   const statusLabels = {
     active: 'Activo',
     inactive: 'Inactivo',
+  };
+
+  const getRoleAccessInfo = (role: string) => {
+    switch (role) {
+      case 'super_admin':
+        return {
+          title: 'Super Admin',
+          description: 'Control total del sistema',
+          accesses: [
+            '✅ Acceso completo a todos los módulos',
+            '✅ Gestión de usuarios y roles',
+            '✅ Configuración del sistema',
+            '✅ Reportes avanzados',
+            '✅ Copias de seguridad y restauración',
+            '✅ Auditoría completa del sistema'
+          ]
+        };
+      case 'gerencia':
+        return {
+          title: 'Gerencia',
+          description: 'Supervisión estratégica',
+          accesses: [
+            '✅ Dashboard y métricas clave',
+            '✅ Reportes ejecutivos',
+            '✅ Aprobación de tickets críticos',
+            '✅ Visibilidad de todas las operaciones',
+            '✅ Análisis de rendimiento',
+            '❌ No puede modificar configuraciones del sistema'
+          ]
+        };
+      case 'sistemas':
+        return {
+          title: 'Sistemas',
+          description: 'Soporte técnico y mantenimiento',
+          accesses: [
+            '✅ Gestión de servidores y equipos',
+            '✅ Soporte técnico avanzado',
+            '✅ Mantenimiento preventivo',
+            '✅ Configuración técnica',
+            '✅ Diagnóstico de problemas',
+            '❌ No puede gestionar usuarios'
+          ]
+        };
+      case 'supervisores':
+        return {
+          title: 'Supervisores',
+          description: 'Gestión operativa diaria',
+          accesses: [
+            '✅ Gestión de tickets asignados',
+            '✅ Supervisión de personal',
+            '✅ Reportes operativos',
+            '✅ Control de inventario básico',
+            '✅ Coordinación de tareas',
+            '❌ No puede acceder a configuraciones'
+          ]
+        };
+      case 'administradores':
+        return {
+          title: 'Administradores',
+          description: 'Gestión administrativa',
+          accesses: [
+            '✅ Gestión de usuarios básica',
+            ' Control de accesos',
+            '✅ Reportes administrativos',
+            '✅ Gestión de ubicaciones',
+            '✅ Soporte a usuarios',
+            '❌ No puede modificar roles de sistema'
+          ]
+        };
+      case 'personalizado':
+        return {
+          title: 'Personalizado',
+          description: 'Acceso configurado según necesidades',
+          accesses: [
+            '⚙️ Permisos configurados manualmente',
+            '⚙️ Acceso según asignación específica',
+            '⚙️ Funcionalidades limitadas',
+            '⚙️ Restricciones personalizadas'
+          ]
+        };
+      default:
+        return {
+          title: 'Sin rol definido',
+          description: 'Permisos básicos',
+          accesses: [
+            '❓ Permisos no especificados',
+            '❓ Contactar al administrador'
+          ]
+        };
+    }
   };
 
   const filteredUsers = useMemo(() => {
@@ -249,9 +356,9 @@ export default function Users() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {[
             { label: 'Total Activos', value: stats.active, icon: UsersIcon, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Sistemas', value: stats.byRole.systems || 0, icon: Lock, color: 'text-rose-600', bg: 'bg-rose-50' },
-            { label: 'Gerencia', value: stats.byRole.management || 0, icon: Crown, color: 'text-amber-600', bg: 'bg-amber-50' },
-            { label: 'Admin/Super', value: (stats.byRole.admin || 0) + (stats.byRole.supervisor || 0), icon: Shield, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Super Admin', value: stats.byRole.super_admin || 0, icon: Crown, color: 'text-purple-600', bg: 'bg-purple-50' },
+            { label: 'Gerencia', value: stats.byRole.gerencia || 0, icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50' },
+            { label: 'Sistemas', value: stats.byRole.sistemas || 0, icon: Lock, color: 'text-rose-600', bg: 'bg-rose-50' },
             { label: 'Nuevos (7d)', value: stats.recentlyAdded, icon: Plus, color: 'text-indigo-600', bg: 'bg-indigo-50' },
           ].map((stat, i) => (
             <div key={i} className="bg-white border border-[#e2e8f0] rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
@@ -293,18 +400,68 @@ export default function Users() {
               <div className="h-8 w-px bg-gray-200 mx-1 hidden sm:block" />
 
               <div className="grid grid-cols-2 gap-2 flex-1 sm:flex-none">
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-white border border-[#e2e8f0] rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-[#64748b] outline-none hover:border-[#002855] transition-all"
-                >
-                  <option value="">ROLES</option>
-                  <option value="systems">SISTEMAS</option>
-                  <option value="management">GERENCIA</option>
-                  <option value="admin">ADMIN</option>
-                  <option value="supervisor">SUPER</option>
-                  <option value="user">USUARIO</option>
-                </select>
+                <div className="relative flex gap-2">
+                  <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="flex-1 px-3 py-1.5 bg-white border border-[#e2e8f0] rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-[#64748b] outline-none hover:border-[#002855] transition-all"
+                  >
+                    <option value="">ROLES</option>
+                    <option value="super_admin">SUPER ADMIN</option>
+                    <option value="gerencia">GERENCIA</option>
+                    <option value="sistemas">SISTEMAS</option>
+                    <option value="supervisores">SUPERVISORES</option>
+                    <option value="administradores">ADMINISTRADORES</option>
+                    <option value="personalizado">PERSONALIZADO</option>
+                  </select>
+                  
+                  <button
+                    onClick={() => setShowRoleInfo(!showRoleInfo)}
+                    className={`p-1.5 rounded-lg border transition-colors ${
+                      showRoleInfo 
+                        ? 'bg-[#002855] border-[#002855] text-white' 
+                        : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-[#002855] hover:border-[#002855]'
+                    }`}
+                    title={showRoleInfo ? "Cerrar información de roles" : "Ver información de roles y accesos"}
+                  >
+                    <HelpCircle size={14} />
+                  </button>
+                  
+                  {/* Tooltip con información de roles */}
+                  {showRoleInfo && (
+                    <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-[#e2e8f0] p-4 z-50 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs font-black text-[#002855] uppercase tracking-wider">Información de Roles y Accesos</h4>
+                        <button
+                          onClick={() => setShowRoleInfo(false)}
+                          className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {['super_admin', 'gerencia', 'sistemas', 'supervisores', 'administradores', 'personalizado'].map((role) => {
+                          const roleInfo = getRoleAccessInfo(role);
+                          return (
+                            <div key={role} className="border-b border-gray-100 pb-3 last:border-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                {getRoleIcon(role)}
+                                <span className="text-xs font-black text-[#002855] uppercase">{roleInfo.title}</span>
+                              </div>
+                              <p className="text-[10px] text-gray-600 mb-2 italic">{roleInfo.description}</p>
+                              <div className="space-y-1">
+                                {roleInfo.accesses.map((access, index) => (
+                                  <p key={index} className="text-[9px] text-gray-700 leading-tight">{access}</p>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 <select
                   value={statusFilter}
@@ -333,7 +490,24 @@ export default function Users() {
             {filteredUsers.map((u) => (
               <div key={u.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400 transition-all duration-300 flex flex-col group overflow-hidden">
                 <div className="p-6 flex-1">
-                  <div className="flex items-start justify-between mb-6">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-12 h-12 rounded-xl bg-[#002855] text-white flex items-center justify-center text-sm font-black overflow-hidden flex-shrink-0">
+                      {u.avatar_url ? (
+                        <img 
+                          src={u.avatar_url} 
+                          alt={u.full_name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // Si la imagen falla al cargar, mostrar la inicial
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = `<div class="w-full h-full bg-[#002855] text-white flex items-center justify-center text-sm font-black">${u.full_name?.charAt(0) || '?'}</div>`;
+                          }}
+                        />
+                      ) : (
+                        u.full_name?.charAt(0) || '?'
+                      )}
+                    </div>
                     <div className="flex-1">
                       <h3 className="text-sm font-black text-[#002855] uppercase tracking-tight mb-2 truncate" title={u.full_name}>
                         {u.full_name}
@@ -370,90 +544,131 @@ export default function Users() {
                     onClick={() => handleViewUser(u)}
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
                   >
-                    <Eye size={14} /> DETALLES
+                    <Eye size={14} />
+                    Ver
                   </button>
-                  {canEdit() && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEditUser(u)}
-                        className="p-2 bg-white text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(u)}
-                        className="p-2 bg-white text-rose-500 border border-rose-100 rounded-lg hover:bg-rose-500 hover:text-white transition-all active:scale-95 shadow-sm"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                  
+                  {canEditValue && u.role !== 'super_admin' && (
+                    <button
+                      onClick={() => handleEditUser(u)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all active:scale-95 shadow-sm"
+                    >
+                      <Edit size={14} />
+                      Editar
+                    </button>
+                  )}
+                  
+                  {u.role === 'super_admin' && (
+                    <button
+                      disabled
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed shadow-sm"
+                      title="Protegido - No se puede editar"
+                    >
+                      <Edit size={14} />
+                      Editar
+                    </button>
+                  )}
+                  
+                  {canEditValue && u.role !== 'super_admin' && (
+                    <button
+                      onClick={() => handleDeleteUser(u)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-all active:scale-95 shadow-sm"
+                    >
+                      <Trash2 size={14} />
+                      Eliminar
+                    </button>
+                  )}
+                  
+                  {u.role === 'super_admin' && (
+                    <button
+                      disabled
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed shadow-sm"
+                      title="Protegido - No se puede eliminar"
+                    >
+                      <Trash2 size={14} />
+                      Eliminar
+                    </button>
                   )}
                 </div>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0] overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-[#e2e8f0]">
-                <thead className="bg-[#f8fafc]">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Nombre del Usuario</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Correo Electrónico</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Cargo / Rol</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Estado</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Sede</th>
-                    <th className="px-6 py-3 text-right text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e2e8f0] bg-white">
-                  {filteredUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50/50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-[#002855] text-white flex items-center justify-center text-xs font-black">
-                            {u.full_name?.charAt(0)}
-                          </div>
-                          <span className="text-sm font-bold text-gray-900 uppercase tracking-tight">{u.full_name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-600 font-mono">{u.email}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
-                          {getRoleIcon(u.role)}
-                          {getRoleLabel(u.role)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ${statusColors[u.status]}`}>
-                          {statusLabels[u.status]}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 hidden sm:block">
-                        {u.locations ? (
-                          <span className="text-[10px] font-black text-gray-500 bg-gray-100 px-2 py-1 rounded uppercase tracking-widest">{u.locations.name}</span>
-                        ) : (
-                          <span className="text-gray-300 italic text-xs">Sin asignar</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                          <button onClick={() => handleViewUser(u)} className="p-2 text-gray-400 hover:text-[#002855] hover:bg-white rounded-lg shadow-sm"><Eye size={16} /></button>
-                          {canEdit() && (
-                            <>
-                              <button onClick={() => handleEditUser(u)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-white rounded-lg shadow-sm"><Edit size={16} /></button>
-                              <button onClick={() => handleDeleteUser(u)} className="p-2 text-gray-400 hover:text-rose-600 hover:bg-white rounded-lg shadow-sm"><Trash2 size={16} /></button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+) : (
+  <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0] overflow-hidden">
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-[#e2e8f0]">
+        <thead className="bg-[#f8fafc]">
+          <tr>
+            <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Nombre del Usuario</th>
+            <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Correo Electrónico</th>
+            <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Cargo / Rol</th>
+            <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Estado</th>
+            <th className="px-6 py-3 text-left text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Sede</th>
+            <th className="px-6 py-3 text-right text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Acciones</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[#e2e8f0] bg-white">
+          {filteredUsers.map((u) => (
+            <tr key={u.id} className="hover:bg-gray-50/50 transition-colors group">
+              <td className="px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#002855] text-white flex items-center justify-center text-xs font-black overflow-hidden">
+                    {u.avatar_url ? (
+                      <img 
+                        src={u.avatar_url} 
+                        alt={u.full_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Si la imagen falla al cargar, mostrar la inicial
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          target.parentElement!.innerHTML = `<div class="w-full h-full bg-[#002855] text-white flex items-center justify-center text-xs font-black">${u.full_name?.charAt(0) || '?'}</div>`;
+                        }}
+                      />
+                    ) : (
+                      u.full_name?.charAt(0) || '?'
+                    )}
+                  </div>
+                  <span className="text-sm font-bold text-gray-900 uppercase tracking-tight">{u.full_name}</span>
+                </div>
+              </td>
+              <td className="px-6 py-4 text-sm font-medium text-gray-600 font-mono">{u.email}</td>
+              <td className="px-6 py-4">
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
+                  {getRoleIcon(u.role)}
+                  {getRoleLabel(u.role)}
+                </span>
+              </td>
+              <td className="px-6 py-4">
+                <span className={`inline-flex px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest shadow-sm ${statusColors[u.status]}`}>
+                  {statusLabels[u.status]}
+                </span>
+              </td>
+              <td className="px-6 py-4 hidden sm:block">
+                {u.locations ? (
+                  <span className="text-[10px] font-black text-gray-500 bg-gray-100 px-2 py-1 rounded uppercase tracking-widest">{u.locations.name}</span>
+                ) : (
+                  <span className="text-gray-300 italic text-xs">Sin asignar</span>
+                )}
+              </td>
+              <td className="px-6 py-4 text-right">
+                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <button onClick={() => handleViewUser(u)} className="p-2 text-gray-400 hover:text-[#002855] hover:bg-white rounded-lg shadow-sm"><Eye size={16} /></button>
+                  {canEdit() && (
+                    <>
+                      <button onClick={() => handleEditUser(u)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-white rounded-lg shadow-sm"><Edit size={16} /></button>
+                      <button onClick={() => handleDeleteUser(u)} className="p-2 text-gray-400 hover:text-rose-600 hover:bg-white rounded-lg shadow-sm"><Trash2 size={16} /></button>
+                    </>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
       </div>
 
       {/* Modals */}
@@ -481,8 +696,29 @@ export default function Users() {
 
             <div className="p-8 overflow-y-auto space-y-6">
               <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Nombre Completo</label>
-                <p className="text-lg font-black text-[#002855] uppercase">{viewingUser.full_name}</p>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-16 h-16 rounded-xl bg-[#002855] text-white flex items-center justify-center text-lg font-black overflow-hidden flex-shrink-0">
+                    {viewingUser.avatar_url ? (
+                      <img 
+                        src={viewingUser.avatar_url} 
+                        alt={viewingUser.full_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Si la imagen falla al cargar, mostrar la inicial
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          target.parentElement!.innerHTML = `<div class="w-full h-full bg-[#002855] text-white flex items-center justify-center text-lg font-black">${viewingUser.full_name?.charAt(0) || '?'}</div>`;
+                        }}
+                      />
+                    ) : (
+                      viewingUser.full_name?.charAt(0) || '?'
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Nombre Completo</label>
+                    <p className="text-lg font-black text-[#002855] uppercase">{viewingUser.full_name}</p>
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
