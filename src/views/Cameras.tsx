@@ -433,7 +433,7 @@ export default function Cameras({ subview }: CamerasProps) {
                             )}
                           </div>
                           {(cam as any).locations && (
-                            <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium">
+                            <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium hidden sm:block">
                               <MapPin size={14} className="text-red-500" />
                               <span>{(cam as any).locations.name}</span>
                             </div>
@@ -699,7 +699,7 @@ export default function Cameras({ subview }: CamerasProps) {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="px-6 py-4 whitespace-nowrap hidden sm:block">
                           {(cam as any).locations ? (
                             <div className="flex items-center gap-1.5 text-sm text-gray-700">
                               <MapPin size={14} className="text-red-500" />

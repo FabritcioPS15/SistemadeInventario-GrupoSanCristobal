@@ -52,6 +52,9 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
     const pathnames = location.pathname.split('/').filter(x => x);
     const showBreadcrumbs = location.pathname !== '/' && location.pathname !== '/login';
     const isTicketsRoute = location.pathname.startsWith('/tickets');
+    
+    // Estado para forzar actualización del breadcrumb
+    const [breadcrumbKey, setBreadcrumbKey] = useState(0);
 
     // Actions panel state (for ticket routes)
     const [showActions, setShowActions] = useState(false);
@@ -64,6 +67,11 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
     const [userLocation, setUserLocation] = useState<string>('');
     const notificationRef = useRef<HTMLDivElement>(null);
     const settingsRef = useRef<HTMLDivElement>(null);
+
+    // Forzar actualización del breadcrumb cuando cambia la ruta
+    useEffect(() => {
+        setBreadcrumbKey(prev => prev + 1);
+    }, [location.pathname]);
 
     // Close actions panel on route change
     useEffect(() => { setShowActions(false); setSearchValue(''); }, [location.pathname]);
@@ -235,8 +243,8 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                         <Menu size={20} />
                     </button>
 
-                    {/* Branding Section (Static) */}
-                    <div className="flex items-center gap-3 shrink-0 mr-4 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/')}>
+                    {/* Branding Section (Static) - Completamente oculto en móvil */}
+                    <div className="hidden lg:flex items-center gap-3 shrink-0 mr-4 cursor-pointer hover:opacity-80 transition-opacity" onClick={() => navigate('/')}>
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
                             <LayoutDashboard size={18} />
                         </div>
@@ -244,7 +252,7 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                     </div>
 
                     {/* Breadcrumbs - Se adapta al espacio disponible */}
-                    <div className="flex items-center gap-1.5 overflow-hidden min-w-0">
+                    <div key={breadcrumbKey} className="flex items-center gap-1.5 overflow-hidden min-w-0">
                         {showBreadcrumbs && pathnames.length > 0 && (
                             <>
                                 {pathnames.map((name, index) => {
@@ -252,7 +260,7 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                                     const to = `/${pathnames.slice(0, index + 1).join('/')}`;
                                     const label = ROUTE_LABELS[name.toLowerCase()] || name.replace(/-/g, ' ');
                                     return (
-                                        <div key={to} className="flex items-center gap-1.5 shrink-0 min-w-0">
+                                        <div key={`${to}-${breadcrumbKey}`} className="flex items-center gap-1.5 shrink-0 min-w-0">
                                             {last ? (
                                                 <span className="text-[10px] font-black text-white/90 uppercase tracking-widest bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 truncate max-w-[200px]">
                                                     {label}
@@ -273,7 +281,7 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
                                 })}
                             </>
                         )}
-                </div>
+                    </div>
 
             </div>
 
@@ -384,15 +392,15 @@ export default function TopHeader({ onMobileMenuClick }: TopHeaderProps) {
 
                     <div className="h-8 w-[1px] bg-white/20 mx-1" />
 
-                    {/* User Info - Nombre y Sede */}
+                    {/* User Info - Nombre y Sede - Oculto en móvil */}
                     <div className="flex items-center gap-2 mr-3">
                         {userLocation && (
                             <>
-                                <span className="text-white/80 text-xs">{userLocation}</span>
-                                <div className="w-1 h-1 bg-white/40 rounded-full" />
+                                <span className="text-white/80 text-xs hidden lg:block">{userLocation}</span>
+                                <div className="w-1 h-1 bg-white/40 rounded-full hidden lg:block" />
                             </>
                         )}
-                        <span className="text-white/90 text-xs font-medium">{user?.full_name}</span>
+                        <span className="text-white/90 text-xs font-medium hidden lg:block">{user?.full_name}</span>
                     </div>
 
                     {/* User Profile Settings */}

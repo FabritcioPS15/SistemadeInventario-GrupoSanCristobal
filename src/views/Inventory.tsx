@@ -916,7 +916,7 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
                                 )}
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-6 py-4 whitespace-nowrap hidden sm:block">
                               {asset.locations ? (
                                 <div className="flex items-center gap-2 text-sm text-slate-600">
                                   <MapPin size={16} className="text-slate-400" />

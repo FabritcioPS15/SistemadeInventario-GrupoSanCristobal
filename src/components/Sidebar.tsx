@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Key, Users, FileText, ChevronRight, Zap,
   Wrench, Send, MapPin, Building2,
   Car, ClipboardList, LogOut, Ticket,
-  Settings, Menu, ChevronLeft
+  Settings, ChevronLeft
 } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { GrServerCluster } from 'react-icons/gr';
@@ -71,6 +71,12 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       setAdjustedTop(top);
     }
   }, [hoveredItem, menuTop]);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      setHoveredItem(null);
+    }
+  }, [mobileOpen]);
 
   const sections: Section[] = [
     {
@@ -295,7 +301,10 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                       >
                         <NavLink
                           to={item.path}
-                          onClick={() => window.innerWidth < 1024 && onCloseMobile?.()}
+                          onClick={() => {
+                            window.innerWidth < 1024 && onCloseMobile?.();
+                            setHoveredItem(null);
+                          }}
                           className={`
                             flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
                             ${isActive || isHovered ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-[#a6adb4] hover:text-white hover:bg-white/5'}

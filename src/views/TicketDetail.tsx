@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, User, Clock, AlertCircle, MessageSquare, ShieldCheck, MessageCircle, Copy, ArrowLeft, Lock, Smile, Bold, Italic, List } from 'lucide-react';
+import { Send, User, Clock, AlertCircle, MessageSquare, ShieldCheck, Copy, ArrowLeft, Lock, Smile, Bold, Italic, List } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { FaWhatsapp, FaTrashAlt } from "react-icons/fa";
+import { IoChatbubbles } from "react-icons/io5";
 
 export default function TicketDetail() {
     const { ticketId } = useParams();
@@ -16,6 +18,7 @@ export default function TicketDetail() {
     const [copiedItem, setCopiedItem] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showFormatting, setShowFormatting] = useState(false);
+    const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
     const commentsEndRef = useRef<HTMLDivElement>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
 
@@ -262,6 +265,7 @@ export default function TicketDetail() {
             .replace(/\n/g, '<br>'); // saltos de línea
     };
 
+    
     const handleDeleteTicket = async () => {
         const now = new Date();
         const createdDate = new Date(ticket.created_at);
@@ -393,6 +397,50 @@ export default function TicketDetail() {
         ticketStatus: ticket?.status,
         ticketRequesterId: ticket?.requester_id
     });
+
+    const handleAttendTicket = async () => {
+        if (!canAttendTicket || statusUpdating) {
+            console.log('Cannot attend ticket - insufficient permissions or already updating');
+            return;
+        }
+
+        if (!confirm('¿Está seguro de atender este ticket? Se le asignará como técnico responsable.')) {
+            return;
+        }
+
+        try {
+            setStatusUpdating(true);
+            console.log('Atendiendo ticket:', ticketId);
+            
+            // Actualizar a en_progreso y asignar como técnico responsable
+            const { error } = await supabase.from('tickets').update({
+                status: 'in_progress',
+                assigned_to: user?.id,
+                attended_at: new Date().toISOString()
+            }).eq('id', ticketId);
+            
+            if (error) {
+                console.error('Error al atender ticket:', error);
+                throw error;
+            }
+            
+            console.log('Ticket atendido exitosamente');
+            
+            // Agregar comentario de atención
+            await supabase.from('ticket_comments').insert([{
+                ticket_id: ticketId,
+                user_id: user?.id,
+                content: `**ATENDIENDO**: Ticket atendido y asignado a ${user?.full_name}`,
+            }]);
+            
+            fetchComments();
+        } catch (error) {
+            console.error('Error al atender ticket:', error);
+            alert('Error al atender ticket: ' + (error as any)?.message || 'Error desconocido');
+        } finally {
+            setStatusUpdating(false);
+        }
+    };
 
     const handleJoinTicket = async () => {
         console.log('handleJoinTicket called:', {
@@ -687,21 +735,21 @@ export default function TicketDetail() {
             `}</style>
             {/* Header Fijo */}
             <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-                <div className="bg-white border-b border-gray-200 px-8 py-4">
+                <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
                     <div className="max-w-full mx-auto flex items-center gap-2 text-sm text-gray-500">
                         <button
                             onClick={() => navigate('/tickets')}
-                            className="hover:text-gray-700 transition-colors"
+                            className="hover:text-gray-700 transition-colors hidden sm:block"
                         >
                             Mesa de Ayuda
                         </button>
-                        <span>/</span>
+                        <span className="hidden sm:block">/</span>
                         <span className="text-gray-900 font-medium">Ticket #{ticket.id.slice(0, 8).toUpperCase()}</span>
                     </div>
                 </div>
             </div>
 
-            <div className="p-8">
+            <div className="p-4 sm:p-6 lg:p-8">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     {/* Left side: Ticket Details (1/4 del ancho) */}
                     <div className="lg:col-span-1">
@@ -831,12 +879,6 @@ export default function TicketDetail() {
                                     ) : (
                                         // Vista funcional para el staff
                                         <div className="space-y-3 mb-4">
-                                            {/* Indicador de permisos */}
-                                            <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg">
-                                                <p className="text-xs font-black text-blue-700 text-center">
-                                                    Rol: {user?.role} | Permisos: {canManageStatus ? '✅ Gestión' : '❌ Solo lectura'}
-                                                </p>
-                                            </div>
                                             
                                             {['open', 'in_progress', 'resolved', 'closed'].map(st => (
                                                 <button
@@ -913,24 +955,19 @@ export default function TicketDetail() {
                                         </div>
                                     )}
                                     
-                                    {/* Botón de WhatsApp para alta prioridad */}
-                                    {shouldShowWhatsApp() && (
-                                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                                    <span className="text-xs font-black text-green-700 uppercase tracking-widest">Contacto Urgente</span>
-                                                </div>
-                                            </div>
+                                    {/* Botón Finalizar Ticket */}
+                                    {canFinalizeTicket && (
+                                        <div className="mt-4">
                                             <button
-                                                onClick={handleWhatsAppContact}
-                                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-green-700 transition-all transform hover:scale-105 active:scale-95"
+                                                onClick={() => setShowFinalizeConfirm(true)}
+                                                disabled={statusUpdating}
+                                                className="w-full px-4 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:from-red-700 hover:to-red-800 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                                             >
-                                                <MessageCircle size={14} />
-                                                Contactar por WhatsApp
+                                                <AlertCircle size={16} />
+                                                Finalizar Ticket
                                             </button>
-                                            <p className="text-xs text-green-600 mt-2 text-center">
-                                                Ticket de alta prioridad con más de 10 minutos
+                                            <p className="text-xs text-gray-500 mt-2 text-center">
+                                                Al finalizar, el ticket se archivará y no podrá ser modificado
                                             </p>
                                         </div>
                                     )}
@@ -945,7 +982,7 @@ export default function TicketDetail() {
                             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-blue-50">
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg">
-                                        <MessageSquare size={24} />
+                                        <IoChatbubbles size={24} />
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-black text-[#002855]">CANAL DE SEGUIMIENTO</h3>
@@ -963,7 +1000,7 @@ export default function TicketDetail() {
                                             className="w-10 h-10 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-all flex items-center justify-center shadow-lg hover:scale-110"
                                             title="Contactar por WhatsApp"
                                         >
-                                            <MessageCircle size={18} />
+                                            <FaWhatsapp size={18} />
                                         </button>
                                     )}
                                     <button
@@ -971,7 +1008,7 @@ export default function TicketDetail() {
                                         className="w-10 h-10 rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-red-500 transition-all flex items-center justify-center hover:bg-red-50 shadow-sm"
                                         title="Eliminar ticket"
                                     >
-                                        <AlertCircle size={18} />
+                                        <FaTrashAlt size={18} />
                                     </button>
                                 </div>
                             </div>
@@ -1325,19 +1362,33 @@ export default function TicketDetail() {
                                     </div>
                                     <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Reportado Por</p>
                                     <p className="text-sm font-bold text-gray-900 uppercase mt-1">{ticket.requester?.full_name?.split(' ')[0]}</p>
-                                    <p className="text-xs text-blue-500 uppercase mt-1">{ticket.locations?.name || 'Sede Central'}</p>
+                                    <p className="text-xs text-blue-500 uppercase mt-1 hidden sm:block">{ticket.locations?.name || 'Sede Central'}</p>
                                 </div>
 
-                       {canJoinTicket && (
-                                    <button
-                                        onClick={handleJoinTicket}
-                                        className="w-full p-2 bg-gradient-to-r from-blue-600 to-green-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-purple-700 hover:to-purple-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
-                                    >
-                                        <User size={18} />
-                                        Unirse al Ticket
-                                    </button>
-                                )}
+                       {/* Botones de Acción */}
+                                <div className="space-y-3">
 
+                                    {/* Botón Atender Ticket */}
+                                    {canAttendTicket && (
+                                        <button
+                                            onClick={handleAttendTicket}
+                                            disabled={statusUpdating}
+                                            className="w-full p-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
+                                            {statusUpdating ? (
+                                                <>
+                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                    Atendiendo...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ShieldCheck size={18} />
+                                                    Atender Ticket
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
                                 {/* Participantes Asignados */}
                                 {getAssignedUsers().length > 0 && (
                                     <div className="p-4 bg-gray-50 rounded-xl">
@@ -1369,29 +1420,16 @@ export default function TicketDetail() {
                                         </div>
                                     </div>
                                 )}
-
-                                {/* Botón Finalizar Ticket */}
-                                {canFinalizeTicket && (
-                                    <button
-                                        onClick={handleFinalizeTicket}
-                                        disabled={statusUpdating}
-                                        className="w-full p-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-red-700 hover:to-red-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {statusUpdating ? (
-                                            <>
-                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                Finalizando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                                                    <div className="w-3 h-3 bg-white rounded-full" />
-                                                </div>
-                                                Finalizar Ticket
-                                            </>
-                                        )}
-                                    </button>
-                                )}
+                                                                    {/* Botón Unirse al Ticket */}
+                                    {canJoinTicket && (
+                                        <button
+                                            onClick={handleJoinTicket}
+                                            className="w-full p-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-purple-700 hover:to-purple-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                                        >
+                                            <User size={18} />
+                                            Unirse al Ticket
+                                        </button>
+                                    )}
 
                                 {/* Técnico Asignado */}
                                 {ticket.attendant && (
@@ -1406,21 +1444,68 @@ export default function TicketDetail() {
                                     </div>
                                 )}
 
-                                {/* Botón Atender para staff */}
-                                {canAttendTicket && (
-                                    <button
-                                        onClick={() => handleStatusUpdate('in_progress')}
-                                        className="w-full p-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
-                                    >
-                                        <ShieldCheck size={18} />
-                                        Atender Ticket
-                                    </button>
-                                )}
-                            </div>
+                                                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            {/* Popup de Confirmación para Finalizar Ticket */}
+            {showFinalizeConfirm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 transform transition-all">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                                <AlertCircle size={24} className="text-red-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">Finalizar Ticket</h3>
+                                <p className="text-sm text-gray-600">Esta acción es irreversible</p>
+                            </div>
+                        </div>
+                        
+                        <div className="mb-6">
+                            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                <p className="text-sm text-red-800 font-medium mb-2">
+                                    ⚠️ Al hacer esto el ticket se archivará
+                                </p>
+                                <ul className="text-xs text-red-700 space-y-1">
+                                    <li>• Ya no se podrá escribir ni editar nada en este ticket</li>
+                                    <li>• El ticket pasará a estado "archivado"</li>
+                                    <li>• Solo quedará como referencia histórica</li>
+                                    <li>• No podrá ser reabierto ni modificado</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowFinalizeConfirm(false)}
+                                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-gray-200 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleFinalizeTicket}
+                                disabled={statusUpdating}
+                                className="flex-1 px-4 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-red-700 hover:to-red-800 transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {statusUpdating ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Finalizando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <AlertCircle size={16} />
+                                        Confirmar
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

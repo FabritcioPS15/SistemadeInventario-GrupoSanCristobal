@@ -357,7 +357,7 @@ export default function Users() {
                     </div>
 
                     {u.locations && (
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1 hidden sm:block">
                         <MapPin size={14} className="text-rose-500" />
                         <span>{u.locations.name}</span>
                       </div>
@@ -429,7 +429,7 @@ export default function Users() {
                           {statusLabels[u.status]}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 hidden sm:block">
                         {u.locations ? (
                           <span className="text-[10px] font-black text-gray-500 bg-gray-100 px-2 py-1 rounded uppercase tracking-widest">{u.locations.name}</span>
                         ) : (
