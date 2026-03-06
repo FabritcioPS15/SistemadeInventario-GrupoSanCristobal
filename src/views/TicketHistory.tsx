@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, History, ShieldCheck, Lock, Search, Calendar, Clock, Filter, RefreshCw, Archive, Download } from 'lucide-react';
+import { History, ShieldCheck, Lock, Search, Calendar,  Filter, RefreshCw, Archive, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -113,11 +113,20 @@ export default function TicketHistory() {
     const getTimeToClose = (ticket: Ticket) => {
         const created = new Date(ticket.created_at);
         const closed = new Date(ticket.closed_at || ticket.updated_at);
-        const days = Math.floor((closed.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+        const diffMs = closed.getTime() - created.getTime();
         
-        if (days === 0) return 'mismo día';
-        if (days === 1) return '1 día';
-        return `${days} días`;
+        if (diffMs < 60000) { // Less than 1 minute
+            const seconds = Math.floor(diffMs / 1000);
+            return `${seconds}s`;
+        } else if (diffMs < 3600000) { // Less than 1 hour
+            const minutes = Math.floor(diffMs / (1000 * 60));
+            const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+            return `${minutes}m ${seconds}s`;
+        } else {
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            return `${hours}h ${minutes}m`;
+        }
     };
 
     const handleRefresh = async () => {
@@ -168,7 +177,7 @@ export default function TicketHistory() {
         try {
             
             // Check all tickets
-            const { data: allTickets, error: allError } = await supabase
+            const { data: allTickets } = await supabase
                 .from('tickets')
                 .select('id, title, status, created_at, closed_at')
                 .order('created_at', { ascending: false })
@@ -176,14 +185,14 @@ export default function TicketHistory() {
             
             
             // Check specifically for archived tickets
-            const { data: archivedTickets, error: archivedError } = await supabase
+            const { data: archivedTickets } = await supabase
                 .from('tickets')
                 .select('id, title, status, created_at, closed_at')
                 .eq('status', 'archived');
             
             
             // Check closed tickets
-            const { data: closedTickets, error: closedError } = await supabase
+            const { data: closedTickets } = await supabase
                 .from('tickets')
                 .select('id, title, status, created_at, closed_at')
                 .eq('status', 'closed');
@@ -249,13 +258,6 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
             <div className="px-8 pt-8 pb-6">
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => navigate('/tickets')}
-                            className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-[#002855] hover:bg-slate-50 rounded-lg transition-all"
-                        >
-                            <ArrowLeft size={20} />
-                            <span className="font-medium">Volver</span>
-                        </button>
                         <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-2xl bg-[#002855] flex items-center justify-center text-white shadow-xl">
                                 <History size={24} />
@@ -268,6 +270,14 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                     </div>
                     <div className="flex items-center gap-4">
                         <button
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-all disabled:opacity-50"
+                        >
+                            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
+                            <span className="font-medium">{refreshing ? 'Actualizando...' : 'Actualizar'}</span>
+                        </button>
+                        <button
                             onClick={generateHistoryPDF}
                             disabled={filteredTickets.length === 0}
                             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -276,12 +286,11 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                             <span className="font-medium">Descargar PDF</span>
                         </button>
                         <button
-                            onClick={handleRefresh}
-                            disabled={refreshing}
-                            className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-[#002855] hover:bg-slate-50 rounded-lg transition-all disabled:opacity-50"
+                            onClick={handleDiagnose}
+                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-all"
                         >
-                            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
-                            <span className="font-medium">Actualizar</span>
+                            <ShieldCheck size={20} />
+                            <span className="font-medium">Diagnosticar</span>
                         </button>
                         <button
                             onClick={handleForceArchive}
@@ -466,8 +475,7 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                                                 </div>
                                             </td>
                                             <td className="px-6 py-6">
-                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
-                                                    <Clock size={12} />
+                                                <div className="text-[10px] font-bold text-slate-600">
                                                     {getTimeToClose(ticket)}
                                                 </div>
                                             </td>

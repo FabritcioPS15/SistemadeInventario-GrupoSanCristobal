@@ -50,7 +50,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
     const navigate = useNavigate();
     const location = useLocation();
     const pathnames = location.pathname.split('/').filter(x => x);
-    const showBreadcrumbs = location.pathname !== '/' && location.pathname !== '/login';
+    const showBreadcrumbs = location.pathname !== '/login'; // Mostrar breadcrumb siempre excepto en login
     const isTicketsRoute = location.pathname.startsWith('/tickets');
     const currentPath = location.pathname;
     
@@ -365,38 +365,92 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                         <Menu size={20} />
                     </button>
 
-                    {/* Breadcrumbs - Se adapta al espacio disponible según el estado del sidebar */}
-                    <div key={breadcrumbKey} className={`flex items-center gap-1.5 overflow-hidden min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-0' : 'lg:ml-0'}`}>
-                        {showBreadcrumbs && pathnames.length > 0 && (
+                    {/* Improved Breadcrumbs with better UX - Desktop Only */}
+                    <nav key={breadcrumbKey} className={`hidden lg:flex items-center gap-2 overflow-hidden min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-0' : 'lg:ml-0'}`} aria-label="Navegación de migajas de pan">
+                        {showBreadcrumbs && (
                             <>
-                                {pathnames.map((name, index) => {
-                                    const last = index === pathnames.length - 1;
-                                    const to = `/${pathnames.slice(0, index + 1).join('/')}`;
-                                    const label = ROUTE_LABELS[name.toLowerCase()] || name.replace(/-/g, ' ');
-                                    return (
-                                        <div key={`${to}-${breadcrumbKey}`} className="flex items-center gap-1.5 shrink-0 min-w-0">
-                                            {last ? (
-                                                <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200 truncate max-w-[200px]">
-                                                    {label}
-                                                </span>
+                                {/* Sistema GSC Root */}
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-800 to-slate-700 text-white rounded-md shadow-sm">
+                                        <div className="w-2 h-2 bg-green-400 rounded-full" />
+                                        <span className="text-[11px] font-black uppercase tracking-widest">SISTEMA GSC</span>
+                                    </div>
+                                </div>
+
+                                <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+
+                                {/* Main Module */}
+                                {pathnames.length > 0 ? (
+                                    <>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            {pathnames.length === 1 ? (
+                                                <div className="flex items-center gap-2 px-3 py-1.5">
+                                                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">
+                                                        {ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    </span>
+                                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
+                                                </div>
                                             ) : (
-                                                <>
-                                                    <button
-                                                        onClick={() => navigate(to)}
-                                                        className="text-[10px] font-black text-gray-600 uppercase tracking-widest hover:text-gray-900 transition-colors truncate max-w-[120px]"
-                                                    >
-                                                        {label}
-                                                    </button>
-                                                    <ChevronRight size={12} className="text-gray-400 shrink-0" />
-                                                </>
+                                                <button
+                                                    onClick={() => navigate(`/${pathnames[0]}`)}
+                                                    className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                    title={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
+                                                    aria-label={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
+                                                >
+                                                    <span className="truncate">{ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                                                </button>
                                             )}
                                         </div>
-                                    );
-                                })}
+
+                                        {/* Sub-routes */}
+                                        {pathnames.length > 1 && (
+                                            <>
+                                                <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                                                {pathnames.slice(1).map((name, index) => {
+                                                    const isLast = index === pathnames.slice(1).length - 1;
+                                                    const fullPath = `/${pathnames.slice(0, index + 2).join('/')}`;
+                                                    const label = ROUTE_LABELS[name.toLowerCase()] || name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                                    
+                                                    return (
+                                                        <div key={fullPath} className="flex items-center gap-1.5 shrink-0 min-w-0">
+                                                            {isLast ? (
+                                                                <div className="flex items-center gap-2 px-3 py-1.5">
+                                                                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest truncate max-w-[180px] sm:max-w-[250px]">
+                                                                        {label}
+                                                                    </span>
+                                                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                                                                    <button
+                                                                        onClick={() => navigate(fullPath)}
+                                                                        className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[100px] sm:max-w-[150px] group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                                        title={`Navegar a ${label}`}
+                                                                        aria-label={`Navegar a ${label}`}
+                                                                    >
+                                                                        <span className="truncate">{label}</span>
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </>
+                                        )}
+                                    </>
+                                ) : (
+                                    /* Dashboard como módulo actual cuando no hay pathnames */
+                                    <div className="flex items-center gap-2 px-3 py-1.5">
+                                        <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">DASHBOARD</span>
+                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
+                                    </div>
+                                )}
                             </>
                         )}
-                    </div>
+                    </nav>
 
+                    
             </div>
 
             <div className="flex items-center gap-2">

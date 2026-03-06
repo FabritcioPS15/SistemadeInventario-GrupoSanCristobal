@@ -41,22 +41,43 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
   const { hasPermission, logout } = useAuth();
   const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [menuTop, setMenuTop] = useState<number>(0);
   const [adjustedTop, setAdjustedTop] = useState(0);
   const subMenuRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout>();
 
   const handleMouseEnter = (itemId: string, e: React.MouseEvent) => {
-    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setMenuTop(rect.top);
-    setHoveredItem(itemId);
+    // Solo en desktop, no en móvil
+    if (window.innerWidth >= 1024) {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      setMenuTop(rect.top);
+      setHoveredItem(itemId);
+    }
   };
 
   const handleMouseLeave = () => {
-    closeTimeoutRef.current = setTimeout(() => {
-      setHoveredItem(null);
-    }, 200);
+    // Solo en desktop, no en móvil
+    if (window.innerWidth >= 1024) {
+      closeTimeoutRef.current = setTimeout(() => {
+        setHoveredItem(null);
+      }, 200);
+    }
+  };
+
+  const handleItemClick = (itemId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // En móvil: toggle del submenu
+    if (window.innerWidth < 1024) {
+      setExpandedItems(prev => 
+        prev.includes(itemId) 
+          ? prev.filter(id => id !== itemId)
+          : [...prev, itemId]
+      );
+    }
   };
 
   useEffect(() => {
@@ -239,8 +260,8 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             </div>
           )}
 
-          {/* Botón de Colapsar Mejorado */}
-          <div className={`relative ${collapsed ? 'mx-auto' : ''}`}>
+          {/* Botón de Colapsar Mejorado - Desktop Only */}
+          <div className={`relative hidden lg:block ${collapsed ? 'mx-auto' : ''}`}>
             <button
               onClick={onToggleCollapse}
               className="p-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-300 text-white/70 hover:text-white group border border-white/20 hover:border-white/30 shadow-lg"
@@ -293,34 +314,79 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                     const Icon = item.icon;
                     const isActive = isPathActive(item.path);
                     const isHovered = hoveredItem === item.id;
+                    const isExpanded = expandedItems.includes(item.id);
+                    const isMobile = window.innerWidth < 1024;
 
                     return (
-                      <div
-                        key={item.id}
-                        className="relative group"
-                        onMouseEnter={(e) => handleMouseEnter(item.id, e)}
-                        onMouseLeave={handleMouseLeave}
-                      >
-                        <NavLink
-                          to={item.path}
-                          onClick={() => {
-                            window.innerWidth < 1024 && onCloseMobile?.();
-                            setHoveredItem(null);
-                          }}
-                          className={`
-                            flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
-                            ${isActive || isHovered ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-[#a6adb4] hover:text-white hover:bg-white/5'}
-                            ${collapsed ? 'justify-center px-3' : ''}
-                          `}
+                      <div key={item.id}>
+                        <div
+                          className="relative group"
+                          onMouseEnter={(e) => handleMouseEnter(item.id, e)}
+                          onMouseLeave={handleMouseLeave}
                         >
-                          <Icon size={collapsed ? 20 : 18} className={(isActive || isHovered) ? 'text-white' : 'group-hover:text-white'} />
-                          {!collapsed && (
-                            <>
-                              <span className="text-[13px] font-bold tracking-tight flex-1 truncate uppercase">{item.label}</span>
-                              {item.hasSubmenu && <ChevronRight size={14} className="opacity-40" />}
-                            </>
-                          )}
-                        </NavLink>
+                          <NavLink
+                            to={item.path}
+                            onClick={() => {
+                              window.innerWidth < 1024 && onCloseMobile?.();
+                              setHoveredItem(null);
+                            }}
+                            className={`
+                              flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+                              ${isActive || isHovered ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'text-[#a6adb4] hover:text-white hover:bg-white/5'}
+                              ${collapsed ? 'justify-center px-3' : ''}
+                            `}
+                          >
+                            <Icon size={collapsed ? 20 : 18} className={(isActive || isHovered) ? 'text-white' : 'group-hover:text-white'} />
+                            {!collapsed && (
+                              <>
+                                <span className="text-[13px] font-bold tracking-tight flex-1 truncate uppercase">{item.label}</span>
+                                {item.hasSubmenu && (
+                                  <button
+                                    onClick={(e) => handleItemClick(item.id, e)}
+                                    className={`p-1 rounded transition-all duration-200 ${
+                                      isMobile ? 'hover:bg-white/10' : 'opacity-40'
+                                    }`}
+                                  >
+                                    <ChevronRight 
+                                      size={14} 
+                                      className={`transition-transform duration-200 ${
+                                        isMobile && isExpanded ? 'rotate-90' : ''
+                                      }`}
+                                    />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </NavLink>
+                        </div>
+
+                        {/* Submenú inline en móvil */}
+                        {isMobile && item.hasSubmenu && isExpanded && (
+                          <div className="ml-4 mt-1 space-y-1 pb-2">
+                            {item.submenu?.filter((sub: any) => hasPermission(sub.id)).map((sub: any) => {
+                              const isSubActive = location.pathname === sub.path;
+                              return (
+                                <NavLink
+                                  key={sub.id}
+                                  to={sub.path}
+                                  onClick={() => {
+                                    onCloseMobile?.();
+                                    setExpandedItems(prev => prev.filter(id => id !== item.id));
+                                  }}
+                                  className={`
+                                    flex items-center gap-3 px-3 py-2 text-[12px] font-bold uppercase tracking-tight rounded-xl transition-all
+                                    ${isSubActive 
+                                      ? 'text-white bg-blue-500 shadow-lg shadow-blue-500/20' 
+                                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                    }
+                                  `}
+                                >
+                                  {sub.label}
+                                </NavLink>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -348,8 +414,8 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
         </div>
       </aside>
 
-      {/* FLYOUT SUBMENU / TOOLTIP */}
-      {hoveredItem && (
+      {/* FLYOUT SUBMENU / TOOLTIP - Desktop Only */}
+      {hoveredItem && window.innerWidth >= 1024 && (
         <div
           ref={subMenuRef}
           className={`

@@ -171,17 +171,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
   return (
     <div className="fixed inset-0 bg-[#001529]/85 backdrop-blur-md flex items-start justify-start p-0 md:items-center md:justify-center md:p-8 z-[999] animate-in fade-in duration-300">
       <div 
-        className="bg-white absolute top-0 left-0 w-screen h-screen md:relative md:w-full md:h-[85vh] md:top-auto md:left-auto md:m-auto max-w-full sm:max-w-6xl rounded-none shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-white/10"
-        style={{
-          margin: 0,
-          padding: 0,
-          boxSizing: 'border-box',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh'
-        }}
+        className="bg-white absolute top-0 left-0 w-screen h-screen md:relative md:w-full md:h-[85vh] md:max-w-6xl md:mx-auto md:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-white/10"
       >
         {/* Header Corporativo (Cuadrado) */}
         <div className="bg-[#001529] px-6 py-4 flex items-center justify-between shrink-0">
@@ -353,7 +343,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                   <FormInput
                     type="text"
                     value={newDocument}
-                    onChange={(e) => setNewDocument(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDocument(e.target.value)}
                     placeholder="Nombre del documento..."
                     className="flex-1"
                   />

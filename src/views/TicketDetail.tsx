@@ -1281,9 +1281,6 @@ export default function TicketDetail() {
                             <div className="space-y-4">
                                 {/* Fecha de Apertura y Tiempo Transcurrido */}
                                 <div className="flex flex-col items-center text-center p-4 bg-gray-50 rounded-xl">
-                                    <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center text-gray-500 mb-3">
-                                        <Clock size={18} />
-                                    </div>
                                     <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Tiempo Activo</p>
                                     <p className="text-sm font-bold text-gray-900 mt-1">
                                         {(() => {

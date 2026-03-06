@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Clock, History, ArrowRight, CheckCircle2, ShieldCheck, X, Lock, BarChart3, TrendingUp, Download, Activity, XCircle, Archive } from 'lucide-react';
+import { History, ArrowRight, CheckCircle2, Download} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { jsPDF } from 'jspdf';
@@ -79,16 +79,12 @@ export default function Tickets() {
         return () => clearInterval(interval);
     }, [tickets]);
 
-    // Función manual para forzar archivado (para pruebas)
-    const forceArchiveOldTickets = async () => {
-        await handleAutomation();
-    };
-
+    
     const handleAutomation = async (ticketsData: any[] = tickets) => {
         
         const now = new Date();
         const threeMinutes = 3 * 60 * 1000;
-        const tenMinutes = 10 * 60 * 1000;
+        const fiveMinutes = 5 * 60 * 1000;
 
         // 1. Resuelto -> Cerrado (automáticamente después de 3 minutos)
         const toClose = ticketsData.filter(t =>
@@ -166,29 +162,8 @@ export default function Tickets() {
             fetchTickets();
         }
     };
-
-    const dashboardMetrics = useMemo(() => {
-        const now = new Date();
-        const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-
-        const inProgressNum = tickets.filter(t => t.status === 'in_progress').length;
-        const resolvedTodayNum = tickets.filter(t => t.status === 'resolved' && new Date(t.resolved_at || t.updated_at) >= startOfDay).length;
-
-        const respondedTickets = tickets.filter(t => t.attended_at && t.created_at);
-        let avgResponseTime = '0m 0s';
-        if (respondedTickets.length > 0) {
-            const totalMs = respondedTickets.reduce((acc, t) => {
-                return acc + (new Date(t.attended_at).getTime() - new Date(t.created_at).getTime());
-            }, 0);
-            const avgMs = totalMs / respondedTickets.length;
-            const minutes = Math.floor(avgMs / 60000);
-            const seconds = Math.floor((avgMs % 60000) / 1000);
-            avgResponseTime = `${minutes}m ${seconds}s`;
-        }
-
-        return { inProgressNum, resolvedTodayNum, avgResponseTime };
-    }, [tickets]);
-
+ 
+    
     const filteredTickets = useMemo(() => {
         const active = tickets.filter(t => t.status !== 'archived');
 

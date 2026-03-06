@@ -31,7 +31,7 @@ export default function Checklist({ type }: { type?: string }) {
 
             let filteredResults = locationsData as Location[];
 
-            const privilegedRoles = ['systems', 'management', 'supervisor'];
+            const privilegedRoles = ['super_admin', 'systems', 'management', 'supervisor'];
             const isPrivileged = user && privilegedRoles.includes(user.role);
 
             if (!isPrivileged && user?.location_id) {
@@ -75,7 +75,7 @@ export default function Checklist({ type }: { type?: string }) {
     };
 
     const canSeeSection = (sectionType: string) => {
-        const privilegedRoles = ['systems', 'management', 'supervisor'];
+        const privilegedRoles = ['super_admin', 'systems', 'management', 'supervisor'];
         if (user && privilegedRoles.includes(user.role)) return true;
 
         if (user?.location_id) {
@@ -92,112 +92,143 @@ export default function Checklist({ type }: { type?: string }) {
 
     const renderGeneralView = () => (
         <div className="animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                {canSeeSection('escon') && (
-                    <button
-                        type="button"
-                        onClick={() => navigate('/checklist/escon')}
-                        className="group bg-white rounded-2xl border border-gray-200 shadow-lg p-8 text-left hover:border-blue-400 hover:shadow-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                    >
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                                    <GraduationCap size={32} />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-700 transition-colors">ESCON</h3>
-                                    <p className="text-sm text-gray-500 font-medium tracking-tight">Escuelas de Conductores</p>
-                                </div>
-                            </div>
-                            <ChevronRight className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" size={24} />
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                                <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-widest">
-                                    <Building2 size={16} className="text-blue-400" />
-                                    <span>{locations.filter(l => l.type === 'escuela_conductores').length} sedes activas</span>
-                                </div>
-                                <span className="text-xs font-black text-blue-600 uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Ir al panel</span>
-                            </div>
-                        </div>
-                    </button>
-                )}
-
-                {canSeeSection('ecsal') && (
-                    <button
-                        type="button"
-                        onClick={() => navigate('/checklist/ecsal')}
-                        className="group bg-white rounded-2xl border border-gray-200 shadow-lg p-8 text-left hover:border-emerald-400 hover:shadow-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
-                    >
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
-                                    <Stethoscope size={32} />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-emerald-700 transition-colors">ECSAL</h3>
-                                    <p className="text-sm text-gray-500 font-medium tracking-tight">Salud y Policlínicos</p>
-                                </div>
-                            </div>
-                            <ChevronRight className="text-gray-300 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" size={24} />
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                                <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-widest">
-                                    <Building2 size={16} className="text-emerald-400" />
-                                    <span>{locations.filter(l => l.type === 'policlinico').length} sedes activas</span>
-                                </div>
-                                <span className="text-xs font-black text-emerald-600 uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Ir al panel</span>
-                            </div>
-                        </div>
-                    </button>
-                )}
-
-                {canSeeSection('citv') && (
-                    <button
-                        type="button"
-                        onClick={() => navigate('/checklist/citv')}
-                        className="group bg-white rounded-2xl border border-gray-200 shadow-lg p-8 text-left hover:border-orange-400 hover:shadow-2xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
-                    >
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-all duration-300">
-                                    <Car size={32} />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-orange-700 transition-colors">CITV</h3>
-                                    <p className="text-sm text-gray-500 font-medium tracking-tight">Inspección Técnica Vehicular</p>
-                                </div>
-                            </div>
-                            <ChevronRight className="text-gray-300 group-hover:text-orange-500 group-hover:translate-x-1 transition-all" size={24} />
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between pt-4 border-t border-gray-50">
-                                <div className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-widest">
-                                    <Building2 size={16} className="text-orange-400" />
-                                    <span>{locations.filter(l => l.type === 'revision').length} sedes activas</span>
-                                </div>
-                                <span className="text-xs font-black text-orange-600 uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity">Ir al panel</span>
-                            </div>
-                        </div>
-                    </button>
-                )}
-            </div>
-
-            <div className="mt-16 text-center">
-                <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-2xl p-8 border border-slate-200">
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                        <Clock size={20} className="text-slate-600" />
-                        <h3 className="text-lg font-bold text-slate-900">Actualización en Tiempo Real</h3>
+            {/* ESGON Section */}
+            {canSeeSection('escon') && (
+                <div className="mb-8">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="w-2 h-6 bg-blue-500 rounded-full" />
+                        <h2 className="text-sm font-black text-[#002855] uppercase tracking-[0.2em]">ESCON</h2>
+                        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black">{locations.filter(l => l.type === 'escuela_conductores').length} sedes</span>
                     </div>
-                    <p className="text-slate-600 text-sm max-w-2xl mx-auto">
-                        Todos los checklists se actualizan automáticamente en tiempo real.
-                    </p>
+                    <div className="bg-white rounded-[2rem] shadow-[0_10px_40px_rgba(0,0,0,0.03)] border border-slate-50 overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/60">
+                                    <th className="px-7 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Sede</th>
+                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Dirección</th>
+                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Documentos</th>
+                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {locations.filter(l => l.type === 'escuela_conductores').map(location => (
+                                    <tr key={location.id} className="hover:bg-blue-50/10 cursor-pointer transition-all group">
+                                        <td className="px-7 py-5">
+                                            <span className="text-[11px] font-black text-[#002855]">{location.name}</span>
+                                        </td>
+                                        <td className="px-5 py-5">
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
+                                        </td>
+                                        <td className="px-5 py-5 text-center">
+                                            <span className="text-[9px] font-black text-blue-600">2 documentos</span>
+                                        </td>
+                                        <td className="px-5 py-5">
+                                            <button 
+                                                onClick={() => navigate('/checklist/escon')}
+                                                className="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase"
+                                            >
+                                                Ver checklist →
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* ECSAL Section */}
+            {canSeeSection('ecsal') && (
+                <div className="mb-8">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="w-2 h-6 bg-emerald-500 rounded-full" />
+                        <h2 className="text-sm font-black text-[#002855] uppercase tracking-[0.2em]">ECSAL</h2>
+                        <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-lg text-[10px] font-black">{locations.filter(l => l.type === 'policlinico').length} sedes</span>
+                    </div>
+                    <div className="bg-white rounded-[2rem] shadow-[0_10px_40px_rgba(0,0,0,0.03)] border border-slate-50 overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/60">
+                                    <th className="px-7 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Sede</th>
+                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Dirección</th>
+                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Documentos</th>
+                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {locations.filter(l => l.type === 'policlinico').map(location => (
+                                    <tr key={location.id} className="hover:bg-emerald-50/10 cursor-pointer transition-all group">
+                                        <td className="px-7 py-5">
+                                            <span className="text-[11px] font-black text-[#002855]">{location.name}</span>
+                                        </td>
+                                        <td className="px-5 py-5">
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
+                                        </td>
+                                        <td className="px-5 py-5 text-center">
+                                            <span className="text-[9px] font-black text-emerald-600">2 documentos</span>
+                                        </td>
+                                        <td className="px-5 py-5">
+                                            <button 
+                                                onClick={() => navigate('/checklist/ecsal')}
+                                                className="text-[10px] font-black text-emerald-600 hover:text-emerald-800 uppercase"
+                                            >
+                                                Ver checklist →
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* CITV Section */}
+            {canSeeSection('citv') && (
+                <div className="mb-8">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="w-2 h-6 bg-orange-500 rounded-full" />
+                        <h2 className="text-sm font-black text-[#002855] uppercase tracking-[0.2em]">CITV</h2>
+                        <span className="bg-orange-50 text-orange-600 px-3 py-1 rounded-lg text-[10px] font-black">{locations.filter(l => l.type === 'revision').length} sedes</span>
+                    </div>
+                    <div className="bg-white rounded-[2rem] shadow-[0_10px_40px_rgba(0,0,0,0.03)] border border-slate-50 overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/60">
+                                    <th className="px-7 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Sede</th>
+                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Dirección</th>
+                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Documentos</th>
+                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                                {locations.filter(l => l.type === 'revision').map(location => (
+                                    <tr key={location.id} className="hover:bg-orange-50/10 cursor-pointer transition-all group">
+                                        <td className="px-7 py-5">
+                                            <span className="text-[11px] font-black text-[#002855]">{location.name}</span>
+                                        </td>
+                                        <td className="px-5 py-5">
+                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
+                                        </td>
+                                        <td className="px-5 py-5 text-center">
+                                            <span className="text-[9px] font-black text-orange-600">2 documentos</span>
+                                        </td>
+                                        <td className="px-5 py-5">
+                                            <button 
+                                                onClick={() => navigate('/checklist/citv')}
+                                                className="text-[10px] font-black text-orange-600 hover:text-orange-800 uppercase"
+                                            >
+                                                Ver checklist →
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
         </div>
     );
 

@@ -152,8 +152,9 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     };
 
     const handleStatusUpdate = async (newStatus: string) => {
-        const canManageStatus = user?.role === 'systems' || user?.role === 'management' || user?.role === 'supervisor';
-        if (!canManageStatus) return;
+        const isAssignedTechnician = user?.id === currentTicket.assigned_to;
+        
+        if (!isAssignedTechnician) return;
 
         try {
             setStatusUpdating(true);
@@ -210,7 +211,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
-    const canManageStatus = user?.role === 'systems' || user?.role === 'management' || user?.role === 'supervisor';
+    const canManageStatus = user?.id === currentTicket.assigned_to;
 
     return (
         <div className="fixed inset-0 bg-[#001529]/70 backdrop-blur-xl flex items-center justify-center z-4 p-2 sm:p-4 md:p-8 animate-in fade-in duration-300">
