@@ -114,7 +114,7 @@ export default function Login() {
           <div className="relative z-10 flex flex-col justify-center items-center h-full">
             <div className="flex justify-center items-center h-full animate-in zoom-in duration-700 delay-100">
               <img
-                src="public/Enblanco.png"
+                src="/Enblanco.png"
                 alt="GSC Logistics"
                 className="w-[60%] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:scale-105 transition-transform duration-700"
                 onError={(e) => {
@@ -139,7 +139,7 @@ export default function Login() {
             
             <div className="flex justify-center items-center mb-8 animate-in zoom-in duration-700 delay-100">
               <img
-                src="public/Enblanco.png"
+                src="/Enblanco.png"
                 alt="GSC Logistics"
                 className="w-[80%] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:scale-105 transition-transform duration-700"
                 onError={(e) => {
