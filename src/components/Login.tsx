@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Eye, EyeOff, AlertCircle, User, Lock, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, User, Lock, ArrowRight, UserPlus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -11,6 +11,17 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
+
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [registrationForm, setRegistrationForm] = useState({
+    full_name: '',
+    email: '',
+    dni: '',
+    phone: '',
+    requested_role: '',
+    notes: ''
+  });
+  const [registrationLoading, setRegistrationLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +65,39 @@ export default function Login() {
     }
   };
 
+  const handleRegistrationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegistrationLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from('user_registration_requests')
+        .insert([{
+          ...registrationForm,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        }]);
+
+      if (error) throw error;
+
+      setShowRegistrationModal(false);
+      setRegistrationForm({
+        full_name: '',
+        email: '',
+        dni: '',
+        phone: '',
+        requested_role: '',
+        notes: ''
+      });
+      alert('Solicitud de registro enviada exitosamente. Será revisada por el administrador.');
+    } catch (err) {
+      console.error('Error submitting registration request:', err);
+      alert('Error al enviar la solicitud. Inténtalo de nuevo.');
+    } finally {
+      setRegistrationLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#f0f2f5] p-4 lg:p-0 overflow-hidden font-sans">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/10 rounded-full blur-[120px] animate-pulse" />
@@ -81,8 +125,6 @@ export default function Login() {
               />
             </div>
           </div>
-          
-          <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white via-white/50 to-transparent"></div>
         </div>
 
         <div className="hidden lg:flex w-1/2 bg-[#002855] relative flex-col p-12 overflow-hidden">
@@ -215,15 +257,138 @@ export default function Login() {
             <div className="mt-8 flex flex-col gap-4">
               <button
                 type="button"
+                onClick={() => setShowRegistrationModal(true)}
                 className="w-full bg-white border border-slate-200 text-slate-600 py-3.5 rounded-2xl font-bold text-xs hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-3"
               >
-                <Lock size={16} className="text-slate-400" />
+                <UserPlus size={16} className="text-slate-400" />
                 Solicitar Registro de Usuario
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Registration Request Modal */}
+      {showRegistrationModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
+              <h3 className="text-xl font-bold text-slate-800">Solicitar Registro de Usuario</h3>
+              <button onClick={() => setShowRegistrationModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <form onSubmit={handleRegistrationSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="space-y-4">
+                <div className="group">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
+                    Nombre Completo
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={registrationForm.full_name}
+                    onChange={(e) => setRegistrationForm({ ...registrationForm, full_name: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
+                    placeholder="Juan Pérez"
+                  />
+                </div>
+
+                <div className="group">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={registrationForm.email}
+                    onChange={(e) => setRegistrationForm({ ...registrationForm, email: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
+                    placeholder="email@ejemplo.com"
+                  />
+                </div>
+
+                <div className="group">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
+                    DNI
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={registrationForm.dni}
+                    onChange={(e) => setRegistrationForm({ ...registrationForm, dni: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
+                    placeholder="12345678"
+                  />
+                </div>
+
+                <div className="group">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
+                    Teléfono
+                  </label>
+                  <input
+                    type="tel"
+                    value={registrationForm.phone}
+                    onChange={(e) => setRegistrationForm({ ...registrationForm, phone: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
+                    placeholder="987654321"
+                  />
+                </div>
+
+                <div className="group">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
+                    Rol Solicitado
+                  </label>
+                  <select
+                    required
+                    value={registrationForm.requested_role}
+                    onChange={(e) => setRegistrationForm({ ...registrationForm, requested_role: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
+                  >
+                    <option value="">Seleccionar rol</option>
+                    <option value="administradores">Administrador</option>
+                    <option value="supervisores">Supervisor</option>
+                    <option value="sistemas">Sistemas</option>
+                    <option value="gerencia">Gerencia</option>
+                    <option value="personalizado">Personalizado</option>
+                  </select>
+                </div>
+
+                <div className="group">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
+                    Notas Adicionales
+                  </label>
+                  <textarea
+                    value={registrationForm.notes}
+                    onChange={(e) => setRegistrationForm({ ...registrationForm, notes: e.target.value })}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700 resize-none"
+                    placeholder="Información adicional (opcional)"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={registrationLoading}
+                className="w-full bg-[#002855] text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-[#003d80] active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 shadow-xl shadow-blue-900/10 flex items-center justify-center gap-3"
+              >
+                {registrationLoading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    Enviar Solicitud
+                    <UserPlus size={18} />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
