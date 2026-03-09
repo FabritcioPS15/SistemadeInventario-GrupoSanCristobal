@@ -13,7 +13,7 @@ type CamerasProps = {
 };
 
 export default function Cameras({ subview }: CamerasProps) {
-  const { canEdit } = useAuth();
+  const { canEdit, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -39,10 +39,16 @@ export default function Cameras({ subview }: CamerasProps) {
   }, []);
 
   const fetchCameras = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from('cameras')
-      .select('*, locations(*), camera_disks(*)')
-      .order('created_at', { ascending: false });
+      .select('*, locations(*), camera_disks(*)');
+    
+    // Si el usuario es administrador, filtrar por su sede
+    if (user?.role === 'administradores' && user?.location_id) {
+      query = query.eq('location_id', user.location_id);
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
     if (!error && data) setCameras(data as Camera[]);
   };
 

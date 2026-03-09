@@ -224,24 +224,24 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                             <IoChatbubbles size={20} />
                         </div>
                         <div>
-                            <h3 className="text-sm font-black text-[#002855] tracking-tight">CANAL DE SEGUIMIENTO</h3>
-                            <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]">Interacción en tiempo real</p>
+                            <h3 className="text-xs font-black text-[#002855] tracking-tight">CANAL DE SEGUIMIENTO</h3>
+                            <p className="text-[7px] font-bold text-slate-400 uppercase tracking-[0.2em]">Interacción en tiempo real</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleDeleteTicket}
-                            className="w-8 h-8 rounded-xl bg-white border border-slate-100 text-slate-300 hover:text-rose-500 transition-all flex items-center justify-center hover:bg-rose-50"
+                            className="w-6 h-6 rounded-lg bg-white border border-slate-100 text-slate-300 hover:text-rose-500 transition-all flex items-center justify-center hover:bg-rose-50"
                             title="Eliminar ticket"
                         >
-                            <Trash2 size={16} />
+                            <Trash2 size={12} />
                         </button>
                         <button
                             onClick={onClose}
-                            className="w-8 h-8 rounded-xl bg-white border border-slate-100 text-slate-300 hover:text-slate-600 transition-all flex items-center justify-center hover:bg-slate-50"
+                            className="w-6 h-6 rounded-lg bg-white border border-slate-100 text-slate-300 hover:text-slate-600 transition-all flex items-center justify-center hover:bg-slate-50"
                             title="Cerrar ventana"
                         >
-                            <X size={16} />
+                            <X size={12} />
                         </button>
                     </div>
                 </div>
@@ -379,24 +379,24 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                     <IoChatbubbles className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </div>
                                 <div>
-                                    <h3 className="text-base sm:text-lg md:text-lg font-black text-[#002855] tracking-tight">CANAL DE SEGUIMIENTO</h3>
-                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Interacción directa en tiempo real</p>
+                                    <h3 className="text-xs sm:text-sm font-black text-[#002855] tracking-tight">CANAL DE SEGUIMIENTO</h3>
+                                    <p className="text-[7px] sm:text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Interacción directa en tiempo real</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 sm:gap-3">
                                 <button
                                     onClick={onClose}
-                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-slate-100 text-slate-300 hover:text-slate-600 transition-all flex items-center justify-center hover:bg-slate-50"
+                                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white border border-slate-100 text-slate-300 hover:text-slate-600 transition-all flex items-center justify-center hover:bg-slate-50"
                                     title="Cerrar ventana"
                                 >
-                                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                                    <X className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </button>
                                 <button
                                     onClick={handleDeleteTicket}
-                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-slate-100 text-slate-300 hover:text-rose-500 transition-all flex items-center justify-center hover:bg-rose-50"
+                                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white border border-slate-100 text-slate-300 hover:text-rose-500 transition-all flex items-center justify-center hover:bg-rose-50"
                                     title="Eliminar ticket"
                                 >
-                                    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                                 </button>
                             </div>
                         </div>

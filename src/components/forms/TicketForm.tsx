@@ -3,6 +3,7 @@ import { Send } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
+import { notifyTicketCreated } from '../../lib/notifications';
 
 type TicketFormProps = {
   onClose: () => void;
@@ -132,7 +133,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
 
     try {
       // Crear el ticket
-      const { error: submitError } = await supabase
+      const { data: ticketData, error: submitError } = await supabase
         .from('tickets')
         .insert([
           {
@@ -149,6 +150,17 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
         .single();
 
       if (submitError) throw submitError;
+
+      // Enviar notificación de ticket creado
+      if (ticketData) {
+        await notifyTicketCreated(
+          ticketData.id,
+          ticketData.title,
+          user?.id || '',
+          user?.full_name || 'Usuario',
+          locations.find(l => l.id === formData.location_id)?.name || 'Sin ubicación'
+        );
+      }
 
       onSave();
       onClose();

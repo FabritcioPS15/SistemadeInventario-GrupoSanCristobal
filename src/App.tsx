@@ -24,6 +24,7 @@ import { useAuth } from './contexts/AuthContext';
 import Login from './components/Login';
 import PasswordSetup from './components/PasswordSetup';
 import Checklist from './views/Checklist';
+import ChecklistInteractive from './views/ChecklistInteractive';
 import Vacations from './views/Vacations';
 import Tickets from './views/Tickets';
 import TicketHistory from './views/TicketHistory';
@@ -189,6 +190,7 @@ function AppContent() {
             {/* Checklist */}
             <Route path="/checklist" element={<ProtectedRoute permission="checklist"><Checklist /></ProtectedRoute>} />
             <Route path="/checklist/:type" element={<ProtectedRoute><ChecklistWrapper /></ProtectedRoute>} />
+            <Route path="/checklist-interactive" element={<ProtectedRoute permission="checklist-interactive"><ChecklistInteractive /></ProtectedRoute>} />
 
             {/* Vacaciones */}
             <Route path="/vacations" element={<ProtectedRoute permission="vacations"><Vacations /></ProtectedRoute>} />

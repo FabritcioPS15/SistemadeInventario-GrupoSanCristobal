@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, User, Clock, AlertCircle, MessageSquare, ShieldCheck, Copy, ArrowLeft, Lock, Smile, Bold, Italic, List } from 'lucide-react';
+import { Send, User, AlertCircle, MessageSquare, ShieldCheck, Copy, ArrowLeft, Lock, Smile, Bold, Italic, List } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { FaWhatsapp, FaTrashAlt } from "react-icons/fa";
 import { IoChatbubbles } from "react-icons/io5";
+import { notifyTicketAttended, notifyTicketResolved, notifyTicketClosed } from '../lib/notifications';
 
 export default function TicketDetail() {
     const { ticketId } = useParams();
@@ -324,6 +325,24 @@ export default function TicketDetail() {
                 throw error;
             }
             
+            // Enviar notificaciones según el nuevo estado
+            if (newStatus === 'resolved') {
+                await notifyTicketResolved(
+                    ticketId || '',
+                    ticket.title || '',
+                    user?.id || '',
+                    user?.full_name || '',
+                    ticket.locations?.name || 'Sin ubicación'
+                );
+            } else if (newStatus === 'closed') {
+                await notifyTicketClosed(
+                    ticketId || '',
+                    ticket.title || '',
+                    user?.id || '',
+                    user?.full_name || '',
+                    ticket.locations?.name || 'Sin ubicación'
+                );
+            }
 
             await supabase.from('ticket_comments').insert([{
                 ticket_id: ticketId,
@@ -394,6 +413,14 @@ export default function TicketDetail() {
                 throw error;
             }
             
+            // Enviar notificación de ticket atendido
+            await notifyTicketAttended(
+                ticketId || '',
+                ticket.title || '',
+                user?.id || '',
+                user?.full_name || '',
+                ticket.locations?.name || ''
+            );
             
             // Agregar comentario de atención
             await supabase.from('ticket_comments').insert([{

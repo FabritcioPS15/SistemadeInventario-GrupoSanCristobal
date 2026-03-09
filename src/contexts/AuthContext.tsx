@@ -150,34 +150,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
 
-    // Si el usuario tiene permisos específicos definidos, usarlos con prioridad
-    if (user.permissions && user.permissions.length > 0) {
-      // Para usuarios personalizados, verificar si tiene el permiso específico
-      if (user.role === 'personalizado') {
-        // Verificar permiso exacto (ej: 'tickets-view', 'tickets-edit')
-        if (user.permissions.includes(permission)) {
-          return true;
-        }
-        
-        // Si solicita un permiso de submenú (ej: 'tickets-dashboard'), verificar si tiene acceso al módulo principal
-        const modulePermission = permission.includes('-') ? permission.split('-')[0] : permission;
-        if (user.permissions.includes(`${modulePermission}-view`) || user.permissions.includes(`${modulePermission}-edit`)) {
-          return true;
-        }
-        
-        return false;
-      }
-      
-      // Para otros roles con permisos personalizados, usar lógica normal
-      return user.permissions.includes(permission);
-    }
-
     // Super Administrador tiene acceso absoluto a todo
     if (user.role === 'super_admin') {
       return true;
     }
 
-    // Definir permisos por rol según la nueva jerarquía
+    // Para rol personalizado, usar permisos específicos definidos
+    if (user.role === 'personalizado') {
+      if (!user.permissions || user.permissions.length === 0) {
+        return false;
+      }
+      
+      // Verificar permiso exacto (ej: 'tickets-view', 'tickets-edit')
+      if (user.permissions.includes(permission)) {
+        return true;
+      }
+      
+      // Si solicita un permiso de submenú (ej: 'tickets-dashboard'), verificar si tiene acceso al módulo principal
+      const modulePermission = permission.includes('-') ? permission.split('-')[0] : permission;
+      if (user.permissions.includes(`${modulePermission}-view`) || user.permissions.includes(`${modulePermission}-edit`)) {
+        return true;
+      }
+      
+      return false;
+    }
+
+    // Para roles predefinidos, usar los permisos del rol
     const rolePermissions: Record<string, string[]> = {
       // Super Admin: Acceso absoluto a todo
       super_admin: [
@@ -186,6 +184,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
         'checklist-view', 'checklist-edit', 'checklist-create',
         'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
+        'checklist-interactive-view',
         'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
         'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
         'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
@@ -214,6 +213,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
         'checklist-view', 'checklist-edit', 'checklist-create',
         'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
+        'checklist-interactive-view',
         'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
         'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
         'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
@@ -241,6 +241,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
         'checklist-view', 'checklist-edit', 'checklist-create',
         'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
+        'checklist-interactive-view',
         'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
         'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
         'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
@@ -282,22 +283,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'sent-lima-view', 'sent-provincias-view'
       ],
       
-      // Administradores: Acceso a gestión básica
+      // Administradores: Acceso limitado - solo visualización y gestión básica
       administradores: [
         'dashboard-view',
-        'tickets-view', 'tickets-create',
+        'tickets-view', 'tickets-create', 'tickets-edit',
         'tickets-mine-view',
         'checklist-view', 'checklist-edit',
         'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
         'inventory-view', 'inventory-create', 'inventory-edit',
         'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
         'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view',
-        'cameras-view', 'cameras-edit',
-        'cameras-revision-view', 'cameras-escuela-view',
+        'spare-parts-view',
+        'cameras-view', // Solo ver cámaras de su sede
+        'cameras-revision-view', 'cameras-escuela-view', // Solo cámaras de su sede
         'maintenance-view', 'maintenance-create', 'maintenance-edit',
         'maintenance-pending-view', 'maintenance-in-progress-view',
-        'locations-view', 'mtc-view',
-        'sent-view', 'sent-create', 'sent-edit',
+        'flota-view', // Solo ver flota
+        'locations-view', // Solo ver sedes, no editar
+        'sutran-view', // Solo ver sutran
+        'sent-view', // Solo ver enviados
         'sent-lima-view', 'sent-provincias-view'
       ],
       
@@ -305,7 +309,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       personalizado: ['tickets-view', 'tickets-edit']
     };
 
-    return rolePermissions[user.role as keyof typeof rolePermissions]?.includes(permission) || false;
+    // Para permisos base del sidebar (ej: 'dashboard', 'tickets'), verificar si tiene acceso al módulo
+    const hasModuleAccess = rolePermissions[user.role as keyof typeof rolePermissions]?.some(p => 
+      p === `${permission}-view` || 
+      p === `${permission}-create` || 
+      p === `${permission}-edit` || 
+      p === `${permission}-delete` ||
+      p === permission
+    ) || false;
+
+    return hasModuleAccess;
   };
 
 

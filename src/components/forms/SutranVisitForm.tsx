@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { FileText, HelpCircle, X, AlertCircle, Loader2 } from 'lucide-react';
+import { FileText, X, HelpCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { SutranVisit, Location } from '../../lib/supabase';
+import { notifySutranVisitScheduled, notifySutranVisitCompleted } from '../../lib/notifications';
 import { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 interface SutranVisitFormProps {
@@ -124,11 +125,23 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('sutran_visits')
-          .insert([payload as any]);
+          .insert([payload as any])
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Enviar notificación de visita SUTRAN programada
+        if (data) {
+          const location = locations.find(loc => loc.id === payload.location_id);
+          await notifySutranVisitScheduled(
+            location?.name || 'Sede desconocida',
+            payload.visit_date,
+            payload.inspector_name
+          );
+        }
       }
 
       onSave();

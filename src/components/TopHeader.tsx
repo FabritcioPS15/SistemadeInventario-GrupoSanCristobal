@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef} from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, FileText, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Building, Users as UsersIcon, Clipboard } from 'lucide-react';
+// Forzar importación para evitar caché
+import { Bell, Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, FileText, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Building, Users as UsersIcon, Clipboard, Ticket } from 'lucide-react';
 import { supabase, SutranVisit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationsFinal from './NotificationsFinal';
+import Notifications from './Notifications';
+import NotificationsSimple from './NotificationsSimple';
 
 const ROUTE_LABELS: Record<string, string> = {
     'inventory': 'Inventario',
@@ -379,6 +383,19 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                 <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
 
+                                {/* Ticket Icon for Ticket Routes */}
+                                {isTicketsRoute && (
+                                    <>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md shadow-sm">
+                                                <Ticket size={14} />
+                                                <span className="text-[11px] font-black uppercase tracking-widest">TICKETS</span>
+                                            </div>
+                                        </div>
+                                        <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                                    </>
+                                )}
+
                                 {/* Main Module */}
                                 {pathnames.length > 0 ? (
                                     <>
@@ -467,7 +484,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                         </button>
 
                         {showActions && (
-                            <div className="absolute right-0 top-full mt-2 w-72 bg-[#001e3c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[200] animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="absolute left-1/3 sm:right-0 top-full mt-2 w-80 sm:w-72 bg-[#001e3c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[200] animate-in fade-in slide-in-from-top-2 duration-200 sm:left-auto left-1/3 sm:translate-x-0 -translate-x-1/3">
                                 <div className="p-4 border-b border-white/10">
                                     <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-3">{pageActions.title}</p>
                                     <div className="relative">
@@ -505,56 +522,9 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 )}
 
                 <div className="flex items-center gap-1">
-                    {/* Notifications */}
-                    <div className="relative" ref={notificationRef}>
-                        <button
-                            title="Notificaciones"
-                            onClick={() => setShowNotifications(!showNotifications)}
-                            className={`p-2 hover:bg-gray-100 rounded-lg transition-colors relative ${showNotifications ? 'bg-gray-100' : ''} text-gray-700`}
-                        >
-                            <Bell size={18} />
-                            {sutranNotifications.length > 0 && (
-                                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                            )}
-                        </button>
-
-                        {showNotifications && (
-                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                                <div className="p-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                                    <h3 className="text-xs font-black text-[#002855] uppercase tracking-wider">Notificaciones</h3>
-                                    <span className="text-[10px] font-bold text-gray-400">{sutranNotifications.length} Pendientes</span>
-                                </div>
-                                <div className="max-h-[300px] overflow-y-auto">
-                                    {sutranNotifications.length === 0 ? (
-                                        <div className="p-6 text-center text-gray-400 text-xs">No tienes notificaciones pendientes</div>
-                                    ) : (
-                                        sutranNotifications.map((note) => (
-                                            <div
-                                                key={note.id}
-                                                onClick={() => { navigate('/sutran'); setShowNotifications(false); }}
-                                                className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-50 transition-colors group"
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <div className="bg-rose-100 p-2 rounded-lg text-rose-600 mt-0.5"><Bell size={14} /></div>
-                                                    <div>
-                                                        <p className="text-xs font-bold text-gray-800 group-hover:text-blue-700">Visita SUTRAN Programada</p>
-                                                        <p className="text-[11px] text-gray-500 mt-0.5">{note.location_name}</p>
-                                                        <div className="flex items-center gap-2 mt-1.5">
-                                                            <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">{getDaysRemaining(note.visit_date)}</span>
-                                                            <span className="text-[10px] text-gray-400">{new Date(note.visit_date).toLocaleDateString('es-ES')}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                                <div className="p-2 border-t border-gray-100 bg-gray-50 text-center">
-                                    <button onClick={() => { navigate('/sutran'); setShowNotifications(false); }} className="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-widest">Ver todas</button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    {/* Sistema de Notificaciones - FUNCIONANDO */}
+                    
+                    <NotificationsFinal />
 
                     {/* Help Button - Después de notificaciones */}
                     <button title="Ayuda" onClick={() => alert('Soporte no disponible')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700">

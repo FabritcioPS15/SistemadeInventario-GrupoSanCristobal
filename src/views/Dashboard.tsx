@@ -11,8 +11,6 @@ import {
   AlertTriangle,
   Camera,
   CheckSquare,
-  Users,
-  Building,
   MapPin
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -27,8 +25,11 @@ interface QuickStats {
   activeVehicles: number;
   maintenanceVehicles: number;
   totalTickets: number;
+  openTickets: number;
+  attendedTickets: number;
   resolvedTickets: number;
-  pendingTickets: number;
+  closedTickets: number;
+  archivedTickets: number;
   expiredDocuments: number;
   warningDocuments: number;
   // New detailed vehicle stats
@@ -57,8 +58,11 @@ export default function Dashboard() {
     activeVehicles: 0,
     maintenanceVehicles: 0,
     totalTickets: 0,
+    openTickets: 0,
+    attendedTickets: 0,
     resolvedTickets: 0,
-    pendingTickets: 0,
+    closedTickets: 0,
+    archivedTickets: 0,
     expiredDocuments: 0,
     warningDocuments: 0,
     vehiclesByDocument: {
@@ -130,8 +134,11 @@ export default function Dashboard() {
       ]);
 
       // Process tickets
+      const openTickets = tickets?.filter(t => t.status === 'open').length || 0;
+      const attendedTickets = tickets?.filter(t => t.status === 'attended').length || 0;
       const resolvedTickets = tickets?.filter(t => t.status === 'resolved').length || 0;
-      const pendingTickets = tickets?.filter(t => t.status === 'pending').length || 0;
+      const closedTickets = tickets?.filter(t => t.status === 'closed').length || 0;
+      const archivedTickets = tickets?.filter(t => t.status === 'archived').length || 0;
 
       // Process vehicles
       const totalVehicles = vehicles?.length || 0;
@@ -210,8 +217,11 @@ export default function Dashboard() {
         activeVehicles,
         maintenanceVehicles,
         totalTickets: totalTickets || 0,
+        openTickets,
+        attendedTickets,
         resolvedTickets,
-        pendingTickets,
+        closedTickets,
+        archivedTickets,
         expiredDocuments,
         warningDocuments,
         vehiclesByDocument,
@@ -295,63 +305,7 @@ export default function Dashboard() {
     }
   }, [showDocumentPopup, documentFilter]);
 
-  const quickActions = [
-    {
-      title: 'Inventario',
-      icon: Package,
-      color: 'blue',
-      count: stats.totalAssets,
-      active: stats.activeAssets,
-      description: 'Equipos y activos',
-      path: '/inventory'
-    },
-    {
-      title: 'Cámaras',
-      icon: Camera,
-      color: 'green',
-      count: stats.totalCameras,
-      active: stats.activeCameras,
-      description: 'Sistema de vigilancia',
-      path: '/cameras'
-    },
-    {
-      title: 'Flota',
-      icon: Truck,
-      color: 'indigo',
-      count: stats.totalVehicles,
-      active: stats.activeVehicles,
-      maintenance: stats.maintenanceVehicles,
-      description: 'Vehículos operativos',
-      path: '/flota-vehicular'
-    },
-    {
-      title: 'Tickets',
-      icon: CheckSquare,
-      color: 'orange',
-      count: stats.totalTickets,
-      resolved: stats.resolvedTickets,
-      pending: stats.pendingTickets,
-      description: 'Mesa de ayuda',
-      path: '/tickets'
-    },
-    {
-      title: 'Usuarios',
-      icon: Users,
-      color: 'purple',
-      count: 0, // Will add later
-      description: 'Personal del sistema',
-      path: '/users'
-    },
-    {
-      title: 'Sedes',
-      icon: Building,
-      color: 'teal',
-      count: 0, // Will add later
-      description: 'Ubicaciones operativas',
-      path: '/locations'
-    }
-  ];
-
+  
   const alertCards = [
     {
       title: 'Documentos Vencidos',
@@ -488,13 +442,27 @@ export default function Dashboard() {
             <h3 className="text-gray-900 text-2xl font-bold mb-1">{stats.totalTickets}</h3>
             <p className="text-gray-800 text-sm font-semibold mb-2">Tickets</p>
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs text-gray-600">{stats.resolvedTickets} resueltos</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <span className="text-xs text-gray-600">{stats.pendingTickets} pendientes</span>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-xs text-gray-600">{stats.openTickets} abiertos</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span className="text-xs text-gray-600">{stats.attendedTickets} en atención</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-xs text-gray-600">{stats.resolvedTickets} resueltos</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
+                  <span className="text-xs text-gray-600">{stats.closedTickets} cerrados</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span className="text-xs text-gray-600">{stats.archivedTickets} archivados</span>
+                </div>
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-3">Mesa de ayuda</p>
@@ -504,7 +472,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-500 font-medium">Participantes recientes</span>
                 <div className="flex -space-x-2">
-                  {stats.recentTicketParticipants.slice(0, 4).map((participant, idx) => (
+                  {stats.recentTicketParticipants.slice(0, 4).map((participant) => (
                     <div key={participant.id} className="relative group">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-white shadow-sm flex items-center justify-center text-white text-xs font-bold overflow-hidden">
                         {participant.avatar ? (
@@ -553,9 +521,9 @@ export default function Dashboard() {
         </div>
 
         {/* Vehicle Document Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
           {/* SOAT Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group"
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
                onClick={() => setShowDocumentPopup('soat')}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -569,7 +537,7 @@ export default function Dashboard() {
               </div>
               <ArrowRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
             </div>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2 flex-grow">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-red-600 font-medium">Vencidos</span>
                 <span className="text-lg font-bold text-red-600">{stats.vehiclesByDocument.soat.expired}</span>
@@ -578,22 +546,22 @@ export default function Dashboard() {
                 <span className="text-xs text-yellow-600 font-medium">Por vencer</span>
                 <span className="text-lg font-bold text-yellow-600">{stats.vehiclesByDocument.soat.warning}</span>
               </div>
-              {stats.vehiclesByDocument.soat.nextExpiring.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-500 mb-2">Próximos a vencer:</p>
-                  {stats.vehiclesByDocument.soat.nextExpiring.map((vehicle, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-gray-700">{vehicle.plate}</span>
-                      <span className="text-orange-600 font-bold">{vehicle.days} días</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+            {stats.vehiclesByDocument.soat.nextExpiring.length > 0 && (
+              <div className="mt-auto pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mb-2">Próximos a vencer:</p>
+                {stats.vehiclesByDocument.soat.nextExpiring.map((vehicle, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-xs">
+                    <span className="font-medium text-gray-700">{vehicle.plate}</span>
+                    <span className="text-orange-600 font-bold">{vehicle.days} días</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* CITV Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group"
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
                onClick={() => setShowDocumentPopup('citv')}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -607,7 +575,7 @@ export default function Dashboard() {
               </div>
               <ArrowRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
             </div>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2 flex-grow">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-red-600 font-medium">Vencidas</span>
                 <span className="text-lg font-bold text-red-600">{stats.vehiclesByDocument.citv.expired}</span>
@@ -616,22 +584,22 @@ export default function Dashboard() {
                 <span className="text-xs text-yellow-600 font-medium">Por vencer</span>
                 <span className="text-lg font-bold text-yellow-600">{stats.vehiclesByDocument.citv.warning}</span>
               </div>
-              {stats.vehiclesByDocument.citv.nextExpiring.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-500 mb-2">Próximas a vencer:</p>
-                  {stats.vehiclesByDocument.citv.nextExpiring.map((vehicle, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-gray-700">{vehicle.plate}</span>
-                      <span className="text-orange-600 font-bold">{vehicle.days} días</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+            {stats.vehiclesByDocument.citv.nextExpiring.length > 0 && (
+              <div className="mt-auto pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mb-2">Próximas a vencer:</p>
+                {stats.vehiclesByDocument.citv.nextExpiring.map((vehicle, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-xs">
+                    <span className="font-medium text-gray-700">{vehicle.plate}</span>
+                    <span className="text-orange-600 font-bold">{vehicle.days} días</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Póliza Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group"
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
                onClick={() => setShowDocumentPopup('poliza')}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -645,7 +613,7 @@ export default function Dashboard() {
               </div>
               <ArrowRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
             </div>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2 flex-grow">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-red-600 font-medium">Vencidas</span>
                 <span className="text-lg font-bold text-red-600">{stats.vehiclesByDocument.poliza.expired}</span>
@@ -654,23 +622,22 @@ export default function Dashboard() {
                 <span className="text-xs text-yellow-600 font-medium">Por vencer</span>
                 <span className="text-lg font-bold text-yellow-600">{stats.vehiclesByDocument.poliza.warning}</span>
               </div>
-              {stats.vehiclesByDocument.poliza.nextExpiring.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <p className="text-xs text-gray-500 mb-2">Próximas a vencer:</p>
-                  {stats.vehiclesByDocument.poliza.nextExpiring.map((vehicle, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-xs">
-                      <span className="font-medium text-gray-700">{vehicle.plate}</span>
-                      <span className="text-orange-600 font-bold">{vehicle.days} días</span>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
+            {stats.vehiclesByDocument.poliza.nextExpiring.length > 0 && (
+              <div className="mt-auto pt-3 border-t border-gray-100">
+                <p className="text-xs text-gray-500 mb-2">Próximas a vencer:</p>
+                {stats.vehiclesByDocument.poliza.nextExpiring.map((vehicle, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-xs">
+                    <span className="font-medium text-gray-700">{vehicle.plate}</span>
+                    <span className="text-orange-600 font-bold">{vehicle.days} días</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Fleet Overview Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          {/* Fleet Overview Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <Truck className="text-indigo-600" size={20} />
@@ -743,6 +710,7 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
 
         {/* Simplified SUTRAN Alert */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
@@ -822,8 +790,9 @@ export default function Dashboard() {
               <span className="text-sm font-medium">Cámaras</span>
             </button>
           </div>
+        </div>        
         </div>
-      </div>
+
 
       {/* Document Details Popup */}
       {showDocumentPopup && (
@@ -1072,5 +1041,5 @@ export default function Dashboard() {
         </div>
       )}
     </div>
-  );
+  )
 }

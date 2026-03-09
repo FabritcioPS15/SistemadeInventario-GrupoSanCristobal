@@ -127,6 +127,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             { id: 'checklist-escon', label: 'ESCON', path: '/checklist/escon' },
             { id: 'checklist-ecsal', label: 'ECSAL', path: '/checklist/ecsal' },
             { id: 'checklist-citv', label: 'CITV', path: '/checklist/citv' },
+            { id: 'checklist-interactive', label: 'Checklist Interactivo', path: '/checklist-interactive' },
           ]
         },
       ]
