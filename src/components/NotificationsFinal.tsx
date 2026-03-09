@@ -3,6 +3,87 @@ import { Bell, Plus, Clock, CheckCircle, Archive, User, MapPin, Calendar, Calend
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
+// Función para reproducir sonido de notificación con volumen máximo
+const playNotificationSound = () => {
+  console.log('🔊 INICIANDO playNotificationSound()');
+  
+  try {
+    // Crear un sonido de notificación usando Web Audio API
+    console.log('🎵 Creando AudioContext...');
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    console.log('✅ AudioContext creado:', audioContext.state);
+    
+    // Verificar si el audio está desbloqueado
+    if (audioContext.state === 'suspended') {
+      console.log('⏸️ AudioContext está suspendido, intentando reanudar...');
+      audioContext.resume().then(() => {
+        console.log('✅ AudioContext reanudado, reproduciendo sonido...');
+        executeSound(audioContext);
+      }).catch(error => {
+        console.error('❌ Error reanudando AudioContext:', error);
+      });
+    } else {
+      console.log('▶️ AudioContext está activo, reproduciendo sonido...');
+      executeSound(audioContext);
+    }
+  } catch (error) {
+    console.error('❌ ERROR en playNotificationSound():', error);
+    console.error('❌ Detalles del error:', (error as Error).message);
+    console.error('❌ Stack:', (error as Error).stack);
+  }
+};
+
+// Función auxiliar para ejecutar el sonido
+const executeSound = (audioContext: AudioContext) => {
+  try {
+    console.log('🎛️ Creando oscilador y gain...');
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    console.log('🔌 Nodos conectados');
+    
+    oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(1.0, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    console.log('🔊 Configuración: Freq=1000Hz, Volume=100%');
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+    console.log('▶️ Oscilador iniciado');
+    
+    setTimeout(() => {
+      try {
+        console.log('🔊 Iniciando segundo beep...');
+        const osc2 = audioContext.createOscillator();
+        const gain2 = audioContext.createGain();
+        
+        osc2.connect(gain2);
+        gain2.connect(audioContext.destination);
+        
+        osc2.frequency.setValueAtTime(1200, audioContext.currentTime);
+        osc2.frequency.exponentialRampToValueAtTime(900, audioContext.currentTime + 0.1);
+        
+        gain2.gain.setValueAtTime(1.0, audioContext.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+        
+        osc2.start(audioContext.currentTime);
+        osc2.stop(audioContext.currentTime + 0.2);
+        console.log('✅ Segundo beep iniciado');
+      } catch (e) {
+        console.error('❌ Error en segundo beep:', e);
+      }
+    }, 400);
+    
+    console.log('🎉 playNotificationSound() completado exitosamente');
+  } catch (error) {
+    console.error('❌ ERROR en executeSound():', error);
+  }
+};
+
 type Notification = {
   id: string;
   type: 'ticket_created' | 'ticket_attended' | 'ticket_resolved' | 'ticket_closed' | 'sutran_visit_scheduled' | 'sutran_visit_completed';
@@ -52,18 +133,35 @@ export default function NotificationsFinal() {
           filter: `target_role=eq.${user.role}`
         },
         (payload) => {
+          console.log('🔔 RECIBIDO EVENTO DE SUPABASE:', payload);
           const newNotification = payload.new as Notification;
+          
+          console.log('🔔 NUEVA NOTIFICACIÓN RECIBIDA:', newNotification);
+          console.log('🔊 Intentando reproducir sonido...');
           
           // Agregar la notificación inmediatamente
           setNotifications(prev => [newNotification, ...prev].slice(0, 50));
           setUnreadCount(prev => prev + 1);
           
-          // Mostrar notificación del navegador si está permitido
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(newNotification.title, {
-              body: newNotification.message,
-              icon: '/favicon.ico'
-            });
+          // Reproducir sonido de notificación con volumen máximo
+          try {
+            playNotificationSound();
+            console.log('✅ Sonido de notificación ejecutado');
+          } catch (error) {
+            console.error('❌ Error ejecutando sonido:', error);
+          }
+          
+          // Mostrar notificación del navegador
+          try {
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification(newNotification.title, {
+                body: newNotification.message,
+                icon: '/favicon.ico'
+              });
+            }
+            console.log('✅ Notificación del navegador mostrada');
+          } catch (error) {
+            console.error('❌ Error mostrando notificación del navegador:', error);
           }
         }
       )
