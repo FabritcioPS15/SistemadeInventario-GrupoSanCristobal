@@ -99,11 +99,11 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[#f0f2f5] p-4 lg:p-0 overflow-hidden font-sans">
+    <div className="min-h-screen w-full flex items-center justify-center bg-white p-0 overflow-hidden font-sans">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/10 rounded-full blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" />
 
-      <div className="relative w-full max-w-5xl min-h-[600px] lg:h-[650px] bg-white rounded-[32px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] flex flex-col lg:flex-row overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-700">
+      <div className="relative w-full h-screen bg-white shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] flex flex-col lg:flex-row overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-700">
 
         <div className="w-full lg:w-1/2 bg-[#002855] relative flex-col p-8 sm:p-12 overflow-hidden flex lg:hidden">
           <div className="absolute inset-0 opacity-40">
@@ -161,7 +161,7 @@ export default function Login() {
         </div>
 
         <div className="w-full lg:w-1/2 p-6 sm:p-8 lg:p-16 flex flex-col justify-center animate-in slide-in-from-right duration-700">
-          <div className="max-w-md mx-auto w-full">
+          <div className="w-full">
             <div className="mb-6 lg:mb-10 text-center lg:text-left">
               <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Bienvenido</h2>
               <p className="text-slate-500 mt-2 font-medium">Por favor ingrese sus credenciales para acceder.</p>
