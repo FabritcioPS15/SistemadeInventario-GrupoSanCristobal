@@ -59,70 +59,68 @@ export default function Login() {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/10 rounded-full blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" />
 
-      <div className="relative w-full max-w-5xl h-[650px] bg-white rounded-[32px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] flex overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-700">
+      <div className="relative w-full max-w-5xl min-h-[600px] lg:h-[650px] bg-white rounded-[32px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] flex flex-col lg:flex-row overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-700">
 
-        <div className="hidden lg:flex w-1/2 bg-[#002855] relative flex-col justify-between p-12 overflow-hidden">
+        <div className="w-full lg:w-1/2 bg-[#002855] relative flex-col p-8 sm:p-12 overflow-hidden flex lg:hidden">
           <div className="absolute inset-0 opacity-40">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_20%,#0056b3_0%,transparent_50%)]" />
             <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_80%_80%,#003d80_0%,transparent_50%)]" />
           </div>
 
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-8 animate-in slide-in-from-left duration-700 delay-100">
-              <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-xl">
-                <Shield className="text-white" size={24} />
-              </div>
-              <h1 className="text-2xl font-black text-white uppercase tracking-[0.2em]">Sistema IT</h1>
+          <div className="relative z-10 flex flex-col justify-center items-center h-full">
+            <div className="flex justify-center items-center h-full animate-in zoom-in duration-700 delay-100">
+              <img
+                src="public/Enblanco.png"
+                alt="GSC Logistics"
+                className="w-[60%] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:scale-105 transition-transform duration-700"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://img.freepik.com/free-vector/modern-courier-delivery-service-commercial-concept_1284-52646.jpg?t=st=1740830000&exp=1740833600&hmac=xxx";
+                  (e.target as HTMLImageElement).style.opacity = "0.8";
+                  (e.target as HTMLImageElement).style.mixBlendMode = "multiply";
+                }}
+              />
+            </div>
+          </div>
+          
+          <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white via-white/50 to-transparent"></div>
+        </div>
+
+        <div className="hidden lg:flex w-1/2 bg-[#002855] relative flex-col p-12 overflow-hidden">
+          <div className="absolute inset-0 opacity-40">
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_20%,#0056b3_0%,transparent_50%)]" />
+            <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_80%_80%,#003d80_0%,transparent_50%)]" />
+          </div>
+
+          <div className="relative z-10 flex flex-col justify-center items-center h-full">
+            <div className="absolute top-8 left-8 right-8 h-1 bg-white/20 animate-pulse" />
+            <div className="absolute top-12 left-16 right-16 h-0.5 bg-white/15 animate-pulse delay-75" />
+            
+            <div className="flex justify-center items-center mb-8 animate-in zoom-in duration-700 delay-100">
+              <img
+                src="public/Enblanco.png"
+                alt="GSC Logistics"
+                className="w-[80%] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:scale-105 transition-transform duration-700"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "https://img.freepik.com/free-vector/modern-courier-delivery-service-commercial-concept_1284-52646.jpg?t=st=1740830000&exp=1740833600&hmac=xxx";
+                  (e.target as HTMLImageElement).style.opacity = "0.8";
+                  (e.target as HTMLImageElement).style.mixBlendMode = "multiply";
+                }}
+              />
             </div>
 
-            <h2 className="text-4xl font-bold text-white leading-tight animate-in slide-in-from-left duration-700 delay-200">
-              Gestión Inteligente de <span className="text-blue-400">Inventario y Flota</span>
+            <h2 className="text-5xl font-bold text-white leading-tight animate-in slide-in-from-left duration-700 delay-200 text-center">
+              Sistema Integrado <span className="text-blue-400"></span>
             </h2>
-            <p className="mt-4 text-blue-100/70 text-lg max-w-md font-medium animate-in slide-in-from-left duration-700 delay-300">
-              Plataforma centralizada para el control total del Grupo San Cristobal. Monitoreo en tiempo real y seguridad garantizada.
-            </p>
-          </div>
-
-          <div className="relative z-10 flex justify-center items-center py-6 animate-in zoom-in duration-1000 delay-500">
-            <img
-              src="/login_side_illustration.png"
-              alt="GSC Logistics"
-              className="w-[85%] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:scale-105 transition-transform duration-700"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://img.freepik.com/free-vector/modern-courier-delivery-service-commercial-concept_1284-52646.jpg?t=st=1740830000&exp=1740833600&hmac=xxx";
-                (e.target as HTMLImageElement).style.opacity = "0.8";
-                (e.target as HTMLImageElement).style.mixBlendMode = "multiply";
-              }}
-            />
-          </div>
-
-          <div className="relative z-10 flex items-center gap-6 animate-in slide-in-from-bottom duration-700 delay-500">
-            <div className="flex -space-x-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className={`w-10 h-10 rounded-full border-2 border-[#002855] bg-slate-300 flex items-center justify-center overflow-hidden`}>
-                  <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="user" />
-                </div>
-              ))}
-              <div className="w-10 h-10 rounded-full border-2 border-[#002855] bg-blue-500 flex items-center justify-center text-[10px] text-white font-bold">
-                +40
-              </div>
-            </div>
-            <p className="text-sm text-blue-100/60 font-medium">
-              Confianza de todo nuestro equipo administrativo
+            
+            <p className="mt-4 text-blue-100/70 text-lg max-w-md font-medium animate-in slide-in-from-left duration-700 delay-400 mx-auto text-center">
+              Solución tecnológica para la gestión integral de activos y operaciones. Eficiencia, control y excelencia operativa.
             </p>
           </div>
         </div>
 
-        <div className="w-full lg:w-1/2 p-8 sm:p-12 lg:p-16 flex flex-col justify-center animate-in slide-in-from-right duration-700">
+        <div className="w-full lg:w-1/2 p-6 sm:p-8 lg:p-16 flex flex-col justify-center animate-in slide-in-from-right duration-700">
           <div className="max-w-md mx-auto w-full">
-            <div className="mb-10 block lg:hidden text-center">
-              <div className="w-16 h-16 bg-[#002855] text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl">
-                <Shield size={32} />
-              </div>
-              <h1 className="text-2xl font-black text-[#002855] uppercase tracking-wider">Sistema GSC</h1>
-            </div>
-
-            <div className="mb-10 text-center lg:text-left">
+            <div className="mb-6 lg:mb-10 text-center lg:text-left">
               <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Bienvenido</h2>
               <p className="text-slate-500 mt-2 font-medium">Por favor ingrese sus credenciales para acceder.</p>
             </div>
