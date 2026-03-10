@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef} from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 // Forzar importación para evitar caché
-import { Bell, Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, FileText, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Building, Users as UsersIcon, Clipboard, Ticket } from 'lucide-react';
+import {  Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, FileText, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Building, Users as UsersIcon, Clipboard, Ticket } from 'lucide-react';
 import { supabase, SutranVisit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationsFinal from './NotificationsFinal';
-import Notifications from './Notifications';
-import NotificationsSimple from './NotificationsSimple';
+
 
 const ROUTE_LABELS: Record<string, string> = {
     'inventory': 'Inventario',

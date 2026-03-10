@@ -7,6 +7,7 @@ interface PaginationProps {
     itemsPerPage: number;
     onPageChange: (page: number) => void;
     onItemsPerPageChange: (itemsPerPage: number) => void;
+    children?: React.ReactNode;
 }
 
 export default function Pagination({
@@ -16,6 +17,7 @@ export default function Pagination({
     itemsPerPage,
     onPageChange,
     onItemsPerPageChange,
+    children,
 }: PaginationProps) {
     const startItem = (currentPage - 1) * itemsPerPage + 1;
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
@@ -52,7 +54,7 @@ export default function Pagination({
     if (totalItems === 0) return null;
 
     return (
-        <div className="bg-white border-t border-gray-200 px-4 py-3 sm:px-6">
+        <div className="bg-white px-4 py-3 sm:px-6">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 {/* Items info */}
                 <div className="flex items-center gap-4">
@@ -83,6 +85,7 @@ export default function Pagination({
 
                 {/* Pagination controls */}
                 <div className="flex items-center gap-2">
+                    {children}
                     <button
                         onClick={() => onPageChange(currentPage - 1)}
                         disabled={currentPage === 1}
@@ -99,10 +102,10 @@ export default function Pagination({
                                 onClick={() => typeof page === 'number' && onPageChange(page)}
                                 disabled={page === '...'}
                                 className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${page === currentPage
-                                        ? 'bg-slate-800 text-white'
-                                        : page === '...'
-                                            ? 'text-gray-400 cursor-default'
-                                            : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                                    ? 'bg-slate-800 text-white'
+                                    : page === '...'
+                                        ? 'text-gray-400 cursor-default'
+                                        : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
                                     }`}
                             >
                                 {page}

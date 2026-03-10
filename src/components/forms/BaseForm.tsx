@@ -14,13 +14,13 @@ type BaseFormProps = {
   showChangesWarning?: boolean;
 };
 
-export default function BaseForm({ 
-  title, 
-  subtitle, 
-  onClose, 
-  onSubmit, 
-  loading = false, 
-  children, 
+export default function BaseForm({
+  title,
+  subtitle,
+  onClose,
+  onSubmit,
+  loading = false,
+  children,
   error,
   maxWidth = '6xl',
   icon,
@@ -28,7 +28,7 @@ export default function BaseForm({
 }: BaseFormProps) {
   const maxWidthClass = {
     sm: 'max-w-full sm:max-w-sm',
-    md: 'max-w-full sm:max-w-md', 
+    md: 'max-w-full sm:max-w-md',
     lg: 'max-w-full sm:max-w-lg',
     xl: 'max-w-full sm:max-w-xl',
     '2xl': 'max-w-full sm:max-w-2xl',
@@ -55,8 +55,8 @@ export default function BaseForm({
               {subtitle && <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-0.5">{subtitle}</p>}
             </div>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
             disabled={loading}
           >
@@ -103,22 +103,22 @@ export default function BaseForm({
 }
 
 // Form Section Component
-export function FormSection({ 
-  title, 
-  children, 
+export function FormSection({
+  title,
+  children,
   color = 'blue',
   className = '',
   titleRight
-}: { 
-  title: string; 
-  children: ReactNode; 
+}: {
+  title: string;
+  children: ReactNode;
   color?: 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'indigo';
   className?: string;
   titleRight?: ReactNode;
 }) {
   const colorClasses = {
     blue: 'bg-blue-600',
-    emerald: 'bg-emerald-500', 
+    emerald: 'bg-emerald-500',
     amber: 'bg-amber-500',
     rose: 'bg-rose-500',
     purple: 'bg-purple-500',
@@ -144,18 +144,18 @@ export function FormSection({
 }
 
 // Form Field Component
-export function FormField({ 
-  label, 
-  required = false, 
-  error, 
-  children, 
+export function FormField({
+  label,
+  required = false,
+  error,
+  children,
   className = '',
   gridCols = 1
-}: { 
-  label: string; 
-  required?: boolean; 
-  error?: string; 
-  children: ReactNode; 
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  children: ReactNode;
   className?: string;
   gridCols?: number;
 }) {
@@ -175,20 +175,16 @@ export function FormField({
 }
 
 // Input Component
-export function FormInput({ 
-  className = '', 
+export function FormInput({
+  className = '',
   error,
-  ...props 
-}: { 
-  className?: string; 
-  error?: string;
-  [key: string]: any;
-}) {
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { error?: string }) {
   const baseClasses = "w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium text-gray-900 placeholder-gray-400";
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
-  
+
   return (
-    <input 
+    <input
       className={`${baseClasses} ${errorClasses} ${className}`}
       {...props}
     />
@@ -196,22 +192,17 @@ export function FormInput({
 }
 
 // Select Component
-export function FormSelect({ 
-  className = '', 
+export function FormSelect({
+  className = '',
   error,
   children,
-  ...props 
-}: { 
-  className?: string; 
-  error?: string;
-  children: ReactNode;
-  [key: string]: any;
-}) {
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: string }) {
   const baseClasses = "w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium text-gray-900";
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
-  
+
   return (
-    <select 
+    <select
       className={`${baseClasses} ${errorClasses} ${className}`}
       {...props}
     >
@@ -221,22 +212,17 @@ export function FormSelect({
 }
 
 // Textarea Component
-export function FormTextarea({ 
-  className = '', 
+export function FormTextarea({
+  className = '',
   error,
   rows = 3,
-  ...props 
-}: { 
-  className?: string; 
-  error?: string;
-  rows?: number;
-  [key: string]: any;
-}) {
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { error?: string }) {
   const baseClasses = "w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium text-gray-900 placeholder-gray-400 resize-none";
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
-  
+
   return (
-    <textarea 
+    <textarea
       rows={rows}
       className={`${baseClasses} ${errorClasses} ${className}`}
       {...props}

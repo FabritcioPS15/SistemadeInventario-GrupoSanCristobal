@@ -4,7 +4,7 @@ import { supabase, Location, WindowsCredential } from '../../lib/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 interface ServerFormProps {
-  editServer?: any;
+  editServer?: Server;
   onClose: () => void;
   onSave: () => void;
 }
@@ -14,7 +14,16 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [locations, setLocations] = useState<Location[]>([]);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    location_id: string;
+    ip_address: string;
+    anydesk_id: string;
+    username: string;
+    password: string;
+    notes: string;
+    windows_credentials: WindowsCredential[];
+  }>({
     name: editServer?.name || '',
     location_id: editServer?.location_id || '',
     ip_address: editServer?.ip_address || '',
@@ -99,7 +108,6 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
       username: formData.username.trim() || null,
       password: formData.password.trim() || null,
       notes: formData.notes.trim() || null,
-      windows_credentials: formData.windows_credentials,
       updated_at: new Date().toISOString(),
     };
 
@@ -250,7 +258,7 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
       </FormSection>
 
       {/* Section: Credenciales de Acceso */}
-      <FormSection title="Credenciales de Acceso Principal" color="emerald">
+      <FormSection title="Credenciales de Acceso Administrador de Windows" color="emerald">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <FormField label="Usuario" error={errors.username}>
             <FormInput
@@ -277,14 +285,14 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
       </FormSection>
 
       {/* Section: Credenciales de Windows */}
-      <FormSection title="Credenciales de Windows" color="amber">
+      <FormSection title="Credenciales de Usuario de Windows" color="amber">
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
             <FormField label="Usuario">
               <FormInput
                 type="text"
                 value={newCredential.username}
-                onChange={(e) => setNewCredential(prev => ({ ...prev, username: e.target.value }))}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCredential(prev => ({ ...prev, username: e.target.value }))}
                 placeholder="Usuario de Windows"
               />
             </FormField>
@@ -293,7 +301,7 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
               <FormInput
                 type="password"
                 value={newCredential.password}
-                onChange={(e) => setNewCredential(prev => ({ ...prev, password: e.target.value }))}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCredential(prev => ({ ...prev, password: e.target.value }))}
                 placeholder="Contraseña"
               />
             </FormField>
@@ -302,7 +310,7 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
               <FormInput
                 type="text"
                 value={newCredential.description}
-                onChange={(e) => setNewCredential(prev => ({ ...prev, description: e.target.value }))}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCredential(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Ej: Administrador, Usuario SQL"
               />
             </FormField>
@@ -320,7 +328,7 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
 
           {formData.windows_credentials.length > 0 && (
             <div className="space-y-2">
-              {formData.windows_credentials.map((cred, index) => (
+              {formData.windows_credentials.map((cred: WindowsCredential, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1">
                     <div className="font-medium">{cred.username}</div>
