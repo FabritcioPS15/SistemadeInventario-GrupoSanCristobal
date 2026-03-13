@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BellIcon, CheckCircle, Clock, Archive, Plus, User, MapPin, Calendar } from 'lucide-react';
+import { BellIcon, CheckCircle, Clock, Archive, Plus, User, MapPin, Calendar, Trash2, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -201,6 +201,41 @@ export default function Notifications() {
     }
   };
 
+  const deleteNotification = async (notificationId: string) => {
+    console.log('🗑️ Deleting notification:', notificationId);
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
+
+    if (!error) {
+      console.log('✅ Notification deleted successfully');
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      const deletedNotification = notifications.find(n => n.id === notificationId);
+      if (deletedNotification && !deletedNotification.read) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } else {
+      console.log('❌ Error deleting notification:', error);
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    console.log('🗑️ Clearing all notifications for role:', user?.role);
+    const { error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('target_role', user?.role);
+
+    if (!error) {
+      console.log('✅ All notifications cleared successfully');
+      setNotifications([]);
+      setUnreadCount(0);
+    } else {
+      console.log('❌ Error clearing notifications:', error);
+    }
+  };
+
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'ticket_created':
@@ -276,18 +311,36 @@ export default function Notifications() {
           />
 
           {/* Dropdown */}
-          <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 max-h-96 overflow-hidden">
+          <div
+            className={`absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 max-h-96 overflow-hidden transition-all duration-200 ease-in-out transform origin-top-right ${
+              showDropdown 
+                ? 'opacity-100 scale-100 translate-y-0' 
+                : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
+            }`}
+          >
             {/* Header */}
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <h3 className="font-black text-slate-900">Notificaciones</h3>
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
-                >
-                  Marcar todas como leídas
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {unreadCount > 0 && (
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                  >
+                    Marcar todas como leídas
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    onClick={clearAllNotifications}
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all text-xs font-bold"
+                    title="Limpiar todas las notificaciones"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Limpiar Todo</span>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Lista de notificaciones */}
@@ -301,53 +354,67 @@ export default function Notifications() {
                 notifications.map(notification => (
                   <div
                     key={notification.id}
-                    className={`p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer ${
+                    className={`p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors ${
                       !notification.read ? 'bg-blue-50/50' : ''
                     }`}
-                    onClick={() => {
-                      markAsRead(notification.id);
-                      if (notification.ticket_id) {
-                        // Navegar al ticket si existe
-                        window.location.href = `/tickets/${notification.ticket_id}`;
-                      }
-                    }}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg border ${getNotificationColor(notification.type)}`}>
-                        {getNotificationIcon(notification.type)}
+                      <div 
+                        className="flex-1 cursor-pointer"
+                        onClick={() => {
+                          markAsRead(notification.id);
+                          if (notification.ticket_id) {
+                            window.location.href = `/tickets/${notification.ticket_id}`;
+                          }
+                        }}
+                      >
+                        <div className={`p-2 rounded-lg border ${getNotificationColor(notification.type)}`}>
+                          {getNotificationIcon(notification.type)}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-black text-sm text-slate-900 truncate">
+                              {notification.title}
+                            </h4>
+                            {!notification.read && (
+                              <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></span>
+                            )}
+                          </div>
+                          
+                          <p className="text-xs text-slate-600 mb-2 line-clamp-2">
+                            {notification.message}
+                          </p>
+                          
+                          <div className="flex items-center gap-3 text-xs text-slate-500">
+                            <div className="flex items-center gap-1">
+                              <User className="w-3 h-3" />
+                              <span>{notification.user_name}</span>
+                            </div>
+                            {notification.location_name && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                <span>{notification.location_name}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              <span>{formatTime(notification.created_at)}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-black text-sm text-slate-900 truncate">
-                            {notification.title}
-                          </h4>
-                          {!notification.read && (
-                            <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></span>
-                          )}
-                        </div>
-                        
-                        <p className="text-xs text-slate-600 mb-2 line-clamp-2">
-                          {notification.message}
-                        </p>
-                        
-                        <div className="flex items-center gap-3 text-xs text-slate-500">
-                          <div className="flex items-center gap-1">
-                            <User className="w-3 h-3" />
-                            <span>{notification.user_name}</span>
-                          </div>
-                          {notification.location_name && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              <span>{notification.location_name}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            <span>{formatTime(notification.created_at)}</span>
-                          </div>
-                        </div>
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(notification.id);
+                        }}
+                        className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-600 hover:text-red-700 transition-all border border-red-200 shadow-sm flex-shrink-0"
+                        title="Eliminar notificación"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 ))

@@ -151,6 +151,17 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
 
       if (submitError) throw submitError;
 
+      // Auto-asignar el creador al ticket
+      if (ticketData) {
+        await supabase
+          .from('ticket_assignments')
+          .insert([{
+            ticket_id: ticketData.id,
+            user_id: user?.id,
+            assigned_at: new Date().toISOString()
+          }]);
+      }
+
       // Enviar notificación de ticket creado
       if (ticketData) {
         console.log('🎫 Creando notificación para ticket:', ticketData.id);

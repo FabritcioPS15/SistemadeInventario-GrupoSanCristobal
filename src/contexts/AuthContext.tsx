@@ -287,21 +287,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       administradores: [
         'dashboard-view',
         'tickets-view', 'tickets-create', 'tickets-edit',
-        'tickets-mine-view',
+        'tickets-dashboard-view', 'tickets-mine-view',
         'checklist-view', 'checklist-edit',
         'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
-        'inventory-view', 'inventory-create', 'inventory-edit',
-        'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
-        'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view',
         'spare-parts-view',
         'cameras-view', // Solo ver cámaras de su sede
-        'cameras-revision-view', 'cameras-escuela-view', // Solo cámaras de su sede
+        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', // Solo cámaras de su sede
         'maintenance-view', 'maintenance-create', 'maintenance-edit',
         'maintenance-pending-view', 'maintenance-in-progress-view',
         'flota-view', // Solo ver flota
         'locations-view', // Solo ver sedes, no editar
         'sutran-view', // Solo ver sutran
-        'sent-view', // Solo ver enviados
         'sent-lima-view', 'sent-provincias-view'
       ],
       
