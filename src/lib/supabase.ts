@@ -226,6 +226,31 @@ export type BranchAudit = {
   locations?: Location;
 };
 
+export type VehicleType = {
+  id: string;
+  placa: string;
+  marca: string;
+  modelo: string;
+  año: number;
+  estado: 'activa' | 'inactiva' | 'en_proceso';
+  ubicacion_actual: string;
+  imagen_url?: string;
+  fecha_ultimo_mantenimiento: string;
+  notas: string;
+  citv_emision?: string;
+  citv_vencimiento?: string;
+  soat_emision?: string;
+  soat_vencimiento?: string;
+  poliza_emision?: string;
+  poliza_vencimiento?: string;
+  contrato_alquiler_emision?: string;
+  contrato_alquiler_vencimiento?: string;
+  color?: string;
+  image_position?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 // Re-exportar tipos y funciones de relaciones
 export * from './relations';
 export * from './sync';

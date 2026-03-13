@@ -1,30 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Car } from 'lucide-react';
-import { supabase, Location } from '../../lib/supabase';
+import { supabase, Location, VehicleType } from '../../lib/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
-
-type VehicleType = {
-  id: string;
-  placa: string;
-  marca: string;
-  modelo: string;
-  año: number;
-  estado: 'activa' | 'inactiva' | 'en_proceso';
-  ubicacion_actual: string;
-  imagen_url?: string;
-  fecha_ultimo_mantenimiento: string;
-  notas: string;
-  citv_emision?: string;
-  citv_vencimiento?: string;
-  soat_emision?: string;
-  soat_vencimiento?: string;
-  poliza_emision?: string;
-  poliza_vencimiento?: string;
-  contrato_alquiler_emision?: string;
-  contrato_alquiler_vencimiento?: string;
-  color?: string;
-  image_position?: string;
-};
 
 type FlotaVehicularFormProps = {
   onClose: () => void;
@@ -73,9 +50,10 @@ export default function FlotaVehicularForm({ onClose, onSave, editVehicle }: Flo
 
   const validatePlate = (plate: string): boolean => {
     if (!plate) return false;
-    // Formato de placa peruana: ABC-123 o ABC-1234
-    const plateRegex = /^[A-Z]{3}-\d{3,4}$/;
-    return plateRegex.test(plate.toUpperCase());
+    // Aceptar cualquier formato de placa peruana con 6-7 caracteres (letras y números)
+    // Formatos comunes: ABC-123, ABC-1234, ABC-123X, X123-ABC, 123ABC, 1234ABC, 58868F, etc.
+    const plateRegex = /^[A-Z0-9]{6,7}$/;
+    return plateRegex.test(plate.toUpperCase().replace(/-/g, ''));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,7 +64,7 @@ export default function FlotaVehicularForm({ onClose, onSave, editVehicle }: Flo
     if (!formData.placa.trim()) {
       newErrors.placa = 'La placa es requerida';
     } else if (!validatePlate(formData.placa)) {
-      newErrors.placa = 'Formato de placa inválido (Ej: ABC-123)';
+      newErrors.placa = 'Formato inválido. Debe tener 6-7 caracteres (letras y números). Ej: ABC123, 58868F';
     }
 
     if (!formData.marca.trim()) {
@@ -134,25 +112,17 @@ export default function FlotaVehicularForm({ onClose, onSave, editVehicle }: Flo
     try {
       if (editVehicle) {
         const { error } = await supabase
-          .from('flota_vehicular')
+          .from('vehiculos')
           .update(dataToSave)
           .eq('id', editVehicle.id);
 
-        if (error) {
-          setErrors({ submit: 'Error al actualizar el vehículo: ' + error.message });
-          setLoading(false);
-          return;
-        }
+        if (error) throw error;
       } else {
         const { error } = await supabase
-          .from('flota_vehicular')
+          .from('vehiculos')
           .insert([dataToSave]);
 
-        if (error) {
-          setErrors({ submit: 'Error al crear el vehículo: ' + error.message });
-          setLoading(false);
-          return;
-        }
+        if (error) throw error;
       }
 
       setLoading(false);

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Edit, Trash2, MapPin, X, Eye, Globe, Copy, Activity, Server as ServerLucide, LayoutGrid, List, Star, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, X, Eye, Globe, Copy, Activity, Server as ServerLucide, LayoutGrid, List, Star, ChevronDown, ChevronUp } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 import { SiAnydesk } from "react-icons/si";
@@ -26,6 +26,8 @@ export default function Servers() {
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<'name' | 'location' | 'ip' | 'anydesk' | 'updated_at'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -106,14 +108,58 @@ export default function Servers() {
     }
   };
 
-  const filtered = servers.filter(s => {
+  const handleSort = (field: 'name' | 'location' | 'ip' | 'anydesk' | 'updated_at') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+    resetPagination();
+  };
+
+  const sortedServers = [...servers].sort((a, b) => {
+    let aValue: string | number = '';
+    let bValue: string | number = '';
+
+    switch (sortField) {
+      case 'name':
+        aValue = a.name || '';
+        bValue = b.name || '';
+        break;
+      case 'location':
+        aValue = a.locations?.name || '';
+        bValue = b.locations?.name || '';
+        break;
+      case 'ip':
+        aValue = a.ip_address || '';
+        bValue = b.ip_address || '';
+        break;
+      case 'anydesk':
+        aValue = a.anydesk_id || '';
+        bValue = b.anydesk_id || '';
+        break;
+      case 'updated_at':
+        aValue = new Date(a.updated_at).getTime();
+        bValue = new Date(b.updated_at).getTime();
+        break;
+    }
+
+    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const filtered = sortedServers.filter(s => {
     const q = search.toLowerCase();
     const matchesSearch = s.name?.toLowerCase().includes(q) ||
       s.ip_address?.toLowerCase().includes(q) ||
       s.anydesk_id?.toLowerCase().includes(q) ||
       s.locations?.name?.toLowerCase().includes(q);
 
-    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(s.location_id || '');
+    const matchesLocation = selectedLocations.length === 0 || 
+                           selectedLocations.length === locations.length || 
+                           selectedLocations.includes(s.location_id || '');
 
     let matchesConnectivity = true;
     if (connectivityFilter === 'lan') matchesConnectivity = !!s.ip_address;
@@ -200,7 +246,9 @@ export default function Servers() {
                       <div className="flex items-center gap-2">
                         <MapPin size={14} className="text-blue-500" />
                         <span className="font-semibold text-slate-600 truncate">
-                          {selectedLocations.length === 0 ? 'Todas las sedes' : `${selectedLocations.length} sedes`}
+                          {selectedLocations.length === 0 ? 'Todas las sedes' : 
+                           selectedLocations.length === locations.length ? 'Todas las sedes' : 
+                           `${selectedLocations.length} sedes`}
                         </span>
                       </div>
                       <span className={`text-slate-400 text-[10px] transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`}>▼</span>
@@ -211,9 +259,13 @@ export default function Servers() {
                           <label className="flex items-center gap-2 p-2 hover:bg-blue-50/50 rounded-lg cursor-pointer transition-colors group/check">
                             <input
                               type="checkbox"
-                              checked={selectedLocations.length === 0}
+                              checked={selectedLocations.length === locations.length}
                               onChange={() => {
-                                setSelectedLocations([]);
+                                if (selectedLocations.length === locations.length) {
+                                  setSelectedLocations([]);
+                                } else {
+                                  setSelectedLocations(locations.map(loc => loc.id));
+                                }
                                 resetPagination();
                               }}
                               className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
@@ -255,13 +307,13 @@ export default function Servers() {
                     onClick={() => { setConnectivityFilter('lan'); resetPagination(); }}
                     className={`flex-1 py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${connectivityFilter === 'lan' ? 'bg-[#10b981] text-white shadow-sm' : 'text-slate-400 hover:text-emerald-600'}`}
                   >
-                    LAN
+                    Red Local
                   </button>
                   <button
                     onClick={() => { setConnectivityFilter('anydesk'); resetPagination(); }}
                     className={`flex-1 py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${connectivityFilter === 'anydesk' ? 'bg-[#3b82f6] text-white shadow-sm' : 'text-slate-400 hover:text-blue-600'}`}
                   >
-                    Remoto
+                    Acceso Remoto
                   </button>
                 </div>
               </div>
@@ -487,25 +539,49 @@ export default function Servers() {
                             )}
                           </th>
                           <th className="px-6 py-5 text-left">
-                            <div className="flex items-center justify-start gap-2">
+                            <button
+                              onClick={() => handleSort('name')}
+                              className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
+                            >
                               <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Servidor</span>
-                            </div>
+                              {sortField === 'name' && (
+                                sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                              )}
+                            </button>
                           </th>
-                          <th className="px-4 py-5 text-center">
-                            <div className="flex items-center justify-center gap-2">
+                          <th className="px-4 py-5 text-left">
+                            <button
+                              onClick={() => handleSort('location')}
+                              className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
+                            >
                               <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Ubicación</span>
-                            </div>
+                              {sortField === 'location' && (
+                                sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                              )}
+                            </button>
                           </th>
-                          <th className="px-4 py-5 text-center">
-                            <div className="flex items-center justify-center gap-2">
+                          <th className="px-4 py-5 text-left">
+                            <button
+                              onClick={() => handleSort('ip')}
+                              className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
+                            >
                               <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">IP</span>
-                            </div>
+                              {sortField === 'ip' && (
+                                sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                              )}
+                            </button>
                           </th>
-                          <th className="px-4 py-5 text-center">
-                            <div className="flex items-center justify-center gap-2">
+                          <th className="px-4 py-5 text-left">
+                            <button
+                              onClick={() => handleSort('anydesk')}
+                              className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
+                            >
                               <SiAnydesk size={12} className="text-red-500" />
                               <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">AnyDesk</span>
-                            </div>
+                              {sortField === 'anydesk' && (
+                                sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                              )}
+                            </button>
                           </th>
                           <th className="px-6 py-5 text-center">
                             <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span>
@@ -544,15 +620,15 @@ export default function Servers() {
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-4 py-5 text-center">
-                                <div className="flex flex-col items-center">
+                              <td className="px-4 py-5 text-left">
+                                <div className="flex flex-col items-start">
                                   <span className="text-sm font-extrabold text-slate-600 uppercase tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
                                   <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Sede Física</span>
                                 </div>
                               </td>
-                              <td className="px-4 py-5 text-center">
-                                <div className="flex flex-col items-center group/cell">
-                                  <div className="flex items-center justify-center gap-2">
+                              <td className="px-4 py-5 text-left">
+                                <div className="flex flex-col items-start group/cell">
+                                  <div className="flex items-center justify-start gap-2">
                                     <span className={`text-[14px] font-mono font-black ${hasIp ? 'text-[#002855]' : 'text-slate-300'}`}>{srv.ip_address || '—'}</span>
                                     {hasIp && (
                                       <button
@@ -570,9 +646,9 @@ export default function Servers() {
                                   <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Red Interna</span>
                                 </div>
                               </td>
-                              <td className="px-4 py-5 text-center">
-                                <div className="flex flex-col items-center group/cell">
-                                  <div className="flex items-center justify-center gap-2">
+                              <td className="px-4 py-5 text-left">
+                                <div className="flex flex-col items-start group/cell">
+                                  <div className="flex items-center justify-start gap-2">
                                     <span className={`text-[14px] font-mono font-black ${hasAnydesk ? 'text-red-600' : 'text-slate-300'}`}>{srv.anydesk_id || '—'}</span>
                                     {hasAnydesk && (
                                       <button

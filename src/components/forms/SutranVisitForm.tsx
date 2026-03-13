@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FileText, X, HelpCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { SutranVisit, Location } from '../../lib/supabase';
-import { notifySutranVisitScheduled, notifySutranVisitCompleted } from '../../lib/notifications';
+import { notifySutranVisitScheduled } from '../../lib/notifications';
 import { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 interface SutranVisitFormProps {
@@ -33,11 +33,9 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
   const [newDocument, setNewDocument] = useState('');
 
   const visitTypes = [
-    { value: 'routine', label: 'Visita de Rutina' },
-    { value: 'special', label: 'Visita Especial' },
-    { value: 'follow_up', label: 'Seguimiento' },
-    { value: 'complaint', label: 'Por Denuncia' },
-    { value: 'emergency', label: 'Emergencia' }
+    { value: 'programada', label: 'Visita Programada' },
+    { value: 'no_programada', label: 'Visita No Programada' },
+    { value: 'de_gabinete', label: 'Visita de Gabinete' }
   ];
 
   const statuses = [
@@ -51,15 +49,56 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
     fetchLocations();
   }, []);
 
+  useEffect(() => {
+    if (visit) {
+      setFormData({
+        visit_date: visit.visit_date || '',
+        visit_type: visit.visit_type || '',
+        inspector_name: visit.inspector_name || '',
+        inspector_email: visit.inspector_email || '',
+        inspector_phone: visit.inspector_phone || '',
+        status: visit.status || 'scheduled',
+        location_id: visit.location_id || '',
+        observations: visit.observations || '',
+        findings: visit.findings || '',
+        recommendations: visit.recommendations || '',
+        documents: visit.documents || []
+      });
+    } else {
+      setFormData({
+        visit_date: '',
+        visit_type: '',
+        inspector_name: '',
+        inspector_email: '',
+        inspector_phone: '',
+        status: 'scheduled',
+        location_id: '',
+        observations: '',
+        findings: '',
+        recommendations: '',
+        documents: []
+      });
+    }
+    setNewDocument('');
+    setErrors({});
+  }, [visit]);
+
   const fetchLocations = async () => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('locations')
         .select('*')
         .order('name');
 
-      if (!error && data) {
-        setLocations(data);
+      if (!error) {
+        const { data } = await supabase
+          .from('locations')
+          .select('*')
+          .order('name');
+        
+        if (data) {
+          setLocations(data);
+        }
       }
     } catch (error) {
       console.error('Error al cargar ubicaciones:', error);
@@ -73,19 +112,16 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
       newErrors.visit_date = 'La fecha de visita es requerida';
     }
 
-    if (!formData.inspector_name.trim()) {
-      newErrors.inspector_name = 'El nombre del inspector es requerido';
-    }
-
-    if (!formData.inspector_email.trim()) {
-      newErrors.inspector_email = 'El email del inspector es requerido';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.inspector_email)) {
+    // Inspector data is optional - only validate if provided
+    if (formData.inspector_name.trim() && !formData.inspector_email.trim()) {
+      newErrors.inspector_email = 'Si ingresa el nombre del inspector, debe ingresar el email';
+    } else if (formData.inspector_email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.inspector_email)) {
       newErrors.inspector_email = 'El email no es válido';
     }
 
-    if (!formData.inspector_phone.trim()) {
-      newErrors.inspector_phone = 'El teléfono del inspector es requerido';
-    } else if (!/^9\d{8}$/.test(formData.inspector_phone.replace(/\s/g, ''))) {
+    if (formData.inspector_name.trim() && !formData.inspector_phone.trim()) {
+      newErrors.inspector_phone = 'Si ingresa el nombre del inspector, debe ingresar el teléfono';
+    } else if (formData.inspector_phone.trim() && !/^9\d{8}$/.test(formData.inspector_phone.replace(/\s/g, ''))) {
       newErrors.inspector_phone = 'El teléfono debe tener 9 dígitos empezando con 9';
     }
 
@@ -112,9 +148,13 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
     setErrors({});
 
     try {
-      const payload = {
+      const location = locations.find(loc => loc.id === formData.location_id);
+      
+      const payload: any = {
         ...formData,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        ...(visit ? {} : { created_at: new Date().toISOString() }),
+        location_name: location?.name || 'Sede desconocida'
       };
 
       if (visit) {
@@ -135,7 +175,6 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
 
         // Enviar notificación de visita SUTRAN programada
         if (data) {
-          const location = locations.find(loc => loc.id === payload.location_id);
           await notifySutranVisitScheduled(
             location?.name || 'Sede desconocida',
             payload.visit_date,
@@ -153,13 +192,14 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
     }
   };
 
-  const handleChange = (name: string, value: string) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
 
-    if (errors[name]) {
+    if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
@@ -220,7 +260,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                   <h4 className="font-semibold text-blue-900">Guía de Visitas SUTRAN</h4>
                   <ul className="text-sm text-blue-800 space-y-1">
                     <li>• <strong>Fecha:</strong> Seleccione la fecha programada para la visita</li>
-                    <li>• <strong>Inspector:</strong> Incluya email válido y teléfono (9 dígitos)</li>
+                    <li>• <strong>Inspector:</strong> Datos opcionales. Si ingresa nombre, incluya email y teléfono válidos</li>
                     <li>• <strong>Documentos:</strong> Agregue todos los documentos relevantes</li>
                     <li>• <strong>Hallazgos:</strong> Documente no conformidades y oportunidades de mejora</li>
                     <li>• <strong>Recomendaciones:</strong> Incluya acciones correctivas y plazos</li>
@@ -309,42 +349,39 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
             {/* Section: Información del Inspector */}
             <FormSection title="Información del Inspector" color="emerald">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <FormField label="Nombre del Inspector" required error={errors.inspector_name}>
+                <FormField label="Nombre del Inspector" error={errors.inspector_name}>
                   <FormInput
                     type="text"
                     name="inspector_name"
                     value={formData.inspector_name}
                     onChange={handleChange}
-                    placeholder="Nombre completo del inspector"
-                    required
+                    placeholder="Nombre completo del inspector (opcional)"
                     error={errors.inspector_name}
                   />
                 </FormField>
 
-                <FormField label="Email del Inspector" required error={errors.inspector_email}>
+                <FormField label="Email del Inspector" error={errors.inspector_email}>
                   <FormInput
                     type="email"
                     name="inspector_email"
                     value={formData.inspector_email}
                     onChange={handleChange}
-                    placeholder="inspector@ejemplo.com"
-                    required
+                    placeholder="inspector@ejemplo.com (opcional)"
                     error={errors.inspector_email}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Email oficial del inspector SUTRAN</p>
+                  <p className="text-xs text-gray-500 mt-1">Email oficial del inspector SUTRAN (opcional)</p>
                 </FormField>
 
-                <FormField label="Teléfono del Inspector" required error={errors.inspector_phone}>
+                <FormField label="Teléfono del Inspector" error={errors.inspector_phone}>
                   <FormInput
                     type="tel"
                     name="inspector_phone"
                     value={formData.inspector_phone}
                     onChange={handleChange}
-                    placeholder="987654321"
-                    required
+                    placeholder="987654321 (opcional)"
                     error={errors.inspector_phone}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Celular peruano (9 dígitos)</p>
+                  <p className="text-xs text-gray-500 mt-1">Celular peruano (opcional)</p>
                 </FormField>
               </div>
             </FormSection>

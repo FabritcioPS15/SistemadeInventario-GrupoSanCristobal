@@ -182,7 +182,6 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 title: 'Acciones Servidores',
                 searchPlaceholder: 'Buscar servidores...',
                 actions: [
-                    { icon: <Plus size={16} />, label: 'Agregar Servidor', action: () => window.dispatchEvent(new CustomEvent('servers:new')) },
                     { icon: <Settings size={16} />, label: 'Configuración', action: () => alert('Configuración en desarrollo') },
                     { icon: <FileText size={16} />, label: 'Reporte', action: () => window.dispatchEvent(new CustomEvent('servers:report')) }
                 ]
@@ -374,10 +373,14 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                             <>
                                 {/* Sistema GSC Root */}
                                 <div className="flex items-center gap-1.5 shrink-0">
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-800 to-slate-700 text-white rounded-md shadow-sm">
+                                    <button
+                                        onClick={() => navigate('/')}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-800 to-slate-700 text-white rounded-md shadow-sm hover:from-slate-700 hover:to-slate-600 transition-all"
+                                        title="Navegar al Dashboard"
+                                    >
                                         <div className="w-2 h-2 bg-green-400 rounded-full" />
                                         <span className="text-[11px] font-black uppercase tracking-widest">SISTEMA GSC</span>
-                                    </div>
+                                    </button>
                                 </div>
 
                                 <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
@@ -386,10 +389,14 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                 {isTicketsRoute && (
                                     <>
                                         <div className="flex items-center gap-1.5 shrink-0">
-                                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md shadow-sm">
+                                            <button
+                                                onClick={() => navigate('/tickets')}
+                                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md shadow-sm hover:bg-blue-200 transition-all"
+                                                title="Navegar a Tickets"
+                                            >
                                                 <Ticket size={14} />
                                                 <span className="text-[11px] font-black uppercase tracking-widest">TICKETS</span>
-                                            </div>
+                                            </button>
                                         </div>
                                         <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
                                     </>
@@ -400,12 +407,14 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                     <>
                                         <div className="flex items-center gap-1.5 shrink-0">
                                             {pathnames.length === 1 ? (
-                                                <div className="flex items-center gap-2 px-3 py-1.5">
-                                                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">
-                                                        {ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                    </span>
+                                                <button
+                                                    onClick={() => navigate(`/${pathnames[0]}`)}
+                                                    className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
+                                                    title={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
+                                                >
+                                                    <span>{ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
                                                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-                                                </div>
+                                                </button>
                                             ) : (
                                                 <button
                                                     onClick={() => navigate(`/${pathnames[0]}`)}
@@ -430,12 +439,14 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                                     return (
                                                         <div key={fullPath} className="flex items-center gap-1.5 shrink-0 min-w-0">
                                                             {isLast ? (
-                                                                <div className="flex items-center gap-2 px-3 py-1.5">
-                                                                    <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest truncate max-w-[180px] sm:max-w-[250px]">
-                                                                        {label}
-                                                                    </span>
+                                                                <button
+                                                                    onClick={() => navigate(fullPath)}
+                                                                    className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[180px] sm:max-w-[250px]"
+                                                                    title={`Navegar a ${label}`}
+                                                                >
+                                                                    <span className="truncate">{label}</span>
                                                                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-                                                                </div>
+                                                                </button>
                                                             ) : (
                                                                 <>
                                                                     <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
@@ -457,10 +468,14 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                     </>
                                 ) : (
                                     /* Dashboard como módulo actual cuando no hay pathnames */
-                                    <div className="flex items-center gap-2 px-3 py-1.5">
-                                        <span className="text-[11px] font-black text-slate-700 uppercase tracking-widest">DASHBOARD</span>
+                                    <button
+                                        onClick={() => navigate('/')}
+                                        className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
+                                        title="Navegar al Dashboard"
+                                    >
+                                        <span>DASHBOARD</span>
                                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-                                    </div>
+                                    </button>
                                 )}
                             </>
                         )}

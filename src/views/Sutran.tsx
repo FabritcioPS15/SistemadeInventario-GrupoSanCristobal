@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Building2, Calendar, FileText, User, MapPin, Clock, CheckCircle, AlertTriangle, Trash2, Edit, X, Star, Eye, Send } from 'lucide-react';
+import { Plus, Building2, Calendar, FileText, User, MapPin, Clock, AlertTriangle, Edit, X, Star, Send, Activity, Globe } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { SutranVisit } from '../lib/supabase';
 import SutranVisitForm from '../components/forms/SutranVisitForm';
@@ -16,16 +16,6 @@ export default function Sutran() {
   const [showForm, setShowForm] = useState(false);
   const [editingVisit, setEditingVisit] = useState<SutranVisit | undefined>();
   const [viewingVisit, setViewingVisit] = useState<SutranVisit | undefined>();
-
-  const [stats, setStats] = useState({
-    total: 0,
-    completed: 0,
-    pending: 0,
-    inProgress: 0,
-    cancelled: 0,
-    byType: {} as Record<string, number>,
-    recentlyAdded: 0
-  });
 
   useEffect(() => {
     fetchVisits();
@@ -47,10 +37,8 @@ export default function Sutran() {
 
       if (data) {
         setVisits(data);
-        calculateStats(data);
       } else {
         setVisits([]);
-        calculateStats([]);
       }
     } catch (err) {
       console.error('❌ Error inesperado al cargar visitas:', err);
@@ -58,46 +46,6 @@ export default function Sutran() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const calculateStats = (visitsData: SutranVisit[]) => {
-    const byType: Record<string, number> = {};
-    let completed = 0;
-    let pending = 0;
-    let inProgress = 0;
-    let cancelled = 0;
-    let recentlyAdded = 0;
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    visitsData.forEach(visit => {
-      // Contar por estado
-      switch (visit.status) {
-        case 'completed': completed++; break;
-        case 'pending': pending++; break;
-        case 'in_progress': inProgress++; break;
-        case 'cancelled': cancelled++; break;
-      }
-
-      // Contar por tipo
-      byType[visit.visit_type] = (byType[visit.visit_type] || 0) + 1;
-
-      // Contar recientes
-      const visitDate = new Date(visit.created_at);
-      if (visitDate >= oneWeekAgo) {
-        recentlyAdded++;
-      }
-    });
-
-    setStats({
-      total: visitsData.length,
-      completed,
-      pending,
-      inProgress,
-      cancelled,
-      byType,
-      recentlyAdded
-    });
   };
 
   const filteredVisits = visits.filter(visit => {
@@ -242,218 +190,169 @@ export default function Sutran() {
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
-        {/* Tarjeta unificada para modo responsive */}
-        <div className="lg:hidden bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-black text-[#002855] uppercase tracking-widest">Resumen de Visitas</h3>
-            <div className="p-2 rounded-lg bg-gray-100 text-gray-600">
-              <Building2 size={16} />
-            </div>
-          </div>
-          <div className="grid grid-cols-4 gap-2 text-center">
-            <div>
-              <p className="text-lg font-black text-gray-900">{stats.total}</p>
-              <p className="text-[6px] font-bold text-gray-400 uppercase tracking-widest">Total</p>
-            </div>
-            <div>
-              <p className="text-lg font-black text-emerald-600">{stats.completed}</p>
-              <p className="text-[6px] font-bold text-emerald-400 uppercase tracking-widest">Completadas</p>
-            </div>
-            <div>
-              <p className="text-lg font-black text-yellow-600">{stats.pending}</p>
-              <p className="text-[6px] font-bold text-yellow-400 uppercase tracking-widest">Pendientes</p>
-            </div>
-            <div>
-              <p className="text-lg font-black text-blue-600">{stats.recentlyAdded}</p>
-              <p className="text-[6px] font-bold text-blue-400 uppercase tracking-widest">Recientes</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Tarjetas separadas para modo desktop */}
-        <div className="hidden lg:grid grid-cols-4 gap-4 mb-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Total Visitas</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-              <Building2 size={20} className="text-gray-400" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Completadas</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-emerald-600">{stats.completed}</div>
-              <CheckCircle size={20} className="text-emerald-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Pendientes</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-              <Clock size={20} className="text-yellow-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col justify-between">
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Recientes (7d)</div>
-            <div className="flex items-end justify-between">
-              <div className="text-2xl font-bold text-blue-600">{stats.recentlyAdded}</div>
-              <Calendar size={20} className="text-blue-500" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-8">
-          <div className="flex flex-col lg:flex-row justify-end gap-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <select
-                className="block w-full pl-3 pr-10 py-2 border border-slate-300 rounded-md bg-white text-xs font-bold text-slate-700 outline-none cursor-pointer uppercase tracking-wider"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">TODOS LOS ESTADOS</option>
-                <option value="pending">PENDIENTE</option>
-                <option value="in_progress">EN PROGRESO</option>
-                <option value="completed">COMPLETADA</option>
-                <option value="cancelled">CANCELADA</option>
-              </select>
-
-              <select
-                className="block w-full pl-3 pr-10 py-2 border border-slate-300 rounded-md bg-white text-xs font-bold text-slate-700 outline-none cursor-pointer uppercase tracking-wider"
-                value={visitTypeFilter}
-                onChange={(e) => setVisitTypeFilter(e.target.value)}
-              >
-                <option value="">TODOS LOS TIPOS</option>
-                <option value="programada">PROGRAMADA</option>
-                <option value="no_programada">NO PROGRAMADA</option>
-                <option value="de_gabinete">DE GABINETE</option>
-              </select>
-            </div>
-          </div>
-
-          {hasActiveFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-              <div className="flex flex-wrap gap-2">
-                {searchTerm && (
-                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-bold border border-blue-100">
-                    "{searchTerm}"
-                  </span>
-                )}
-                {statusFilter && (
-                  <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-bold border border-amber-100">
-                    {statusLabels[statusFilter]}
-                  </span>
-                )}
-                {visitTypeFilter && (
-                  <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-bold border border-purple-100">
-                    {getVisitTypeLabel(visitTypeFilter)}
-                  </span>
-                )}
+      <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-8">
+          {/* Bloque Unificado: Filtros Compactos */}
+          <div className="bg-white border border-slate-200 rounded-[2.5rem] px-8 py-8 relative group shadow-sm transition-all hover:shadow-md">
+            <div className="relative flex flex-col md:flex-row md:items-center gap-6">
+              <div className="flex items-center gap-3 shrink-0 py-1 pr-4 border-r border-slate-100 hidden md:flex">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Activity size={16} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-[#002855] uppercase">Operaciones</h3>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Sutran</p>
+                </div>
               </div>
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-gray-400 hover:text-rose-600 transition-colors"
-              >
-                <X size={14} /> Limpiar filtros
-              </button>
-            </div>
-          )}
-        </div>
 
-        {
-          loading ? (
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-4">
+                <div className="md:col-span-2 lg:col-span-5 relative">
+                  <div className="relative group/search">
+                    <input
+                      type="text"
+                      placeholder="Búsqueda global..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500/50 transition-all placeholder:text-slate-400 font-medium"
+                    />
+                    <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                  </div>
+                </div>
+
+                <div className="md:col-span-1 lg:col-span-3">
+                  <select
+                    className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl hover:bg-white hover:border-blue-500/30 text-left flex items-center justify-between transition-all font-medium"
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="">Todos los estados</option>
+                    <option value="pending">Pendiente</option>
+                    <option value="in_progress">En Progreso</option>
+                    <option value="completed">Completada</option>
+                    <option value="cancelled">Cancelada</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-1 lg:col-span-4">
+                  <select
+                    className="w-full px-3 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl hover:bg-white hover:border-blue-500/30 text-left flex items-center justify-between transition-all font-medium"
+                    value={visitTypeFilter}
+                    onChange={(e) => setVisitTypeFilter(e.target.value)}
+                  >
+                    <option value="">Todos los tipos</option>
+                    <option value="programada">Programada</option>
+                    <option value="no_programada">No Programada</option>
+                    <option value="de_gabinete">De Gabinete</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {hasActiveFilters && (
+              <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div className="flex flex-wrap gap-2">
+                  {searchTerm && (
+                    <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-bold border border-blue-100">
+                      "{searchTerm}"
+                    </span>
+                  )}
+                  {statusFilter && (
+                    <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-bold border border-amber-100">
+                      {statusLabels[statusFilter]}
+                    </span>
+                  )}
+                  {visitTypeFilter && (
+                    <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-bold border border-purple-100">
+                      {getVisitTypeLabel(visitTypeFilter)}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-slate-400 hover:text-rose-600 transition-colors"
+                >
+                  <X size={14} /> Limpiar filtros
+                </button>
+              </div>
+            )}
+          </div>
+
+          </div>
+
+      <div className="flex-1 p-6 overflow-y-auto">
+        {loading ? (
             <div className="flex flex-col items-center justify-center min-h-[50vh]">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
               <p className="mt-4 text-gray-600">Cargando visitas...</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filteredVisits.map((visit) => (
-                <div key={visit.id} className="group bg-white rounded-xl shadow-sm border border-gray-200 transition-all duration-200 hover:shadow-lg hover:border-blue-300 overflow-hidden">
-                  <div className="p-6">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-4">
-                          <div className="flex items-center gap-1.5 p-2 px-3 bg-slate-50 border border-slate-100 rounded-lg w-fit">
-                            <Calendar size={14} className="text-slate-400" />
-                            <span className="font-bold text-slate-900 text-[11px] uppercase">
-                              {new Date(visit.visit_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-bold uppercase tracking-tight">
-                            <User size={14} className="text-slate-400" />
-                            <span>Inspector:</span>
-                            <span className="text-slate-900">{visit.inspector_name}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-bold uppercase tracking-tight sm:border-l sm:border-slate-200 sm:pl-4">
-                            <MapPin size={14} className="text-rose-400" />
-                            <span className="text-slate-900">{visit.location_name}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 mb-4">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm border ${statusColors[visit.status]}`}>
-                            {statusLabels[visit.status]}
-                          </span>
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold shadow-sm border ${typeColors[visit.visit_type]}`}>
-                            {getVisitTypeLabel(visit.visit_type)}
-                          </span>
-                        </div>
-
-                        {visit.observations && (
-                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">Observaciones</label>
-                            <p className="text-sm text-gray-700 leading-relaxed">{visit.observations}</p>
-                          </div>
-                        )}
-
-                        {visit.findings && (
-                          <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 mb-3">
-                            <label className="text-[10px] font-bold text-amber-600 uppercase tracking-wider block mb-1">Hallazgos</label>
-                            <p className="text-sm text-amber-900 leading-relaxed font-medium">{visit.findings}</p>
-                          </div>
-                        )}
-
-                        {visit.documents && visit.documents.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {visit.documents.map((doc, index) => (
-                              <span key={index} className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gray-200 text-gray-600 rounded text-[10px] font-bold uppercase tracking-wider">
-                                <FileText size={12} className="text-blue-500" />
-                                {doc}
-                              </span>
-                            ))}
-                          </div>
-                        )}
+                <div key={visit.id} className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={14} className="text-gray-400" />
+                        <span className="text-sm font-medium">
+                          {new Date(visit.visit_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
                       </div>
-
-                      <div className="flex items-center gap-2 mt-6 pt-6 border-t border-slate-50">
-                        <button
-                          onClick={() => handleViewVisit(visit)}
-                          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors font-bold text-[10px] uppercase tracking-widest border border-slate-100"
-                        >
-                          <Eye size={16} /> Ver detalles
-                        </button>
-                        {canEdit() && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEditVisit(visit)}
-                              className="p-2 text-slate-400 hover:text-slate-900 bg-slate-50 rounded-lg transition-colors border border-slate-100"
-                            >
-                              <Edit size={18} />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteVisit(visit.id)}
-                              className="p-2 text-slate-400 hover:text-rose-600 bg-red-50 rounded-lg transition-colors border border-red-100"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <User size={14} className="text-gray-400" />
+                        <span className="text-sm">{visit.inspector_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin size={14} className="text-gray-400" />
+                        <span className="text-sm">{visit.location_name}</span>
                       </div>
                     </div>
+                    <div className="flex gap-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[visit.status]}`}>
+                        {statusLabels[visit.status]}
+                      </span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${typeColors[visit.visit_type]}`}>
+                        {getVisitTypeLabel(visit.visit_type)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {(visit.observations || visit.findings) && (
+                    <div className="text-sm text-gray-600 mb-3">
+                      {visit.observations && <p className="mb-1">{visit.observations}</p>}
+                      {visit.findings && <p className="text-amber-700">{visit.findings}</p>}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleViewVisit(visit)}
+                        className="px-3 py-1 text-sm bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-colors"
+                      >
+                        Ver detalles
+                      </button>
+                      {canEdit() && (
+                        <>
+                          <button
+                            onClick={() => handleEditVisit(visit)}
+                            className="px-3 py-1 text-sm bg-gray-50 text-gray-600 rounded hover:bg-gray-100 transition-colors"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVisit(visit.id)}
+                            className="px-3 py-1 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors"
+                          >
+                            Eliminar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    {visit.documents && visit.documents.length > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <FileText size={12} />
+                        <span>{visit.documents.length} documento(s)</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -473,8 +372,7 @@ export default function Sutran() {
           )
         }
 
-        {
-          viewingVisit && (
+        {viewingVisit && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
               <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
                 <div className="bg-gray-50 border-b border-gray-100 px-6 py-4 flex items-center justify-between">
@@ -632,15 +530,13 @@ export default function Sutran() {
           )
         }
 
-        {
-          showForm && (
-            <SutranVisitForm
-              visit={editingVisit}
-              onSave={handleSaveVisit}
-              onClose={handleCloseForm}
-            />
-          )
-        }
+        {showForm && (
+          <SutranVisitForm
+            visit={editingVisit}
+            onSave={handleSaveVisit}
+            onClose={handleCloseForm}
+          />
+        )}
       </div>
     </div>
   );
