@@ -293,8 +293,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'spare-parts-view',
         'cameras-view', // Solo ver cámaras de su sede
         'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', // Solo cámaras de su sede
-        'maintenance-view', 'maintenance-create', 'maintenance-edit',
-        'maintenance-pending-view', 'maintenance-in-progress-view',
         'flota-view', // Solo ver flota
         'locations-view', // Solo ver sedes, no editar
         'sutran-view', // Solo ver sutran
