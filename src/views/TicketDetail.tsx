@@ -272,7 +272,7 @@ export default function TicketDetail() {
         const createdDate = new Date(ticket.created_at);
         const minutesDiff = (now.getTime() - createdDate.getTime()) / (1000 * 60);
         const isOwner = user?.id === ticket.requester_id;
-        const isStaff = user?.role === 'super_admin' || user?.role === 'systems' || user?.role === 'management' || user?.role === 'supervisor';
+        const isStaff = user?.role === 'super_admin' || user?.role === 'sistemas' || user?.role === 'gerencia' || user?.role === 'supervisores';
         const canDelete = isStaff || (isOwner && minutesDiff <= 3);
 
         if (!canDelete) {
@@ -388,7 +388,7 @@ export default function TicketDetail() {
         }
     };
 
-    const canManageStatus = user?.role === 'super_admin' || user?.role === 'systems' || user?.role === 'management' || user?.role === 'supervisor' || user?.role === 'admin' || user?.role === 'staff' || user?.role === 'personalizado';
+    const canManageStatus = user?.role === 'super_admin' || user?.role === 'sistemas' || user?.role === 'gerencia' || user?.role === 'supervisores' || user?.role === 'administradores' || user?.role === 'personalizado';
 
     const handleAttendTicket = async () => {
         if (!canAttendTicket || statusUpdating) {

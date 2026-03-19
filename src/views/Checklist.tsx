@@ -31,7 +31,7 @@ export default function Checklist({ type }: { type?: string }) {
 
             let filteredResults = locationsData as Location[];
 
-            const privilegedRoles = ['super_admin', 'systems', 'management', 'supervisor'];
+            const privilegedRoles = ['super_admin', 'sistemas', 'gerencia', 'supervisores'];
             const isPrivileged = user && privilegedRoles.includes(user.role);
 
             if (!isPrivileged && user?.location_id) {
@@ -75,7 +75,7 @@ export default function Checklist({ type }: { type?: string }) {
     };
 
     const canSeeSection = (sectionType: string) => {
-        const privilegedRoles = ['super_admin', 'systems', 'management', 'supervisor'];
+        const privilegedRoles = ['super_admin', 'sistemas', 'gerencia', 'supervisores'];
         if (user && privilegedRoles.includes(user.role)) return true;
 
         if (user?.location_id) {

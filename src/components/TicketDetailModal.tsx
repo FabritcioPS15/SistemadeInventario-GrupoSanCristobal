@@ -128,7 +128,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         const createdDate = new Date(currentTicket.created_at);
         const minutesDiff = (now.getTime() - createdDate.getTime()) / (1000 * 60);
         const isOwner = user?.id === currentTicket.requester_id;
-        const isStaff = user?.role === 'systems' || user?.role === 'management' || user?.role === 'supervisor';
+        const isStaff = user?.role === 'super_admin' || user?.role === 'sistemas' || user?.role === 'gerencia' || user?.role === 'supervisores';
         const canDelete = isStaff || (isOwner && minutesDiff <= 3);
 
         if (!canDelete) {
