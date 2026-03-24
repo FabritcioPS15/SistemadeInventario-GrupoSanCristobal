@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Send, User, Clock, MessageSquare, Trash2, ShieldCheck } from 'lucide-react';
+import { X, Send, User, Clock, MessageSquare, Trash2, ShieldCheck, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { IoChatbubbles } from "react-icons/io5";
@@ -19,6 +19,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     const commentsEndRef = useRef<HTMLDivElement>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [activeTab, setActiveTab] = useState<'details' | 'feed'>('feed');
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setCurrentTicket(initialTicket);
@@ -97,6 +99,56 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
+    const uploadFile = async (file: File) => {
+        if (!currentTicket) return;
+        try {
+            setUploadingImage(true);
+            const fileExt = file.name.split('.').pop() || 'png';
+            const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+            const filePath = `ticket_${currentTicket.id}/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('chat-attachments')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('chat-attachments')
+                .getPublicUrl(filePath);
+
+            const { error: commentError } = await supabase
+                .from('ticket_comments')
+                .insert([{
+                    ticket_id: currentTicket.id,
+                    user_id: user?.id,
+                    content: `![imagen](${publicUrl})`
+                }]);
+
+            if (commentError) throw commentError;
+            fetchComments();
+        } catch (error: any) {
+            console.error('Error al subir imagen:', error);
+            alert('No se pudo subir la imagen: ' + (error.message || 'Error desconocido'));
+        } finally {
+            setUploadingImage(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) await uploadFile(file);
+    };
+
+    const handlePaste = async (e: React.ClipboardEvent) => {
+        const item = e.clipboardData.items[0];
+        if (item?.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            if (file) await uploadFile(file);
+        }
+    };
+
     const handleSendComment = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newComment.trim()) return;
@@ -140,6 +192,15 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
 
         try {
             setStatusUpdating(true);
+            
+            // Limpiar archivos adjuntos antes de eliminar el ticket
+            const { data: files } = await supabase.storage.from('chat-attachments').list(`ticket_${currentTicket.id}`);
+            if (files && files.length > 0) {
+                await supabase.storage.from('chat-attachments').remove(
+                    files.map(f => `ticket_${currentTicket.id}/${f.name}`)
+                );
+            }
+
             const { error } = await supabase.from('tickets').delete().eq('id', currentTicket.id);
             if (error) throw error;
             onUpdate();
@@ -443,10 +504,20 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                                     ? 'bg-blue-600 text-white rounded-tr-none' 
                                                     : 'bg-white border border-slate-100 text-[#002855] rounded-tl-none group-hover:shadow-md'
                                             }`}>
-                                                {c.content}
+                                                {c.content.startsWith('![imagen]') ? (
+                                                    <div className="space-y-2">
+                                                        <img 
+                                                            src={c.content.match(/\((.*?)\)/)?.[1]} 
+                                                            alt="Adjunto" 
+                                                            className="max-w-full rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                                            onClick={() => window.open(c.content.match(/\((.*?)\)/)?.[1], '_blank')}
+                                                        />
+                                                        <span className="text-[10px] opacity-70 block italic">Imagen adjunta</span>
+                                                    </div>
+                                                ) : c.content}
                                             </div>
                                             <div className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-3 px-1 sm:px-2">
-                                                <span className="text-[7px] sm:text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">{c.author?.full_name?.split(' ')[0]}</span>
+                                                <span className="text-[7px] sm:text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">{c.author?.full_name}</span>
                                                 <span className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full bg-slate-200"></span>
                                                 <span className="text-[7px] sm:text-[8px] md:text-[9px] font-black text-slate-400 uppercase">{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
@@ -458,21 +529,40 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                         </div>
 
                         <div className="p-3 sm:p-4 bg-white border-t border-slate-50">
-                            <form onSubmit={handleSendComment} className="relative group">
+                            <form onSubmit={handleSendComment} className="flex items-center gap-2">
                                 <input
-                                    type="text"
-                                    value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    placeholder="Escribe un mensaje aquí..."
-                                    className="w-full h-10 sm:h-12 pl-4 sm:pl-6 pr-12 sm:pr-16 bg-[#F8FAFC] rounded-[1rem] sm:rounded-[1.5rem] border border-slate-100 outline-none focus:ring-3 sm:focus:ring-4 focus:ring-blue-50 text-[11px] sm:text-[13px] font-bold text-[#002855] placeholder:text-slate-300 transition-all"
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleImageUpload}
+                                    className="hidden"
+                                    accept="image/*"
                                 />
                                 <button
-                                    type="submit"
-                                    disabled={!newComment.trim() || sending}
-                                    className="absolute right-1 sm:right-1.5 top-1 sm:top-1.5 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-200 hover:scale-110 active:scale-95 transition-all disabled:opacity-30"
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploadingImage}
+                                    className="p-2 sm:p-3 text-[#002855] bg-blue-50 border border-blue-100 hover:bg-blue-100 rounded-xl transition-all shadow-sm"
+                                    title="Subir imagen"
                                 >
-                                    <Send className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                                    {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
                                 </button>
+                                <div className="flex-1 relative group">
+                                    <input
+                                        type="text"
+                                        value={newComment}
+                                        onChange={(e) => setNewComment(e.target.value)}
+                                        onPaste={handlePaste}
+                                        placeholder={uploadingImage ? "Subiendo imagen..." : "Escribe un mensaje aquí (o pega una imagen)..."}
+                                        className="w-full h-10 sm:h-12 pl-4 sm:pl-6 pr-12 sm:pr-16 bg-[#F8FAFC] rounded-[1rem] sm:rounded-[1.5rem] border border-slate-200 outline-none focus:ring-3 sm:focus:ring-4 focus:ring-blue-100 text-[11px] sm:text-[13px] font-bold text-[#002855] placeholder:text-slate-400 transition-all"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!newComment.trim() || sending}
+                                        className="absolute right-1 sm:right-1.5 top-1 sm:top-1.5 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-200 hover:scale-110 active:scale-95 transition-all disabled:opacity-30"
+                                    >
+                                        <Send className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>

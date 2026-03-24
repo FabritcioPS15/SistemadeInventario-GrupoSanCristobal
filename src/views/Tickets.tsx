@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { History, ArrowRight, CheckCircle2, Download} from 'lucide-react';
+import { History, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { FaFilePdf } from "react-icons/fa6";
+import { RiFileExcel2Fill } from "react-icons/ri";
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import TicketForm from '../components/forms/TicketForm';
-import { notifyTicketCreated, notifyTicketAttended, notifyTicketResolved, notifyTicketClosed } from '../lib/notifications';
 
 // Definición de Estilos de Prioridad (P1 más crítico)
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string, badge: string }> = {
@@ -25,6 +26,8 @@ export default function Tickets() {
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     // Sincronizar activeTab con la URL
     const activeTab = useMemo(() => {
@@ -49,13 +52,21 @@ export default function Tickets() {
     useEffect(() => {
         const onSearch = (e: Event) => setSearchTerm((e as CustomEvent).detail ?? '');
         const onNew = () => setShowForm(true);
+        const onExportExcel = () => generateExcel();
+        const onExportPdf = () => generatePDF();
+        
         window.addEventListener('tickets:search', onSearch);
         window.addEventListener('tickets:new', onNew);
+        window.addEventListener('tickets:export', onExportExcel);
+        window.addEventListener('tickets:export-pdf', onExportPdf);
+        
         return () => {
             window.removeEventListener('tickets:search', onSearch);
             window.removeEventListener('tickets:new', onNew);
+            window.removeEventListener('tickets:export', onExportExcel);
+            window.removeEventListener('tickets:export-pdf', onExportPdf);
         };
-    }, []);
+    }, [tickets]);
 
     const fetchTickets = async () => {
         try {
@@ -85,7 +96,6 @@ export default function Tickets() {
         
         const now = new Date();
         const threeMinutes = 3 * 60 * 1000;
-        const fiveMinutes = 5 * 60 * 1000;
 
         // 1. Resuelto -> Cerrado (automáticamente después de 3 minutos)
         const toClose = ticketsData.filter(t =>
@@ -150,6 +160,19 @@ export default function Tickets() {
                         });
                         continue;
                     }
+
+                    // Limpiar almacenamiento para tickets archivados (Imágenes temporales)
+                    try {
+                        const { data: files } = await supabase.storage.from('chat-attachments').list(`ticket_${ticket.id}`);
+                        if (files && files.length > 0) {
+                            await supabase.storage.from('chat-attachments').remove(
+                                files.map(f => `ticket_${ticket.id}/${f.name}`)
+                            );
+                            console.log(`🧹 Limpieza de almacenamiento completada para ticket ${ticket.id}`);
+                        }
+                    } catch (storageError) {
+                        console.error('Error al limpiar almacenamiento:', storageError);
+                    }
                     
                     
                 } catch (error) {
@@ -166,7 +189,19 @@ export default function Tickets() {
  
     
     const filteredTickets = useMemo(() => {
-        const active = tickets.filter(t => t.status !== 'archived');
+        let active = tickets.filter(t => t.status !== 'archived');
+        
+        // Filter by date range if provided
+        if (startDate) {
+            const [y, m, d] = startDate.split('-').map(Number);
+            const start = new Date(y, m - 1, d, 0, 0, 0);
+            active = active.filter(t => new Date(t.created_at) >= start);
+        }
+        if (endDate) {
+            const [y, m, d] = endDate.split('-').map(Number);
+            const end = new Date(y, m - 1, d, 23, 59, 59);
+            active = active.filter(t => new Date(t.created_at) <= end);
+        }
 
         const searchMatch = (t: any) =>
             t.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -181,6 +216,18 @@ export default function Tickets() {
         // Mis Tickets: atendidos por mí (assigned)
         const myAttended = tickets.filter(t => t.assigned_to === user?.id && t.requester_id !== user?.id && searchMatch(t));
 
+        let archivedList = tickets.filter(t => t.status === 'archived' && searchMatch(t));
+        if (startDate) {
+            const [y, m, d] = startDate.split('-').map(Number);
+            const start = new Date(y, m - 1, d, 0, 0, 0);
+            archivedList = archivedList.filter(t => new Date(t.created_at) >= start);
+        }
+        if (endDate) {
+            const [y, m, d] = endDate.split('-').map(Number);
+            const end = new Date(y, m - 1, d, 23, 59, 59);
+            archivedList = archivedList.filter(t => new Date(t.created_at) <= end);
+        }
+
         return {
             pending: dashboardList.filter(t => t.status === 'open'),
             inProgress: dashboardList.filter(t => t.status === 'in_progress'),
@@ -189,19 +236,30 @@ export default function Tickets() {
             recent: dashboardList.slice(0, 15),
             myCreated,
             myAttended,
-            archivedList: tickets.filter(t => t.status === 'archived' && searchMatch(t))
+            archivedList
         };
-    }, [tickets, searchTerm, activeTab, user?.id]);
+    }, [tickets, searchTerm, activeTab, user?.id, startDate, endDate]);
 
     const metricsData = useMemo(() => {
-        const total = tickets.length;
-        if (total === 0) return { resolutionRate: '0%', avgResponseTime: '0m', activeTickets: 0 };
+        let filteredForMetrics = [...tickets];
+        if (startDate) {
+            const start = new Date(startDate);
+            filteredForMetrics = filteredForMetrics.filter(t => new Date(t.created_at) >= start);
+        }
+        if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            filteredForMetrics = filteredForMetrics.filter(t => new Date(t.created_at) <= end);
+        }
 
-        const resolved = tickets.filter(t => t.status === 'resolved' || t.status === 'closed' || t.status === 'archived').length;
+        const total = filteredForMetrics.length;
+        if (total === 0) return { resolutionRate: '0%', avgResponseTime: '0m', activeTickets: 0, total: 0, resolved: 0 };
+
+        const resolved = filteredForMetrics.filter(t => t.status === 'resolved' || t.status === 'closed' || t.status === 'archived').length;
         const resolutionRate = ((resolved / total) * 100).toFixed(1) + '%';
-        const activeTickets = tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length;
+        const activeTickets = filteredForMetrics.filter(t => t.status === 'open' || t.status === 'in_progress').length;
 
-        const respondedTickets = tickets.filter(t => t.attended_at && t.created_at);
+        const respondedTickets = filteredForMetrics.filter(t => t.attended_at && t.created_at);
         let avgResponseTime = '0m 0s';
         if (respondedTickets.length > 0) {
             const totalMs = respondedTickets.reduce((acc, t) => {
@@ -214,10 +272,22 @@ export default function Tickets() {
         }
 
         return { resolutionRate, avgResponseTime, activeTickets, total, resolved };
-    }, [tickets]);
+    }, [tickets, startDate, endDate]);
 
     const generatePDF = () => {
         const doc = new jsPDF();
+
+        // Filter tickets for report
+        let reportTickets = [...tickets];
+        if (startDate) {
+            const start = new Date(startDate);
+            reportTickets = reportTickets.filter(t => new Date(t.created_at) >= start);
+        }
+        if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            reportTickets = reportTickets.filter(t => new Date(t.created_at) <= end);
+        }
 
         // Title & Header
         doc.setFontSize(20);
@@ -227,24 +297,27 @@ export default function Tickets() {
         doc.setFontSize(10);
         doc.setTextColor(100);
         doc.text(`Generado el: ${new Date().toLocaleDateString()} a las ${new Date().toLocaleTimeString()}`, 14, 30);
+        if (startDate || endDate) {
+            doc.text(`Rango: ${startDate || 'Inicio'} hasta ${endDate || 'Hoy'}`, 14, 37);
+        }
 
         // Metrics Section
         doc.setFontSize(14);
         doc.setTextColor(0, 40, 85);
-        doc.text('Métricas Generales', 14, 45);
+        doc.text('Métricas del Periodo', 14, 48);
 
         doc.setFontSize(11);
         doc.setTextColor(60);
-        doc.text(`Total de Tickets: ${metricsData.total}`, 14, 55);
-        doc.text(`Tickets Resueltos: ${metricsData.resolved} (${metricsData.resolutionRate})`, 14, 62);
-        doc.text(`Tickets Activos: ${metricsData.activeTickets}`, 14, 69);
-        doc.text(`Tiempo Promedio de Respuesta: ${metricsData.avgResponseTime}`, 14, 76);
+        doc.text(`Total de Tickets: ${metricsData.total}`, 14, 58);
+        doc.text(`Tickets Resueltos: ${metricsData.resolved} (${metricsData.resolutionRate})`, 14, 65);
+        doc.text(`Tickets Activos: ${metricsData.activeTickets}`, 14, 72);
+        doc.text(`Tiempo Promedio de Respuesta: ${metricsData.avgResponseTime}`, 14, 79);
 
         // Tickets Table
-        const tableBody = tickets.slice(0, 50).map(t => [
+        const tableBody = reportTickets.slice(0, 100).map(t => [
             `TK-${t.id.slice(0, 6).toUpperCase()}`,
             t.title,
-            t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado',
+            t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : t.status === 'closed' ? 'Cerrado' : 'Archivado',
             t.priority === 'critical' ? 'P1 - Crítica' : t.priority === 'high' ? 'P2 - Alta' : t.priority === 'medium' ? 'P3 - Media' : 'P4 - Baja',
             new Date(t.created_at).toLocaleDateString()
         ]);
@@ -258,7 +331,41 @@ export default function Tickets() {
             margin: { top: 90 }
         });
 
-        doc.save(`Reporte_Mesa_de_Ayuda_${new Date().toISOString().split('T')[0]}.pdf`);
+        doc.save(`Reporte_Tickets_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
+    const generateExcel = () => {
+        // Filter tickets for report
+        let reportTickets = [...tickets];
+        if (startDate) {
+            const start = new Date(startDate);
+            reportTickets = reportTickets.filter(t => new Date(t.created_at) >= start);
+        }
+        if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            reportTickets = reportTickets.filter(t => new Date(t.created_at) <= end);
+        }
+
+        const data = reportTickets.map(t => ({
+            'ID': `TK-${t.id.slice(0, 6).toUpperCase()}`,
+            'Incidente': t.title,
+            'Descripción': t.description || '',
+            'Estado': t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : t.status === 'closed' ? 'Cerrado' : 'Archivado',
+            'Prioridad': t.priority === 'critical' ? 'P1 - Crítica' : t.priority === 'high' ? 'P2 - Alta' : t.priority === 'medium' ? 'P3 - Media' : 'P4 - Baja',
+            'Solicitante': t.requester?.full_name || 'N/A',
+            'Sede': t.locations?.name || 'N/A',
+            'Atendido Por': t.attendant?.full_name || 'Sin asignar',
+            'Fecha Creación': new Date(t.created_at).toLocaleString(),
+            'Fecha Cierre': t.closed_at ? new Date(t.closed_at).toLocaleString() : 'N/A'
+        }));
+
+        import('xlsx').then(XLSX => {
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Tickets");
+            XLSX.writeFile(wb, `Reporte_Tickets_${new Date().toISOString().split('T')[0]}.xlsx`);
+        });
     };
 
     if (loading) return null;
@@ -288,6 +395,27 @@ export default function Tickets() {
                                     </div>
                                 </div>
 
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Fecha Inicio</label>
+                                        <input 
+                                            type="date" 
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                            className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Fecha Fin</label>
+                                        <input 
+                                            type="date" 
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                            className="w-full px-6 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div className="flex flex-col sm:flex-row gap-4">
                                     <button
                                         onClick={() => navigate('/tickets/history')}
@@ -300,8 +428,15 @@ export default function Tickets() {
                                         onClick={generatePDF}
                                         className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-emerald-700 hover:to-emerald-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
                                     >
-                                        <Download size={18} />
-                                        Descargar Reporte PDF
+                                        <FaFilePdf size={18} />
+                                        PDF
+                                    </button>
+                                    <button
+                                        onClick={generateExcel}
+                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-slate-800 hover:to-slate-900 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                                    >
+                                        <RiFileExcel2Fill size={18} />
+                                        Excel
                                     </button>
                                 </div>
                             </div>
@@ -366,7 +501,7 @@ export default function Tickets() {
                                                                             {t.attendant?.avatar_url ? <img src={t.attendant.avatar_url} className="w-full h-full object-cover" alt="" /> : t.attendant?.full_name?.charAt(0)}
                                                                         </div>
                                                                         <span className="text-[9px] font-black text-slate-500 uppercase tracking-tight">Atendido por:</span>
-                                                                        <span className="text-[10px] font-bold text-slate-700">{t.attendant.full_name?.split(' ')[0]}</span>
+                                                                         <span className="text-[10px] font-bold text-slate-700">{t.attendant.full_name}</span>
                                                                     </div>
                                                                 </div>
                                                             )}
@@ -412,7 +547,7 @@ export default function Tickets() {
                                                                         {t.attendant ? (
                                                                             <div className="flex items-center gap-2">
                                                                                 <div className="w-7 h-7 rounded-xl bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase overflow-hidden">{t.attendant?.avatar_url ? <img src={t.attendant.avatar_url} className="w-full h-full object-cover" alt="" /> : t.attendant?.full_name?.charAt(0)}</div>
-                                                                                <span className="text-[11px] font-bold text-slate-600 uppercase">{t.attendant.full_name?.split(' ')[0]}</span>
+                                                                                 <span className="text-[11px] font-bold text-slate-600 uppercase">{t.attendant.full_name}</span>
                                                                             </div>
                                                                         ) : <span className="text-[10px] text-slate-300 font-black uppercase">Sin asignar</span>}
                                                                     </td>
@@ -472,7 +607,7 @@ export default function Tickets() {
                                                                 <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-[9px] font-black text-slate-500 uppercase overflow-hidden">
                                                                     {t.requester?.avatar_url ? <img src={t.requester.avatar_url} className="w-full h-full object-cover" alt="" /> : t.requester?.full_name?.charAt(0)}
                                                                 </div>
-                                                                <span className="text-[10px] font-bold text-slate-600 uppercase">{t.requester?.full_name?.split(' ')[0]}</span>
+                                                                <span className="text-[10px] font-bold text-slate-600 uppercase">{t.requester?.full_name}</span>
                                                             </div>
                                                             <div className="flex items-center justify-between">
                                                                 <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">{t.locations?.name || 'Central'}</span>
@@ -519,7 +654,7 @@ export default function Tickets() {
                                                                     <td className="px-5 py-5">
                                                                         <div className="flex items-center gap-2">
                                                                             <div className="w-7 h-7 rounded-xl bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase overflow-hidden">{t.requester?.avatar_url ? <img src={t.requester.avatar_url} className="w-full h-full object-cover" alt="" /> : t.requester?.full_name?.charAt(0)}</div>
-                                                                            <span className="text-[11px] font-bold text-slate-600 uppercase">{t.requester?.full_name?.split(' ')[0]}</span>
+                                                                             <span className="text-[11px] font-bold text-slate-600 uppercase">{t.requester?.full_name}</span>
                                                                         </div>
                                                                     </td>
                                                                     <td className="px-5 py-5">
@@ -574,7 +709,7 @@ export default function Tickets() {
                                                             </div>
                                                             <div className="flex-1">
                                                                 <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Solicitante</p>
-                                                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.requester?.full_name?.split(' ')[0]}</p>
+                                                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.requester?.full_name}</p>
                                                             </div>
                                                         </div>
                                                         {t.attendant && (
@@ -582,11 +717,11 @@ export default function Tickets() {
                                                                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-blue-50 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-blue-600 border border-blue-100 uppercase overflow-hidden shadow-inner">
                                                                     {t.attendant?.avatar_url ? (
                                                                         <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
-                                                                    ) : t.attendant?.full_name?.charAt(0)}
+                                                                ) : t.attendant?.full_name?.charAt(0)}
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Atendido por</p>
-                                                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.attendant?.full_name?.split(' ')[0]}</p>
+                                                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.attendant?.full_name}</p>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -627,7 +762,7 @@ export default function Tickets() {
                                                             </div>
                                                             <div className="flex-1">
                                                                 <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Solicitante</p>
-                                                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.requester?.full_name?.split(' ')[0]}</p>
+                                                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.requester?.full_name}</p>
                                                             </div>
                                                         </div>
                                                         {t.attendant && (
@@ -639,7 +774,7 @@ export default function Tickets() {
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Atendido por</p>
-                                                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.attendant?.full_name?.split(' ')[0]}</p>
+                                                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.attendant?.full_name}</p>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -677,7 +812,7 @@ export default function Tickets() {
                                                             </div>
                                                             <div className="flex-1">
                                                                 <p className="text-[8px] sm:text-[9px] font-black text-emerald-600 uppercase tracking-tight">Solicitante</p>
-                                                                <p className="text-[9px] sm:text-[10px] font-bold text-emerald-800">{t.requester?.full_name?.split(' ')[0]}</p>
+                                                                 <p className="text-[9px] sm:text-[10px] font-bold text-emerald-800">{t.requester?.full_name}</p>
                                                             </div>
                                                         </div>
                                                         {t.attendant && (
@@ -688,8 +823,8 @@ export default function Tickets() {
                                                                     ) : t.attendant?.full_name?.charAt(0)}
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                    <p className="text-[8px] sm:text-[9px] font-black text-emerald-600 uppercase tracking-tight">Atendido por</p>
-                                                                    <p className="text-[9px] sm:text-[10px] font-bold text-emerald-800">{t.attendant?.full_name?.split(' ')[0]}</p>
+                                                                     <p className="text-[8px] sm:text-[9px] font-black text-emerald-600 uppercase tracking-tight">Atendido por</p>
+                                                                     <p className="text-[9px] sm:text-[10px] font-bold text-emerald-800">{t.attendant?.full_name}</p>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -759,7 +894,7 @@ export default function Tickets() {
                                                             </div>
                                                             <div className="flex-1">
                                                                 <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Solicitante</p>
-                                                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.requester?.full_name?.split(' ')[0]}</p>
+                                                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.requester?.full_name}</p>
                                                             </div>
                                                         </div>
                                                         {t.attendant && (
@@ -771,7 +906,7 @@ export default function Tickets() {
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Atendido por</p>
-                                                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.attendant?.full_name?.split(' ')[0]}</p>
+                                                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.attendant?.full_name}</p>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -850,7 +985,7 @@ export default function Tickets() {
                                                                 ) : t.requester?.full_name?.charAt(0)}
                                                             </div>
                                                             <div className="flex-1">
-                                                                <p className="text-[10px] font-black text-slate-700 uppercase leading-none mb-1">{t.requester?.full_name?.split(' ')[0]}</p>
+                                                                 <p className="text-[10px] font-black text-slate-700 uppercase leading-none mb-1">{t.requester?.full_name}</p>
                                                                 <p className="text-[8px] font-bold text-slate-300 uppercase tracking-widest truncate">{t.locations?.name || 'Central'}</p>
                                                             </div>
                                                         </div>
@@ -905,7 +1040,7 @@ export default function Tickets() {
                                                                             ) : t.requester?.full_name?.charAt(0)}
                                                                         </div>
                                                                         <div>
-                                                                            <p className="text-[11px] font-black text-slate-700 uppercase leading-none mb-1">{t.requester?.full_name?.split(' ')[0]}</p>
+                                                                             <p className="text-[11px] font-black text-slate-700 uppercase leading-none mb-1">{t.requester?.full_name}</p>
                                                                             <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest truncate max-w-[80px]">{t.locations?.name || 'Central'}</p>
                                                                         </div>
                                                                     </div>

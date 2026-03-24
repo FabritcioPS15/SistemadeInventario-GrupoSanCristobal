@@ -121,7 +121,8 @@ export default function Dashboard() {
         { count: totalTickets },
         { data: tickets },
         { data: vehicles },
-        { data: schoolsData }
+        { data: schoolsData },
+        { data: recentTicketsData }
       ] = await Promise.all([
         supabase.from('assets').select('*', { count: 'exact', head: true }),
         supabase.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'active'),
@@ -130,7 +131,15 @@ export default function Dashboard() {
         supabase.from('tickets').select('*', { count: 'exact', head: true }),
         supabase.from('tickets').select('status'),
         supabase.from('vehiculos').select('estado, soat_vencimiento, citv_vencimiento, poliza_vencimiento, contrato_alquiler_vencimiento, placa, ubicacion_actual'),
-        supabase.from('locations').select('id, name')
+        supabase.from('locations').select('id, name'),
+        supabase.from('tickets')
+          .select(`
+            id,
+            requester:requester_id(id, full_name, avatar_url),
+            attendant:assigned_to(id, full_name, avatar_url)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(10)
       ]);
 
       // Process tickets
@@ -139,6 +148,30 @@ export default function Dashboard() {
       const resolvedTickets = tickets?.filter(t => t.status === 'resolved').length || 0;
       const closedTickets = tickets?.filter(t => t.status === 'closed').length || 0;
       const archivedTickets = tickets?.filter(t => t.status === 'archived').length || 0;
+
+      // Extract recent participants
+      const participantsMap = new Map();
+
+      recentTicketsData?.forEach((t: any) => {
+        if (t.requester) {
+          participantsMap.set(t.requester.id, {
+            id: t.requester.id,
+            name: t.requester.full_name,
+            avatar: t.requester.avatar_url,
+            role: 'requester'
+          });
+        }
+        if (t.attendant) {
+          participantsMap.set(t.attendant.id, {
+            id: t.attendant.id,
+            name: t.attendant.full_name,
+            avatar: t.attendant.avatar_url,
+            role: 'attendant'
+          });
+        }
+      });
+
+      const recentTicketParticipants = Array.from(participantsMap.values());
 
       // Process vehicles
       const totalVehicles = vehicles?.length || 0;
@@ -225,7 +258,7 @@ export default function Dashboard() {
         expiredDocuments,
         warningDocuments,
         vehiclesByDocument,
-        recentTicketParticipants: [] // Will populate later
+        recentTicketParticipants
       });
 
     } catch (err) {

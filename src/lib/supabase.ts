@@ -50,6 +50,47 @@ export type Location = {
   history_url?: string;
 };
 
+export type Category = {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Subcategory = {
+  id: string;
+  category_id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Area = {
+  id: string;
+  name: string;
+  location_id: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InventoryMovement = {
+  id: string;
+  asset_id: string;
+  type: 'entry' | 'exit' | 'transfer' | 'maintenance' | 'adjustment';
+  origin_location_id?: string;
+  origin_area_id?: string;
+  destination_location_id?: string;
+  destination_area_id?: string;
+  quantity: number;
+  reason?: string;
+  performed_by?: string;
+  movement_date: string;
+  created_at: string;
+};
+
 export type AssetType = {
   id: string;
   name: string;
@@ -59,7 +100,11 @@ export type AssetType = {
 export type Asset = {
   id: string;
   asset_type_id: string;
+  category_id?: string;
+  subcategory_id?: string;
   location_id?: string;
+  area_id?: string;
+  codigo_unico?: string;
   brand?: string;
   model?: string;
   serial_number?: string;
@@ -88,11 +133,24 @@ export type Asset = {
   valor_estimado?: number;
   estado_uso?: string;
 
-  // Campos adicionales para PC/Laptop
+  // Technical fields (generic)
+  operating_system?: string;
   processor?: string;
   ram?: string;
-  operating_system?: string;
   bios_mode?: string;
+  mac_address?: string;
+  
+  // Electrical/Network
+  potencia_w?: number;
+  estabilizador_w?: number;
+  voltage_v?: number;
+  frecuencia_hz?: number;
+  velocidad_internet?: string;
+  tipo_conector?: string;
+  
+  marca_motor?: string;
+  brillo_lumens?: number;
+  
   area?: string;
   placa?: string;
 
@@ -130,8 +188,11 @@ export type Asset = {
 };
 
 export type AssetWithDetails = Asset & {
-  asset_types: AssetType;
+  asset_types?: AssetType;
+  categories?: Category;
+  subcategories?: Subcategory;
   locations?: Location;
+  areas?: Area;
 };
 
 export type CameraDisk = {

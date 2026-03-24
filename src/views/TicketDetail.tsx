@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, User, AlertCircle, MessageSquare, ShieldCheck, Copy, ArrowLeft, Lock, Smile, Bold, Italic, List } from 'lucide-react';
+import { Send, User, AlertCircle, MessageSquare, ShieldCheck, Copy, ArrowLeft, Lock, Smile, Bold, Italic, List, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { FaWhatsapp, FaTrashAlt } from "react-icons/fa";
@@ -21,7 +21,9 @@ export default function TicketDetail() {
     const [showFormatting, setShowFormatting] = useState(false);
     const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
     const commentsEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
 
     useEffect(() => {
         if (ticketId) {
@@ -133,6 +135,56 @@ export default function TicketDetail() {
             setComments(data || []);
         } catch (error) {
             console.error('Error fetching comments:', error);
+        }
+    };
+
+    const uploadFile = async (file: File) => {
+        if (!ticketId) return;
+        try {
+            setUploadingImage(true);
+            const fileExt = file.name.split('.').pop() || 'png';
+            const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+            const filePath = `ticket_${ticketId}/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('chat-attachments')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('chat-attachments')
+                .getPublicUrl(filePath);
+
+            const { error: commentError } = await supabase
+                .from('ticket_comments')
+                .insert([{
+                    ticket_id: ticketId,
+                    user_id: user?.id,
+                    content: `![imagen](${publicUrl})`
+                }]);
+
+            if (commentError) throw commentError;
+            fetchComments();
+        } catch (error: any) {
+            console.error('Error al subir imagen:', error);
+            alert('No se pudo subir la imagen: ' + (error.message || 'Error desconocido'));
+        } finally {
+            setUploadingImage(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) await uploadFile(file);
+    };
+
+    const handlePaste = async (e: React.ClipboardEvent) => {
+        const item = e.clipboardData.items[0];
+        if (item?.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            if (file) await uploadFile(file);
         }
     };
 
@@ -258,6 +310,9 @@ export default function TicketDetail() {
             .replace(/^-\s*\[\s*\] (.*?)$/gm, '<li class="checklist-item">☐ $1</li>') // - [ ] checklist
             .replace(/^-\s*\[x\] (.*?)$/gm, '<li class="checklist-item">☑ $1</li>') // - [x] checklist completado
             
+            // Imágenes
+            .replace(/!\[imagen\]\((.*?)\)/g, '<img src="$1" alt="Adjunto" class="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity mt-2" onclick="window.open(\'$1\', \'_blank\')" />')
+            
             // Envolver listas
             .replace(/(<li class="bullet-item">.*<\/li>)/gs, '<ul class="bullet-list">$1</ul>')
             .replace(/(<li class="numbered-item">.*<\/li>)/gs, '<ol class="numbered-list">$1</ol>')
@@ -284,6 +339,14 @@ export default function TicketDetail() {
 
         try {
             setStatusUpdating(true);
+            // Limpiar archivos adjuntos antes de eliminar el ticket
+            const { data: files } = await supabase.storage.from('chat-attachments').list(`ticket_${ticketId}`);
+            if (files && files.length > 0) {
+                await supabase.storage.from('chat-attachments').remove(
+                    files.map(f => `ticket_${ticketId}/${f.name}`)
+                );
+            }
+
             const { error } = await supabase.from('tickets').delete().eq('id', ticketId);
             if (error) throw error;
             navigate('/tickets');
@@ -480,7 +543,7 @@ export default function TicketDetail() {
             await supabase.from('ticket_comments').insert([{
                 ticket_id: ticketId,
                 user_id: user?.id,
-                content: `**${user?.full_name?.split(' ')[0] || 'Un usuario'}** se ha unido al ticket.`
+                content: `**${user?.full_name || 'Un usuario'}** se ha unido al ticket.`
             }]);
             
             // Actualizar el ticket para reflejar los cambios
@@ -517,10 +580,6 @@ export default function TicketDetail() {
             return;
         }
 
-        if (!confirm('¿Está seguro de finalizar y archivar este ticket? Esta acción no se puede deshacer.')) {
-            return;
-        }
-
         try {
             setStatusUpdating(true);
             
@@ -534,7 +593,6 @@ export default function TicketDetail() {
                 throw error;
             }
             
-            
             // Agregar comentario de finalización
             await supabase.from('ticket_comments').insert([{
                 ticket_id: ticketId,
@@ -542,7 +600,9 @@ export default function TicketDetail() {
                 content: `**FINALIZADO**: Ticket finalizado y archivado manualmente por ${user?.full_name}`,
             }]);
             
-            fetchComments();
+            setShowFinalizeConfirm(false);
+            alert('¡El ticket fue cerrado correctamente! Puedes verlo en el apartado de historial de tickets :D');
+            navigate('/tickets');
         } catch (error) {
             alert('Error al finalizar ticket: ' + (error as any)?.message || 'Error desconocido');
         } finally {
@@ -1104,12 +1164,29 @@ export default function TicketDetail() {
                                     </div>
                                 ) : (
                                     <form onSubmit={handleCommentSubmit} className="flex gap-2">
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                            accept="image/*"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={uploadingImage}
+                                            className="p-2 sm:p-3 text-[#002855] bg-blue-50 border border-blue-100 hover:bg-blue-100 rounded-xl transition-all shadow-sm flex items-center justify-center shrink-0"
+                                            title="Subir imagen"
+                                        >
+                                            {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+                                        </button>
                                         <div className="flex-1 relative">
                                             <textarea
                                                 id="comment-input"
                                                 value={newComment}
                                                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewComment(e.target.value)}
-                                                placeholder="Escribe tu mensaje..."
+                                                onPaste={handlePaste}
+                                                placeholder={uploadingImage ? "Subiendo imagen..." : "Escribe tu mensaje aquí (o pega una imagen)..."}
                                                 className="w-full px-4 py-3 pr-24 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
                                                 rows={1}
                                                 disabled={sending}
@@ -1340,7 +1417,7 @@ export default function TicketDetail() {
                                         ) : <User size={20} />}
                                     </div>
                                     <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Reportado Por</p>
-                                    <p className="text-sm font-bold text-gray-900 uppercase mt-1">{ticket.requester?.full_name?.split(' ')[0]}</p>
+                                    <p className="text-sm font-bold text-gray-900 uppercase mt-1">{ticket.requester?.full_name}</p>
                                     <p className="text-xs text-blue-500 uppercase mt-1 hidden sm:block">{ticket.locations?.name || 'Sede Central'}</p>
                                 </div>
 
@@ -1419,7 +1496,7 @@ export default function TicketDetail() {
                                             ) : <ShieldCheck size={20} />}
                                         </div>
                                         <p className="text-xs font-black text-white/70 uppercase tracking-widest">Técnico Asignado</p>
-                                        <p className="text-sm font-bold text-white uppercase mt-1">{ticket.attendant?.full_name?.split(' ')[0]}</p>
+                                        <p className="text-sm font-bold text-white uppercase mt-1">{ticket.attendant?.full_name}</p>
                                     </div>
                                 )}
 

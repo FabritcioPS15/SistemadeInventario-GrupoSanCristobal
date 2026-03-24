@@ -20,7 +20,7 @@ export default function QuickDiagnostic() {
 
     // Test 1: Verificar ubicaciones
     try {
-      const { data, error, count } = await supabase
+      const { error, count } = await supabase
         .from('locations')
         .select('*', { count: 'exact' })
         .limit(5);
@@ -43,7 +43,7 @@ export default function QuickDiagnostic() {
 
     // Test 2: Verificar activos
     try {
-      const { data, error, count } = await supabase
+      const { error, count } = await supabase
         .from('assets')
         .select('*', { count: 'exact' })
         .limit(5);
@@ -66,7 +66,7 @@ export default function QuickDiagnostic() {
 
     // Test 3: Verificar usuarios
     try {
-      const { data, error, count } = await supabase
+      const { error, count } = await supabase
         .from('users')
         .select('*', { count: 'exact' })
         .limit(5);
@@ -89,7 +89,7 @@ export default function QuickDiagnostic() {
 
     // Test 4: Verificar cámaras
     try {
-      const { data, error, count } = await supabase
+      const { error, count } = await supabase
         .from('cameras')
         .select('*', { count: 'exact' })
         .limit(5);
@@ -110,22 +110,44 @@ export default function QuickDiagnostic() {
       });
     }
 
-    // Test 5: Verificar tipos de activos
+    // Test 5: Verificar Categorías de Inventario
     try {
-      const { data, error, count } = await supabase
-        .from('asset_types')
+      const { error, count } = await supabase
+        .from('categories')
         .select('*', { count: 'exact' });
 
       newResults.push({
-        test: 'Tipos de Activos',
+        test: 'Categorías de Inventario',
         status: error ? 'error' : count === 0 ? 'warning' : 'success',
-        message: error ? `Error: ${error.message}` : `${count || 0} tipos encontrados`,
+        message: error ? `Error: ${error.message}` : `${count || 0} categorías encontradas`,
         count: count || 0,
         details: error
       });
     } catch (err) {
       newResults.push({
-        test: 'Tipos de Activos',
+        test: 'Categorías de Inventario',
+        status: 'error',
+        message: 'Error de conexión',
+        details: err
+      });
+    }
+
+    // Test 6: Verificar Subcategorías de Inventario
+    try {
+      const { error, count } = await supabase
+        .from('subcategories')
+        .select('*', { count: 'exact' });
+
+      newResults.push({
+        test: 'Subcategorías de Inventario',
+        status: error ? 'error' : count === 0 ? 'warning' : 'success',
+        message: error ? `Error: ${error.message}` : `${count || 0} subcategorías encontradas`,
+        count: count || 0,
+        details: error
+      });
+    } catch (err) {
+      newResults.push({
+        test: 'Subcategorías de Inventario',
         status: 'error',
         message: 'Error de conexión',
         details: err

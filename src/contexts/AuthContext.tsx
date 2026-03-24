@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 type User = {
@@ -43,9 +43,17 @@ type AuthProviderProps = {
 };
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const mountedRef = useRef(true);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     // Verificar si hay una sesión activa al cargar la app
@@ -81,7 +89,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           .eq('id', user.id)
           .single();
 
-        if (updatedUser) {
+        if (updatedUser && mountedRef.current) {
           setUser(updatedUser as User);
         }
       })
@@ -106,10 +114,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           .eq('id', parsedUser.id)
           .single();
 
-        if (freshUser) {
+        if (freshUser && mountedRef.current) {
           setUser(freshUser as User);
           localStorage.setItem('auth_user', JSON.stringify(freshUser));
-        } else {
+        } else if (mountedRef.current) {
           setUser(parsedUser);
         }
       }
@@ -120,7 +128,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         .select('id, password')
         .eq('status', 'active');
 
-      if (usersData && usersData.length > 0) {
+      if (usersData && usersData.length > 0 && mountedRef.current) {
         const hasPasswordUsers = usersData.some(user => user.password && user.password.trim() !== '');
         if (!hasPasswordUsers) {
           setNeedsPasswordSetup(true);
@@ -129,22 +137,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Error checking session:', error);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
   const login = (userData: User, remember: boolean = false) => {
-    setUser(userData);
-    if (remember) {
-      localStorage.setItem('auth_user', JSON.stringify(userData));
-    } else {
-      localStorage.removeItem('auth_user');
+    if (mountedRef.current) {
+      setUser(userData);
+      if (remember) {
+        localStorage.setItem('auth_user', JSON.stringify(userData));
+      } else {
+        localStorage.removeItem('auth_user');
+      }
     }
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('auth_user');
+    if (mountedRef.current) {
+      setUser(null);
+      localStorage.removeItem('auth_user');
+    }
   };
 
   const hasPermission = (permission: string): boolean => {

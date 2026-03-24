@@ -59,11 +59,11 @@ function ProtectedRoute({ children, permission }: { children: React.ReactNode, p
 
 // Wrappers para manejar parámetros de ruta similares a activeView.startsWith
 function InventoryWrapper() {
-  const { category } = useParams();
+  const { category, subcategory } = useParams();
   const { hasPermission } = useAuth();
   const viewId = `inventory-${category}`;
   if (!hasPermission(viewId)) return <Navigate to="/" />;
-  return <Inventory categoryFilter={viewId} />;
+  return <Inventory categoryFilter={viewId} subcategoryFilter={subcategory} />;
 }
 
 function CamerasWrapper() {
@@ -171,6 +171,7 @@ function AppContent() {
             <Route path="/inventory/all" element={<ProtectedRoute permission="inventory-all"><Inventory /></ProtectedRoute>} />
             <Route path="/inventory/camara" element={<ProtectedRoute permission="inventory-camara"><Cameras /></ProtectedRoute>} />
             <Route path="/inventory/:category" element={<ProtectedRoute><InventoryWrapper /></ProtectedRoute>} />
+            <Route path="/inventory/:category/:subcategory" element={<ProtectedRoute><InventoryWrapper /></ProtectedRoute>} />
 
             {/* Cámaras */}
             <Route path="/cameras" element={<ProtectedRoute permission="cameras"><Cameras /></ProtectedRoute>} />

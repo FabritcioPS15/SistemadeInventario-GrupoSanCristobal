@@ -21,6 +21,7 @@ type MessagesModalProps = {
 
 export default function MessagesModal({ onClose }: MessagesModalProps) {
     const { user } = useAuth();
+    const mountedRef = useRef(true);
     const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
     const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -30,6 +31,13 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
     const [showNewChat, setShowNewChat] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -62,8 +70,10 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
                 table: 'messages',
                 filter: `conversation_id=eq.${selectedConversation}`
             }, (payload) => {
-                setMessages(prev => [...prev, payload.new as Message]);
-                markAsRead(selectedConversation);
+                if (mountedRef.current) {
+                    setMessages(prev => [...prev, payload.new as Message]);
+                    markAsRead(selectedConversation);
+                }
             })
             .subscribe();
 
@@ -73,14 +83,14 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
     }, [selectedConversation]);
 
     const fetchConversations = async () => {
-        if (!user) return;
+        if (!user || !mountedRef.current) return;
 
         const { data: participants } = await supabase
             .from('conversation_participants')
             .select('conversation_id, conversations(*)')
             .eq('user_id', user.id);
 
-        if (!participants) return;
+        if (!participants || !mountedRef.current) return;
 
         const conversationDetails = await Promise.all(
             participants.map(async (p) => {
@@ -126,10 +136,12 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
             })
         );
 
-        setConversations(conversationDetails.sort((a, b) =>
-            new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-        ));
-        setLoading(false);
+        if (mountedRef.current) {
+            setConversations(conversationDetails.sort((a, b) =>
+                new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+            ));
+            setLoading(false);
+        }
     };
 
     const fetchMessages = async (conversationId: string) => {
@@ -139,7 +151,7 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
             .eq('conversation_id', conversationId)
             .order('created_at', { ascending: true });
 
-        if (data) setMessages(data);
+        if (data && mountedRef.current) setMessages(data);
     };
 
     const fetchUsers = async () => {
@@ -149,7 +161,7 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
             .eq('status', 'active')
             .neq('id', user?.id || '');
 
-        if (data) setUsers(data);
+        if (data && mountedRef.current) setUsers(data);
     };
 
     const markAsRead = async (conversationId: string) => {
@@ -161,7 +173,9 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
             .eq('conversation_id', conversationId)
             .eq('user_id', user.id);
 
-        fetchConversations();
+        if (mountedRef.current) {
+            fetchConversations();
+        }
     };
 
     const sendMessage = async () => {
@@ -175,7 +189,7 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
                 content: newMessage.trim()
             }]);
 
-        if (!error) {
+        if (!error && mountedRef.current) {
             setNewMessage('');
         }
     };
@@ -189,7 +203,7 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
             .select('conversation_id')
             .eq('user_id', user.id);
 
-        if (existingParticipants) {
+        if (existingParticipants && mountedRef.current) {
             for (const p of existingParticipants) {
                 const { data: otherP } = await supabase
                     .from('conversation_participants')
@@ -198,7 +212,7 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
                     .eq('user_id', otherUserId)
                     .single();
 
-                if (otherP) {
+                if (otherP && mountedRef.current) {
                     setSelectedConversation(p.conversation_id);
                     setShowNewChat(false);
                     return;
@@ -213,7 +227,7 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
             .select()
             .single();
 
-        if (convError || !newConv) return;
+        if (convError || !newConv || !mountedRef.current) return;
 
         // Add participants
         await supabase
@@ -223,9 +237,11 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
                 { conversation_id: newConv.id, user_id: otherUserId }
             ]);
 
-        setSelectedConversation(newConv.id);
-        setShowNewChat(false);
-        fetchConversations();
+        if (mountedRef.current) {
+            setSelectedConversation(newConv.id);
+            setShowNewChat(false);
+            fetchConversations();
+        }
     };
 
     const selectedConvDetails = conversations.find(c => c.id === selectedConversation);

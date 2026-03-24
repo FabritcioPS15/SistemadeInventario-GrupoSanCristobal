@@ -1,54 +1,76 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Monitor, Smartphone, HardDrive, Printer, Scan, Laptop, Projector, Network, CreditCard, Droplets, Zap, MemoryStick, Database, HardDriveIcon, Edit, Trash2, Eye, MapPin, Download, Upload, Package, ChevronUp, ChevronDown, Star, X } from 'lucide-react';
-import { GiCctvCamera } from 'react-icons/gi';
+import { Plus, Edit, Trash2, Eye, MapPin, Download, Upload, Package, Search, Layers, ChevronRight } from 'lucide-react';
 import ExcelJS from 'exceljs';
-import { supabase, AssetWithDetails, Location, AssetType } from '../lib/supabase';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { supabase, AssetWithDetails, Location, Category, Subcategory } from '../lib/supabase';
 import AssetForm from '../components/forms/AssetForm';
 import AssetDetails from '../components/AssetDetails';
-import PCForm from '../components/forms/PCForm';
 import ExcelImportModal from '../components/ExcelImportModal';
 import Pagination from '../components/Pagination';
 import { useAuth } from '../contexts/AuthContext';
 
 type InventoryProps = {
-  categoryFilter?: string;
+  categoryFilter?: string; // e.g., 'inventory-computo-ti'
+  subcategoryFilter?: string; // e.g., 'cpu'
 };
 
-export default function Inventory({ categoryFilter }: InventoryProps) {
+export default function Inventory({ categoryFilter, subcategoryFilter }: InventoryProps) {
   const { canEdit } = useAuth();
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
   const [showAssetForm, setShowAssetForm] = useState(false);
-  const [showPCForm, setShowPCForm] = useState(false);
   const [showAssetDetails, setShowAssetDetails] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<AssetWithDetails | undefined>();
   const [editingAsset, setEditingAsset] = useState<AssetWithDetails | undefined>();
-  const [editingPC, setEditingPC] = useState<AssetWithDetails | undefined>();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const [searchTerm] = useState('');
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterSubcategory, setFilterSubcategory] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
+  const [filterArea, setFilterArea] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
-  // Estados para paginación
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  // isHeaderVisible no longer needed if not used in the UI
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [sortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'created_at', direction: 'desc' });
 
-  const handleSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
+  // Map categoryFilter path to actual Category names in DB
+  const pathCategoryMap: Record<string, string> = {
+    'computo-ti': 'Equipos de Cómputo y TI',
+    'biometricos-control': 'Equipos Biométricos y Control',
+    'equipos-medicos': 'Equipos Médicos',
+    'mobiliario': 'Mobiliario',
+    'seguridad': 'Seguridad',
+    'utiles-oficina': 'Útiles de Oficina'
   };
 
+  // Subcategory prefix/slug mapping
+  const subcategorySlugMap: Record<string, string[]> = {
+    'cpu': ['Computadoras (CPU)'],
+    'monitores': ['Monitores'],
+    'laptops': ['Laptops'],
+    'perifericos': ['Teclados', 'Mouse'],
+    'impresoras': ['Impresoras', 'Impresoras multifuncionales'],
+    'redes': ['Redes (router y DVR)'],
+    'lector': ['Biométricos'],
+    'huella': ['Control de huella'],
+    'diagnostico': ['Diagnóstico general'],
+    'clinicos': ['Equipos clínicos'],
+    'laboratorio': ['Laboratorio - Equipos de análisis', 'Laboratorio - Equipos de esterilización', 'Laboratorio - Equipos de muestras', 'Laboratorio - Equipos ópticos'],
+    'evaluacion': ['Evaluación Técnica - Equipos de evaluación visual', 'Evaluación Técnica - Equipos de evaluación auditiva', 'Evaluación Técnica - Equipos psicotécnicos', 'Evaluación Técnica - Equipos de simulación o pruebas'],
+    'oficina': ['Escritorios', 'Mesas', 'Sillas', 'Estantes', 'Armarios', 'Muebles de archivo', 'Módulos', 'Biombos'],
+    'infraestructura': ['Infraestructura - Refrigeración', 'Infraestructura - Lavaderos', 'Infraestructura - Instalaciones de agua', 'Infraestructura - Dispensadores', 'Infraestructura - Ventilación', 'Infraestructura - Instalaciones del local'],
+  };
 
   useEffect(() => {
     fetchData();
@@ -57,1036 +79,492 @@ export default function Inventory({ categoryFilter }: InventoryProps) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchAssets(), fetchLocations(), fetchAssetTypes()]);
+      await Promise.all([
+        fetchAssets(),
+        fetchCategories(),
+        fetchSubcategories(),
+        fetchLocations()
+      ]);
     } catch (error) {
       console.error('Error fetching data:', error);
-      alert('Error al cargar los datos. Por favor, intente nuevamente.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditAsset = (asset: AssetWithDetails) => {
-    if (asset.asset_types?.name === 'PC' || asset.asset_types?.name === 'Laptop' || categoryFilter === 'inventory-pc') {
-      setEditingPC(asset);
-      setShowPCForm(true);
-    } else {
-      setEditingAsset(asset);
-      setShowAssetForm(true);
-    }
+  const fetchAssets = async () => {
+    const { data, error } = await supabase
+      .from('assets')
+      .select('*, categories(*), subcategories(*), locations(*), areas(*)')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    if (data) setAssets(data as AssetWithDetails[]);
   };
 
-  const handleToggleSelectConnect = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
+  // Listen to TopHeader action events
+  useEffect(() => {
+    const onNew = () => setShowAssetForm(true);
+    const onExport = () => handleExportExcel();
+    const onExportPdf = () => handleExportPdf();
+    const onSearch = (e: Event) => setSearchTerm((e as CustomEvent).detail ?? '');
+
+    window.addEventListener('inventory:new', onNew);
+    window.addEventListener('inventory:export', onExport);
+    window.addEventListener('inventory:export-pdf', onExportPdf);
+    window.addEventListener('inventory:search', onSearch);
+
+    return () => {
+      window.removeEventListener('inventory:new', onNew);
+      window.removeEventListener('inventory:export', onExport);
+      window.removeEventListener('inventory:export-pdf', onExportPdf);
+      window.removeEventListener('inventory:search', onSearch);
+    };
+  }, [assets]); // Use assets dependency to ensure export uses latest data
+
+  const fetchCategories = async () => {
+    const { data } = await supabase.from('categories').select('*').order('name');
+    if (data) setCategories(data);
   };
 
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedIds(new Set(paginatedAssets.map(a => a.id)));
-    } else {
-      setSelectedIds(new Set());
-    }
+  const fetchSubcategories = async () => {
+    const { data } = await supabase.from('subcategories').select('*').order('name');
+    if (data) setSubcategories(data);
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedIds.size === 0) return;
+  const fetchLocations = async () => {
+    const { data } = await supabase.from('locations').select('*').order('name');
+    if (data) setLocations(data);
+  };
 
-    if (window.confirm(`¿Estás seguro de que quieres eliminar ${selectedIds.size} activos seleccionados? Esta acción no se puede deshacer.`)) {
+  const handleDeleteAsset = async (asset: AssetWithDetails) => {
+    if (window.confirm(`¿Estás seguro de eliminar "${asset.codigo_unico} - ${asset.brand} ${asset.model}"?`)) {
       setLoading(true);
       try {
-        const { error } = await supabase
-          .from('assets')
-          .delete()
-          .in('id', Array.from(selectedIds));
-
+        const { error } = await supabase.from('assets').delete().eq('id', asset.id);
         if (error) throw error;
-
-        setSelectedIds(new Set());
         await fetchAssets();
-      } catch (error: any) {
-        console.error('Error deleting assets:', error);
-        alert('Error al eliminar activos: ' + error.message);
+      } catch (err: any) {
+        alert('Error: ' + err.message);
       } finally {
         setLoading(false);
       }
     }
   };
 
-  const handleDeleteAsset = async (asset: AssetWithDetails) => {
-    // Check for related records first
-    try {
-      const [maintenanceResult, shipmentsResult] = await Promise.all([
-        supabase
-          .from('maintenance_records')
-          .select('id')
-          .eq('asset_id', asset.id),
-        supabase
-          .from('shipments')
-          .select('id')
-          .eq('asset_id', asset.id)
-      ]);
-
-      const hasMaintenanceRecords = maintenanceResult.data && maintenanceResult.data.length > 0;
-      const hasShipments = shipmentsResult.data && shipmentsResult.data.length > 0;
-
-      let confirmMessage = `¿Estás seguro de que quieres eliminar el activo "${asset.brand} ${asset.model}"?`;
-
-      if (hasMaintenanceRecords || hasShipments) {
-        confirmMessage += '\n\nEste activo tiene registros relacionados:';
-        if (hasMaintenanceRecords) {
-          confirmMessage += `\n- ${maintenanceResult.data!.length} registro(s) de mantenimiento`;
-        }
-        if (hasShipments) {
-          confirmMessage += `\n- ${shipmentsResult.data!.length} registro(s) de envío`;
-        }
-        confirmMessage += '\n\nEstos registros también serán eliminados.';
-      }
-
-      if (window.confirm(confirmMessage)) {
-        try {
-          // Delete the asset (related records will be deleted automatically due to CASCADE)
-          const { error } = await supabase
-            .from('assets')
-            .delete()
-            .eq('id', asset.id);
-
-          if (error) {
-            console.error('Error al eliminar activo:', error);
-            alert('Error al eliminar el activo: ' + error.message);
-          } else {
-            await fetchAssets(); // Recargar datos
-          }
-        } catch (err: any) {
-          console.error('Error al eliminar activo:', err);
-          alert('Error al eliminar el activo: ' + err.message);
-        }
-      }
-    } catch (err: any) {
-      console.error('Error verificando registros relacionados:', err);
-      // Fallback to simple deletion if we can't check related records
-      if (window.confirm(`¿Estás seguro de que quieres eliminar el activo "${asset.brand} ${asset.model}"?`)) {
-        try {
-          const { error } = await supabase
-            .from('assets')
-            .delete()
-            .eq('id', asset.id);
-
-          if (error) {
-            console.error('Error al eliminar activo:', error);
-            alert('Error al eliminar el activo: ' + error.message);
-          } else {
-            await fetchAssets();
-          }
-        } catch (deleteErr: any) {
-          console.error('Error al eliminar activo:', deleteErr);
-          alert('Error al eliminar el activo: ' + deleteErr.message);
-        }
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (window.confirm(`¿Eliminar ${selectedIds.size} activos seleccionados?`)) {
+      setLoading(true);
+      try {
+        const { error } = await supabase.from('assets').delete().in('id', Array.from(selectedIds));
+        if (error) throw error;
+        setSelectedIds(new Set());
+        await fetchAssets();
+      } catch (err: any) {
+        alert('Error: ' + err.message);
+      } finally {
+        setLoading(false);
       }
     }
-  };
-
-  const handleViewAsset = (asset: AssetWithDetails) => {
-    setSelectedAsset(asset);
-    setShowAssetDetails(true);
-  };
-
-  const handleSaveAsset = async () => {
-    setShowAssetForm(false);
-    setEditingAsset(undefined);
-    await fetchAssets(); // Recargar datos
-  };
-
-  const handleSavePC = async () => {
-    setShowPCForm(false);
-    setEditingPC(undefined);
-    await fetchAssets(); // Recargar datos
-  };
-
-  const handleCloseForm = () => {
-    setShowAssetForm(false);
-    setEditingAsset(undefined);
-  };
-
-  const handleClosePCForm = () => {
-    setShowPCForm(false);
-    setEditingPC(undefined);
-  };
-
-  const fetchAssets = async () => {
-    const { data, error } = await supabase
-      .from('assets')
-      .select('*, asset_types(*), locations(*)')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching assets:', error);
-      throw error;
-    }
-
-    if (data) setAssets(data as AssetWithDetails[]);
-  };
-
-  const fetchLocations = async () => {
-    const { data, error } = await supabase
-      .from('locations')
-      .select('*')
-      .order('name');
-
-    if (error) {
-      console.error('Error fetching locations:', error);
-      throw error;
-    }
-
-    if (data) setLocations(data);
-  };
-
-  const fetchAssetTypes = async () => {
-    const { data, error } = await supabase
-      .from('asset_types')
-      .select('*')
-      .order('name');
-
-    if (error) {
-      console.error('Error fetching asset types:', error);
-      throw error;
-    }
-
-    if (data) setAssetTypes(data);
-  };
-
-  // Mapear filtro de categoría a tipo de activo
-  const getCategoryFromFilter = (filter?: string) => {
-    if (!filter) return '';
-
-    const categoryMap: Record<string, string> = {
-      'inventory-pc': 'PC',
-      'inventory-celular': 'Celular',
-      'inventory-camara': 'Cámara',
-      'inventory-dvr': 'DVR',
-      'inventory-impresora': 'Impresora',
-      'inventory-escaner': 'Escáner',
-      'inventory-monitor': 'Monitor',
-      'inventory-laptop': 'Laptop',
-      'inventory-proyector': 'Proyector',
-      'inventory-switch': 'Switch',
-      'inventory-chip': 'Chip de Celular',
-      'inventory-tinte': 'Tinte',
-      'inventory-fuente': 'Fuente de Poder',
-      'inventory-ram': 'Memoria RAM',
-      'inventory-disco': 'Disco de Almacenamiento',
-      'inventory-disco-extraido': 'Disco Extraído',
-      'inventory-maquinaria': 'Maquinaria',
-      'inventory-otros': 'Otros',
-    };
-
-    return categoryMap[filter] || '';
-  };
-
-  // Obtener el ID del tipo de activo basado en el filtro
-  const getAssetTypeIdFromFilter = (filter?: string) => {
-    if (!filter) return '';
-    const categoryName = getCategoryFromFilter(filter);
-    const assetType = assetTypes.find(type => type.name === categoryName);
-    return assetType?.id || '';
   };
 
   const filteredAssets = useMemo(() => {
+    const cleanCategoryFilter = categoryFilter?.replace('inventory-', '');
+    const activePathCategory = cleanCategoryFilter ? pathCategoryMap[cleanCategoryFilter] : null;
+    const activeSubcatNames = subcategoryFilter ? subcategorySlugMap[subcategoryFilter] : null;
+
     return assets.filter(asset => {
-      const matchesSearch =
-        asset.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.serial_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.asset_types?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = 
+        (asset.codigo_unico?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (asset.brand?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (asset.model?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (asset.serial_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (asset.categories?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (asset.subcategories?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
-      // Aplicar filtro de categoría desde el menú
-      const categoryFromFilter = getCategoryFromFilter(categoryFilter);
-      const matchesCategoryFilter = !categoryFromFilter || asset.asset_types?.name === categoryFromFilter;
-
+      const matchesPathCategory = !activePathCategory || asset.categories?.name === activePathCategory;
+      const matchesPathSubcategory = !activeSubcatNames || activeSubcatNames.includes(asset.subcategories?.name || '');
+      
+      const matchesCategory = !filterCategory || asset.category_id === filterCategory;
+      const matchesSubcategory = !filterSubcategory || asset.subcategory_id === filterSubcategory;
       const matchesLocation = !filterLocation || asset.location_id === filterLocation;
+      const matchesArea = !filterArea || asset.area_id === filterArea;
       const matchesStatus = !filterStatus || asset.status === filterStatus;
 
-      return matchesSearch && matchesCategoryFilter && matchesLocation && matchesStatus;
+      return matchesSearch && matchesPathCategory && matchesPathSubcategory && matchesCategory && matchesSubcategory && matchesLocation && matchesArea && matchesStatus;
     });
-  }, [assets, searchTerm, categoryFilter, filterLocation, filterStatus]);
+  }, [assets, searchTerm, categoryFilter, subcategoryFilter, filterCategory, filterSubcategory, filterLocation, filterArea, filterStatus]);
 
-  // Lógica de paginación
   const sortedAssets = useMemo(() => {
     if (!sortConfig) return filteredAssets;
-
     return [...filteredAssets].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (sortConfig.key) {
-        case 'type':
-          aValue = a.asset_types?.name || '';
-          bValue = b.asset_types?.name || '';
-          break;
-        case 'device':
-          aValue = `${a.brand || ''} ${a.model || ''}`.trim();
-          bValue = `${b.brand || ''} ${b.model || ''}`.trim();
-          break;
-        case 'location':
-          aValue = a.locations?.name || '';
-          bValue = b.locations?.name || '';
-          break;
-        default:
-          aValue = (a as any)[sortConfig.key];
-          bValue = (b as any)[sortConfig.key];
+      let aVal, bVal;
+      switch(sortConfig.key) {
+        case 'category': aVal = a.categories?.name || ''; bVal = b.categories?.name || ''; break;
+        case 'location': aVal = a.locations?.name || ''; bVal = b.locations?.name || ''; break;
+        case 'status': aVal = a.status || ''; bVal = b.status || ''; break;
+        default: aVal = (a as any)[sortConfig.key] || ''; bVal = (b as any)[sortConfig.key] || '';
       }
-
-      if (aValue === bValue) return 0;
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
-      const result = aValue < bValue ? -1 : 1;
-      return sortConfig.direction === 'asc' ? result : -result;
+      const res = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      return sortConfig.direction === 'asc' ? res : -res;
     });
   }, [filteredAssets, sortConfig]);
 
   const paginatedAssets = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return sortedAssets.slice(startIndex, endIndex);
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedAssets.slice(start, start + itemsPerPage);
   }, [sortedAssets, currentPage, itemsPerPage]);
 
   const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
-
-  // Resetear página cuando cambian los filtros
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterLocation, filterStatus, categoryFilter]);
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleItemsPerPageChange = (newItemsPerPage: number) => {
-    setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1);
-  };
-
-  // Mapeo de iconos para cada tipo de activo
-  const getIconForType = (typeName: string) => {
-    const iconMap: Record<string, any> = {
-      'PC': Monitor,
-      'Celular': Smartphone,
-      'Cámara': GiCctvCamera,
-      'DVR': HardDrive,
-      'Impresora': Printer,
-      'Escáner': Scan,
-      'Monitor': Monitor,
-      'Laptop': Laptop,
-      'Proyector': Projector,
-      'Switch': Network,
-      'Chip de Celular': CreditCard,
-      'Tinte': Droplets,
-      'Fuente de Poder': Zap,
-      'Memoria RAM': MemoryStick,
-      'Disco de Almacenamiento': Database,
-      'Disco Extraído': HardDriveIcon,
-      'Maquinaria': HardDrive,
-      'Otros': Package,
-    };
-
-    return iconMap[typeName] || Monitor;
-  };
-
-  const statusColors = {
-    active: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    inactive: 'bg-slate-100 text-slate-800 border-slate-200',
-    maintenance: 'bg-amber-100 text-amber-800 border-amber-200',
-    extracted: 'bg-rose-100 text-rose-800 border-rose-200',
-  };
-
-  const statusLabels = {
-    active: 'Activo',
-    inactive: 'Inactivo',
-    maintenance: 'Mantenimiento',
-    extracted: 'Extraído',
-  };
-
-  const categoryFromFilter = getCategoryFromFilter(categoryFilter);
 
   const handleExportExcel = async () => {
     setExporting(true);
     try {
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Inventario');
-
-      // Set default row height
-      worksheet.properties.defaultRowHeight = 15;
-
-      let currentRow = 1;
-
-      // Try to load logo, but continue if it fails
-      try {
-        const logoResponse = await fetch('/src/assets/logo.png');
-        if (logoResponse.ok) {
-          const logoBlob = await logoResponse.blob();
-          const logoBase64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(logoBlob);
-          });
-
-          const imageId = workbook.addImage({
-            base64: logoBase64,
-            extension: 'png',
-          });
-
-          // Add logo to worksheet
-          worksheet.addImage(imageId, {
-            tl: { col: 0, row: 0 },
-            ext: { width: 290, height: 172 }
-          });
-        }
-      } catch (error) {
-        console.warn('Logo not found, continuing without it');
-      }
-
-      // Company contact information (right side of header) - moved to column C
-      // Row 1: Email
-      worksheet.mergeCells('C1:G1');
-      const emailCell = worksheet.getCell('C1');
-      emailCell.value = 'E-mail: contacto@gruposancristobal.com';
-      emailCell.font = { size: 10, color: { argb: 'FF374151' } };
-      emailCell.alignment = { vertical: 'middle', horizontal: 'left' };
-
-      // Row 2: Phone and Website
-      worksheet.mergeCells('C2:G2');
-      const phoneCell = worksheet.getCell('C2');
-      phoneCell.value = 'Teléfono: +51 123-456-789 | Sitio web: www.gruposancristobal.com';
-      phoneCell.font = { size: 10, color: { argb: 'FF374151' } };
-      phoneCell.alignment = { vertical: 'middle', horizontal: 'left' };
-
-      // Row 3: Address
-      worksheet.mergeCells('C3:G3');
-      const addressCell = worksheet.getCell('C3');
-      addressCell.value = 'Dirección: Lima, Perú';
-      addressCell.font = { size: 10, color: { argb: 'FF374151' } };
-      addressCell.alignment = { vertical: 'middle', horizontal: 'left' };
-
-      // Row 4: Total assets
-      worksheet.mergeCells('C4:G4');
-      const totalHeaderCell = worksheet.getCell('C4');
-      totalHeaderCell.value = `Total de activos: ${filteredAssets.length}`;
-      totalHeaderCell.font = { size: 10, bold: true, color: { argb: 'FF374151' } };
-      totalHeaderCell.alignment = { vertical: 'middle', horizontal: 'left' };
-
-      // Set row heights for header
-      worksheet.getRow(1).height = 20;
-      worksheet.getRow(2).height = 20;
-      worksheet.getRow(3).height = 20;
-      worksheet.getRow(4).height = 20;
-
-      // Add white/invisible borders to entire header area (A1:G4)
-      for (let row = 1; row <= 4; row++) {
-        for (let col = 1; col <= 7; col++) {
-          const cell = worksheet.getCell(row, col);
-          cell.border = {
-            top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
-            bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
-            left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
-            right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
-          };
-        }
-      }
-
-      currentRow = 4;
-
-      // Empty row for spacing
-      currentRow++;
-
-      // Creation date (row 5)
-      worksheet.mergeCells(`A${currentRow}:G${currentRow}`);
-      const dateCell = worksheet.getCell(`A${currentRow}`);
-      dateCell.value = `Fecha de creación: ${new Date().toLocaleString('es-ES', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      })}`;
-      dateCell.font = { size: 10, bold: true };
-      dateCell.alignment = { vertical: 'middle', horizontal: 'center' };
-      currentRow++;
-
-      // Applied filters (row 6)
-      const appliedFilters = [];
-      if (categoryFromFilter) appliedFilters.push(`Categoría: ${categoryFromFilter}`);
-      if (filterLocation) {
-        const loc = locations.find(l => l.id === filterLocation);
-        if (loc) appliedFilters.push(`Sede: ${loc.name}`);
-      }
-      if (filterStatus) {
-        appliedFilters.push(`Estado: ${statusLabels[filterStatus as keyof typeof statusLabels]}`);
-      }
-      if (searchTerm) appliedFilters.push(`Búsqueda: "${searchTerm}"`);
-
-      if (appliedFilters.length > 0) {
-        worksheet.mergeCells(`A${currentRow}:G${currentRow}`);
-        const filterCell = worksheet.getCell(`A${currentRow}`);
-        filterCell.value = `Filtros aplicados: ${appliedFilters.join(' | ')}`;
-        filterCell.font = { size: 9, italic: true, color: { argb: 'FF6B7280' } };
-        filterCell.alignment = { vertical: 'middle', horizontal: 'center' };
-        currentRow++;
-      }
-
-      // Total assets (row 7 or 8 depending on filters)
-      worksheet.mergeCells(`A${currentRow}:G${currentRow}`);
-      const totalCell = worksheet.getCell(`A${currentRow}`);
-      totalCell.value = `Total de activos: ${filteredAssets.length}`;
-      totalCell.font = { bold: true, size: 11 };
-      totalCell.alignment = { vertical: 'middle', horizontal: 'center' };
-      currentRow++;
-
-      // Empty row for spacing (row 8)
-      currentRow++;
-
-      // Column headers - MUST be at row 9
-      const headerRow = currentRow;
-      currentRow = headerRow;
-      worksheet.columns = [
-        { header: 'TIPO DE ACTIVO', key: 'type', width: 22 },
-        { header: 'MARCA', key: 'brand', width: 18 },
-        { header: 'MODELO', key: 'model', width: 22 },
-        { header: 'N° DE SERIE', key: 'serial', width: 28 },
-        { header: 'UBICACIÓN', key: 'location', width: 28 },
-        { header: 'ESTADO', key: 'status', width: 16 },
-        { header: 'FECHA DE CREACIÓN', key: 'created', width: 20 }
+      const ws = workbook.addWorksheet('Inventario');
+      
+      ws.columns = [
+        { header: 'CÓDIGO', key: 'code', width: 15 },
+        { header: 'CATEGORÍA', key: 'category', width: 25 },
+        { header: 'SUBCATEGORÍA', key: 'subcategory', width: 25 },
+        { header: 'MARCA', key: 'brand', width: 15 },
+        { header: 'MODELO', key: 'model', width: 20 },
+        { header: 'SERIE', key: 'serial', width: 20 },
+        { header: 'SEDE', key: 'location', width: 25 },
+        { header: 'ÁREA', key: 'area', width: 20 },
+        { header: 'ESTADO', key: 'status', width: 15 },
+        { header: 'FECHA ADQUISICIÓN', key: 'purchase_date', width: 20 },
+        { header: 'NOTAS', key: 'notes', width: 40 }
       ];
 
-      // Add header row
-      const headerRowObj = worksheet.getRow(headerRow);
-      headerRowObj.values = ['TIPO DE ACTIVO', 'MARCA', 'MODELO', 'N° DE SERIE', 'UBICACIÓN', 'ESTADO', 'FECHA DE CREACIÓN'];
-
-      // Style header row
-      headerRowObj.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } };
-      headerRowObj.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FF1E40AF' }
-      };
-      headerRowObj.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      headerRowObj.height = 30;
-      headerRowObj.eachCell((cell) => {
-        cell.border = {
-          top: { style: 'medium', color: { argb: 'FF1E3A8A' } },
-          left: { style: 'thin', color: { argb: 'FF1E3A8A' } },
-          bottom: { style: 'medium', color: { argb: 'FF1E3A8A' } },
-          right: { style: 'thin', color: { argb: 'FF1E3A8A' } }
-        };
-      });
-
-      // Add data rows
-      filteredAssets.forEach((asset, index) => {
-        const row = worksheet.addRow({
-          type: asset.asset_types?.name || '',
-          brand: asset.brand || '',
-          model: asset.model || '',
-          serial: asset.serial_number || '',
-          location: asset.locations?.name || 'Sin ubicación',
-          status: statusLabels[asset.status as keyof typeof statusLabels] || asset.status,
-          created: new Date(asset.created_at).toLocaleDateString('es-ES')
-        });
-
-        // Alternating row colors
-        if (index % 2 === 0) {
-          row.fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFF9FAFB' }
-          };
-        }
-
-        // Add borders
-        row.eachCell((cell) => {
-          cell.border = {
-            top: { style: 'thin' },
-            left: { style: 'thin' },
-            bottom: { style: 'thin' },
-            right: { style: 'thin' }
-          };
-          cell.alignment = { vertical: 'middle', wrapText: true };
+      filteredAssets.forEach(a => {
+        ws.addRow({
+          code: a.codigo_unico,
+          category: a.categories?.name,
+          subcategory: a.subcategories?.name,
+          brand: a.brand,
+          model: a.model,
+          serial: a.serial_number,
+          location: a.locations?.name,
+          area: a.areas?.name,
+          status: a.status,
+          purchase_date: a.fecha_adquisicion ? new Date(a.fecha_adquisicion).toLocaleDateString() : '—',
+          notes: a.notes || '—'
         });
       });
 
-      // Generate file
       const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      });
-
-      // Download
-      const link = document.createElement('a');
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
-      const dateStr = new Date().toISOString().split('T')[0];
-      const fileName = `Inventario_${categoryFromFilter ? categoryFromFilter.replace(/\s+/g, '_') : 'General'}_${dateStr}.xlsx`;
-
-      link.setAttribute('href', url);
-      link.setAttribute('download', fileName);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Inventario_${new Date().toISOString().split('T')[0]}.xlsx`;
       link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error exporting to Excel:', error);
-      alert('Error al exportar el archivo Excel. Por favor, intente nuevamente.');
+    } catch (e) {
+      console.error(e);
     } finally {
       setExporting(false);
     }
   };
 
+  const handleExportPdf = () => {
+    const doc = new jsPDF();
+    const tableData = filteredAssets.map(a => [
+      a.codigo_unico || '',
+      a.categories?.name || '',
+      `${a.brand || ''} ${a.model || ''}`.trim(),
+      a.serial_number || '',
+      a.locations?.name || '',
+      a.status
+    ]);
+
+    autoTable(doc, {
+      head: [['Código', 'Categoría', 'Marca/Modelo', 'Serie', 'Sede', 'Estado']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [0, 40, 85] }
+    });
+
+    doc.save(`Inventario_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const statusMap: Record<string, { label: string, color: string }> = {
+    active: { label: 'Activo', color: 'emerald' },
+    inactive: { label: 'Inactivo', color: 'slate' },
+    maintenance: { label: 'Mantenimiento', color: 'amber' },
+    extracted: { label: 'Extraído', color: 'rose' }
+  };
+
+  const currentCategoryName = categoryFilter ? pathCategoryMap[categoryFilter.replace('inventory-', '')] : 'General';
+  const currentSubcatLabel = subcategoryFilter ? (Object.keys(subcategorySlugMap).find(k => k === subcategoryFilter) ? subcategoryFilter.charAt(0).toUpperCase() + subcategoryFilter.slice(1) : '') : '';
+
   return (
-    <div className="flex flex-col h-full bg-[#f8f9fc]">
-      {/* Title / Tab Bar - Minimalist Executive Style */}
-      {/* Standard Application Header (h-14) */}
-      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out translate-y-0`}>
-        <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
+    <div className="flex flex-col h-full bg-[#F8FAFC]">
+      {/* Dynamic Header */}
+      <div className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm transition-all duration-300">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-600 p-2 rounded-lg text-white shadow-lg shadow-blue-200">
             <Package size={20} />
           </div>
-          <div className="hidden lg:block">
-            <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">
-              Inventario {categoryFromFilter ? `- ${categoryFromFilter.toUpperCase()}` : ''}
-            </h2>
+          <div>
+            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">
+              <span>Inventario</span>
+              <ChevronRight size={10} />
+              <span className="text-slate-500">{currentCategoryName}</span>
+              {currentSubcatLabel && (
+                <>
+                  <ChevronRight size={10} />
+                  <span className="text-blue-500">{currentSubcatLabel}</span>
+                </>
+              )}
+            </div>
+            <h1 className="text-sm font-black text-slate-800 uppercase tracking-tight">
+              {currentSubcatLabel || currentCategoryName}
+            </h1>
           </div>
         </div>
-
-
-
 
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && canEdit() && (
             <button
               onClick={handleBulkDelete}
-              className="flex items-center justify-center gap-2 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-all font-bold text-[10px] uppercase tracking-widest mr-2"
-              title="Eliminar seleccionados"
+              className="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-rose-100 transition-all flex items-center gap-2"
             >
-              <Trash2 size={12} />
-              Eliminar ({selectedIds.size})
+              <Trash2 size={14} /> Eliminar ({selectedIds.size})
             </button>
           )}
-
-          <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
-            <button
-              onClick={handleExportExcel}
-              disabled={exporting}
-              className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
-              title="Exportar Excel"
-            >
-              <Download size={18} />
-            </button>
-            {canEdit() && (
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
-                title="Importar Excel"
-              >
-                <Upload size={18} />
-              </button>
-            )}
-            {canEdit() && (
-              <button
-                onClick={() => {
-                  setSelectedAsset(undefined);
-                  setEditingAsset(undefined);
-                  setShowAssetForm(true);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
-                title="Nuevo Activo"
-              >
-                <Plus size={18} />
-              </button>
-            )}
-          </div>
-
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <Star size={18} />
+          
+          <button onClick={handleExportExcel} disabled={exporting} className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Exportar Excel">
+            <Download size={20} />
           </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-      </div>
-
-      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-
-
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 mb-6">
-          <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ordenamiento</label>
-                <select
-                  value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : ''}
-                  onChange={(e) => {
-                    const [key, direction] = e.target.value.split('-');
-                    if (key) {
-                      setSortConfig({ key, direction: direction as 'asc' | 'desc' });
-                    } else {
-                      setSortConfig(null);
-                    }
-                  }}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white text-xs sm:text-sm font-medium text-slate-700"
-                >
-                  <option value="">Ordenar por...</option>
-                  <option value="type-asc">Tipo (A-Z)</option>
-                  <option value="type-desc">Tipo (Z-A)</option>
-                  <option value="device-asc">Dispositivo (A-Z)</option>
-                  <option value="device-desc">Dispositivo (Z-A)</option>
-                  <option value="location-asc">Ubicación (A-Z)</option>
-                  <option value="location-desc">Ubicación (Z-A)</option>
-                  <option value="status-asc">Estado (A-Z)</option>
-                  <option value="status-desc">Estado (Z-A)</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ubicación</label>
-                <select
-                  value={filterLocation}
-                  onChange={(e) => setFilterLocation(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white text-xs sm:text-sm font-medium"
-                >
-                  <option value="">Todas las sedes</option>
-                  {locations.map(location => (
-                    <option key={location.id} value={location.id}>{location.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white text-xs sm:text-sm font-medium"
-                >
-                  <option value="">Todos los estados</option>
-                  <option value="active">Activo</option>
-                  <option value="inactive">Inactivo</option>
-                  <option value="maintenance">Mantenimiento</option>
-                  <option value="extracted">Extraído</option>
-                  <option value="new">Nuevo</option>
-                  <option value="pending">Pendiente</option>
-                  <option value="disponible">Disponible</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Pagination */}
-        {filteredAssets.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredAssets.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={handlePageChange}
-            onItemsPerPageChange={handleItemsPerPageChange}
-          />
-        )}
-
-        {/* Table View */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center min-h-[400px]">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800"></div>
-            </div>
-          ) : (
+          
+          {canEdit() && (
             <>
-              {/* Desktop Table */}
-              <div className="hidden lg:block overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="px-6 py-4 w-4">
-                        <input
-                          type="checkbox"
-                          className="w-5 h-5 rounded border-2 border-slate-300 cursor-pointer text-blue-600 focus:ring-blue-500"
-                          onChange={handleSelectAll}
-                          checked={paginatedAssets.length > 0 && selectedIds.size === paginatedAssets.length}
-                        />
-                      </th>
-                      <th
-                        className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors"
-                        onClick={() => handleSort('type')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Tipo
-                          {sortConfig?.key === 'type' ? (
-                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                          ) : null}
-                        </div>
-                      </th>
-                      <th
-                        className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors"
-                        onClick={() => handleSort('device')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Dispositivo
-                          {sortConfig?.key === 'device' ? (
-                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                          ) : null}
-                        </div>
-                      </th>
-                      <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Detalles</th>
-                      <th
-                        className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors"
-                        onClick={() => handleSort('location')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Ubicación
-                          {sortConfig?.key === 'location' ? (
-                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                          ) : null}
-                        </div>
-                      </th>
-                      <th
-                        className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-700 transition-colors"
-                        onClick={() => handleSort('status')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Estado
-                          {sortConfig?.key === 'status' ? (
-                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                          ) : null}
-                        </div>
-                      </th>
-                      <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {paginatedAssets.length > 0 ? (
-                      paginatedAssets.map((asset) => {
-                        const Icon = getIconForType(asset.asset_types?.name || '');
-                        const isSelected = selectedIds.has(asset.id);
-                        return (
-                          <tr
-                            key={asset.id}
-                            onClick={() => handleToggleSelectConnect(asset.id)}
-                            className={`
-                            transition-colors group cursor-pointer
-                            ${isSelected ? 'bg-blue-50/80 hover:bg-blue-100/80 border-l-4 border-l-blue-500' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}
-                          `}
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center">
-                                <input
-                                  type="checkbox"
-                                  className={`
-                                    w-5 h-5 rounded border-2 transition-colors cursor-pointer
-                                    ${isSelected ? 'border-blue-500 bg-blue-500 text-white' : 'border-slate-300 bg-white'}
-                                    focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                                  `}
-                                  checked={isSelected}
-                                  onChange={() => handleToggleSelectConnect(asset.id)}
-                                />
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className={`p-2 rounded-lg w-fit transition-colors ${isSelected ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600'}`}>
-                                <Icon size={20} />
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-col">
-                                <span className="font-medium text-slate-900">{asset.asset_types?.name}</span>
-                                <span className="text-sm text-slate-500">{asset.brand}</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-col">
-                                <span className="text-sm text-slate-900 font-medium">{asset.model}</span>
-                                {asset.serial_number && (
-                                  <span className="text-xs text-slate-500 font-mono">S/N: {asset.serial_number}</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap hidden sm:block">
-                              {asset.locations ? (
-                                <div className="flex items-center gap-2 text-sm text-slate-600">
-                                  <MapPin size={16} className="text-slate-400" />
-                                  {asset.locations.name}
-                                </div>
-                              ) : (
-                                <span className="text-sm text-slate-400 italic">Sin ubicación</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[asset.status as keyof typeof statusColors]}`}>
-                                {statusLabels[asset.status as keyof typeof statusLabels]}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => handleViewAsset(asset)}
-                                  className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                                  title="Ver detalles"
-                                >
-                                  <Eye size={18} />
-                                </button>
-                                {canEdit() && (
-                                  <>
-                                    <button
-                                      onClick={() => handleEditAsset(asset)}
-                                      className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
-                                      title="Editar"
-                                    >
-                                      <Edit size={18} />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteAsset(asset)}
-                                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                      title="Eliminar"
-                                    >
-                                      <Trash2 size={18} />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile Card View */}
-              <div className="lg:hidden divide-y divide-slate-100">
-                {paginatedAssets.length > 0 ? (
-                  paginatedAssets.map((asset) => {
-                    const Icon = getIconForType(asset.asset_types?.name || '');
-                    return (
-                      <div key={asset.id} className="p-5 hover:bg-slate-50 transition-colors">
-                        <div className="flex items-start justify-between gap-4 mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="bg-slate-100 p-2.5 rounded-lg text-slate-600">
-                              <Icon size={24} />
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-slate-900 uppercase tracking-tight">{asset.asset_types?.name}</h4>
-                              <p className="text-xs text-slate-500 font-medium">{asset.brand} - {asset.model}</p>
-                            </div>
-                          </div>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border whitespace-nowrap ${statusColors[asset.status as keyof typeof statusColors]}`}>
-                            {statusLabels[asset.status as keyof typeof statusLabels]}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 mb-4 text-[11px]">
-                          <div>
-                            <p className="text-slate-400 font-bold uppercase tracking-widest mb-1 text-[9px]">Serie</p>
-                            <p className="font-mono text-slate-700">{asset.serial_number || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <p className="text-slate-400 font-bold uppercase tracking-widest mb-1 text-[9px]">Ubicación</p>
-                            <p className="text-slate-700">{asset.locations?.name || 'Sede no especificada'}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-4 border-t border-slate-50">
-                          <button
-                            onClick={() => handleViewAsset(asset)}
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-md hover:bg-slate-100 transition-all font-bold text-[10px] uppercase tracking-widest"
-                          >
-                            <Eye size={14} /> Detalle
-                          </button>
-                          {canEdit() && (
-                            <>
-                              <button
-                                onClick={() => handleEditAsset(asset)}
-                                className="p-2 text-slate-400 hover:text-slate-900 bg-slate-50 rounded-md transition-all"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteAsset(asset)}
-                                className="p-2 text-slate-400 hover:text-red-600 bg-red-50 rounded-md transition-all"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : null}
-              </div>
-
-              {/* Empty State */}
-              {filteredAssets.length === 0 && (
-                <div className="px-6 py-16 text-center">
-                  <div className="flex flex-col items-center justify-center text-slate-400">
-                    <div className="bg-slate-50 p-6 rounded-full mb-4">
-                      <Package size={40} className="opacity-50" />
-                    </div>
-                    <p className="text-lg font-bold text-slate-700 uppercase tracking-tight">Sin resultados</p>
-                    <p className="text-sm mt-1">Intenta ajustar los filtros de búsqueda</p>
-                  </div>
-                </div>
-              )}
+              <button onClick={() => setShowUploadModal(true)} className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="Importar Excel">
+                <Upload size={20} />
+              </button>
+              <button 
+                onClick={() => { setEditingAsset(undefined); setShowAssetForm(true); }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center gap-2"
+              >
+                <Plus size={16} /> Nuevo Activo
+              </button>
             </>
           )}
         </div>
+      </div>
 
-        {/* Forms and Modals */}
-        {showAssetForm && (
-          <AssetForm
-            onClose={handleCloseForm}
-            onSave={handleSaveAsset}
-            editAsset={editingAsset}
-            preselectedAssetTypeId={getAssetTypeIdFromFilter(categoryFilter)}
-          />
-        )}
+      <div className="p-6 overflow-y-auto flex-1">
+        {/* Advanced Filters Panel */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+            <div className="lg:col-span-2 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Buscar por código, marca, serie..." 
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+            </div>
 
-        {showPCForm && (
-          <PCForm
-            editPC={editingPC}
-            onClose={handleClosePCForm}
-            onSave={handleSavePC}
-          />
-        )}
+            {!categoryFilter && (
+              <select 
+                className="bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-600 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-100"
+                value={filterCategory}
+                onChange={e => setFilterCategory(e.target.value)}
+              >
+                <option value="">Categorías</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
 
-        {showAssetDetails && selectedAsset && (
-          <AssetDetails
-            asset={selectedAsset}
-            onClose={() => {
-              setShowAssetDetails(false);
-              setSelectedAsset(undefined);
-            }}
-          />
-        )}
-        {/* Modal de Importación Excel */}
-        <ExcelImportModal
+            <select 
+              className="bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-600 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-100"
+              value={filterLocation}
+              onChange={e => setFilterLocation(e.target.value)}
+            >
+              <option value="">Sedes</option>
+              {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+
+            <select 
+              className="bg-slate-50 border-none rounded-xl text-xs font-bold text-slate-600 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-100"
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+            >
+              <option value="">Estados</option>
+              <option value="active">Activo</option>
+              <option value="inactive">Inactivo</option>
+              <option value="maintenance">Mantenimiento</option>
+              <option value="extracted">Extraído</option>
+            </select>
+
+            <button 
+              onClick={() => { setSearchTerm(''); setFilterCategory(''); setFilterLocation(''); setFilterStatus(''); setFilterArea(''); setFilterSubcategory(''); }}
+              className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:bg-rose-50 rounded-xl px-4 py-3 transition-all text-center"
+            >
+              Cerrar Filtros
+            </button>
+          </div>
+        </div>
+
+        {/* Assets Table */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="p-4 w-10">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      checked={selectedIds.size > 0 && selectedIds.size === paginatedAssets.length}
+                      onChange={e => {
+                        if (e.target.checked) setSelectedIds(new Set(paginatedAssets.map(a => a.id)));
+                        else setSelectedIds(new Set());
+                      }}
+                    />
+                  </th>
+                  <th className="p-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Código</th>
+                  <th className="p-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Activo / Detalle</th>
+                  <th className="p-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Categoría</th>
+                  <th className="p-4 text-[11px] font-black text-slate-400 uppercase tracking-widest">Ubicación / Área</th>
+                  <th className="p-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Estado</th>
+                  <th className="p-4 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={7} className="p-20 text-center text-slate-400 font-bold">Cargando activos...</td></tr>
+                ) : paginatedAssets.length === 0 ? (
+                  <tr><td colSpan={7} className="p-20 text-center text-slate-400 font-bold">Sin resultados</td></tr>
+                ) : paginatedAssets.map(asset => {
+                    const status = statusMap[asset.status] || { label: asset.status, color: 'slate' };
+                    return (
+                        <tr key={asset.id} className="hover:bg-slate-50/50 border-b border-slate-50 transition-colors group">
+                            <td className="p-4">
+                                <input 
+                                    type="checkbox" 
+                                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    checked={selectedIds.has(asset.id)}
+                                    onChange={e => {
+                                        const newSet = new Set(selectedIds);
+                                        if (e.target.checked) newSet.add(asset.id);
+                                        else newSet.delete(asset.id);
+                                        setSelectedIds(newSet);
+                                    }}
+                                />
+                            </td>
+                            <td className="p-4">
+                                <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg">
+                                    {asset.codigo_unico}
+                                </span>
+                            </td>
+                            <td className="p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 border border-blue-100">
+                                        <Package size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-700">{asset.brand} {asset.model}</p>
+                                        <p className="text-[10px] text-slate-400 font-medium font-mono">SN: {asset.serial_number || 'S/N'}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td className="p-4">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+                                        <Layers size={14} className="text-slate-300" /> {asset.categories?.name}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-medium ml-5 italic">
+                                        {asset.subcategories?.name}
+                                    </span>
+                                </div>
+                            </td>
+                            <td className="p-4">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5">
+                                        <MapPin size={14} className="text-blue-400" /> {asset.locations?.name}
+                                    </span>
+                                    <span className="text-[10px] text-slate-400 font-medium ml-5 uppercase tracking-wider">
+                                        {asset.areas?.name || 'General'}
+                                    </span>
+                                </div>
+                            </td>
+                            <td className="p-4 text-center">
+                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-current bg-${status.color}-50 text-${status.color}-600`}>
+                                    {status.label}
+                                </span>
+                            </td>
+                            <td className="p-4 text-right">
+                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onClick={() => { setSelectedAsset(asset); setShowAssetDetails(true); }} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all">
+                                        <Eye size={16} />
+                                    </button>
+                                    {canEdit() && (
+                                        <>
+                                            <button onClick={() => { setEditingAsset(asset); setShowAssetForm(true); }} className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all">
+                                                <Edit size={16} />
+                                            </button>
+                                            <button onClick={() => handleDeleteAsset(asset)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            </td>
+                        </tr>
+                    );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="p-4 bg-slate-50 border-t border-slate-100">
+            <Pagination 
+              currentPage={currentPage} 
+              totalPages={totalPages} 
+              totalItems={filteredAssets.length} 
+              itemsPerPage={itemsPerPage} 
+              onPageChange={setCurrentPage} 
+              onItemsPerPageChange={setItemsPerPage} 
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {showAssetForm && (
+        <AssetForm 
+          onClose={() => setShowAssetForm(false)} 
+          onSave={async () => { setShowAssetForm(false); await fetchAssets(); }} 
+          editAsset={editingAsset} 
+          initialCategoryId={!editingAsset && categoryFilter ? categories.find(c => c.name === pathCategoryMap[categoryFilter.replace('inventory-', '')])?.id : undefined}
+          initialSubcategoryId={!editingAsset && subcategoryFilter ? subcategories.find(s => subcategorySlugMap[subcategoryFilter]?.includes(s.name))?.id : undefined}
+        />
+      )}
+
+      {showAssetDetails && selectedAsset && (
+        <AssetDetails 
+          asset={selectedAsset} 
+          onClose={() => setShowAssetDetails(false)} 
+          onEdit={() => { setShowAssetDetails(false); setEditingAsset(selectedAsset); setShowAssetForm(true); }}
+        />
+      )}
+
+      {showUploadModal && (
+        <ExcelImportModal 
           isOpen={showUploadModal}
-          onClose={() => setShowUploadModal(false)}
-          onSuccess={() => {
-            fetchAssets();
-            alert('Importación completada exitosamente');
-          }}
-          assetTypes={assetTypes}
+          onClose={() => setShowUploadModal(false)} 
+          onSuccess={async () => { setShowUploadModal(false); await fetchAssets(); }}
+          assetTypes={[]} 
           locations={locations}
         />
-      </div>
+      )}
     </div>
-
   );
 }

@@ -3,10 +3,15 @@ import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOf
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
-import { supabase, Camera, Location } from '../lib/supabase';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { supabase, Camera as CameraType, Location } from '../lib/supabase';
 import CameraForm from '../components/forms/CameraForm';
 import { useAuth } from '../contexts/AuthContext';
-import { RiFileExcel2Line } from "react-icons/ri";
+import { RiFileExcel2Fill } from "react-icons/ri";
+import { FaFilePdf } from "react-icons/fa6";
+
+type Camera = CameraType;
 
 type CamerasProps = {
   subview?: string;
@@ -17,7 +22,6 @@ export default function Cameras({ subview }: CamerasProps) {
   const [loading, setLoading] = useState(true);
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [search] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [editing, setEditing] = useState<Camera | undefined>();
@@ -37,6 +41,25 @@ export default function Cameras({ subview }: CamerasProps) {
       setLoading(false);
     })();
   }, []);
+
+  useEffect(() => {
+    const handleNewCamera = () => openCreate();
+    const handleExport = () => handleExportExcel();
+    const handleExportPdf = () => handleExportPDF();
+    const handleToggleView = () => setViewMode(prev => prev === 'grid' ? 'list' : 'grid');
+
+    window.addEventListener('cameras:new', handleNewCamera);
+    window.addEventListener('cameras:export', handleExport);
+    window.addEventListener('cameras:export-pdf', handleExportPdf);
+    window.addEventListener('cameras:toggle-view', handleToggleView);
+
+    return () => {
+      window.removeEventListener('cameras:new', handleNewCamera);
+      window.removeEventListener('cameras:export', handleExport);
+      window.removeEventListener('cameras:export-pdf', handleExportPdf);
+      window.removeEventListener('cameras:toggle-view', handleToggleView);
+    };
+  }, [cameras, filterLocation, filterStatus, filterStorage, viewMode]);
 
   const fetchCameras = async () => {
     let query = supabase
@@ -146,14 +169,8 @@ export default function Cameras({ subview }: CamerasProps) {
       return false;
     }
 
-    // Filtro por búsqueda
-    const q = search.toLowerCase();
-    const matchesSearch =
-      c.name?.toLowerCase().includes(q) ||
-      c.brand?.toLowerCase().includes(q) ||
-      c.model?.toLowerCase().includes(q) ||
-      c.ip_address?.toLowerCase().includes(q) ||
-      (c as any).locations?.name?.toLowerCase().includes(q);
+    // Filtro por búsqueda (si existiera un campo de búsqueda en el futuro)
+    const matchesSearch = true;
 
     if (!matchesSearch) return false;
 
@@ -181,6 +198,47 @@ export default function Cameras({ subview }: CamerasProps) {
     return true;
   });
 
+  const handleExportPDF = async () => {
+    try {
+      const doc = new jsPDF('l', 'mm', 'a4');
+      const title = `Reporte Detallado de Cámaras - ${new Date().toLocaleDateString()}`;
+      
+      doc.setFontSize(18);
+      doc.setTextColor(0, 40, 85);
+      doc.text(title, 14, 20);
+      
+      const tableData = filtered.map(c => [
+        c.name,
+        (c as any).locations?.name || '—',
+        c.brand || '—',
+        c.model || '—',
+        c.ip_address || '—',
+        c.display_count || '0', // Capacidad
+        c.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
+        c.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join('\n') || '—'
+      ]);
+
+      autoTable(doc, {
+        startY: 30,
+        head: [['Cámara', 'Ubicación', 'Marca', 'Modelo', 'IP', 'Cap.', 'Discos Duros', 'Espacio Libre']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [0, 40, 85], textColor: 255, fontSize: 10 },
+        styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+        columnStyles: {
+          5: { halign: 'center', cellWidth: 15 }, // Capacidad
+          6: { fontSize: 7, cellWidth: 35 }, // Discos
+          7: { fontSize: 7, cellWidth: 25 } // Espacio Libre
+        }
+      });
+
+      doc.save(`Reporte_Camaras_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      alert('Error al generar el PDF');
+    }
+  };
+
   const handleExportExcel = async () => {
     // Crear un nuevo libro de trabajo
     const workbook = new ExcelJS.Workbook();
@@ -199,6 +257,9 @@ export default function Cameras({ subview }: CamerasProps) {
       { header: 'URL', key: 'url', width: 40 },
       { header: 'Tipo Acceso', key: 'access_type', width: 15 },
       { header: 'Estado', key: 'status', width: 15 },
+      { header: 'Capacidad', key: 'capacity', width: 15 },
+      { header: 'Discos Duros', key: 'disks', width: 35 },
+      { header: 'Espacio Libre', key: 'free_space', width: 25 },
       { header: 'Notas', key: 'notes', width: 30 }
     ];
 
@@ -240,6 +301,9 @@ export default function Cameras({ subview }: CamerasProps) {
         url: camera.url || '',
         access_type: humanAccess(camera.access_type),
         status: statusLabel,
+        capacity: camera.display_count || '0',
+        disks: camera.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
+        free_space: camera.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join('\n') || '—',
         notes: camera.notes || ''
       });
 
@@ -319,13 +383,21 @@ export default function Cameras({ subview }: CamerasProps) {
           <div className="h-6 w-px bg-gray-200 mx-1" />
 
           {canEdit() && (
-            <>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExportPDF}
+                className="flex items-center justify-center gap-2 px-3 py-1.5 bg-white text-rose-600 border border-rose-100 rounded-lg hover:bg-rose-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm h-9"
+                title="Descargar en PDF"
+              >
+                <FaFilePdf size={14} />
+                <span className="hidden sm:inline">PDF</span>
+              </button>
               <button
                 onClick={handleExportExcel}
-                className="flex items-center justify-center gap-2 px-3 py-1.5 bg-white text-emerald-700 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors text-[10px] font-bold uppercase tracking-widest shadow-sm h-9"
-                title="Exportar Excel"
+                className="flex items-center justify-center gap-2 px-3 py-1.5 bg-white text-emerald-600 border border-emerald-100 rounded-lg hover:bg-emerald-50 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm h-9"
+                title="Descargar en Excel"
               >
-                <RiFileExcel2Line size={14} />
+                <RiFileExcel2Fill size={14} />
                 <span className="hidden sm:inline">Excel</span>
               </button>
               <button
@@ -333,9 +405,9 @@ export default function Cameras({ subview }: CamerasProps) {
                 className="flex items-center justify-center gap-2 px-3 py-1.5 bg-[#002855] text-white rounded-lg hover:bg-[#002855]/90 transition-all font-bold text-[10px] uppercase tracking-widest shadow-sm h-9"
               >
                 <Plus size={14} />
-                <span className="hidden sm:inline">Nueva</span>
+                <span className="hidden sm:inline">Agregar</span>
               </button>
-            </>
+            </div>
           )}
 
           <div className="h-6 w-px bg-gray-200 mx-1" />

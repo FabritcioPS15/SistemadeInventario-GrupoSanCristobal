@@ -1,701 +1,626 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Plus, Edit, Trash2, MapPin, Building, Users, Package, Eye, X, FileText, LayoutGrid, List, ChevronUp, ChevronDown, Star } from 'lucide-react';
-import { useHeaderVisible } from '../hooks/useHeaderVisible';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { Edit, Trash2, MapPin, X, Eye, Building, Package, Users, ChevronDown, ChevronUp, LayoutGrid, List, Globe } from 'lucide-react';
+import ExcelJS from 'exceljs';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { supabase, Location } from '../lib/supabase';
-import LocationForm from '../components/forms/LocationForm';
 import { useAuth } from '../contexts/AuthContext';
+import LocationForm from '../components/forms/LocationForm';
+import Pagination from '../components/Pagination';
+
+const typeLabels: Record<string, string> = {
+  revision: 'Revisión',
+  policlinico: 'Policlínico',
+  escuela_conductores: 'Escuela de Conductores',
+  central: 'Central',
+  circuito: 'Circuito',
+};
+
+const typeColors: Record<string, string> = {
+  revision: 'bg-blue-50 text-blue-700 border-blue-200',
+  policlinico: 'bg-green-50 text-green-700 border-green-200',
+  escuela_conductores: 'bg-purple-50 text-purple-700 border-purple-200',
+  central: 'bg-orange-50 text-orange-700 border-orange-200',
+  circuito: 'bg-red-50 text-red-700 border-red-200',
+};
 
 export default function Sedes() {
   const { canEdit } = useAuth();
   const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingLocation, setEditingLocation] = useState<Location | undefined>();
-  const [viewingLocation, setViewingLocation] = useState<Location | undefined>();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
   const [cameraCounts, setCameraCounts] = useState<Record<string, number>>({});
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Location | undefined>();
+  const [viewingLocation, setViewingLocation] = useState<Location | undefined>();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-
-  const handleSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<'name' | 'type' | 'cameras'>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchData();
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowTypeDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
-    await fetchLocations();
-    await fetchCameraCounts();
-    setLoading(false);
-  };
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      await Promise.all([fetchLocations(), fetchCameraCounts()]);
+      setLoading(false);
+    })();
+  }, []);
+
+  useEffect(() => {
+    const handleNew = () => openCreate();
+    const handleExport = () => exportToExcel();
+    const handleExportPdf = () => exportToPdf();
+
+    window.addEventListener('locations:new', handleNew);
+    window.addEventListener('locations:export', handleExport);
+    window.addEventListener('locations:export-pdf', handleExportPdf);
+    return () => {
+      window.removeEventListener('locations:new', handleNew);
+      window.removeEventListener('locations:export', handleExport);
+      window.removeEventListener('locations:export-pdf', handleExportPdf);
+    };
+  }, [locations, cameraCounts]);
 
   const fetchLocations = async () => {
-    const { data } = await supabase
-      .from('locations')
-      .select('*')
-      .order('name');
+    const { data } = await supabase.from('locations').select('*').order('name');
     if (data) setLocations(data);
   };
 
   const fetchCameraCounts = async () => {
-    const { data } = await supabase
-      .from('cameras')
-      .select('location_id');
-
+    const { data } = await supabase.from('cameras').select('location_id');
     if (data) {
       const counts: Record<string, number> = {};
-      data.forEach(camera => {
-        if (camera.location_id) {
-          counts[camera.location_id] = (counts[camera.location_id] || 0) + 1;
-        }
-      });
+      data.forEach(c => { if (c.location_id) counts[c.location_id] = (counts[c.location_id] || 0) + 1; });
       setCameraCounts(counts);
     }
   };
 
-  const handleEditLocation = (location: Location) => {
-    setEditingLocation(location);
-    setShowForm(true);
+  const openCreate = () => { setEditing(undefined); setShowForm(true); };
+  const openEdit = (loc: Location) => { setEditing(loc); setShowForm(true); };
+
+  const del = async (loc: Location) => {
+    if (!confirm(`¿Eliminar sede "${loc.name}"?`)) return;
+    const { error } = await supabase.from('locations').delete().eq('id', loc.id);
+    if (error) return alert('Error al eliminar: ' + error.message);
+    setSelectedIds(prev => prev.filter(id => id !== loc.id));
+    await Promise.all([fetchLocations(), fetchCameraCounts()]);
   };
 
-  const handleViewLocation = (location: Location) => {
-    setViewingLocation(location);
+  const toggleSelectAll = () => {
+    if (selectedIds.length === paginatedData.length) setSelectedIds([]);
+    else setSelectedIds(paginatedData.map(l => l.id));
   };
 
-  const handleDeleteLocation = async (location: Location) => {
-    const cameraCount = cameraCounts[location.id] || 0;
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
 
-    // Verificar assets asociados
-    let assetsCount = 0;
+  const handleBulkDelete = async () => {
+    if (!confirm(`¿Eliminar ${selectedIds.length} sedes seleccionadas?`)) return;
+    const { error } = await supabase.from('locations').delete().in('id', selectedIds);
+    if (!error) { setSelectedIds([]); await Promise.all([fetchLocations(), fetchCameraCounts()]); }
+    else alert('Error al eliminar: ' + error.message);
+  };
+
+  const handleSort = (field: 'name' | 'type' | 'cameras') => {
+    if (sortField === field) setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDirection('asc'); }
+    setCurrentPage(1);
+  };
+
+  const typeEntries = Object.keys(typeLabels);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return [...locations]
+      .filter(loc => {
+        const matchesSearch = loc.name?.toLowerCase().includes(q) ||
+          loc.address?.toLowerCase().includes(q) ||
+          loc.notes?.toLowerCase().includes(q);
+        const matchesType = selectedTypes.length === 0 || selectedTypes.length === typeEntries.length ||
+          selectedTypes.includes(loc.type || '');
+        return matchesSearch && matchesType;
+      })
+      .sort((a, b) => {
+        let av: string | number = '', bv: string | number = '';
+        if (sortField === 'name') { av = a.name || ''; bv = b.name || ''; }
+        else if (sortField === 'type') { av = typeLabels[a.type] || a.type || ''; bv = typeLabels[b.type] || b.type || ''; }
+        else if (sortField === 'cameras') { av = cameraCounts[a.id] || 0; bv = cameraCounts[b.id] || 0; }
+        if (av < bv) return sortDirection === 'asc' ? -1 : 1;
+        if (av > bv) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+  }, [locations, search, selectedTypes, sortField, sortDirection, cameraCounts]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = filtered.slice(startIndex, startIndex + itemsPerPage);
+
+  const exportToExcel = async () => {
     try {
-      const { data: assetsData } = await supabase
-        .from('assets')
-        .select('id')
-        .eq('location_id', location.id);
-      assetsCount = assetsData?.length || 0;
-    } catch (err) {
-    }
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Sedes');
+      ws.columns = [
+        { header: 'NOMBRE', key: 'name', width: 30 },
+        { header: 'TIPO', key: 'type', width: 25 },
+        { header: 'DIRECCIÓN', key: 'address', width: 40 },
+        { header: 'CÁMARAS', key: 'cameras', width: 15 },
+        { header: 'NOTAS', key: 'notes', width: 40 },
+      ];
+      ws.getRow(1).font = { bold: true, size: 12 };
+      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+      filtered.forEach(loc => ws.addRow({
+        name: loc.name,
+        type: typeLabels[loc.type] || loc.type,
+        address: loc.address || '—',
+        cameras: cameraCounts[loc.id] || 0,
+        notes: loc.notes || '—'
+      }));
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `Sedes_${new Date().toISOString().split('T')[0]}.xlsx`; a.click();
+    } catch (e) { console.error('Error exportando Excel:', e); }
+  };
 
-    // Verificar usuarios asociados
-    let usersCount = 0;
+  const exportToPdf = () => {
     try {
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('location_id', location.id);
-      usersCount = usersData?.length || 0;
-    } catch (err) {
-    }
-
-    const totalAssociated = cameraCount + assetsCount + usersCount;
-
-    const message = totalAssociated > 0
-      ? `⚠️ Esta sede tiene elementos asociados (${cameraCount} cámaras, ${assetsCount} assets, ${usersCount} usuarios).\n\n¿Estás seguro de que quieres eliminar la ubicación "${location.name}"? Los elementos quedarán con ubicación no definida.`
-      : `¿Estás seguro de que quieres eliminar la ubicación "${location.name}"?`;
-
-    if (!window.confirm(message)) return;
-
-    try {
-      const { error } = await supabase
-        .from('locations')
-        .delete()
-        .eq('id', location.id);
-
-      if (error) throw error;
-
-      await fetchData();
-      alert(`Sede "${location.name}" eliminada.`);
-    } catch (err: any) {
-      alert('Error al eliminar la sede: ' + err.message);
-    }
+      const doc = new jsPDF();
+      autoTable(doc, {
+        head: [['Nombre', 'Tipo', 'Dirección', 'Cámaras']],
+        body: filtered.map(loc => [
+          loc.name,
+          typeLabels[loc.type] || loc.type,
+          loc.address || '—',
+          (cameraCounts[loc.id] || 0).toString()
+        ]),
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [0, 40, 85] }
+      });
+      doc.save(`Sedes_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (e) { console.error('Error exportando PDF:', e); }
   };
 
-  const handleSaveLocation = async () => {
-    setShowForm(false);
-    setEditingLocation(undefined);
-    await fetchData();
-  };
-
-  const handleCloseForm = () => {
-    setShowForm(false);
-    setEditingLocation(undefined);
-  };
-
-  const typeLabels: Record<string, string> = {
-    revision: 'Revisión',
-    policlinico: 'Policlínico',
-    escuela_conductores: 'Escuela de Conductores',
-    central: 'Central',
-    circuito: 'Circuito',
-  };
-
-  const typeColors: Record<string, string> = {
-    revision: 'bg-blue-50 text-blue-700 border-blue-200',
-    policlinico: 'bg-green-50 text-green-700 border-green-200',
-    escuela_conductores: 'bg-purple-50 text-purple-700 border-purple-200',
-    central: 'bg-orange-50 text-orange-700 border-orange-200',
-    circuito: 'bg-red-50 text-red-700 border-red-200',
-  };
-
-  const sortedLocations = useMemo(() => {
-    const filtered = locations.filter(location => {
-      const matchesSearch =
-        location.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        location.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        location.notes?.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesType = !typeFilter || location.type === typeFilter;
-
-      return matchesSearch && matchesType;
-    });
-
-    if (!sortConfig) return filtered;
-
-    return [...filtered].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-
-      switch (sortConfig.key) {
-        case 'type':
-          aValue = typeLabels[a.type as keyof typeof typeLabels] || a.type;
-          bValue = typeLabels[b.type as keyof typeof typeLabels] || b.type;
-          break;
-        case 'cameras':
-          aValue = cameraCounts[a.id] || 0;
-          bValue = cameraCounts[b.id] || 0;
-          break;
-        default:
-          aValue = (a as any)[sortConfig.key];
-          bValue = (b as any)[sortConfig.key];
-      }
-
-      if (aValue === bValue) return 0;
-      if (aValue === null || aValue === undefined) return 1;
-      if (bValue === null || bValue === undefined) return -1;
-
-      const result = aValue < bValue ? -1 : 1;
-      return sortConfig.direction === 'asc' ? result : -result;
-    });
-  }, [locations, searchTerm, typeFilter, sortConfig, cameraCounts]);
+  const SortIcon = ({ field }: { field: string }) => sortField === field
+    ? (sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)
+    : null;
 
   return (
-    <div className="flex flex-col h-full bg-[#f8f9fc]">
-      {/* Standard Application Header (h-14) */}
-      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
-            <Building size={20} />
-          </div>
-          <div className="hidden lg:block">
-            <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Gestión de Sedes</h2>
-          </div>
-        </div>
+    <div className="flex flex-col h-full bg-white font-sans min-h-screen relative overflow-hidden">
+      <div className="flex-1 overflow-y-auto bg-[#f8fafc]">
+        <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-4">
 
-
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
-            <div className="flex bg-[#f1f5f9] p-1 rounded-lg">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                title="Vista Cuadrícula"
-              >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                title="Vista Lista"
-              >
-                <List size={16} />
-              </button>
-            </div>
-            {canEdit() && (
-              <button
-                onClick={() => {
-                  setEditingLocation(undefined);
-                  setShowForm(true);
-                }}
-                className="p-2 ml-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
-                title="Nueva Sede"
-              >
-                <Plus size={18} />
-              </button>
-            )}
-          </div>
-
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <Star size={18} />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-      </div>
-
-      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-        {/* Tarjeta unificada para modo responsive */}
-        <div className="lg:hidden bg-white border border-[#e2e8f0] rounded-xl p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-black text-[#002855] uppercase tracking-widest">Resumen de Sedes</h3>
-            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
-              <Building size={16} />
-            </div>
-          </div>
-          <div className="grid grid-cols-5 gap-1 text-center">
-            <div>
-              <p className="text-lg font-black text-blue-600">{locations.filter(loc => loc.type !== 'circuito').length}</p>
-              <p className="text-[6px] font-bold text-blue-400 uppercase tracking-widest">Sedes</p>
-            </div>
-            <div>
-              <p className="text-lg font-black text-rose-600">{locations.filter(loc => loc.type === 'circuito').length}</p>
-              <p className="text-[6px] font-bold text-rose-400 uppercase tracking-widest">Circuitos</p>
-            </div>
-            <div>
-              <p className="text-lg font-black text-emerald-600">{Object.values(cameraCounts).reduce((sum, count) => sum + count, 0)}</p>
-              <p className="text-[6px] font-bold text-emerald-400 uppercase tracking-widest">Cámaras</p>
-            </div>
-            <div>
-              <p className="text-lg font-black text-purple-600">{locations.filter(loc => loc.type !== 'circuito').length > 0 ? Math.round(Object.values(cameraCounts).reduce((sum, count) => sum + count, 0) / locations.filter(loc => loc.type !== 'circuito').length) : 0}</p>
-              <p className="text-[6px] font-bold text-purple-400 uppercase tracking-widest">Prom</p>
-            </div>
-            <div>
-              <p className="text-lg font-black text-orange-600">{locations.filter(loc => loc.type !== 'circuito').length > 0 ? Math.round((Object.keys(cameraCounts).length / locations.filter(loc => loc.type !== 'circuito').length) * 100) : 0}%</p>
-              <p className="text-[6px] font-bold text-orange-400 uppercase tracking-widest">Cobertura</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Tarjetas separadas para modo desktop */}
-        <div className="hidden lg:grid grid-cols-5 gap-4">
-          {[
-            { label: 'Total Sedes', value: locations.filter(loc => loc.type !== 'circuito').length, icon: Building, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Circuitos', value: locations.filter(loc => loc.type === 'circuito').length, icon: MapPin, color: 'text-rose-600', bg: 'bg-rose-50' },
-            { label: 'Cámaras', value: Object.values(cameraCounts).reduce((sum, count) => sum + count, 0), icon: Package, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-            { label: 'Promedio Cam.', value: locations.filter(loc => loc.type !== 'circuito').length > 0 ? Math.round(Object.values(cameraCounts).reduce((sum, count) => sum + count, 0) / locations.filter(loc => loc.type !== 'circuito').length) : 0, icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-            { label: 'Cobertura', value: `${locations.filter(loc => loc.type !== 'circuito').length > 0 ? Math.round((Object.keys(cameraCounts).length / locations.filter(loc => loc.type !== 'circuito').length) * 100) : 0}%`, icon: MapPin, color: 'text-orange-600', bg: 'bg-orange-50' },
-          ].map((stat, i) => (
-            <div key={i} className="bg-white border border-[#e2e8f0] rounded-xl p-4 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-              <div className="flex items-center justify-between relative z-10">
-                <div>
-                  <p className="text-[10px] font-black text-[#64748b] uppercase tracking-widest mb-1">{stat.label}</p>
-                  <p className="text-2xl font-black text-[#002855]">{stat.value}</p>
-                </div>
-                <div className={`p-2.5 rounded-lg ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>
-                  <stat.icon size={18} />
-                </div>
+          {/* Action Bar */}
+          <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
+            <div className="absolute -top-3 -left-3">
+              <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+                {filtered.length} Sedes
               </div>
-              <div className={`absolute -right-2 -bottom-2 w-16 h-16 ${stat.bg} opacity-10 rounded-full blur-2xl group-hover:scale-150 transition-transform`} />
             </div>
-          ))}
-        </div>
 
-        {/* Control Bar */}
-        <div className="bg-white p-3 sm:p-4 rounded-xl border border-[#e2e8f0] shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
-                <FileText size={14} className="text-slate-500" />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo:</span>
-                <select
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
-                >
-                  <option value="">TODOS LOS TIPOS</option>
-                  {Object.entries(typeLabels).map(([key, label]) => (
-                    <option key={key} value={key}>{label.toUpperCase()}</option>
-                  ))}
-                </select>
-              </div>
+            {/* Search */}
+            <div className="flex-1 relative group/search">
+              <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+              <input
+                type="text"
+                placeholder="BUSCAR SEDE, DIRECCIÓN O NOTAS..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+              />
+            </div>
 
-              <div className="h-8 w-px bg-gray-200 mx-1 hidden sm:block" />
-
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
-                <ChevronDown size={14} className="text-slate-500" />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Orden:</span>
-                <select
-                  value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : ''}
-                  onChange={(e) => {
-                    const [key, direction] = e.target.value.split('-');
-                    if (key) {
-                      setSortConfig({ key, direction: direction as 'asc' | 'desc' });
-                    } else {
-                      setSortConfig(null);
-                    }
-                  }}
-                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
-                >
-                  <option value="">ORDENAR POR...</option>
-                  <option value="name-asc">NOMBRE (A-Z)</option>
-                  <option value="name-desc">NOMBRE (Z-A)</option>
-                  <option value="type-asc">TIPO (A-Z)</option>
-                  <option value="type-desc">TIPO (Z-A)</option>
-                  <option value="cameras-desc">N° CÁMARAS (MAYOR)</option>
-                  <option value="cameras-asc">N° CÁMARAS (MENOR)</option>
-                </select>
-              </div>
-
-              {(searchTerm || typeFilter) && (
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Type Dropdown */}
+              <div className="relative" ref={dropdownRef}>
                 <button
-                  onClick={() => { setSearchTerm(''); setTypeFilter(''); setSortConfig(null); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors uppercase tracking-wider"
+                  onClick={() => setShowTypeDropdown(!showTypeDropdown)}
+                  className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
                 >
-                  <X size={14} /> Limpiar filtros
+                  <MapPin size={14} className="text-rose-500" />
+                  <span className="truncate">{selectedTypes.length === 0 || selectedTypes.length === typeEntries.length ? 'Todos los tipos' : `${selectedTypes.length} tipos`}</span>
+                  <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showTypeDropdown ? 'rotate-180' : ''}`} />
                 </button>
-              )}
-            </div>
+                {showTypeDropdown && (
+                  <div className="absolute top-full right-0 z-[70] mt-2 bg-white border border-slate-200 shadow-2xl min-w-[260px] animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-2 max-h-[300px] overflow-y-auto">
+                      <label className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedTypes.length === typeEntries.length}
+                          onChange={() => { setSelectedTypes(selectedTypes.length === typeEntries.length ? [] : typeEntries); setCurrentPage(1); }}
+                          className="w-4 h-4 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]"
+                        />
+                        <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest">Todos los tipos</span>
+                      </label>
+                      <div className="h-px bg-slate-100 my-1" />
+                      {typeEntries.map(type => (
+                        <label key={type} className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedTypes.includes(type)}
+                            onChange={() => { setSelectedTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]); setCurrentPage(1); }}
+                            className="w-4 h-4 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]"
+                          />
+                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{typeLabels[type]}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
 
-            <div className="text-[10px] font-black text-[#64748b] uppercase tracking-widest text-right">
-              {sortedLocations.length} Ubicaciones encontradas
+              {/* View Toggle */}
+              <div className="flex bg-slate-100 p-1 border border-slate-200">
+                <button onClick={() => setViewMode('grid')} className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}><LayoutGrid size={16} /></button>
+                <button onClick={() => setViewMode('list')} className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}><List size={16} /></button>
+              </div>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[40vh]">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#002855]"></div>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-1">
+              {paginatedData.map(loc => {
+                const camCount = cameraCounts[loc.id] || 0;
+                const isSelected = selectedIds.includes(loc.id);
+                return (
+                  <div
+                    key={loc.id}
+                    onClick={() => canEdit() && toggleSelect(loc.id)}
+                    className={`bg-white rounded-none shadow-sm border transition-all duration-300 flex flex-col group overflow-hidden relative cursor-pointer hover:bg-slate-50/80 hover:border-blue-200/50 hover:shadow-md ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-100'}`}
+                  >
+                    {canEdit() && (
+                      <div className="absolute top-4 left-4 z-20">
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded border-slate-200 text-blue-600 focus:ring-blue-500 cursor-pointer shadow-sm" />
+                      </div>
+                    )}
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-blue-500/10 transition-colors" />
+
+                    <div className="p-4 flex-1 relative z-10">
+                      <div className="flex items-center gap-3 mb-4 pt-1">
+                        <div className={`w-10 h-10 rounded-none flex items-center justify-center transition-all duration-300 ${canEdit() ? 'md:ml-8' : ''} bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-blue-600/20`}>
+                          <MapPin size={16} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-tight truncate leading-tight group-hover:text-blue-700 transition-colors">{loc.name}</h3>
+                          <span className={`inline-block px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest border mt-1 ${typeColors[loc.type] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                            {typeLabels[loc.type] || loc.type}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="p-2 rounded-none border bg-slate-50 border-slate-100">
+                          <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-0.5 ml-1">Dirección</label>
+                          <p className="text-[9px] font-mono font-black text-slate-600 truncate">{loc.address || '—'}</p>
+                        </div>
+                        <div className={`p-2 rounded-none border transition-all ${camCount > 0 ? 'bg-emerald-50/20 border-emerald-100/50' : 'bg-slate-50 border-slate-100'}`}>
+                          <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-0.5 ml-1">Cámaras</label>
+                          <p className={`text-[9px] font-mono font-black ${camCount > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>{camCount}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex gap-2 z-10">
+                      <button onClick={e => { e.stopPropagation(); setViewingLocation(loc); }} className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 rounded-none hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm">Ficha</button>
+                      {canEdit() && (
+                        <div className="flex gap-2">
+                          <button onClick={e => { e.stopPropagation(); openEdit(loc); }} className="w-7 h-7 flex items-center justify-center text-amber-600 bg-white border border-amber-100 rounded-none hover:bg-amber-500 hover:text-white transition-all shadow-sm"><Edit size={12} /></button>
+                          <button onClick={e => { e.stopPropagation(); del(loc); }} className="w-7 h-7 flex items-center justify-center text-rose-500 bg-white border border-rose-100 rounded-none hover:bg-rose-500 hover:text-white transition-all shadow-sm"><Trash2 size={12} /></button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+              {/* Pagination Header */}
+              <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filtered.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                >
+                  {selectedIds.length > 0 && canEdit() && (
+                    <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-2 duration-300">
+                      <span className="hidden xl:block text-[10px] font-black text-rose-600 uppercase tracking-widest">{selectedIds.length} marcados</span>
+                      <button onClick={handleBulkDelete} className="flex items-center gap-2 px-3 py-2 bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest rounded-md hover:bg-rose-600 transition-all shadow-sm active:scale-95" title="Eliminar seleccionados">
+                        <Trash2 size={14} /><span className="hidden sm:inline">Eliminar</span>
+                      </button>
+                    </div>
+                  )}
+                </Pagination>
+              </div>
+
+              <div className="flex-1">
+                {/* Mobile Accordion */}
+                <div className="md:hidden divide-y divide-slate-100">
+                  {paginatedData.map(loc => {
+                    const isExpanded = expandedId === loc.id;
+                    const camCount = cameraCounts[loc.id] || 0;
+                    const isSelected = selectedIds.includes(loc.id);
+                    return (
+                      <div key={loc.id} className={`bg-white overflow-hidden transition-all duration-300 ${isSelected ? 'bg-blue-50/30' : ''}`}>
+                        <div className={`p-5 flex items-center justify-between transition-colors ${isExpanded ? 'bg-slate-50/50' : ''}`}>
+                          <div className="flex items-center gap-4">
+                            {canEdit() && (
+                              <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded-md border-slate-200 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                            )}
+                            <div className="flex items-center gap-3 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : loc.id)}>
+                              <div className="w-10 h-10 rounded-none flex items-center justify-center shadow-sm bg-slate-50 text-slate-400">
+                                <MapPin size={18} />
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-black text-[#002855] uppercase leading-tight">{loc.name}</span>
+                                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-0.5">{typeLabels[loc.type] || loc.type}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <ChevronDown onClick={() => setExpandedId(isExpanded ? null : loc.id)} className={`text-slate-300 transition-transform duration-500 cursor-pointer ${isExpanded ? 'rotate-180' : ''}`} size={16} />
+                        </div>
+
+                        {isExpanded && (
+                          <div className="px-5 pb-5 space-y-5 border-t border-slate-50/50 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="p-4 rounded-none border bg-slate-50 border-slate-100">
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Dirección</label>
+                                <span className="text-[11px] font-mono font-black text-[#002855]">{loc.address || '—'}</span>
+                              </div>
+                              <div className={`p-4 rounded-none border ${camCount > 0 ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-slate-50 border-slate-100'}`}>
+                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Cámaras</label>
+                                <span className={`text-[11px] font-mono font-black ${camCount > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{camCount}</span>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => setViewingLocation(loc)} className="flex-1 py-3 bg-[#002855] text-[10px] font-black uppercase tracking-wider text-white rounded-none shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                                <Eye size={14} /> Ficha Técnica
+                              </button>
+                              {canEdit() && (
+                                <div className="flex gap-2">
+                                  <button onClick={() => openEdit(loc)} className="w-12 h-12 bg-white text-amber-600 rounded-none flex items-center justify-center border border-slate-100 shadow-sm active:scale-95 transition-all"><Edit size={14} /></button>
+                                  <button onClick={() => del(loc)} className="w-12 h-12 bg-white text-rose-500 rounded-none flex items-center justify-center border border-slate-100 shadow-sm active:scale-95 transition-all"><Trash2 size={14} /></button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-hidden relative group/table">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse border-spacing-0">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="px-6 py-5 text-left w-12">
+                            {canEdit() && (
+                              <input type="checkbox" checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length} onChange={toggleSelectAll} className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                            )}
+                          </th>
+                          <th className="px-6 py-5 text-left">
+                            <button onClick={() => handleSort('name')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+                              <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span>
+                              <SortIcon field="name" />
+                            </button>
+                          </th>
+                          <th className="px-4 py-5 text-left">
+                            <button onClick={() => handleSort('type')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+                              <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tipo</span>
+                              <SortIcon field="type" />
+                            </button>
+                          </th>
+                          <th className="px-4 py-5 text-left">
+                            <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Dirección</span>
+                          </th>
+                          <th className="px-4 py-5 text-left">
+                            <button onClick={() => handleSort('cameras')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+                              <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Cámaras</span>
+                              <SortIcon field="cameras" />
+                            </button>
+                          </th>
+                          <th className="px-6 py-5 text-center">
+                            <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {paginatedData.map(loc => {
+                          const camCount = cameraCounts[loc.id] || 0;
+                          return (
+                            <tr
+                              key={loc.id}
+                              className={`hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0 ${selectedIds.includes(loc.id) ? 'bg-blue-50/50' : ''}`}
+                              onDoubleClick={() => setViewingLocation(loc)}
+                              onClick={() => canEdit() && toggleSelect(loc.id)}
+                            >
+                              <td className="px-6 py-5 text-left w-12">
+                                <input type="checkbox" checked={selectedIds.includes(loc.id)} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                              </td>
+                              <td className="px-6 py-5 font-bold text-left">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
+                                    <MapPin size={14} />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{loc.name}</span>
+                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 md:hidden">{typeLabels[loc.type] || loc.type}</span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-4 py-5 text-left">
+                                <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${typeColors[loc.type] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                                  {typeLabels[loc.type] || loc.type}
+                                </span>
+                              </td>
+                              <td className="px-4 py-5 text-left">
+                                <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block">{loc.address || '—'}</span>
+                              </td>
+                              <td className="px-4 py-5 text-left">
+                                <div className="flex flex-col">
+                                  <span className={`text-[14px] font-mono font-black ${camCount > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{camCount}</span>
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Instaladas</span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-5 text-center">
+                                <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={e => { e.stopPropagation(); setViewingLocation(loc); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm" title="Ver Ficha">
+                                    <Eye size={14} />
+                                  </button>
+                                  {canEdit() && (
+                                    <>
+                                      <button onClick={e => { e.stopPropagation(); openEdit(loc); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Edit size={14} /></button>
+                                      <button onClick={e => { e.stopPropagation(); del(loc); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Trash2 size={14} /></button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bulk action bar */}
+      {selectedIds.length > 0 && canEdit() && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[60] pointer-events-none w-full flex justify-center px-6">
+          <div className="bg-[#002855]/95 backdrop-blur-md text-white px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 border border-white/10 pointer-events-auto">
+            <div className="flex items-center gap-2 pr-4 border-r border-white/10">
+              <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-[9px] font-black">{selectedIds.length}</div>
+              <span className="text-[8px] font-black uppercase tracking-widest opacity-80">Marcadas</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-100 transition-colors">
+                <Trash2 size={12} /> Eliminar lote
+              </button>
+              <button onClick={() => setSelectedIds([])} className="text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors">Cerrar</button>
             </div>
           </div>
         </div>
+      )}
 
-        {loading ? (
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600"></div>
-          </div>
-        ) : sortedLocations.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
-            <Building size={48} className="mx-auto text-slate-200 mb-4" />
-            <h3 className="text-lg font-bold text-slate-400 uppercase tracking-widest">No se encontraron sedes</h3>
-            <p className="text-sm text-slate-400 mt-2">Prueba con otro término de búsqueda o filtro</p>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedLocations.map(location => (
-              <div key={location.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400/50 transition-all duration-300 flex flex-col group overflow-hidden">
-                <div className="p-6 flex-1">
-                  <div className="flex items-start justify-between mb-6">
-                    <div className="bg-gray-50 rounded-xl p-2.5 group-hover:bg-blue-50 transition-colors duration-300">
-                      <MapPin className={`h-6 w-6 ${location.type === 'circuito' ? 'text-rose-500' : 'text-blue-500'}`} />
-                    </div>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${typeColors[location.type as keyof typeof typeColors] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-                      {typeLabels[location.type as keyof typeof typeLabels] || location.type}
-                    </span>
-                  </div>
-
-                  <div className="mb-6">
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate">
-                      {location.name}
-                    </h3>
-                    {location.address && (
-                      <p className="text-sm text-gray-500 mt-1 line-clamp-2 min-h-[2.5rem]">
-                        {location.address}
-                      </p>
-                    )}
-                  </div>
-
-                  {location.notes && (
-                    <div className="mb-6 px-3 py-2 bg-amber-50/50 border border-amber-100 rounded-lg">
-                      <p className="text-xs text-amber-800 line-clamp-2 italic">
-                        {location.notes}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl border border-gray-100/50">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-gray-400" />
-                      <span className="text-xs font-bold text-gray-500 uppercase tracking-tight">Cámaras</span>
-                    </div>
-                    <span className="text-lg font-black text-gray-900">
-                      {cameraCounts[location.id] || 0}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-50 flex gap-2">
-                  <button
-                    onClick={() => handleViewLocation(location)}
-                    className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
-                  >
-                    <Eye size={14} />
-                    DETALLES
-                  </button>
-                  {canEdit() && (
-                    <>
-                      <button
-                        onClick={() => handleEditLocation(location)}
-                        className="p-2 bg-white text-blue-600 border border-blue-100 rounded-lg hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-sm"
-                        title="Editar sede"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteLocation(location)}
-                        className={`p-2 bg-white rounded-lg transition-all active:scale-95 shadow-sm border ${cameraCounts[location.id] > 0
-                          ? 'text-orange-500 border-orange-100 hover:bg-orange-500 hover:text-white'
-                          : 'text-rose-500 border-rose-100 hover:bg-rose-500 hover:text-white'
-                          }`}
-                        title={cameraCounts[location.id] > 0 ? 'Eliminar sede y sus cámaras asociadas' : 'Eliminar sede'}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-slate-600 transition-colors"
-                      onClick={() => handleSort('name')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Nombre
-                        {sortConfig?.key === 'name' ? (
-                          sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                        ) : null}
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-slate-600 transition-colors"
-                      onClick={() => handleSort('type')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Tipo
-                        {sortConfig?.key === 'type' ? (
-                          sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                        ) : null}
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-slate-600 transition-colors"
-                      onClick={() => handleSort('address')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Dirección
-                        {sortConfig?.key === 'address' ? (
-                          sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                        ) : null}
-                      </div>
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest cursor-pointer hover:text-slate-600 transition-colors"
-                      onClick={() => handleSort('cameras')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Cámaras
-                        {sortConfig?.key === 'cameras' ? (
-                          sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                        ) : null}
-                      </div>
-                    </th>
-                    <th scope="col" className="relative px-6 py-4">
-                      <span className="sr-only">Acciones</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {sortedLocations.map(location => (
-                    <tr key={location.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-gray-50 rounded-lg p-2">
-                            <MapPin className={`h-5 w-5 ${location.type === 'circuito' ? 'text-rose-500' : 'text-blue-500'}`} />
-                          </div>
-                          <div>
-                            <div className="text-sm font-bold text-gray-900 leading-tight">{location.name}</div>
-                            {location.notes && (
-                              <div className="text-xs text-gray-500 line-clamp-1 mt-0.5 italic">{location.notes}</div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${typeColors[location.type as keyof typeof typeColors] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-                          {typeLabels[location.type as keyof typeof typeLabels] || location.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        {location.address ? (
-                          <div className="text-sm text-gray-700 max-w-xs truncate">{location.address}</div>
-                        ) : (
-                          <span className="text-sm text-gray-400">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Package className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm font-bold text-gray-900">{cameraCounts[location.id] || 0}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleViewLocation(location)}
-                            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
-                            title="Ver detalles"
-                          >
-                            <Eye size={16} />
-                          </button>
-                          {canEdit() && (
-                            <>
-                              <button
-                                onClick={() => handleEditLocation(location)}
-                                className="p-2 text-slate-600 hover:text-white hover:bg-blue-600 rounded-lg transition-all"
-                                title="Editar"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteLocation(location)}
-                                className={`p-2 rounded-lg transition-all border ${cameraCounts[location.id] > 0
-                                  ? 'text-orange-500 border-orange-100 hover:bg-orange-500 hover:text-white'
-                                  : 'text-rose-500 border-rose-100 hover:bg-rose-500 hover:text-white'
-                                  }`}
-                                title={cameraCounts[location.id] > 0 ? 'Eliminar sede y sus cámaras asociadas' : 'Eliminar sede'}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Modals */}
+      {/* Location Form Modal */}
       {showForm && (
         <LocationForm
-          editLocation={editingLocation}
-          onClose={handleCloseForm}
-          onSave={handleSaveLocation}
+          onClose={() => { setShowForm(false); setEditing(undefined); }}
+          onSave={async () => {
+            await Promise.all([fetchLocations(), fetchCameraCounts()]);
+            setShowForm(false);
+            setEditing(undefined);
+          }}
+          editLocation={editing}
         />
       )}
 
+      {/* Location Detail Modal */}
       {viewingLocation && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
-            {/* Modal Header */}
-            <div className={`px-8 py-6 flex items-center justify-between border-b border-gray-100 ${typeColors[viewingLocation.type as keyof typeof typeColors]?.split(' ')[0] || 'bg-gray-50'} bg-opacity-30`}>
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-2xl bg-white shadow-sm border border-gray-100`}>
-                  <MapPin className={`h-6 w-6 ${viewingLocation.type === 'circuito' ? 'text-rose-500' : 'text-blue-500'}`} />
+        <div className="fixed inset-0 bg-[#001529]/95 backdrop-blur-sm flex items-center justify-center p-0 md:p-8 lg:p-12 z-[100] animate-in fade-in duration-200">
+          <div className="bg-white w-full h-full md:h-auto md:max-h-[95vh] max-w-3xl rounded-none md:rounded-[3.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 border border-white/20">
+            {/* Header */}
+            <div className="bg-[#001529] px-6 py-4 md:px-8 md:py-6 flex items-center justify-between shrink-0 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -mr-32 -mt-32 blur-2xl" />
+              <div className="flex items-center gap-4 md:gap-6 relative z-10">
+                <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-none md:rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <Building size={28} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Detalles de Sede</h2>
-                  <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">{typeLabels[viewingLocation.type as keyof typeof typeLabels] || viewingLocation.type}</p>
+                  <h2 className="text-lg font-black text-white uppercase tracking-[0.3em] leading-tight">Ficha de Sede</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                    {viewingLocation.name}
+                  </p>
                 </div>
               </div>
-              <button
-                onClick={() => setViewingLocation(undefined)}
-                className="p-2 hover:bg-white/50 rounded-full transition-colors text-gray-400 hover:text-gray-600"
-              >
-                <X size={24} />
+              <button onClick={() => setViewingLocation(undefined)} className="p-2 md:p-2.5 bg-white/5 hover:bg-rose-500 rounded-none md:rounded-xl transition-all text-white/40 hover:text-white border border-white/10 hover:border-rose-500 relative z-10">
+                <X size={20} />
               </button>
             </div>
 
-            <div className="p-8 overflow-y-auto space-y-8">
-              {/* Información básica */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-4 bg-blue-500 rounded-full" />
-                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Información General</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50">
-                  <div className="md:col-span-2">
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nombre de la Sede</label>
-                    <p className="text-gray-900 font-bold text-lg leading-tight uppercase">{viewingLocation.name}</p>
-                  </div>
-
-                  {viewingLocation.address && (
-                    <div className="md:col-span-2">
-                      <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Dirección Fiscal / Operativa</label>
-                      <p className="text-sm text-gray-600 font-medium leading-relaxed italic">"{viewingLocation.address}"</p>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5 md:p-8 space-y-6 bg-slate-50/50">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {[
+                  { label: 'Tipo de Sede', val: typeLabels[viewingLocation.type] || viewingLocation.type, icon: <MapPin size={18} />, color: 'blue' },
+                  { label: 'Cámaras Instaladas', val: (cameraCounts[viewingLocation.id] || 0).toString(), icon: <Package size={18} />, color: 'emerald' },
+                  { label: 'Usuarios Asignados', val: '—', icon: <Users size={18} />, color: 'purple' },
+                ].map((item, i) => (
+                  <div key={i} className="bg-white p-4 rounded-none border border-slate-100 shadow-sm flex items-center gap-4">
+                    <div className={`p-3 rounded-none bg-${item.color}-50 text-${item.color}-600 shrink-0`}>{item.icon}</div>
+                    <div className="min-w-0 flex-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">{item.label}</label>
+                      <p className="text-sm font-black text-[#002855]">{item.val || '—'}</p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ))}
               </div>
 
-              {/* Estadísticas Detalladas */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-1 h-4 bg-emerald-500 rounded-full" />
-                  <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Recursos Instalados</h3>
+              {viewingLocation.address && (
+                <div className="bg-white border border-slate-100 rounded-none p-5 shadow-sm">
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Dirección</label>
+                  <p className="text-sm font-bold text-[#002855]">{viewingLocation.address}</p>
                 </div>
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center group hover:border-blue-200 transition-colors">
-                    <div className="text-3xl font-black text-blue-600 mb-1">{cameraCounts[viewingLocation.id] || 0}</div>
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Cámaras</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center group hover:border-emerald-200 transition-colors">
-                    <div className="text-3xl font-black text-emerald-600 mb-1">
-                      {cameraCounts[viewingLocation.id] ? '100%' : '0%'}
-                    </div>
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">Operatividad</div>
-                  </div>
-                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm text-center group hover:border-purple-200 transition-colors col-span-2 lg:col-span-1">
-                    <div className="text-lg font-black text-purple-600 mb-1 leading-none pt-2 uppercase truncate">
-                      {viewingLocation.type === 'revision' ? 'Automotriz' :
-                        viewingLocation.type === 'policlinico' ? 'Salud' : 'Educación'}
-                    </div>
-                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mt-1">Sector</div>
-                  </div>
-                </div>
-              </div>
+              )}
 
-              {/* Notas */}
               {viewingLocation.notes && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-1 h-4 bg-amber-500 rounded-full" />
-                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Observaciones Técnicas</h3>
-                  </div>
-                  <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100">
-                    <p className="text-sm text-amber-950 font-medium italic leading-relaxed">{viewingLocation.notes}</p>
-                  </div>
+                <div className="bg-amber-50/30 rounded-none border border-amber-200/50 p-6 relative overflow-hidden">
+                  <h3 className="text-[10px] font-black text-amber-900 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />Observaciones
+                  </h3>
+                  <p className="text-sm font-medium text-amber-900/80 leading-relaxed italic border-l-2 border-amber-400 pl-4 py-1">
+                    "{viewingLocation.notes}"
+                  </p>
                 </div>
               )}
             </div>
 
-            {/* Modal Footer */}
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
-              <button
-                onClick={() => setViewingLocation(undefined)}
-                className="flex-1 px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-widest bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
-              >
-                Cerrar
+            {/* Footer */}
+            <div className="bg-white border-t border-slate-100 px-6 py-4 md:px-8 md:py-5 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-4">
+                {canEdit() && (
+                  <button onClick={() => { setViewingLocation(undefined); openEdit(viewingLocation); }} className="flex items-center gap-2 px-4 py-2 text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 rounded-none hover:bg-amber-500 hover:text-white transition-all uppercase tracking-widest">
+                    <Edit size={14} /> Editar
+                  </button>
+                )}
+              </div>
+              <button onClick={() => setViewingLocation(undefined)} className="w-full sm:w-auto px-8 py-3 text-[11px] font-black text-white bg-[#002855] rounded-none md:rounded-2xl hover:bg-blue-600 transition-all shadow-lg active:scale-95 uppercase tracking-widest">
+                Cerrar Ficha
               </button>
-              {canEdit() && (
-                <button
-                  onClick={() => {
-                    setViewingLocation(undefined);
-                    handleEditLocation(viewingLocation);
-                  }}
-                  className="flex-1 px-4 py-3 text-xs font-black text-white uppercase tracking-widest bg-blue-600 rounded-xl hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-100"
-                >
-                  Editar Sede
-                </button>
-              )}
             </div>
           </div>
         </div>

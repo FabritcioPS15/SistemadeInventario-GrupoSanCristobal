@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, ShieldCheck, Lock, Search, Calendar,  Filter, RefreshCw, Archive, Download } from 'lucide-react';
+import { History, ShieldCheck, Lock, Search, Calendar, Filter, RefreshCw } from 'lucide-react';
+import { FaFilePdf } from "react-icons/fa6";
+import { RiFileExcel2Fill } from "react-icons/ri";
 import { supabase } from '../lib/supabase';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -39,10 +41,11 @@ export default function TicketHistory() {
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [archiving, setArchiving] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterPriority, setFilterPriority] = useState('all');
     const [filterDateRange, setFilterDateRange] = useState('all');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
 
     useEffect(() => {
         fetchArchivedTickets();
@@ -50,7 +53,6 @@ export default function TicketHistory() {
 
     const fetchArchivedTickets = async () => {
         try {
-            
             const { data, error } = await supabase
                 .from('tickets')
                 .select(`
@@ -62,12 +64,11 @@ export default function TicketHistory() {
                 .eq('status', 'archived')
                 .order('created_at', { ascending: false });
 
-
             if (error) {
                 console.error('❌ Error fetching archived tickets:', error);
                 throw error;
             }
-            
+
             setTickets(data || []);
         } catch (error) {
             console.error('❌ Error in fetchArchivedTickets:', error);
@@ -79,7 +80,7 @@ export default function TicketHistory() {
     const filteredTickets = useMemo(() => {
         return tickets.filter(ticket => {
             // Search filter
-            const searchMatch = searchTerm === '' || 
+            const searchMatch = searchTerm === '' ||
                 ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 ticket.requester?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 ticket.locations?.name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -89,32 +90,46 @@ export default function TicketHistory() {
 
             // Date range filter
             let dateMatch = true;
+            // For history, we usually care about when it was closed
+            const ticketDate = new Date(ticket.closed_at || ticket.created_at);
+            const now = new Date();
+
             if (filterDateRange !== 'all') {
-                const ticketDate = new Date(ticket.created_at);
-                const now = new Date();
-                
-                switch (filterDateRange) {
-                    case '7days':
-                        dateMatch = (now.getTime() - ticketDate.getTime()) <= 7 * 24 * 60 * 60 * 1000;
-                        break;
-                    case '30days':
-                        dateMatch = (now.getTime() - ticketDate.getTime()) <= 30 * 24 * 60 * 60 * 1000;
-                        break;
-                    case '90days':
-                        dateMatch = (now.getTime() - ticketDate.getTime()) <= 90 * 24 * 60 * 60 * 1000;
-                        break;
+                if (filterDateRange === 'custom') {
+                    if (startDate) {
+                        const [y, m, d] = startDate.split('-').map(Number);
+                        const start = new Date(y, m - 1, d, 0, 0, 0);
+                        if (ticketDate < start) dateMatch = false;
+                    }
+                    if (endDate && dateMatch) {
+                        const [y, m, d] = endDate.split('-').map(Number);
+                        const end = new Date(y, m - 1, d, 23, 59, 59);
+                        if (ticketDate > end) dateMatch = false;
+                    }
+                } else {
+                    switch (filterDateRange) {
+                        case '7days':
+                            dateMatch = (now.getTime() - ticketDate.getTime()) <= 7 * 24 * 60 * 60 * 1000;
+                            break;
+                        case '30days':
+                            dateMatch = (now.getTime() - ticketDate.getTime()) <= 30 * 24 * 60 * 60 * 1000;
+                            break;
+                        case '90days':
+                            dateMatch = (now.getTime() - ticketDate.getTime()) <= 90 * 24 * 60 * 60 * 1000;
+                            break;
+                    }
                 }
             }
 
             return searchMatch && priorityMatch && dateMatch;
         });
-    }, [tickets, searchTerm, filterPriority, filterDateRange]);
+    }, [tickets, searchTerm, filterPriority, filterDateRange, startDate, endDate]);
 
     const getTimeToClose = (ticket: Ticket) => {
         const created = new Date(ticket.created_at);
         const closed = new Date(ticket.closed_at || ticket.updated_at);
         const diffMs = closed.getTime() - created.getTime();
-        
+
         if (diffMs < 60000) { // Less than 1 minute
             const seconds = Math.floor(diffMs / 1000);
             return `${seconds}s`;
@@ -141,20 +156,27 @@ export default function TicketHistory() {
         // Title & Header
         doc.setFontSize(20);
         doc.setTextColor(0, 40, 85);
-        doc.text('Historial Completo de Tickets', 14, 22);
+        doc.text('Historial de Tickets', 14, 22);
 
         doc.setFontSize(10);
         doc.setTextColor(100);
         doc.text(`Generado el: ${new Date().toLocaleDateString()} a las ${new Date().toLocaleTimeString()}`, 14, 30);
-        doc.text(`Total de tickets archivados: ${filteredTickets.length}`, 14, 37);
+
+        if (filterDateRange === 'custom' && (startDate || endDate)) {
+            doc.text(`Rango: ${startDate || 'Inicio'} hasta ${endDate || 'Hoy'}`, 14, 37);
+        } else if (filterDateRange !== 'all') {
+            doc.text(`Periodo: ${filterDateRange}`, 14, 37);
+        }
+
+        doc.text(`Total de tickets en este reporte: ${filteredTickets.length}`, 14, 44);
 
         // Tickets Table
-        const tableBody = filteredTickets.map(t => [
+        const tableBody = filteredTickets.slice(0, 100).map(t => [
             `TK-${t.id.slice(0, 6).toUpperCase()}`,
             t.title,
             t.requester?.full_name || 'N/A',
             t.attendant?.full_name || 'Sin asignar',
-            t.priority === 'critical' ? 'P1 - Crítica' : t.priority === 'high' ? 'P2 - Alta' : t.priority === 'medium' ? 'P3 - Media' : 'P4 - Baja',
+            PRIORITY_STYLES[t.priority]?.label || t.priority,
             new Date(t.created_at).toLocaleDateString(),
             t.closed_at ? new Date(t.closed_at).toLocaleDateString() : 'N/A',
             getTimeToClose(t)
@@ -162,7 +184,7 @@ export default function TicketHistory() {
 
         autoTable(doc, {
             startY: 50,
-            head: [['ID', 'Título', 'Solicitante', 'Atendido por', 'Prioridad', 'Fecha Creación', 'Fecha Cierre', 'Tiempo de Cierre']],
+            head: [['ID', 'Título', 'Solicitante', 'Atendido por', 'Prioridad', 'Fecha Creación', 'Fecha Cierre', 'Tiempo Cierre']],
             body: tableBody,
             headStyles: { fillColor: [0, 40, 85] },
             alternateRowStyles: { fillColor: [240, 245, 250] },
@@ -173,73 +195,30 @@ export default function TicketHistory() {
         doc.save(`Historial_Tickets_${new Date().toISOString().split('T')[0]}.pdf`);
     };
 
-    const handleDiagnose = async () => {
-        try {
-            
-            // Check all tickets
-            const { data: allTickets } = await supabase
-                .from('tickets')
-                .select('id, title, status, created_at, closed_at')
-                .order('created_at', { ascending: false })
-                .limit(10);
-            
-            
-            // Check specifically for archived tickets
-            const { data: archivedTickets } = await supabase
-                .from('tickets')
-                .select('id, title, status, created_at, closed_at')
-                .eq('status', 'archived');
-            
-            
-            // Check closed tickets
-            const { data: closedTickets } = await supabase
-                .from('tickets')
-                .select('id, title, status, created_at, closed_at')
-                .eq('status', 'closed');
-            
-            
-            alert(`Diagnóstico completado. Revisa la consola para detalles.
-            
-Total tickets recientes: ${allTickets?.length || 0}
-Tickets archivados: ${archivedTickets?.length || 0}
-Tickets cerrados: ${closedTickets?.length || 0}`);
-            
-        } catch (error) {
-            console.error('❌ Diagnosis error:', error);
-            alert('Error en diagnóstico: ' + (error as any)?.message);
-        }
+    const generateHistoryExcel = () => {
+        const data = filteredTickets.map(t => ({
+            'ID': `TK-${t.id.slice(0, 6).toUpperCase()}`,
+            'Incidente': t.title,
+            'Descripción': t.description || '',
+            'Estado': 'Archivado',
+            'Prioridad': PRIORITY_STYLES[t.priority]?.label || t.priority,
+            'Solicitante': t.requester?.full_name || 'N/A',
+            'Sede': t.locations?.name || 'N/A',
+            'Atendido Por': t.attendant?.full_name || 'Sin asignar',
+            'Fecha Creación': new Date(t.created_at).toLocaleString(),
+            'Fecha Cierre': t.closed_at ? new Date(t.closed_at).toLocaleString() : 'N/A',
+            'Tiempo de Cierre': getTimeToClose(t)
+        }));
+
+        import('xlsx').then(XLSX => {
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Historial Tickets");
+            XLSX.writeFile(wb, `Historial_Tickets_${new Date().toISOString().split('T')[0]}.xlsx`);
+        });
     };
 
-    const handleForceArchive = async () => {
-        setArchiving(true);
-        try {
-            // Fetch all closed tickets that should be archived
-            const { data: closedTickets, error } = await supabase
-                .from('tickets')
-                .select('*')
-                .eq('status', 'closed')
-                .lte('closed_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
 
-            if (error) throw error;
-
-            if (closedTickets && closedTickets.length > 0) {
-                // Archive all eligible tickets
-                for (const ticket of closedTickets) {
-                    await supabase.from('tickets').update({ status: 'archived' }).eq('id', ticket.id);
-                }
-                
-                alert(`Se archivaron ${closedTickets.length} tickets exitosamente`);
-                await fetchArchivedTickets();
-            } else {
-                alert('No hay tickets elegibles para archivar');
-            }
-        } catch (error) {
-            console.error('Error al forzar archivado:', error);
-            alert('Error al forzar archivado');
-        } finally {
-            setArchiving(false);
-        }
-    };
 
     if (loading) {
         return (
@@ -254,7 +233,6 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
 
     return (
         <div className="min-h-screen bg-[#f8f9fc]">
-            {/* Header Section */}
             <div className="px-8 pt-8 pb-6">
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex items-center gap-4">
@@ -272,44 +250,32 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                         <button
                             onClick={handleRefresh}
                             disabled={refreshing}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-all disabled:opacity-50"
+                            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-50"
                         >
-                            <RefreshCw size={20} className={refreshing ? 'animate-spin' : ''} />
-                            <span className="font-medium">{refreshing ? 'Actualizando...' : 'Actualizar'}</span>
+                            <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
+                            <span className="font-medium">Refrescar</span>
                         </button>
                         <button
                             onClick={generateHistoryPDF}
                             disabled={filteredTickets.length === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white hover:bg-rose-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <FaFilePdf size={20} />
+                            <span className="font-medium">PDF</span>
+                        </button>
+                        <button
+                            onClick={generateHistoryExcel}
+                            disabled={filteredTickets.length === 0}
                             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <Download size={20} />
-                            <span className="font-medium">Descargar PDF</span>
+                            <RiFileExcel2Fill size={20} />
+                            <span className="font-medium">Excel</span>
                         </button>
-                        <button
-                            onClick={handleDiagnose}
-                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-all"
-                        >
-                            <ShieldCheck size={20} />
-                            <span className="font-medium">Diagnosticar</span>
-                        </button>
-                        <button
-                            onClick={handleForceArchive}
-                            disabled={archiving}
-                            className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 rounded-lg transition-all disabled:opacity-50"
-                        >
-                            <Archive size={20} />
-                            <span className="font-medium">{archiving ? 'Archivando...' : 'Forzar Archivado'}</span>
-                        </button>
-                        <div className="text-sm text-slate-500">
-                            <span className="font-bold text-[#002855]">{filteredTickets.length}</span> tickets archivados
-                        </div>
                     </div>
                 </div>
 
-                {/* Filters Section */}
                 <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
                     <div className="flex flex-wrap items-center gap-4">
-                        {/* Search */}
                         <div className="flex-1 min-w-[300px]">
                             <div className="relative">
                                 <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -318,18 +284,17 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                                     placeholder="Buscar por título, solicitante o sede..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] focus:border-transparent"
+                                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855]"
                                 />
                             </div>
                         </div>
 
-                        {/* Priority Filter */}
                         <div className="flex items-center gap-2">
                             <Filter size={18} className="text-slate-400" />
                             <select
                                 value={filterPriority}
                                 onChange={(e) => setFilterPriority(e.target.value)}
-                                className="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] focus:border-transparent text-sm"
+                                className="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] text-sm"
                             >
                                 <option value="all">Todas las prioridades</option>
                                 <option value="critical">P1 - Crítica</option>
@@ -339,25 +304,47 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                             </select>
                         </div>
 
-                        {/* Date Range Filter */}
                         <div className="flex items-center gap-2">
                             <Calendar size={18} className="text-slate-400" />
                             <select
                                 value={filterDateRange}
                                 onChange={(e) => setFilterDateRange(e.target.value)}
-                                className="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] focus:border-transparent text-sm"
+                                className="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] text-sm font-bold uppercase tracking-wider"
                             >
                                 <option value="all">Todo el tiempo</option>
                                 <option value="7days">Últimos 7 días</option>
                                 <option value="30days">Últimos 30 días</option>
                                 <option value="90days">Últimos 90 días</option>
+                                <option value="custom">Rango Personalizado</option>
                             </select>
                         </div>
+
+                        {filterDateRange === 'custom' && (
+                            <div className="flex items-center gap-3 animate-in slide-in-from-left-2 duration-300">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Desde</span>
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] text-sm font-medium"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hasta</span>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] text-sm font-medium"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Content Section */}
             <div className="px-8 pb-12">
                 {filteredTickets.length === 0 ? (
                     <div className="bg-white rounded-3xl border border-slate-200 p-16 text-center">
@@ -366,7 +353,7 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                         </div>
                         <h3 className="text-xl font-bold text-slate-700 mb-2">No se encontraron tickets archivados</h3>
                         <p className="text-slate-500">
-                            {searchTerm || filterPriority !== 'all' || filterDateRange !== 'all' 
+                            {searchTerm || filterPriority !== 'all' || filterDateRange !== 'all'
                                 ? 'Intenta ajustar los filtros de búsqueda'
                                 : 'Los tickets cerrados aparecerán aquí después de 10 minutos'
                             }
@@ -392,7 +379,6 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                             <tbody className="divide-y divide-slate-50">
                                 {filteredTickets.map((ticket) => {
                                     const prio = PRIORITY_STYLES[ticket.priority] || PRIORITY_STYLES.medium;
-                                    
                                     return (
                                         <tr key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)} className="hover:bg-blue-50/10 transition-all cursor-pointer group active:bg-blue-50/30">
                                             <td className="px-8 py-6">
@@ -423,7 +409,7 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                                                         ) : ticket.requester?.full_name?.charAt(0)}
                                                     </div>
                                                     <div>
-                                                        <p className="text-[11px] font-black text-slate-700 uppercase leading-none mb-1">{ticket.requester?.full_name?.split(' ')[0]}</p>
+                                                        <p className="text-[11px] font-black text-slate-700 uppercase leading-none mb-1">{ticket.requester?.full_name}</p>
                                                         <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest truncate max-w-[80px]">{ticket.locations?.name || 'Central'}</p>
                                                     </div>
                                                 </div>
@@ -437,7 +423,7 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                                                             ) : ticket.attendant?.full_name?.charAt(0)}
                                                         </div>
                                                         <div>
-                                                            <p className="text-[11px] font-black text-slate-700 uppercase leading-none">{ticket.attendant?.full_name?.split(' ')[0]}</p>
+                                                            <p className="text-[11px] font-black text-slate-700 uppercase leading-none">{ticket.attendant?.full_name}</p>
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -453,9 +439,9 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                                             <td className="px-6 py-6">
                                                 <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
                                                     <Calendar size={12} />
-                                                    {new Date(ticket.created_at).toLocaleDateString('es-PE', { 
-                                                        day: '2-digit', 
-                                                        month: 'short', 
+                                                    {new Date(ticket.created_at).toLocaleDateString('es-PE', {
+                                                        day: '2-digit',
+                                                        month: 'short',
                                                         year: 'numeric',
                                                         hour: '2-digit',
                                                         minute: '2-digit'
@@ -465,9 +451,9 @@ Tickets cerrados: ${closedTickets?.length || 0}`);
                                             <td className="px-6 py-6">
                                                 <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
                                                     <Calendar size={12} />
-                                                    {ticket.closed_at ? new Date(ticket.closed_at).toLocaleDateString('es-PE', { 
-                                                        day: '2-digit', 
-                                                        month: 'short', 
+                                                    {ticket.closed_at ? new Date(ticket.closed_at).toLocaleDateString('es-PE', {
+                                                        day: '2-digit',
+                                                        month: 'short',
                                                         year: 'numeric',
                                                         hour: '2-digit',
                                                         minute: '2-digit'

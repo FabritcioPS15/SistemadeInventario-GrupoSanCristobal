@@ -21,6 +21,8 @@ interface SubmenuItem {
   id: string;
   label: string;
   path: string;
+  hasSubmenu?: boolean;
+  submenu?: SubmenuItem[];
 }
 
 interface MenuItem {
@@ -41,14 +43,12 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
   const { hasPermission, logout } = useAuth();
   const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [menuTop, setMenuTop] = useState<number>(0);
   const [adjustedTop, setAdjustedTop] = useState(0);
   const subMenuRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<NodeJS.Timeout>();
 
   const handleMouseEnter = (itemId: string, e: React.MouseEvent) => {
-    // Solo en desktop, no en móvil
     if (window.innerWidth >= 1024) {
       if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -58,7 +58,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
   };
 
   const handleMouseLeave = () => {
-    // Solo en desktop, no en móvil
     if (window.innerWidth >= 1024) {
       closeTimeoutRef.current = setTimeout(() => {
         setHoveredItem(null);
@@ -66,19 +65,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
     }
   };
 
-  const handleItemClick = (itemId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // En móvil: toggle del submenu
-    if (window.innerWidth < 1024) {
-      setExpandedItems(prev => 
-        prev.includes(itemId) 
-          ? prev.filter(id => id !== itemId)
-          : [...prev, itemId]
-      );
-    }
-  };
+
 
   useEffect(() => {
     if (hoveredItem && subMenuRef.current) {
@@ -142,23 +129,74 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
           path: '/inventory',
           hasSubmenu: true,
           submenu: [
+            { id: 'inventory-all', label: 'Ver Todo', path: '/inventory/all' },
+            { 
+              id: 'inventory-computo', 
+              label: 'Cómputo y TI', 
+              path: '/inventory/computo-ti',
+              hasSubmenu: true,
+              submenu: [
+                { id: 'sub-cpu', label: 'Computadoras (CPU)', path: '/inventory/computo-ti/cpu' },
+                { id: 'sub-monitor', label: 'Monitores', path: '/inventory/computo-ti/monitores' },
+                { id: 'sub-laptop', label: 'Laptops', path: '/inventory/computo-ti/laptops' },
+                { id: 'sub-perifericos', label: 'Teclados y Mouse', path: '/inventory/computo-ti/perifericos' },
+                { id: 'sub-impresora', label: 'Impresoras', path: '/inventory/computo-ti/impresoras' },
+                { id: 'sub-redes', label: 'Redes y DVR', path: '/inventory/computo-ti/redes' },
+              ]
+            },
+            { 
+              id: 'inventory-biometricos', 
+              label: 'Biométricos', 
+              path: '/inventory/biometricos-control',
+              hasSubmenu: true,
+              submenu: [
+                { id: 'sub-bio-lector', label: 'Biométricos', path: '/inventory/biometricos-control/lector' },
+                { id: 'sub-bio-huella', label: 'Control de Huella', path: '/inventory/biometricos-control/huella' },
+              ]
+            },
+            { 
+              id: 'inventory-medicos', 
+              label: 'Equipos Médicos', 
+              path: '/inventory/equipos-medicos',
+              hasSubmenu: true,
+              submenu: [
+                { id: 'sub-med-diag', label: 'Diagnóstico', path: '/inventory/equipos-medicos/diagnostico' },
+                { id: 'sub-med-clinico', label: 'Clínicos', path: '/inventory/equipos-medicos/clinicos' },
+                { id: 'sub-med-lab', label: 'Laboratorio', path: '/inventory/equipos-medicos/laboratorio' },
+                { id: 'sub-med-eval', label: 'Evaluación Técnica', path: '/inventory/equipos-medicos/evaluacion' },
+              ]
+            },
+            { 
+              id: 'inventory-mobiliario', 
+              label: 'Mobiliario', 
+              path: '/inventory/mobiliario',
+              hasSubmenu: true,
+              submenu: [
+                { id: 'sub-mob-oficina', label: 'Oficina', path: '/inventory/mobiliario/oficina' },
+                { id: 'sub-mob-infra', label: 'Infraestructura', path: '/inventory/mobiliario/infraestructura' },
+              ]
+            },
+            { 
+              id: 'inventory-seguridad', 
+              label: 'Seguridad', 
+              path: '/inventory/seguridad',
+              hasSubmenu: true,
+              submenu: [
+                { id: 'sub-seg-extintor', label: 'Extintores', path: '/inventory/seguridad/extintor' },
+                { id: 'sub-seg-alarmas', label: 'Alarmas y Sensores', path: '/inventory/seguridad/alarmas' },
+              ]
+            },
+            { 
+              id: 'inventory-utiles', 
+              label: 'Útiles de Oficina', 
+              path: '/inventory/utiles-oficina',
+              hasSubmenu: true,
+              submenu: [
+                { id: 'sub-uti-papel', label: 'Papelería', path: '/inventory/utiles-oficina/papel' },
+                { id: 'sub-uti-escritorio', label: 'Escritorio', path: '/inventory/utiles-oficina/escritorio' },
+              ]
+            },
             { id: 'spare-parts', label: 'Repuestos', path: '/spare-parts' },
-            { id: 'inventory-pc', label: 'PCs', path: '/inventory/pc' },
-            { id: 'inventory-celular', label: 'Celulares', path: '/inventory/celular' },
-            { id: 'inventory-dvr', label: 'DVRs', path: '/inventory/dvr' },
-            { id: 'inventory-impresora', label: 'Impresoras', path: '/inventory/impresora' },
-            { id: 'inventory-escaner', label: 'Escáneres', path: '/inventory/escaner' },
-            { id: 'inventory-monitor', label: 'Monitores', path: '/inventory/monitor' },
-            { id: 'inventory-laptop', label: 'Laptops', path: '/inventory/laptop' },
-            { id: 'inventory-proyector', label: 'Proyectores', path: '/inventory/proyector' },
-            { id: 'inventory-switch', label: 'Switch', path: '/inventory/switch' },
-            { id: 'inventory-chip', label: 'Chips de Celular', path: '/inventory/chip' },
-            { id: 'inventory-tinte', label: 'Tintes', path: '/inventory/tinte' },
-            { id: 'inventory-fuente', label: 'Fuentes de Poder', path: '/inventory/fuente' },
-            { id: 'inventory-ram', label: 'Memorias RAM', path: '/inventory/ram' },
-            { id: 'inventory-disco', label: 'Discos', path: '/inventory/disco' },
-            { id: 'inventory-disco-extraido', label: 'Discos Extraídos', path: '/inventory/disco-extraido' },
-            { id: 'inventory-maquinaria', label: 'Maquinarias', path: '/inventory/maquinaria' },
           ]
         },
         {
@@ -250,7 +288,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        {/* Toggle & Logo Header */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-white/5 shrink-0 overflow-hidden">
           {!collapsed && (
             <div className="flex items-center gap-3 transition-opacity duration-300">
@@ -261,14 +298,12 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             </div>
           )}
 
-          {/* Botón de Colapsar Mejorado - Desktop Only */}
           <div className={`relative hidden lg:block ${collapsed ? 'mx-auto' : ''}`}>
             <button
               onClick={onToggleCollapse}
               className="p-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-300 text-white/70 hover:text-white group border border-white/20 hover:border-white/30 shadow-lg"
             >
               <div className="relative">
-                {/* Flecha principal - más grande y visible */}
                 {collapsed ? (
                   <ChevronRight size={18} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:text-white" />
                 ) : (
@@ -276,20 +311,11 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                 )}
               </div>
             </button>
-            
-            {/* Tooltip mejorado */}
-            <div className={`absolute right-full mr-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 pointer-events-none transition-opacity duration-300 shadow-xl whitespace-nowrap ${collapsed ? 'group-hover:opacity-100' : ''}`}>
-              <div className="font-semibold">{collapsed ? 'Expandir menú' : 'Colapsar menú'}</div>
-              <div className="text-gray-300 text-[10px] mt-0.5">Click para {collapsed ? 'mostrar' : 'ocultar'}</div>
-              {/* Flechita del tooltip */}
-              <div className="absolute left-full top-1/2 -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 rotate-45" />
-            </div>
           </div>
         </div>
 
-        {/* Navigation Content */}
         <div className="flex-1 overflow-y-auto sidebar-scroll py-6 flex flex-col">
-          {sections.map((section) => {
+          {sections.map((section, index) => {
             const filteredItems = section.items.filter(item => {
               if (!hasPermission(item.id)) return false;
               if (item.submenu) return item.submenu.some(sub => hasPermission(sub.id));
@@ -299,24 +325,15 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             if (filteredItems.length === 0) return null;
 
             return (
-              <div key={section.title} className="mb-4 last:mb-0">
-                {!collapsed && (
-                  <h3 className="px-6 mb-2 text-[10px] font-black uppercase tracking-[2.5px] text-white/40">
-                    {section.title}
-                  </h3>
+              <div key={section.title} className="mb-2 last:mb-0">
+                {!collapsed && index > 0 && (
+                  <div className="my-2 mx-4 border-t border-white/10" />
                 )}
-                {collapsed && section.title !== 'Principal' && (
-                  <div className="px-3 mb-2">
-                    <div className="h-px bg-white/10"></div>
-                  </div>
-                )}
-                <div className="space-y-1.5 px-3">
+                <div className="space-y-1 px-3">
                   {filteredItems.map(item => {
                     const Icon = item.icon;
                     const isActive = isPathActive(item.path);
                     const isHovered = hoveredItem === item.id;
-                    const isExpanded = expandedItems.includes(item.id);
-                    const isMobile = window.innerWidth < 1024;
 
                     return (
                       <div key={item.id}>
@@ -328,7 +345,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                           <NavLink
                             to={item.path}
                             onClick={() => {
-                              window.innerWidth < 1024 && onCloseMobile?.();
+                              if (window.innerWidth < 1024) onCloseMobile?.();
                               setHoveredItem(null);
                             }}
                             className={`
@@ -342,52 +359,15 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                               <>
                                 <span className="text-[13px] font-bold tracking-tight flex-1 truncate uppercase">{item.label}</span>
                                 {item.hasSubmenu && (
-                                  <button
-                                    onClick={(e) => handleItemClick(item.id, e)}
-                                    className={`p-1 rounded transition-all duration-200 ${
-                                      isMobile ? 'hover:bg-white/10' : 'opacity-40'
-                                    }`}
-                                  >
-                                    <ChevronRight 
-                                      size={14} 
-                                      className={`transition-transform duration-200 ${
-                                        isMobile && isExpanded ? 'rotate-90' : ''
-                                      }`}
-                                    />
-                                  </button>
+                                  <ChevronRight
+                                    size={14}
+                                    className="transition-transform duration-200 opacity-50 group-hover:opacity-100"
+                                  />
                                 )}
                               </>
                             )}
                           </NavLink>
                         </div>
-
-                        {/* Submenú inline en móvil */}
-                        {isMobile && item.hasSubmenu && isExpanded && (
-                          <div className="ml-4 mt-1 space-y-1 pb-2">
-                            {item.submenu?.filter((sub: any) => hasPermission(sub.id)).map((sub: any) => {
-                              const isSubActive = location.pathname === sub.path;
-                              return (
-                                <NavLink
-                                  key={sub.id}
-                                  to={sub.path}
-                                  onClick={() => {
-                                    onCloseMobile?.();
-                                    setExpandedItems(prev => prev.filter(id => id !== item.id));
-                                  }}
-                                  className={`
-                                    flex items-center gap-3 px-3 py-2 text-[12px] font-bold uppercase tracking-tight rounded-xl transition-all
-                                    ${isSubActive 
-                                      ? 'text-white bg-blue-500 shadow-lg shadow-blue-500/20' 
-                                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                                    }
-                                  `}
-                                >
-                                  {sub.label}
-                                </NavLink>
-                              );
-                            })}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -397,16 +377,11 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
           })}
         </div>
 
-        {/* Footer */}
-        <div className="p-4 bg-black/30 border-t border-white/5 flex flex-col gap-4">
+        <div className="p-4 bg-black/30 border-t border-white/5 shrink-0 flex flex-col gap-4">
           {!collapsed ? (
-            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/5 shadow-inner">
-              <div className="flex-1 min-w-0">
-                <button onClick={logout} className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all uppercase tracking-[2px]">
-                  <LogOut size={14} /> Salir
-                </button>
-              </div>
-            </div>
+            <button onClick={logout} className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all uppercase tracking-[2px]">
+              <LogOut size={14} /> Salir
+            </button>
           ) : (
             <button onClick={logout} className="mx-auto p-2 text-white/30 hover:text-rose-400 transition-colors">
               <LogOut size={20} />
@@ -419,17 +394,14 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       {hoveredItem && window.innerWidth >= 1024 && (
         <div
           ref={subMenuRef}
-          className={`
-            fixed z-[120] transition-all duration-200
-            ${activeSubmenuItems && activeSubmenuItems.length > 0
-              ? 'bg-[#1e293b] border border-blue-500/20 shadow-2xl rounded-2xl py-3 min-w-[240px]'
-              : 'bg-blue-600 text-white px-4 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest shadow-xl border border-white/10'}
-          `}
+          className={`fixed z-[120] bg-[#1e293b] border border-blue-500/20 shadow-2xl rounded-2xl transition-all duration-200 ${
+            activeSubmenuItems && activeSubmenuItems.length > 0 ? 'py-3 min-w-[240px]' : 'py-1.5 px-3'
+          }`}
           style={{
             top: adjustedTop || menuTop,
             left: collapsed ? '5.5rem' : '18.5rem',
-            opacity: hoveredItem ? 1 : 0,
-            transform: `translateX(${hoveredItem ? '0' : '-10px'})`
+            opacity: 1,
+            transform: 'translateX(0)'
           }}
           onMouseEnter={() => { if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current); }}
           onMouseLeave={handleMouseLeave}
@@ -442,30 +414,42 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                   {activeItem?.label}
                 </h4>
               </div>
-              <div className="max-h-[calc(100vh-60px)] overflow-y-auto sidebar-scroll px-2 space-y-0.5">
-                {activeSubmenuItems.filter((sub: any) => hasPermission(sub.id)).map((sub: any) => {
-                  const isSubActive = location.pathname === sub.path;
-                  return (
-                    <NavLink
-                      key={sub.id}
-                      to={sub.path}
-                      onClick={() => {
-                        window.innerWidth < 1024 && onCloseMobile?.();
-                        setHoveredItem(null);
-                      }}
-                      className={`
-                        flex items-center gap-3 px-4 py-2.5 text-[12px] font-bold uppercase tracking-tight rounded-xl transition-all
-                        ${isSubActive ? 'text-white bg-blue-500 shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}
-                      `}
-                    >
-                      {sub.label}
-                    </NavLink>
-                  );
-                })}
+          <div className="max-h-[calc(100vh-60px)] overflow-y-auto sidebar-scroll px-2 space-y-0.5">
+            {activeSubmenuItems?.filter((sub) => hasPermission(sub.id)).map((sub) => (
+              <div key={sub.id}>
+                <NavLink
+                  to={sub.path}
+                  className={({ isActive }) => `
+                    flex items-center gap-3 px-4 py-2.5 text-[12px] font-bold uppercase tracking-tight rounded-xl transition-all
+                    ${isActive ? 'text-white bg-blue-500 shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                  `}
+                >
+                  {sub.label}
+                </NavLink>
+                {sub.hasSubmenu && (
+                  <div className="ml-4 mt-1 border-l border-white/10 pl-2 space-y-0.5">
+                    {sub.submenu?.map(deepSub => (
+                      <NavLink
+                        key={deepSub.id}
+                        to={deepSub.path}
+                        className={({ isActive }) => `
+                          block px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all
+                          ${isActive ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}
+                        `}
+                      >
+                        {deepSub.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
               </div>
+            ))}
+          </div>
             </>
           ) : (
-            <span>{activeItem?.label}</span>
+            <div className="flex items-center justify-center">
+              <span className="text-[11px] font-black tracking-widest uppercase text-white">{activeItem?.label}</span>
+            </div>
           )}
         </div>
       )}

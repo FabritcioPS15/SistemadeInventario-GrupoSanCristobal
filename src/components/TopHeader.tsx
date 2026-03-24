@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef} from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 // Forzar importación para evitar caché
-import {  Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, FileText, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Building, Users as UsersIcon, Clipboard, Ticket } from 'lucide-react';
+import {  Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid } from 'lucide-react';
 import { supabase, SutranVisit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationsFinal from './NotificationsFinal';
+import { RiFileExcel2Fill } from 'react-icons/ri';
+import { FaFilePdf } from 'react-icons/fa6';
 
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -65,7 +67,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 title: 'Acciones Dashboard',
                 searchPlaceholder: 'Buscar...',
                 actions: [
-                    { icon: <FileText size={16} />, label: 'Reportes', action: () => navigate('/tickets/reports') },
+                    { icon: <FaFilePdf size={16} />, label: 'Reportes', action: () => navigate('/tickets/reports') },
                     { icon: <RefreshCw size={16} />, label: 'Actualizar', action: () => window.location.reload() },
                     { icon: <BarChart3 size={16} />, label: 'Estadísticas', action: () => alert('Estadísticas en desarrollo') }
                 ]
@@ -79,7 +81,8 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 searchPlaceholder: 'Buscar tickets...',
                 actions: [
                     { icon: <Plus size={16} />, label: 'Nuevo Ticket', action: () => window.dispatchEvent(new CustomEvent('tickets:new')) },
-                    { icon: <FileText size={16} />, label: 'Reportes', action: () => navigate('/tickets/reports') },
+                    { icon: <FaFilePdf size={16} />, label: 'Reportes', action: () => navigate('/tickets/reports') },
+                    { icon: <RiFileExcel2Fill size={16} />, label: 'Descargar Excel', action: () => window.dispatchEvent(new CustomEvent('tickets:export')) },
                     { icon: <Clipboard size={16} />, label: 'Historial', action: () => navigate('/tickets/history') }
                 ]
             };
@@ -92,6 +95,8 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 searchPlaceholder: 'Buscar equipos...',
                 actions: [
                     { icon: <Plus size={16} />, label: 'Agregar Equipo', action: () => window.dispatchEvent(new CustomEvent('inventory:new')) },
+                    { icon: <RiFileExcel2Fill size={16} />, label: 'Exportar Excel', action: () => window.dispatchEvent(new CustomEvent('inventory:export')) },
+                    { icon: <FaFilePdf size={16} />, label: 'Exportar PDF', action: () => window.dispatchEvent(new CustomEvent('inventory:export-pdf')) },
                     { icon: <Package size={16} />, label: 'Repuestos', action: () => navigate('/spare-parts') },
                     { icon: <Wrench size={16} />, label: 'Mantenimiento', action: () => navigate('/maintenance') }
                 ]
@@ -105,8 +110,9 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 searchPlaceholder: 'Buscar usuarios...',
                 actions: [
                     { icon: <Plus size={16} />, label: 'Nuevo Usuario', action: () => window.dispatchEvent(new CustomEvent('users:new')) },
-                    { icon: <Settings size={16} />, label: 'Permisos', action: () => alert('Permisos en desarrollo') },
-                    { icon: <FileText size={16} />, label: 'Reporte', action: () => alert('Reporte en desarrollo') }
+                    { icon: <RiFileExcel2Fill size={16} />, label: 'Exportar Excel', action: () => window.dispatchEvent(new CustomEvent('users:export')) },
+                    { icon: <FaFilePdf size={16} />, label: 'Exportar PDF', action: () => window.dispatchEvent(new CustomEvent('users:export-pdf')) },
+                    { icon: <Settings size={16} />, label: 'Permisos', action: () => alert('Permisos en desarrollo') }
                 ]
             };
         }
@@ -118,7 +124,8 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 searchPlaceholder: 'Buscar vehículos...',
                 actions: [
                     { icon: <Plus size={16} />, label: 'Agregar Vehículo', action: () => window.dispatchEvent(new CustomEvent('flota:new')) },
-                    { icon: <FileText size={16} />, label: 'Reporte', action: () => window.dispatchEvent(new CustomEvent('flota:report')) },
+                    { icon: <FaFilePdf size={16} />, label: 'Reporte PDF', action: () => window.dispatchEvent(new CustomEvent('flota:report')) },
+                    { icon: <RiFileExcel2Fill size={16} />, label: 'Exportar Excel', action: () => window.dispatchEvent(new CustomEvent('flota:export')) },
                     { icon: <Wrench size={16} />, label: 'Mantenimiento', action: () => navigate('/maintenance') }
                 ]
             };
@@ -132,7 +139,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 actions: [
                     { icon: <Plus size={16} />, label: 'Nueva Visita', action: () => window.dispatchEvent(new CustomEvent('sutran:new')) },
                     { icon: <Calendar size={16} />, label: 'Calendario', action: () => alert('Calendario en desarrollo') },
-                    { icon: <FileText size={16} />, label: 'Reporte', action: () => window.dispatchEvent(new CustomEvent('sutran:report')) }
+                    { icon: <FaFilePdf size={16} />, label: 'Reporte PDF', action: () => window.dispatchEvent(new CustomEvent('sutran:report')) }
                 ]
             };
         }
@@ -153,12 +160,14 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
         if (currentPath.startsWith('/cameras')) {
             return {
                 show: true,
-                title: 'Acciones Cámaras',
+                showSearch: false,
+                title: 'Control de Cámaras',
                 searchPlaceholder: 'Buscar cámaras...',
                 actions: [
                     { icon: <Plus size={16} />, label: 'Agregar Cámara', action: () => window.dispatchEvent(new CustomEvent('cameras:new')) },
-                    { icon: <Camera size={16} />, label: 'Revisión', action: () => navigate('/cameras/revision') },
-                    { icon: <Building size={16} />, label: 'Sedes', action: () => navigate('/locations') }
+                    { icon: <RiFileExcel2Fill size={16} />, label: 'Descargar en Excel', action: () => window.dispatchEvent(new CustomEvent('cameras:export')) },
+                    { icon: <FaFilePdf size={16} />, label: 'Descargar en PDF', action: () => window.dispatchEvent(new CustomEvent('cameras:export-pdf')) },
+                    { icon: <LayoutGrid size={16} />, label: 'Cambiar de vista', action: () => window.dispatchEvent(new CustomEvent('cameras:toggle-view')) }
                 ]
             };
         }
@@ -170,6 +179,8 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 searchPlaceholder: 'Buscar sedes...',
                 actions: [
                     { icon: <Plus size={16} />, label: 'Nueva Sede', action: () => window.dispatchEvent(new CustomEvent('locations:new')) },
+                    { icon: <RiFileExcel2Fill size={16} />, label: 'Exportar Excel', action: () => window.dispatchEvent(new CustomEvent('locations:export')) },
+                    { icon: <FaFilePdf size={16} />, label: 'Exportar PDF', action: () => window.dispatchEvent(new CustomEvent('locations:export-pdf')) },
                     { icon: <Camera size={16} />, label: 'Cámaras', action: () => navigate('/cameras') },
                     { icon: <UsersIcon size={16} />, label: 'Usuarios', action: () => navigate('/users') }
                 ]
@@ -182,14 +193,16 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 title: 'Acciones Servidores',
                 searchPlaceholder: 'Buscar servidores...',
                 actions: [
-                    { icon: <Settings size={16} />, label: 'Configuración', action: () => alert('Configuración en desarrollo') },
-                    { icon: <FileText size={16} />, label: 'Reporte', action: () => window.dispatchEvent(new CustomEvent('servers:report')) }
+                    { icon: <Plus size={16} />, label: 'Añadir nuevo servidor', action: () => window.dispatchEvent(new CustomEvent('servers:new')) },
+                    { icon: <LayoutGrid size={16} />, label: 'Cambiar vista', action: () => window.dispatchEvent(new CustomEvent('servers:toggle-view')) },
+                    { icon: <RiFileExcel2Fill size={16} />, label: 'Descargar Excel', action: () => window.dispatchEvent(new CustomEvent('servers:download')) },
+                    { icon: <FaFilePdf size={16} />, label: 'Descargar PDF', action: () => window.dispatchEvent(new CustomEvent('servers:download-pdf')) }
                 ]
             };
         }
         
         // Para otras páginas, no mostrar acciones por ahora
-        return { show: false };
+        return { show: false, showSearch: true };
     };
     
     const pageActions = getPageActions();
@@ -499,25 +512,27 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                         {showActions && (
                             <div className="absolute left-1/3 sm:right-0 top-full mt-2 w-80 sm:w-72 bg-[#001e3c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[200] animate-in fade-in slide-in-from-top-2 duration-200 sm:left-auto left-1/3 sm:translate-x-0 -translate-x-1/3">
-                                <div className="p-4 border-b border-white/10">
-                                    <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-3">{pageActions.title}</p>
-                                    <div className="relative">
-                                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
-                                        <input
-                                            autoFocus
-                                            type="text"
-                                            value={searchValue}
-                                            onChange={e => setSearchValue(e.target.value)}
-                                            placeholder={pageActions.searchPlaceholder}
-                                            className="w-full bg-white/10 border border-white/10 rounded-xl pl-8 pr-8 py-2.5 text-[11px] text-white placeholder-white/30 font-medium outline-none focus:border-blue-500/50 focus:bg-white/15 transition-all"
-                                        />
-                                        {searchValue && (
-                                            <button onClick={() => setSearchValue('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
-                                                <X size={13} />
-                                            </button>
-                                        )}
+                                 {pageActions.showSearch !== false && (
+                                    <div className="p-4 border-b border-white/10">
+                                        <p className="text-[9px] font-black text-white/30 uppercase tracking-[0.3em] mb-3">{pageActions.title}</p>
+                                        <div className="relative">
+                                            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                value={searchValue}
+                                                onChange={e => setSearchValue(e.target.value)}
+                                                placeholder={pageActions.searchPlaceholder}
+                                                className="w-full bg-white/10 border border-white/10 rounded-xl pl-8 pr-8 py-2.5 text-[11px] text-white placeholder-white/30 font-medium outline-none focus:border-blue-500/50 focus:bg-white/15 transition-all"
+                                            />
+                                            {searchValue && (
+                                                <button onClick={() => setSearchValue('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white">
+                                                    <X size={13} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                                 <div className="p-3 space-y-2">
                                     {pageActions.actions?.map((action, index) => (
                                         <button

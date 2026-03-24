@@ -1,26 +1,34 @@
 import { useState, useEffect } from 'react';
-import { Package, X, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import { supabase, AssetType, Location, AssetWithDetails } from '../../lib/supabase';
+import { Package, RefreshCw } from 'lucide-react';
+import { supabase, Category, Subcategory, Location, Area, AssetWithDetails } from '../../lib/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 type AssetFormProps = {
   onClose: () => void;
   onSave: () => void;
   editAsset?: AssetWithDetails;
-  preselectedAssetTypeId?: string;
+  initialCategoryId?: string;
+  initialSubcategoryId?: string;
 };
 
-export default function AssetForm({ onClose, onSave, editAsset, preselectedAssetTypeId }: AssetFormProps) {
-  const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
+export default function AssetForm({ onClose, onSave, editAsset, initialCategoryId, initialSubcategoryId }: AssetFormProps) {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  
   const [loading, setLoading] = useState(false);
+  const [fetchingSubcategories, setFetchingSubcategories] = useState(false);
+  const [fetchingAreas, setFetchingAreas] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [validationStatus, setValidationStatus] = useState<Record<string, 'valid' | 'invalid' | 'checking' | null>>({});
   const [hasChanges, setHasChanges] = useState(false);
 
   const [formData, setFormData] = useState({
-    asset_type_id: editAsset?.asset_type_id || preselectedAssetTypeId || '',
+    codigo_unico: editAsset?.codigo_unico || '',
+    category_id: editAsset?.category_id || initialCategoryId || '',
+    subcategory_id: editAsset?.subcategory_id || initialSubcategoryId || '',
     location_id: editAsset?.location_id || '',
+    area_id: editAsset?.area_id || '',
     brand: editAsset?.brand || '',
     model: editAsset?.model || '',
     serial_number: editAsset?.serial_number || '',
@@ -30,29 +38,27 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     capacity: editAsset?.capacity || '',
     status: editAsset?.status || 'active',
     notes: editAsset?.notes || '',
-    image_url: editAsset?.image_url || '',
 
-    // Campos adicionales para maquinarias
-    item: editAsset?.item || '',
-    descripcion: editAsset?.descripcion || '',
-    unidad_medida: editAsset?.unidad_medida || '',
-    cantidad: editAsset?.cantidad?.toString() || '1',
-    condicion: editAsset?.condicion || '',
-    color: editAsset?.color || '',
-    gama: editAsset?.gama || '',
-    fecha_adquisicion: editAsset?.fecha_adquisicion || '',
-    valor_estimado: editAsset?.valor_estimado?.toString() || '',
-    estado_uso: editAsset?.estado_uso || '',
-
-    // Campos adicionales para PC/Laptop
+    // Technical fields
     processor: editAsset?.processor || '',
     ram: editAsset?.ram || '',
     operating_system: editAsset?.operating_system || '',
     bios_mode: editAsset?.bios_mode || '',
-    area: editAsset?.area || '',
     placa: editAsset?.placa || '',
+    
+    // Inventory details
+    item: editAsset?.item || '',
+    descripcion: editAsset?.descripcion || '',
+    unidad_medida: editAsset?.unidad_medida || 'UNIDADES',
+    cantidad: editAsset?.cantidad?.toString() || '1',
+    condicion: editAsset?.condicion || 'Nuevo',
+    color: editAsset?.color || '',
+    gama: editAsset?.gama || '',
+    fecha_adquisicion: editAsset?.fecha_adquisicion || '',
+    valor_estimado: editAsset?.valor_estimado?.toString() || '',
+    estado_uso: editAsset?.estado_uso || 'Operativo',
 
-    // Campos adicionales para Cámaras
+    // Camera fields
     name: editAsset?.name || '',
     url: editAsset?.url || '',
     username: editAsset?.username || '',
@@ -61,7 +67,7 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     access_type: editAsset?.access_type || 'url',
     auth_code: editAsset?.auth_code || '',
 
-    // Campos adicionales para Celulares
+    // Mobile fields
     imei: editAsset?.imei || '',
     operator: editAsset?.operator || '',
     data_plan: editAsset?.data_plan || '',
@@ -72,102 +78,261 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     bateria_estado: editAsset?.bateria_estado || '',
     accesorios: editAsset?.accesorios || '',
 
-    // Campos adicionales para Impresoras/Escáneres
+    // Printing fields
     tipo_impresion: editAsset?.tipo_impresion || '',
     tecnologia_impresion: editAsset?.tecnologia_impresion || '',
     velocidad_impresion: editAsset?.velocidad_impresion || '',
     resolucion: editAsset?.resolucion || '',
 
-    // Campos adicionales para Monitores/Proyectores
+    // Monitor/Projector fields
     tamaño_pantalla: editAsset?.tamaño_pantalla || '',
     resolucion_pantalla: editAsset?.resolucion_pantalla || '',
     tipo_conexion: editAsset?.tipo_conexion || '',
     luminosidad: editAsset?.luminosidad || '',
+    potencia_w: editAsset?.potencia_w?.toString() || '',
+    estabilizador_w: editAsset?.estabilizador_w?.toString() || '',
+    voltage_v: editAsset?.voltage_v?.toString() || '',
+    frecuencia_hz: editAsset?.frecuencia_hz?.toString() || '',
+    brillo_lumens: editAsset?.brillo_lumens?.toString() || '',
+    mac_address: editAsset?.mac_address || '',
+    velocidad_internet: editAsset?.velocidad_internet || '',
+    tipo_conector: editAsset?.tipo_conector || '',
+    marca_motor: editAsset?.marca_motor || '',
   });
 
-  const [uploadingImage, setUploadingImage] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchAssetTypes();
-    fetchLocations();
+    fetchInitialData();
+    if (!editAsset && !formData.codigo_unico) {
+      generateUniqueCode();
+    }
   }, []);
 
   useEffect(() => {
+    if (formData.category_id) {
+      fetchSubcategories(formData.category_id);
+    } else {
+      setSubcategories([]);
+    }
+  }, [formData.category_id]);
+
+  useEffect(() => {
+    if (formData.location_id) {
+      fetchAreas(formData.location_id);
+    } else {
+      setAreas([]);
+    }
+  }, [formData.location_id]);
+
+  useEffect(() => {
     if (editAsset) {
-      // Logic to detect changes
       const hasFormChanges = Object.keys(formData).some(key => {
         const val1 = formData[key as keyof typeof formData]?.toString() || '';
-        const val2 = editAsset[key as keyof AssetWithDetails]?.toString() || '';
+        const val2 = (editAsset as any)[key]?.toString() || '';
         return val1 !== val2;
       });
       setHasChanges(hasFormChanges);
     }
   }, [formData, editAsset]);
 
-  const fetchAssetTypes = async () => {
-    const { data } = await supabase.from('asset_types').select('*').order('name');
-    if (data) setAssetTypes(data);
-  };
-
-  const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
-    if (data) setLocations(data);
-  };
-
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const fetchInitialData = async () => {
     try {
-      setUploadingImage(true);
-      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-      const path = `assets/${editAsset?.id || 'new'}/${Date.now()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from('assets-images')
-        .upload(path, file, { upsert: true, contentType: file.type });
+      const [catRes, locRes] = await Promise.all([
+        supabase.from('categories').select('*').order('name'),
+        supabase.from('locations').select('*').order('name')
+      ]);
+      
+      if (catRes.error) {
+        console.error('Error fetching categories:', catRes.error);
+        setErrors(prev => ({ ...prev, submit: `Error cargando categorías: ${catRes.error.message}` }));
+      }
+      if (locRes.error) {
+        console.error('Error fetching locations:', locRes.error);
+      }
 
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('assets-images').getPublicUrl(path);
-      setFormData(prev => ({ ...prev, image_url: data.publicUrl }));
+      if (catRes.data) {
+        setCategories(catRes.data);
+        if (catRes.data.length === 0) {
+          console.warn('No category data found in table "categories"');
+        }
+      }
+      if (locRes.data) setLocations(locRes.data);
     } catch (error: any) {
-      alert('Error subiendo imagen: ' + error.message);
-    } finally {
-      setUploadingImage(false);
+      console.error('Fetch error:', error);
+      setErrors(prev => ({ ...prev, submit: 'Error de conexión con la base de datos' }));
     }
   };
 
-  const handleRemoveImage = () => {
-    setFormData(prev => ({ ...prev, image_url: '' }));
+  const fetchSubcategories = async (categoryId: string) => {
+    try {
+      setFetchingSubcategories(true);
+      const { data } = await supabase
+        .from('subcategories')
+        .select('*')
+        .eq('category_id', categoryId)
+        .order('name');
+      if (data) setSubcategories(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFetchingSubcategories(false);
+    }
+  };
+
+  const fetchAreas = async (locationId: string) => {
+    try {
+      setFetchingAreas(true);
+      const { data } = await supabase
+        .from('areas')
+        .select('*')
+        .eq('location_id', locationId)
+        .order('name');
+      if (data) setAreas(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFetchingAreas(false);
+    }
+  };
+
+  const generateUniqueCode = () => {
+    const code = 'ACT-' + Math.floor(100000 + Math.random() * 900000).toString();
+    setFormData(prev => ({ ...prev, codigo_unico: code }));
+  };
+
+  const initializeDefaultStructure = async () => {
+    try {
+      setLoading(true);
+      const categoriesToCreate = [
+        'Equipos de Cómputo y TI',
+        'Equipos Biométricos y Control',
+        'Equipos Médicos',
+        'Mobiliario',
+        'Seguridad',
+        'Útiles de Oficina'
+      ];
+
+      // 1. Create Categories
+      for (const name of categoriesToCreate) {
+        await supabase.from('categories').insert([{ name }]).select();
+      }
+
+      // 2. Fetch new Categories to get IDs
+      const { data: newCats } = await supabase.from('categories').select('*');
+      if (!newCats) return;
+
+      // 3. Create Subcategories
+      const subcatMap: Record<string, string[]> = {
+        'Equipos de Cómputo y TI': [
+          'Computadoras (CPU)', 'Monitores', 'Laptops', 'Teclados', 'Mouse', 
+          'Impresoras', 'Impresoras multifuncionales', 'Estabilizadores', 
+          'Proyectores', 'Audio (parlantes y micrófonos)', 'Redes (router y DVR)', 
+          'Cámaras', 'Accesorios TI'
+        ],
+        'Equipos Biométricos y Control': [
+          'Biométricos', 'Control de huella', 'Accesorios biométricos (tampón y tampón de huella)'
+        ],
+        'Equipos Médicos': [
+          'Diagnóstico general', 'Equipos de medición', 'Equipos clínicos', 
+          'Equipos de oftalmología', 'Equipos de otorrinolaringología', 
+          'Equipos psicotécnicos', 'Instrumentos médicos', 
+          'Laboratorio - Equipos de análisis', 'Laboratorio - Equipos de esterilización', 
+          'Laboratorio - Equipos de muestras', 'Laboratorio - Equipos ópticos',
+          'Evaluación Técnica - Equipos de evaluación visual', 
+          'Evaluación Técnica - Equipos de evaluación auditiva', 
+          'Evaluación Técnica - Equipos psicotécnicos', 
+          'Evaluación Técnica - Equipos de simulación o pruebas'
+        ],
+        'Mobiliario': [
+          'Escritorios', 'Mesas', 'Sillas', 'Estantes', 'Armarios', 
+          'Muebles de archivo', 'Módulos', 'Biombos', 
+          'Infraestructura - Refrigeración', 'Infraestructura - Lavaderos', 
+          'Infraestructura - Instalaciones de agua', 'Infraestructura - Dispensadores', 
+          'Infraestructura - Ventilación', 'Infraestructura - Instalaciones del local'
+        ],
+        'Seguridad': [
+          'Extintores', 'Detectores de humo', 'Luces de emergencia', 
+          'Botiquines', 'Seguridad electrónica (cámaras)'
+        ],
+        'Útiles de Oficina': [
+          'Herramientas de oficina', 'Organización de escritorio', 'Papelería', 'Accesorios'
+        ]
+      };
+
+      for (const cat of newCats) {
+        const subnames = subcatMap[cat.name];
+        if (subnames) {
+          const inserts = subnames.map(name => ({ category_id: cat.id, name }));
+          await supabase.from('subcategories').insert(inserts);
+        }
+      }
+
+      await fetchInitialData();
+      alert('¡Estructura de inventario inicializada con éxito!');
+    } catch (error: any) {
+      alert('Error inicializando: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      
+      // Reset dependent fields
+      if (name === 'category_id') {
+        newData.subcategory_id = '';
+      }
+      if (name === 'location_id') {
+        newData.area_id = '';
+      }
+      
+      return newData;
+    });
+
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
-
-    // Quick validation for specific fields
-    if (['ip_address', 'phone_number', 'anydesk_id', 'serial_number'].includes(name)) {
-      validateField(name, value);
-    }
-  };
-
-  const validateField = async (name: string, value: string) => {
-    setValidationStatus(prev => ({ ...prev, [name]: 'checking' }));
-    // Simplified validation for overwrite
-    let isValid = true;
-    if (name === 'ip_address' && value && !/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(value)) isValid = false;
-    if (name === 'anydesk_id' && value && !/^[0-9]{9}$/.test(value)) isValid = false;
-
-    setValidationStatus(prev => ({ ...prev, [name]: isValid ? 'valid' : 'invalid' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
+      if (!formData.category_id) throw new Error('La categoría es obligatoria');
+      if (!formData.subcategory_id) throw new Error('La subcategoría es obligatoria');
+      
       const dataToSave = {
-        ...formData,
-        location_id: formData.location_id || null,
+        // Core Identity
+        brand: formData.brand,
+        model: formData.model,
+        serial_number: formData.serial_number,
+        codigo_unico: formData.codigo_unico,
+        
+        // Relationships
+        category_id: formData.category_id,
+        subcategory_id: formData.subcategory_id,
+        location_id: formData.location_id,
+        area_id: formData.area_id,
+        
+        // General Info
+        status: formData.status,
+        notes: formData.notes,
+        condicion: formData.condicion,
+        cantidad: parseInt(formData.cantidad) || 1,
+        valor_estimado: formData.valor_estimado ? parseFloat(formData.valor_estimado) : null,
+        fecha_adquisicion: formData.fecha_adquisicion || null,
+        
+        // Technical Info (Core)
+        anydesk_id: formData.anydesk_id,
+        ip_address: formData.ip_address,
+        capacity: formData.capacity,
+        processor: formData.processor,
+        ram: formData.ram,
+        operating_system: formData.operating_system,
+        bios_mode: formData.bios_mode,
+        
         updated_at: new Date().toISOString()
       };
 
@@ -186,26 +351,14 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
     }
   };
 
-  const renderValidationIcon = (fieldName: string) => {
-    const status = validationStatus[fieldName];
-    if (status === 'checking') return <Loader2 size={14} className="text-blue-500 animate-spin" />;
-    if (status === 'valid') return <CheckCircle size={14} className="text-emerald-500" />;
-    if (status === 'invalid') return <AlertCircle size={14} className="text-rose-500" />;
-    return null;
-  };
-
-  const selectedTypeName = assetTypes.find(t => t.id === formData.asset_type_id)?.name || '';
-  const isPCOrLaptop = selectedTypeName === 'PC' || selectedTypeName === 'Laptop';
-  const isCelular = selectedTypeName === 'Celular';
-  const isCamera = selectedTypeName === 'Cámara' || selectedTypeName === 'DVR';
-  const isTinte = selectedTypeName === 'Tinte';
-  const isRam = selectedTypeName === 'Memoria RAM';
-  const isDisk = selectedTypeName === 'Disco de Almacenamiento';
-
+  const selectedCategoryName = categories.find(c => c.id === formData.category_id)?.name || '';
+  const isCómputo = selectedCategoryName === 'Equipos de Cómputo y TI';
+  const isBiométrico = selectedCategoryName === 'Equipos Biométricos y Control';
+  
   return (
     <BaseForm
-      title={editAsset ? 'Editar Activo' : preselectedAssetTypeId ? `Nuevo ${selectedTypeName || 'Activo'}` : 'Nuevo Activo'}
-      subtitle="Gestión de Activos Tecnológicos"
+      title={editAsset ? 'Editar Activo' : 'Nuevo Activo'}
+      subtitle="Sistema Centralizado de Inventario"
       onClose={onClose}
       onSubmit={handleSubmit}
       loading={loading}
@@ -214,196 +367,139 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
       icon={<Package size={24} className="text-blue-600" />}
       showChangesWarning={hasChanges}
     >
-      {/* SECTION 1: IDENTIFICACIÓN BÁSICA */}
-      <FormSection title="Identificación Básica" color="blue">
+      {/* SECCIÓN 1: Clasificación y Ubicación */}
+      <FormSection title="Clasificación y Ubicación" color="blue">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <FormField label="Tipo de Activo" required error={errors.asset_type_id}>
+          <FormField label="Código Único">
+            <div className="flex gap-2">
+              <FormInput 
+                type="text" 
+                name="codigo_unico" 
+                value={formData.codigo_unico} 
+                readOnly 
+                className="bg-gray-50 font-mono font-bold text-blue-700"
+              />
+              <button 
+                type="button" 
+                onClick={generateUniqueCode}
+                className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 shadow-sm transition-colors"
+                title="Regenerar código"
+              >
+                <RefreshCw size={18} />
+              </button>
+            </div>
+          </FormField>
+
+          <FormField label="Categoría" required error={errors.category_id}>
+            {categories.length === 0 ? (
+              <div className="flex flex-col gap-2">
+                <p className="text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded-lg border border-amber-100">
+                  ⚠ No hay categorías definidas. Por favor, ejecuta la migración SQL o usa el botón de abajo.
+                </p>
+                <div className="flex gap-2">
+                  <button 
+                    type="button"
+                    onClick={fetchInitialData}
+                    className="text-[10px] text-blue-600 font-black uppercase hover:underline flex items-center gap-1"
+                  >
+                    <RefreshCw size={12} /> Refrescar
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={initializeDefaultStructure}
+                    className="text-[10px] text-emerald-600 font-black uppercase hover:underline flex items-center gap-1"
+                  >
+                    <Package size={12} /> Inicializar con datos por defecto
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <FormSelect name="category_id" value={formData.category_id} onChange={handleChange} required>
+                <option value="">Seleccionar categoría...</option>
+                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              </FormSelect>
+            )}
+          </FormField>
+
+          <FormField label="Subcategoría" required error={errors.subcategory_id}>
             <FormSelect 
-              name="asset_type_id" 
-              value={formData.asset_type_id} 
+              name="subcategory_id" 
+              value={formData.subcategory_id} 
               onChange={handleChange} 
-              required
-              error={errors.asset_type_id}
+              required 
+              disabled={!formData.category_id || fetchingSubcategories}
             >
-              <option value="">Seleccionar...</option>
-              {assetTypes.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}
+              <option value="">{fetchingSubcategories ? 'Cargando...' : 'Seleccionar subcategoría...'}</option>
+              {subcategories.map(sub => <option key={sub.id} value={sub.id}>{sub.name}</option>)}
             </FormSelect>
           </FormField>
-          
-          <FormField label="Ubicación / Sede" error={errors.location_id}>
-            <FormSelect 
-              name="location_id" 
-              value={formData.location_id} 
-              onChange={handleChange}
-              error={errors.location_id}
-            >
+
+          <FormField label="Sede (Ubicación)" error={errors.location_id}>
+            <FormSelect name="location_id" value={formData.location_id} onChange={handleChange}>
               <option value="">Sin asignar</option>
               {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
             </FormSelect>
           </FormField>
-          
-          <FormField label="Estado Operativo">
+
+          <FormField label="Área / Departamento" error={errors.area_id}>
             <FormSelect 
-              name="status" 
-              value={formData.status} 
-              onChange={handleChange}
-              className="text-emerald-700 font-bold"
+              name="area_id" 
+              value={formData.area_id} 
+              onChange={handleChange} 
+              disabled={!formData.location_id || fetchingAreas}
             >
+              <option value="">{fetchingAreas ? 'Cargando áreas...' : 'Seleccionar área...'}</option>
+              {areas.map(area => <option key={area.id} value={area.id}>{area.name}</option>)}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Estado Operativo">
+            <FormSelect name="status" value={formData.status} onChange={handleChange} className="font-bold text-emerald-700">
               <option value="active">Activo</option>
               <option value="inactive">Inactivo</option>
               <option value="maintenance">Mantenimiento</option>
+              <option value="extracted">Extraído</option>
             </FormSelect>
-          </FormField>
-          
-          <FormField label="Marca">
-            <FormInput 
-              type="text" 
-              name="brand" 
-              value={formData.brand} 
-              onChange={handleChange} 
-              placeholder="Ej: Dell, Lenovo"
-              error={errors.brand}
-            />
-          </FormField>
-          
-          <FormField label={isTinte ? 'Color' : 'Modelo'}>
-            <FormInput 
-              type="text" 
-              name="model" 
-              value={formData.model} 
-              onChange={handleChange} 
-              placeholder="Ej: Latitude 5420"
-              error={errors.model}
-            />
-          </FormField>
-          
-          <FormField label="Nº de Serie">
-            <div className="relative">
-              <FormInput 
-                type="text" 
-                name="serial_number" 
-                value={formData.serial_number} 
-                onChange={handleChange} 
-                placeholder="S/N"
-                className="font-mono pr-10"
-                error={errors.serial_number}
-              />
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderValidationIcon('serial_number')}</div>
-            </div>
-          </FormField>
-          
-          <FormField label="Imagen del Activo" className="lg:col-span-3">
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-              <input 
-                type="file" 
-                accept="image/*" 
-                onChange={handleImageChange} 
-                disabled={uploadingImage} 
-                className="text-sm" 
-              />
-              {formData.image_url && (
-                <div className="relative group">
-                  <img 
-                    src={formData.image_url} 
-                    alt="asset" 
-                    className="h-20 w-20 object-cover rounded-xl border border-white shadow-md" 
-                  />
-                  <button 
-                    type="button" 
-                    onClick={handleRemoveImage} 
-                    className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow-lg"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              )}
-            </div>
           </FormField>
         </div>
       </FormSection>
 
-      
-      {/* SECTION 2: ESPECIFICACIONES TÉCNICAS */}
-      <FormSection title="Especificaciones Técnicas" color="emerald">
+      {/* SECCIÓN 2: Información Técnica Principal */}
+      <FormSection title="Detalles Técnicos" color="emerald">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {(isPCOrLaptop || isCelular || isCamera) && (
-            <FormField label="AnyDesk / ID Acceso">
-              <div className="relative">
-                <FormInput 
-                  type="text" 
-                  name="anydesk_id" 
-                  value={formData.anydesk_id} 
-                  onChange={handleChange} 
-                  placeholder="123 456 789"
-                  className="pr-10"
-                  error={errors.anydesk_id}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderValidationIcon('anydesk_id')}</div>
-              </div>
-            </FormField>
-          )}
+          <FormField label="Marca">
+            <FormInput name="brand" value={formData.brand} onChange={handleChange} placeholder="Ej: Dell, Lenovo" />
+          </FormField>
           
-          {!isTinte && (
-            <FormField label="Dirección IP">
-              <div className="relative">
-                <FormInput 
-                  type="text" 
-                  name="ip_address" 
-                  value={formData.ip_address} 
-                  onChange={handleChange} 
-                  placeholder="192.168.x.x"
-                  className="pr-10"
-                  error={errors.ip_address}
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2">{renderValidationIcon('ip_address')}</div>
-              </div>
-            </FormField>
-          )}
+          <FormField label="Modelo">
+            <FormInput name="model" value={formData.model} onChange={handleChange} placeholder="Ej: Precision 3660" />
+          </FormField>
           
-          {(isRam || isDisk || isCelular) && (
-            <FormField label="Capacidad / Tamaño">
-              <FormInput 
-                type="text" 
-                name="capacity" 
-                value={formData.capacity} 
-                onChange={handleChange} 
-                placeholder="Ej: 16GB, 1TB"
-                error={errors.capacity}
-              />
-            </FormField>
+          <FormField label="Nº de Serie">
+            <FormInput name="serial_number" value={formData.serial_number} onChange={handleChange} className="font-mono" placeholder="S/N" />
+          </FormField>
+
+          {(isCómputo || isBiométrico) && (
+            <>
+              <FormField label="AnyDesk / Acceso">
+                <FormInput name="anydesk_id" value={formData.anydesk_id} onChange={handleChange} placeholder="ID Acceso" />
+              </FormField>
+              <FormField label="Dirección IP">
+                <FormInput name="ip_address" value={formData.ip_address} onChange={handleChange} placeholder="192.168.1.X" />
+              </FormField>
+            </>
           )}
-          
-          {isPCOrLaptop && (
+
+          {isCómputo && selectedCategoryName.includes('Computadoras') && (
             <>
               <FormField label="Procesador">
-                <FormInput 
-                  type="text" 
-                  name="processor" 
-                  value={formData.processor} 
-                  onChange={handleChange} 
-                  placeholder="Intel Core i7"
-                  error={errors.processor}
-                />
+                <FormInput name="processor" value={formData.processor} onChange={handleChange} placeholder="Ej: Intel Core i7" />
               </FormField>
-              
               <FormField label="Memoria RAM">
-                <FormInput 
-                  type="text" 
-                  name="ram" 
-                  value={formData.ram} 
-                  onChange={handleChange} 
-                  placeholder="8GB DDR4"
-                  error={errors.ram}
-                />
+                <FormInput name="ram" value={formData.ram} onChange={handleChange} placeholder="Ej: 16GB DDR4" />
               </FormField>
-              
               <FormField label="Sis. Operativo">
-                <FormSelect 
-                  name="operating_system" 
-                  value={formData.operating_system} 
-                  onChange={handleChange}
-                  error={errors.operating_system}
-                >
+                <FormSelect name="operating_system" value={formData.operating_system} onChange={handleChange}>
                   <option value="">Seleccionar...</option>
                   <option value="Windows 10">Windows 10</option>
                   <option value="Windows 11">Windows 11</option>
@@ -413,161 +509,47 @@ export default function AssetForm({ onClose, onSave, editAsset, preselectedAsset
               </FormField>
             </>
           )}
-          
-          {isCelular && (
-            <>
-              <FormField label="IMEI">
-                <FormInput 
-                  type="text" 
-                  name="imei" 
-                  value={formData.imei} 
-                  onChange={handleChange}
-                  error={errors.imei}
-                />
-              </FormField>
-              
-              <FormField label="Operador">
-                <FormSelect 
-                  name="operator" 
-                  value={formData.operator} 
-                  onChange={handleChange}
-                  error={errors.operator}
-                >
-                  <option value="">Seleccionar...</option>
-                  <option value="Claro">Claro</option>
-                  <option value="Movistar">Movistar</option>
-                  <option value="Entel">Entel</option>
-                </FormSelect>
-              </FormField>
-            </>
-          )}
         </div>
       </FormSection>
 
-      {/* SECTION 3: DATOS DE INVENTARIO */}
-      <FormSection title="Información de Inventario" color="amber">
+      {/* SECCIÓN 3: Inventario y Administrativo */}
+      <FormSection title="Inventario y Valor" color="amber">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <FormField label="ITEM">
-            <FormInput 
-              type="text" 
-              name="item" 
-              value={formData.item} 
-              onChange={handleChange}
-              error={errors.item}
-            />
+            <FormInput name="item" value={formData.item} onChange={handleChange} placeholder="Nombre corto" />
           </FormField>
-          
-          <FormField label="Descripción" className="md:col-span-2">
-            <FormInput 
-              type="text" 
-              name="descripcion" 
-              value={formData.descripcion} 
-              onChange={handleChange}
-              error={errors.descripcion}
-            />
+
+          <FormField label="Descripción" className="lg:col-span-2">
+            <FormInput name="descripcion" value={formData.descripcion} onChange={handleChange} placeholder="Descripción completa" />
           </FormField>
-          
-          <FormField label="U. Medida">
-            <FormInput 
-              type="text" 
-              name="unidad_medida" 
-              value={formData.unidad_medida} 
-              onChange={handleChange} 
-              placeholder="UNID"
-              error={errors.unidad_medida}
-            />
-          </FormField>
-          
-          <FormField label="Cant.">
-            <FormInput 
-              type="number" 
-              name="cantidad" 
-              value={formData.cantidad} 
-              onChange={handleChange}
-              error={errors.cantidad}
-            />
-          </FormField>
-          
+
           <FormField label="Condición">
-            <FormSelect 
-              name="condicion" 
-              value={formData.condicion} 
-              onChange={handleChange}
-              error={errors.condicion}
-            >
-              <option value="">Seleccionar...</option>
+            <FormSelect name="condicion" value={formData.condicion} onChange={handleChange}>
               <option value="Nuevo">Nuevo</option>
-              <option value="Usado - Excelente">Usado - Excelente</option>
-              <option value="Usado - Bueno">Usado - Bueno</option>
+              <option value="Bueno">Bueno</option>
+              <option value="Regular">Regular</option>
               <option value="Malo">Malo</option>
             </FormSelect>
           </FormField>
-          
-          <FormField label="Gama">
-            <FormInput 
-              type="text" 
-              name="gama" 
-              value={formData.gama} 
-              onChange={handleChange}
-              error={errors.gama}
-            />
-          </FormField>
-        </div>
-      </FormSection>
 
-      {/* SECTION 4: ADQUISICIÓN Y VALOR */}
-      <FormSection title="Adquisición y Valor" color="purple">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <FormField label="Fecha Adquisición">
-            <FormInput 
-              type="date" 
-              name="fecha_adquisicion" 
-              value={formData.fecha_adquisicion} 
-              onChange={handleChange}
-              error={errors.fecha_adquisicion}
-            />
+          <FormField label="Cantidad">
+            <FormInput type="number" name="cantidad" value={formData.cantidad} onChange={handleChange} />
           </FormField>
-          
+
           <FormField label="Valor Estimado ($)">
-            <FormInput 
-              type="number" 
-              name="valor_estimado" 
-              value={formData.valor_estimado} 
-              onChange={handleChange} 
-              step="0.01" 
-              placeholder="0.00"
-              error={errors.valor_estimado}
-            />
+            <FormInput type="number" name="valor_estimado" value={formData.valor_estimado} onChange={handleChange} step="0.01" />
           </FormField>
-          
-          <FormField label="Estado uso">
-            <FormSelect 
-              name="estado_uso" 
-              value={formData.estado_uso} 
-              onChange={handleChange}
-              error={errors.estado_uso}
-            >
-              <option value="">Seleccionar...</option>
-              <option value="Operativo">Operativo</option>
-              <option value="Mantenimiento">Mantenimiento</option>
-              <option value="Fuera de Servicio">F. Servicio</option>
-            </FormSelect>
+
+          <FormField label="Fecha Adquisición">
+            <FormInput type="date" name="fecha_adquisicion" value={formData.fecha_adquisicion} onChange={handleChange} />
           </FormField>
         </div>
-      </FormSection>
-
-      {/* SECTION 5: NOTAS */}
-      <FormSection title="Notas / Observaciones" color="blue">
-        <FormField label="">
-          <FormTextarea 
-            name="notes" 
-            value={formData.notes} 
-            onChange={handleChange} 
-            rows={3} 
-            placeholder="Detalles adicionales..."
-            error={errors.notes}
-          />
-        </FormField>
+        
+        <div className="mt-6">
+          <FormField label="Notas y Observaciones">
+            <FormTextarea name="notes" value={formData.notes} onChange={handleChange} placeholder="Detalles adicionales..." rows={3} />
+          </FormField>
+        </div>
       </FormSection>
     </BaseForm>
   );

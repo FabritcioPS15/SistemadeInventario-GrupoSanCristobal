@@ -68,51 +68,72 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
 
     setErrors(newErrors);
 
-    if (Object.keys(newErrors).length > 0) {
+    if (Object.keys(newErrors).length > 0 || errors.name) {
+      setLoading(false);
       return;
     }
 
     setLoading(true);
 
-    const dataToSave = {
+    const dataToSave: any = {
       name: formData.name.trim(),
       type: formData.type,
       address: formData.address.trim() || null,
       notes: formData.notes.trim() || null,
       region: formData.region,
-      checklist_url: formData.checklist_url.trim() || null,
-      history_url: formData.history_url.trim() || null,
-      updated_at: new Date().toISOString(),
     };
+
+    // Solo agregar URLs si tienen contenido
+    if (formData.checklist_url.trim()) dataToSave.checklist_url = formData.checklist_url.trim();
+    if (formData.history_url.trim()) dataToSave.history_url = formData.history_url.trim();
 
     try {
       if (editLocation) {
-        const { error } = await supabase
+        console.log('Diagnóstico: Verificando visibilidad del ID:', editLocation.id);
+        const { data: existingRow, error: checkError } = await supabase
           .from('locations')
-          .update(dataToSave)
+          .select('id')
+          .eq('id', editLocation.id)
+          .single();
+
+        if (checkError || !existingRow) {
+          console.error('Error de visibilidad:', checkError);
+          throw new Error('La sede no es visible o fue eliminada. Actualiza la página e intenta de nuevo.');
+        }
+
+        console.log('ID confirmado, procediendo con la actualización...');
+        
+        const { error, count } = await supabase
+          .from('locations')
+          .update(dataToSave, { count: 'exact' })
           .eq('id', editLocation.id);
 
         if (error) {
-          setErrors({ submit: 'Error al actualizar la ubicación: ' + error.message });
-          setLoading(false);
-          return;
+          console.error('Error de Supabase al actualizar:', error);
+          throw error;
         }
+
+        if (count === 0) {
+          console.error('Ninguna fila afectada. ¿ID incorrecto o sin permisos?', editLocation.id);
+          throw new Error('No se pudo actualizar la sede. Probablemente tienes permisos de lectura pero no de edición.');
+        }
+
+        console.log('Actualización exitosa, filas afectadas:', count);
       } else {
         const { error } = await supabase
           .from('locations')
           .insert([dataToSave]);
 
         if (error) {
-          setErrors({ submit: 'Error al crear la ubicación: ' + error.message });
-          setLoading(false);
-          return;
+          throw error;
         }
       }
 
       setLoading(false);
       onSave();
     } catch (err: any) {
-      setErrors({ submit: 'Error inesperado: ' + err });
+      console.error('Error saving location:', err);
+      setErrors({ submit: err.message || 'Error al procesar la sede' });
       setLoading(false);
     }
   };
@@ -164,12 +185,11 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
               required
               error={errors.type}
             >
-              <option value="revision">Centro de Revisión</option>
-              <option value="office">Oficina Administrativa</option>
-              <option value="warehouse">Almacén</option>
-              <option value="workshop">Taller</option>
-              <option value="branch">Sucursal</option>
-              <option value="other">Otro</option>
+              <option value="revision">Centro de Revisión (CITV)</option>
+              <option value="policlinico">Policlínico</option>
+              <option value="escuela_conductores">Escuela de Conductores</option>
+              <option value="central">Sede Central / Administrativa</option>
+              <option value="circuito">Circuito de Manejo</option>
             </FormSelect>
           </FormField>
 
@@ -181,11 +201,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
               error={errors.region}
             >
               <option value="lima">Lima</option>
-              <option value="arequipa">Arequipa</option>
-              <option value="trujillo">Trujillo</option>
-              <option value="cusco">Cusco</option>
-              <option value="piura">Piura</option>
-              <option value="other">Otra Región</option>
+              <option value="provincia">Provincia</option>
             </FormSelect>
           </FormField>
 

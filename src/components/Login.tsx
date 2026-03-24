@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, AlertCircle, User, Lock, ArrowRight, UserPlus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
+  const mountedRef = useRef(true);
   const [emailOrDni, setEmailOrDni] = useState(() => localStorage.getItem('remembered_user') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,6 +23,13 @@ export default function Login() {
     notes: ''
   });
   const [registrationLoading, setRegistrationLoading] = useState(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +52,8 @@ export default function Login() {
 
       const { data: userData, error: userError } = await query.single();
 
+      if (!mountedRef.current) return;
+
       if (userError || !userData) {
         setError('Credenciales incorrectas o usuario inactivo');
         setLoading(false);
@@ -59,9 +69,13 @@ export default function Login() {
 
       login(userData, rememberMe);
     } catch (err) {
-      setError('Error de conexión con el servidor.');
+      if (mountedRef.current) {
+        setError('Error de conexión con el servidor.');
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -78,6 +92,8 @@ export default function Login() {
           created_at: new Date().toISOString()
         }]);
 
+      if (!mountedRef.current) return;
+
       if (error) throw error;
 
       setShowRegistrationModal(false);
@@ -89,12 +105,19 @@ export default function Login() {
         requested_role: '',
         notes: ''
       });
-      alert('Solicitud de registro enviada exitosamente. Será revisada por el administrador.');
+      
+      if (mountedRef.current) {
+        alert('Solicitud de registro enviada exitosamente. Será revisada por el administrador.');
+      }
     } catch (err) {
-      console.error('Error submitting registration request:', err);
-      alert('Error al enviar la solicitud. Inténtalo de nuevo.');
+      if (mountedRef.current) {
+        console.error('Error submitting registration request:', err);
+        alert('Error al enviar la solicitud. Inténtalo de nuevo.');
+      }
     } finally {
-      setRegistrationLoading(false);
+      if (mountedRef.current) {
+        setRegistrationLoading(false);
+      }
     }
   };
 
@@ -103,7 +126,7 @@ export default function Login() {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/10 rounded-full blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" />
 
-      <div className="relative w-full h-screen bg-white shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] flex flex-col lg:flex-row overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-700">
+      <div className="relative w-full h-screen bg-white shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] flex flex-col lg:flex-row overflow-hidden border border-white/20">
 
         <div className="w-full lg:w-1/2 bg-[#002855] relative flex-col p-8 sm:p-12 overflow-hidden flex lg:hidden">
           <div className="absolute inset-0 opacity-40">
@@ -112,15 +135,17 @@ export default function Login() {
           </div>
 
           <div className="relative z-10 flex flex-col justify-center items-center h-full">
-            <div className="flex justify-center items-center h-full animate-in zoom-in duration-700 delay-100">
+            <div className="flex justify-center items-center h-full">
               <img
                 src="/Enblanco.png"
                 alt="GSC Logistics"
                 className="w-[60%] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:scale-105 transition-transform duration-700"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://img.freepik.com/free-vector/modern-courier-delivery-service-commercial-concept_1284-52646.jpg?t=st=1740830000&exp=1740833600&hmac=xxx";
-                  (e.target as HTMLImageElement).style.opacity = "0.8";
-                  (e.target as HTMLImageElement).style.mixBlendMode = "multiply";
+                  if (mountedRef.current) {
+                    (e.target as HTMLImageElement).src = "https://img.freepik.com/free-vector/modern-courier-delivery-service-commercial-concept_1284-52646.jpg?t=st=1740830000&exp=1740833600&hmac=xxx";
+                    (e.target as HTMLImageElement).style.opacity = "0.8";
+                    (e.target as HTMLImageElement).style.mixBlendMode = "multiply";
+                  }
                 }}
               />
             </div>
@@ -137,30 +162,32 @@ export default function Login() {
             <div className="absolute top-8 left-8 right-8 h-1 bg-white/20 animate-pulse" />
             <div className="absolute top-12 left-16 right-16 h-0.5 bg-white/15 animate-pulse delay-75" />
             
-            <div className="flex justify-center items-center mb-8 animate-in zoom-in duration-700 delay-100">
+            <div className="flex justify-center items-center mb-8">
               <img
                 src="/Enblanco.png"
                 alt="GSC Logistics"
                 className="w-[80%] object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.5)] hover:scale-105 transition-transform duration-700"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "https://img.freepik.com/free-vector/modern-courier-delivery-service-commercial-concept_1284-52646.jpg?t=st=1740830000&exp=1740833600&hmac=xxx";
-                  (e.target as HTMLImageElement).style.opacity = "0.8";
-                  (e.target as HTMLImageElement).style.mixBlendMode = "multiply";
+                  if (mountedRef.current) {
+                    (e.target as HTMLImageElement).src = "https://img.freepik.com/free-vector/modern-courier-delivery-service-commercial-concept_1284-52646.jpg?t=st=1740830000&exp=1740833600&hmac=xxx";
+                    (e.target as HTMLImageElement).style.opacity = "0.8";
+                    (e.target as HTMLImageElement).style.mixBlendMode = "multiply";
+                  }
                 }}
               />
             </div>
 
-            <h2 className="text-5xl font-bold text-white leading-tight animate-in slide-in-from-left duration-700 delay-200 text-center">
+            <h2 className="text-5xl font-bold text-white leading-tight text-center">
               Sistema Integrado <span className="text-blue-400"></span>
             </h2>
             
-            <p className="mt-4 text-blue-100/70 text-lg max-w-md font-medium animate-in slide-in-from-left duration-700 delay-400 mx-auto text-center">
+            <p className="mt-4 text-blue-100/70 text-lg max-w-md font-medium mx-auto text-center">
               Solución tecnológica para la gestión integral de activos y operaciones. Eficiencia, control y excelencia operativa.
             </p>
           </div>
         </div>
 
-        <div className="w-full lg:w-1/2 p-6 sm:p-8 lg:p-16 flex flex-col justify-center animate-in slide-in-from-right duration-700">
+        <div className="w-full lg:w-1/2 p-6 sm:p-8 lg:p-16 flex flex-col justify-center">
           <div className="w-full">
             <div className="mb-6 lg:mb-10 text-center lg:text-left">
               <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Bienvenido</h2>
@@ -232,7 +259,7 @@ export default function Login() {
               </div>
 
               {error && (
-                <div className="bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3 rounded-2xl flex items-center gap-3">
                   <AlertCircle size={18} className="shrink-0" />
                   <p className="text-xs font-bold">{error}</p>
                 </div>
@@ -275,7 +302,14 @@ export default function Login() {
             {/* Header */}
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
               <h3 className="text-xl font-bold text-slate-800">Solicitar Registro de Usuario</h3>
-              <button onClick={() => setShowRegistrationModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <button 
+                onClick={() => {
+                  if (mountedRef.current) {
+                    setShowRegistrationModal(false);
+                  }
+                }} 
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
                 <X size={24} />
               </button>
             </div>
@@ -291,7 +325,11 @@ export default function Login() {
                     type="text"
                     required
                     value={registrationForm.full_name}
-                    onChange={(e) => setRegistrationForm({ ...registrationForm, full_name: e.target.value })}
+                    onChange={(e) => {
+                      if (mountedRef.current) {
+                        setRegistrationForm({ ...registrationForm, full_name: e.target.value });
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
                     placeholder="Juan Pérez"
                   />
@@ -305,7 +343,11 @@ export default function Login() {
                     type="email"
                     required
                     value={registrationForm.email}
-                    onChange={(e) => setRegistrationForm({ ...registrationForm, email: e.target.value })}
+                    onChange={(e) => {
+                      if (mountedRef.current) {
+                        setRegistrationForm({ ...registrationForm, email: e.target.value });
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
                     placeholder="email@ejemplo.com"
                   />
@@ -319,7 +361,11 @@ export default function Login() {
                     type="text"
                     required
                     value={registrationForm.dni}
-                    onChange={(e) => setRegistrationForm({ ...registrationForm, dni: e.target.value })}
+                    onChange={(e) => {
+                      if (mountedRef.current) {
+                        setRegistrationForm({ ...registrationForm, dni: e.target.value });
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
                     placeholder="12345678"
                   />
@@ -332,7 +378,11 @@ export default function Login() {
                   <input
                     type="tel"
                     value={registrationForm.phone}
-                    onChange={(e) => setRegistrationForm({ ...registrationForm, phone: e.target.value })}
+                    onChange={(e) => {
+                      if (mountedRef.current) {
+                        setRegistrationForm({ ...registrationForm, phone: e.target.value });
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
                     placeholder="987654321"
                   />
@@ -345,7 +395,11 @@ export default function Login() {
                   <select
                     required
                     value={registrationForm.requested_role}
-                    onChange={(e) => setRegistrationForm({ ...registrationForm, requested_role: e.target.value })}
+                    onChange={(e) => {
+                      if (mountedRef.current) {
+                        setRegistrationForm({ ...registrationForm, requested_role: e.target.value });
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
                   >
                     <option value="">Seleccionar rol</option>
@@ -363,7 +417,11 @@ export default function Login() {
                   </label>
                   <textarea
                     value={registrationForm.notes}
-                    onChange={(e) => setRegistrationForm({ ...registrationForm, notes: e.target.value })}
+                    onChange={(e) => {
+                      if (mountedRef.current) {
+                        setRegistrationForm({ ...registrationForm, notes: e.target.value });
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700 resize-none"
                     placeholder="Información adicional (opcional)"
                     rows={3}
