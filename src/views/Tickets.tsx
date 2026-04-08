@@ -426,17 +426,17 @@ export default function Tickets() {
                                     </button>
                                     <button
                                         onClick={generatePDF}
-                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-emerald-700 hover:to-emerald-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                                        className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-emerald-700 hover:to-emerald-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center"
+                                        title="Exportar a PDF"
                                     >
                                         <FaFilePdf size={18} />
-                                        PDF
                                     </button>
                                     <button
                                         onClick={generateExcel}
-                                        className="flex-1 px-6 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-slate-800 hover:to-slate-900 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                                        className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-slate-800 hover:to-slate-900 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center"
+                                        title="Exportar a Excel"
                                     >
                                         <RiFileExcel2Fill size={18} />
-                                        Excel
                                     </button>
                                 </div>
                             </div>

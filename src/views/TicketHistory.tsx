@@ -258,18 +258,18 @@ export default function TicketHistory() {
                         <button
                             onClick={generateHistoryPDF}
                             disabled={filteredTickets.length === 0}
-                            className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white hover:bg-rose-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center justify-center w-10 h-10 bg-rose-600 text-white hover:bg-rose-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Exportar a PDF"
                         >
                             <FaFilePdf size={20} />
-                            <span className="font-medium">PDF</span>
                         </button>
                         <button
                             onClick={generateHistoryExcel}
                             disabled={filteredTickets.length === 0}
-                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center justify-center w-10 h-10 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Exportar a Excel"
                         >
                             <RiFileExcel2Fill size={20} />
-                            <span className="font-medium">Excel</span>
                         </button>
                     </div>
                 </div>

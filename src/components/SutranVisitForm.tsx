@@ -84,7 +84,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
 
 
       if (visit) {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('sutran_visits')
           .update(visitData)
           .eq('id', visit.id)
@@ -97,7 +97,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
         }
 
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('sutran_visits')
           .insert([visitData])
           .select('*');

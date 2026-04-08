@@ -4,7 +4,7 @@ import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
-import { supabase } from '../lib/supabase';
+import { supabase, Location } from '../lib/supabase';
 import UserForm from '../components/forms/UserForm';
 import { useAuth } from '../contexts/AuthContext';
 import Pagination from '../components/Pagination';
@@ -40,6 +40,8 @@ export default function Users() {
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('');
+  const [locations, setLocations] = useState<Location[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -79,8 +81,13 @@ export default function Users() {
 
   const fetchData = async () => {
     setLoading(true);
-    await fetchUsers();
+    await Promise.all([fetchUsers(), fetchLocations()]);
     setLoading(false);
+  };
+
+  const fetchLocations = async () => {
+    const { data } = await supabase.from('locations').select('*').order('name');
+    if (data) setLocations(data);
   };
 
   const handleEditUser = (user: User) => {
@@ -198,9 +205,10 @@ export default function Users() {
         user.role.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesRole = !roleFilter || user.role === roleFilter;
       const matchesStatus = !statusFilter || user.status === statusFilter;
-      return matchesSearch && matchesRole && matchesStatus;
+      const matchesLocation = !locationFilter || user.location_id === locationFilter;
+      return matchesSearch && matchesRole && matchesStatus && matchesLocation;
     });
-  }, [users, searchTerm, roleFilter, statusFilter]);
+  }, [users, searchTerm, roleFilter, statusFilter, locationFilter]);
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -272,10 +280,24 @@ export default function Users() {
 
             {/* Filters + Toggle */}
             <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-3 bg-slate-50 border border-slate-200 rounded-none min-w-[180px]">
+                <MapPin size={14} className="text-slate-400" />
+                <select
+                  value={locationFilter}
+                  onChange={e => { setLocationFilter(e.target.value); setCurrentPage(1); }}
+                  className="bg-transparent text-[10px] font-black text-[#002855] uppercase outline-none cursor-pointer flex-1"
+                >
+                  <option value="">TODAS LAS SEDES</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+
               <select
                 value={roleFilter}
                 onChange={e => { setRoleFilter(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[200px] appearance-none cursor-pointer"
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[160px] appearance-none cursor-pointer"
               >
                 <option value="">Todos los roles</option>
                 <option value="super_admin">Super Admin</option>
@@ -289,7 +311,7 @@ export default function Users() {
               <select
                 value={statusFilter}
                 onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[160px] appearance-none cursor-pointer"
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[140px] appearance-none cursor-pointer"
               >
                 <option value="">Todos los estados</option>
                 <option value="active">Activo</option>
@@ -331,57 +353,57 @@ export default function Users() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {paginatedUsers.map((u) => (
-                <div key={u.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400 transition-all duration-300 flex flex-col group overflow-hidden">
-                  <div className="p-6 flex-1">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-12 h-12 rounded-xl bg-[#002855] text-white flex items-center justify-center text-sm font-black overflow-hidden flex-shrink-0">
-                        {u.avatar_url ? (
-                          <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              target.parentElement!.innerHTML = `<div class="w-full h-full bg-[#002855] text-white flex items-center justify-center text-sm font-black">${u.full_name?.charAt(0) || '?'}</div>`;
-                            }} />
-                        ) : (u.full_name?.charAt(0) || '?')}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-sm font-black text-[#002855] uppercase tracking-tight mb-2 truncate">{u.full_name}</h3>
-                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
-                          {getRoleIcon(u.role)}{getRoleLabel(u.role)}
+                  <div key={u.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400 transition-all duration-300 flex flex-col group overflow-hidden">
+                    <div className="p-6 flex-1">
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-12 h-12 rounded-xl bg-[#002855] text-white flex items-center justify-center text-sm font-black overflow-hidden flex-shrink-0">
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                target.parentElement!.innerHTML = `<div class="w-full h-full bg-[#002855] text-white flex items-center justify-center text-sm font-black">${u.full_name?.charAt(0) || '?'}</div>`;
+                              }} />
+                          ) : (u.full_name?.charAt(0) || '?')}
                         </div>
+                        <div className="flex-1">
+                          <h3 className="text-sm font-black text-[#002855] uppercase tracking-tight mb-2 truncate">{u.full_name}</h3>
+                          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
+                            {getRoleIcon(u.role)}{getRoleLabel(u.role)}
+                          </div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${statusColors[u.status]}`}>{statusLabels[u.status]}</span>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${statusColors[u.status]}`}>{statusLabels[u.status]}</span>
+                      <div className="space-y-3 mb-6">
+                        <div className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                          <Mail size={14} className="text-blue-500 shrink-0" />
+                          <span className="font-bold truncate">{u.email}</span>
+                        </div>
+                        {u.locations && (
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
+                            <MapPin size={14} className="text-rose-500" />
+                            <span>{u.locations.name}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="space-y-3 mb-6">
-                      <div className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 p-2 rounded-xl border border-gray-100">
-                        <Mail size={14} className="text-blue-500 shrink-0" />
-                        <span className="font-bold truncate">{u.email}</span>
-                      </div>
-                      {u.locations && (
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
-                          <MapPin size={14} className="text-rose-500" />
-                          <span>{u.locations.name}</span>
-                        </div>
+                    <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex gap-2">
+                      <button onClick={() => handleViewUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm">
+                        <Eye size={14} /> Ver
+                      </button>
+                      {canEditValue && u.role !== 'super_admin' && (
+                        <>
+                          <button onClick={() => handleEditUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm">
+                            <Edit size={14} /> Editar
+                          </button>
+                          <button onClick={() => handleDeleteUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-rose-600 text-white rounded-lg hover:bg-rose-700 shadow-sm">
+                            <Trash2 size={14} /> Eliminar
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
-                  <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex gap-2">
-                    <button onClick={() => handleViewUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm">
-                      <Eye size={14} /> Ver
-                    </button>
-                    {canEditValue && u.role !== 'super_admin' && (
-                      <>
-                        <button onClick={() => handleEditUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm">
-                          <Edit size={14} /> Editar
-                        </button>
-                        <button onClick={() => handleDeleteUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-rose-600 text-white rounded-lg hover:bg-rose-700 shadow-sm">
-                          <Trash2 size={14} /> Eliminar
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ))}
               </div>
             </div>
           ) : (

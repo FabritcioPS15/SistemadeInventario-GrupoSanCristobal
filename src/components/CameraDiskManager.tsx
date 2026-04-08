@@ -157,7 +157,7 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
 
   const getAvailableDiskNumbers = () => {
     const usedNumbers = disks.map(d => d.disk_number);
-    return [1, 2, 3, 4].filter(num => {
+    return [1, 2, 3, 4, 5, 6, 7, 8].filter(num => {
       // Si estamos editando, permitir el número actual del disco
       if (editingDisk && editingDisk.disk_number === num) {
         return true;
@@ -215,7 +215,7 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
           <HardDrive className="h-5 w-5" />
           Discos de Almacenamiento
         </h3>
-        {disks.length < 4 && (
+        {disks.length < 8 && (
           <button
             type="button"
             onClick={(e) => {
@@ -341,7 +341,7 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
                 </select>
                 {getAvailableDiskNumbers().length === 0 && (
                   <p className="text-red-500 text-sm mt-1">
-                    No hay números de disco disponibles (máximo 4 discos)
+                    No hay números de disco disponibles (máximo 8 discos)
                   </p>
                 )}
               </div>

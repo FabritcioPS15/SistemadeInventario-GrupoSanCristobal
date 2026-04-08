@@ -26,9 +26,9 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
             <Package size={60} strokeWidth={1} />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          
-          <button 
-            onClick={onClose} 
+
+          <button
+            onClick={onClose}
             className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/40 text-white rounded-full backdrop-blur-md transition-all"
           >
             <X size={20} />
@@ -157,8 +157,8 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
                   <div>
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Fecha</label>
                     <p className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                       <Calendar size={14} className="text-slate-300" />
-                       {asset.fecha_adquisicion ? new Date(asset.fecha_adquisicion).toLocaleDateString('es-ES') : 'N/A'}
+                      <Calendar size={14} className="text-slate-300" />
+                      {asset.fecha_adquisicion ? new Date(asset.fecha_adquisicion).toLocaleDateString('es-ES') : 'N/A'}
                     </p>
                   </div>
                   <div>
@@ -171,18 +171,18 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
               </section>
 
               <div className="pt-8 mt-auto border-t border-slate-100 grid grid-cols-2 gap-4">
-                 <button 
+                <button
                   onClick={onEdit}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-                 >
-                   <Edit size={14} /> Editar
-                 </button>
-                 <button 
+                >
+                  <Edit size={14} /> Editar
+                </button>
+                <button
                   onClick={onClose}
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-200 transition-all"
-                 >
-                   Cerrar
-                 </button>
+                >
+                  Cerrar
+                </button>
               </div>
             </div>
           </div>

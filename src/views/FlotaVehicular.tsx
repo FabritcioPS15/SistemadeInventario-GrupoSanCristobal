@@ -1,12 +1,14 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Plus, Edit, Trash2, Car, X, Download, LayoutGrid, List, MapPin, Search } from 'lucide-react';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { Plus, Edit, Trash2, Car, LayoutGrid, List, MapPin, Search, ChevronDown } from 'lucide-react';
+import { RiFileExcel2Fill } from "react-icons/ri";
+import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import VehicleImportModal from '../components/VehicleImportModal';
 import FlotaVehicularForm from '../components/forms/FlotaVehicularForm';
 import Pagination from '../components/Pagination';
-import { supabase } from '../lib/supabase';
+import { supabase, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
 type Vehiculo = {
@@ -40,13 +42,25 @@ export default function FlotaVehicular() {
   const [view, setView] = useState<'list' | 'form'>('list');
   const [editing, setEditing] = useState<Vehiculo | undefined>();
   const [filterEstado, setFilterEstado] = useState<string>('todos');
-  const [filterSede, setFilterSede] = useState<string>('todos');
-  const [schools, setSchools] = useState<Array<{ id: string, name: string }>>([]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [schools, setSchools] = useState<Location[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchSchools();
@@ -55,10 +69,10 @@ export default function FlotaVehicular() {
 
   const fetchSchools = async () => {
     try {
-      const { data, error } = await supabase.from('locations').select('id, name').eq('type', 'escuela_conductores');
-      if (!error && data) setSchools(data);
+      const { data, error } = await supabase.from('locations').select('*').order('name');
+      if (!error && data) setSchools(data as Location[]);
     } catch (error) {
-      console.error('Error al cargar las escuelas:', error);
+      console.error('Error al cargar ubicaciones:', error);
     }
   };
 
@@ -95,19 +109,21 @@ export default function FlotaVehicular() {
     const vencDate = new Date(vencimiento);
     vencDate.setHours(0, 0, 0, 0);
     const daysUntil = Math.ceil((vencDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (daysUntil <= 0) return 'text-rose-600 font-black';
     if (daysUntil <= 15) return 'text-amber-600 font-black';
     return 'text-slate-600 font-bold';
   };
 
-  const filteredVehiculos = vehiculos.filter(v => {
-    const q = search.toLowerCase();
-    const searchMatch = !search || v.placa.toLowerCase().includes(q) || v.marca.toLowerCase().includes(q) || v.modelo.toLowerCase().includes(q);
-    const sedeMatch = filterSede === 'todos' || v.ubicacion_actual === filterSede;
-    const estadoMatch = filterEstado === 'todos' || v.estado === filterEstado;
-    return searchMatch && sedeMatch && estadoMatch;
-  });
+  const filteredVehiculos = useMemo(() => {
+    return vehiculos.filter(v => {
+      const q = search.toLowerCase();
+      const searchMatch = !search || v.placa.toLowerCase().includes(q) || v.marca.toLowerCase().includes(q) || v.modelo.toLowerCase().includes(q);
+      const sedeMatch = selectedLocations.length === 0 || selectedLocations.length === schools.length || selectedLocations.includes(v.ubicacion_actual);
+      const estadoMatch = filterEstado === 'todos' || v.estado === filterEstado;
+      return searchMatch && sedeMatch && estadoMatch;
+    });
+  }, [vehiculos, search, selectedLocations, filterEstado, schools.length]);
 
   const sortedVehiculos = useMemo(() => {
     if (!sortConfig) return filteredVehiculos;
@@ -146,15 +162,15 @@ export default function FlotaVehicular() {
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('Flota');
       ws.columns = [
-        { header: 'PLACA', key: 'placa', width: 15 }, 
+        { header: 'PLACA', key: 'placa', width: 15 },
         { header: 'MARCA', key: 'marca', width: 20 },
         { header: 'MODELO', key: 'modelo', width: 20 },
         { header: 'AÑO', key: 'año', width: 10 },
         { header: 'ESTADO', key: 'estado', width: 15 },
         { header: 'UBICACIÓN', key: 'ubicacion_actual', width: 30 }
       ];
-      filteredVehiculos.forEach(v => ws.addRow({ 
-        placa: v.placa, 
+      filteredVehiculos.forEach(v => ws.addRow({
+        placa: v.placa,
         marca: v.marca,
         modelo: v.modelo,
         año: v.año,
@@ -166,6 +182,28 @@ export default function FlotaVehicular() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = `Flota_${new Date().toISOString().split('T')[0]}.xlsx`; a.click();
     } catch (e) { console.error(e) }
+  };
+
+  const handleExportPdf = () => {
+    const doc = new jsPDF();
+    const tableData = filteredVehiculos.map(v => [
+      v.placa,
+      v.marca,
+      v.modelo,
+      v.año.toString(),
+      v.estado,
+      getEscuelaNombre(v.ubicacion_actual)
+    ]);
+
+    autoTable(doc, {
+      head: [['PLACA', 'MARCA', 'MODELO', 'AÑO', 'ESTADO', 'UBICACIÓN']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [0, 40, 85] }
+    });
+
+    doc.save(`Flota_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const statusColors: Record<string, string> = {
@@ -185,6 +223,7 @@ export default function FlotaVehicular() {
             </div>
           </div>
 
+          {/* Search */}
           <div className="flex-1 relative group/search">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
             <input
@@ -196,19 +235,58 @@ export default function FlotaVehicular() {
             />
           </div>
 
+          {/* Filters + Toggle */}
           <div className="flex flex-wrap items-center gap-2">
-            <select value={filterEstado} onChange={e => { setFilterEstado(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[160px] appearance-none cursor-pointer">
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
+              >
+                <MapPin size={14} className="text-rose-500" />
+                <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === schools.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
+                <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              {showLocationDropdown && (
+                <div className="absolute top-full right-0 z-[70] mt-2 bg-white border border-slate-200 shadow-2xl min-w-[280px] animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="p-2 max-h-[300px] overflow-y-auto">
+                    <label className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer group/loc">
+                      <input
+                        type="checkbox"
+                        checked={selectedLocations.length === schools.length}
+                        onChange={() => { setSelectedLocations(selectedLocations.length === schools.length ? [] : schools.map(l => l.id)); setCurrentPage(1); }}
+                        className="w-4 h-4 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]"
+                      />
+                      <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest">Todas las sedes</span>
+                    </label>
+                    <div className="h-px bg-slate-100 my-1" />
+                    {schools.map((loc) => (
+                      <label key={loc.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer group/loc">
+                        <input
+                          type="checkbox"
+                          checked={selectedLocations.includes(loc.id)}
+                          onChange={() => {
+                            setSelectedLocations(prev => prev.includes(loc.id) ? prev.filter(id => id !== loc.id) : [...prev, loc.id]);
+                            setCurrentPage(1);
+                          }}
+                          className="w-4 h-4 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]"
+                        />
+                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-none group-hover/loc:text-[#002855] transition-colors">{loc.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <select
+              value={filterEstado}
+              onChange={e => { setFilterEstado(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
+            >
               <option value="todos">Todos los estados</option>
               <option value="activa">Activa</option>
               <option value="inactiva">Inactiva</option>
               <option value="en_proceso">En Proceso</option>
-            </select>
-
-            <select value={filterSede} onChange={e => { setFilterSede(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[180px] appearance-none cursor-pointer">
-              <option value="todos">Todas las sedes</option>
-              {schools.map(s => <option key={s.id} value={s.id}>{s.name.toUpperCase()}</option>)}
             </select>
 
             <div className="flex bg-slate-100 p-1 border border-slate-200">
@@ -217,22 +295,36 @@ export default function FlotaVehicular() {
             </div>
 
             {canEdit() && (
-              <button onClick={() => { setEditing(undefined); setView(view === 'form' ? 'list' : 'form'); }}
-                className={`flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${view === 'form' ? 'bg-slate-800 text-white' : 'bg-[#002855] text-white hover:bg-blue-800'}`}>
+              <button
+                onClick={() => { setEditing(undefined); setView(view === 'form' ? 'list' : 'form'); }}
+                className={`flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${view === 'form' ? 'bg-slate-800 text-white' : 'bg-[#002855] text-white hover:bg-blue-800'}`}
+              >
                 {view === 'form' ? <List size={14} /> : <Plus size={14} />}
                 {view === 'form' ? 'Ver Lista' : 'Nueva Unidad'}
               </button>
             )}
 
-            <button onClick={handleExportExcel} className="px-4 py-3 text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-all shadow-sm">
-              <Download size={14} /> Excel
+            <button
+              onClick={handleExportExcel}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
+              title="Exportar a Excel"
+            >
+              <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+            </button>
+
+            <button
+              onClick={handleExportPdf}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
+              title="Exportar a PDF"
+            >
+              <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
             </button>
           </div>
         </div>
 
         {view === 'form' ? (
           <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
-             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-8">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-8">
               <div className="mb-8 border-b border-gray-100 pb-6">
                 <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">
                   {editing ? 'Actualización de Unidad' : 'Registro de Nueva Unidad'}
@@ -348,7 +440,7 @@ export default function FlotaVehicular() {
                           {v.estado === 'en_proceso' ? 'En Proceso' : v.estado}
                         </span>
                       </div>
-                      
+
                       <div className="space-y-3 mb-6">
                         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600 uppercase">
                           <MapPin size={14} className="text-rose-500" />

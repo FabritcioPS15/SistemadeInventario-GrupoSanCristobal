@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { Edit, Trash2, MapPin, X, Eye, Globe, Copy, Server as ServerLucide, ChevronDown, ChevronUp, LayoutGrid, List } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Edit, Trash2, MapPin, X, Eye, Globe, Copy, Server as ServerLucide, ChevronDown, ChevronUp, LayoutGrid, List, Plus } from 'lucide-react';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 import { SiAnydesk } from "react-icons/si";
 import jsPDF from 'jspdf';
@@ -22,22 +22,11 @@ export default function Servers() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortField, setSortField] = useState<'name' | 'location' | 'ip' | 'anydesk' | 'updated_at'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowLocationDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -268,46 +257,18 @@ export default function Servers() {
 
             {/* Controles de Filtrado (Lado Derecho) */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Sedes */}
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[280px]"
+              <div className="flex items-center gap-2 px-3 py-3 bg-slate-50 border border-slate-200 rounded-none min-w-[280px]">
+                <MapPin size={14} className="text-slate-400" />
+                <select
+                  value={selectedLocations[0] || ''}
+                  onChange={e => { setSelectedLocations(e.target.value ? [e.target.value] : []); resetPagination(); }}
+                  className="bg-transparent text-[10px] font-black text-[#002855] uppercase outline-none cursor-pointer flex-1"
                 >
-                  <MapPin size={14} className="text-rose-500" />
-                  <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === locations.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
-                  <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
-                </button>
-                {showLocationDropdown && (
-                  <div className="absolute top-full right-0 z-[70] mt-2 bg-white border border-slate-200 shadow-2xl min-w-[300px] animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-2 max-h-[300px] overflow-y-auto">
-                      <label className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer group/loc">
-                        <input
-                          type="checkbox"
-                          checked={selectedLocations.length === locations.length}
-                          onChange={() => { setSelectedLocations(selectedLocations.length === locations.length ? [] : locations.map(l => l.id)); resetPagination(); }}
-                          className="w-4 h-4 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]"
-                        />
-                        <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest">Todas las sedes</span>
-                      </label>
-                      <div className="h-px bg-slate-100 my-1" />
-                      {locations.map((loc) => (
-                        <label key={loc.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer group/loc">
-                          <input
-                            type="checkbox"
-                            checked={selectedLocations.includes(loc.id)}
-                            onChange={() => {
-                              setSelectedLocations(prev => prev.includes(loc.id) ? prev.filter(id => id !== loc.id) : [...prev, loc.id]);
-                              resetPagination();
-                            }}
-                            className="w-4 h-4 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]"
-                          />
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest group-hover/loc:text-[#002855]">{loc.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  <option value="">TODAS LAS SEDES</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Vistas */}
@@ -325,6 +286,15 @@ export default function Servers() {
                   <List size={16} />
                 </button>
               </div>
+
+              {canEdit() && (
+                <button
+                  onClick={openCreate}
+                  className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+                >
+                  <Plus size={14} /> Nuevo
+                </button>
+              )}
             </div>
           </div>
 

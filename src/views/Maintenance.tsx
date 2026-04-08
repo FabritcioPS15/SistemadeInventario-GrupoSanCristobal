@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Eye, Star, X, MapPin, ShieldCheck, Package, LayoutGrid, List as ListIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Eye, Star, X, MapPin, ShieldCheck, Package, LayoutGrid, List as ListIcon } from 'lucide-react';
 import { supabase, AssetWithDetails, Location } from '../lib/supabase';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
 import { useAuth } from '../contexts/AuthContext';
+import Pagination from '../components/Pagination';
 
 type MaintenanceProps = {
   categoryFilter?: string;
@@ -57,7 +58,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const [typeFilter, setTypeFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [machineTypeFilter, setMachineTypeFilter] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   const handleSort = (key: string) => {
@@ -252,6 +255,10 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
     });
   }, [maintenanceRecords, searchTerm, locationFilter, statusFilter, typeFilter, categoryFilter, sortConfig]);
 
+  const totalPages = Math.ceil(sortedRecords.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedData = sortedRecords.slice(startIndex, startIndex + itemsPerPage);
+
   const clearFilters = () => {
     setStatusFilter('');
     setTypeFilter('');
@@ -262,19 +269,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const hasActiveFilters = searchTerm || statusFilter || typeFilter || locationFilter || machineTypeFilter || categoryFilter;
 
   type StatusKey = MaintenanceRecord['status'];
-  type MaintenanceTypeKey = MaintenanceRecord['maintenance_type'];
-
-
-
-  const getStatusIcon = (status: StatusKey) => {
-    switch (status) {
-      case 'pending': return <Clock size={16} className="text-yellow-600" />;
-      case 'in_progress': return <AlertTriangle size={16} className="text-blue-600" />;
-      case 'completed': return <CheckCircle size={16} className="text-green-600" />;
-      case 'waiting_parts': return <Clock size={16} className="text-orange-600" />;
-      default: return <Clock size={16} className="text-gray-600" />;
-    }
-  };
 
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
@@ -302,9 +296,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 <LayoutGrid size={16} />
               </button>
               <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                title="Vista Lista"
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                title="Vista Tabla"
               >
                 <ListIcon size={16} />
               </button>
@@ -335,88 +329,75 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
       <div className="p-6 space-y-6">
 
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 mb-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado</label>
-              <select
-                className="block w-full pl-3 pr-10 py-2 text-xs sm:text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="">Todos los Estados</option>
-                {Object.entries(statusLabels).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
+          {/* Action Bar */}
+          <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
+            <div className="absolute -top-3 -left-3">
+              <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+                {sortedRecords.length} Registros
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo</label>
-              <select
-                className="block w-full pl-3 pr-10 py-2 text-xs sm:text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-              >
-                <option value="">Todos los Tipos</option>
-                {Object.entries(typeLabels).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
-                ))}
-              </select>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3 flex-1">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
+                <MapPin size={14} className="text-slate-500" />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sede:</span>
+                <select
+                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                >
+                  <option value="">TODAS LAS SEDES</option>
+                  {locations.map((loc) => (
+                    <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
+                <ShieldCheck size={14} className="text-slate-500" />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo:</span>
+                <select
+                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                >
+                  <option value="">TODOS LOS TIPOS</option>
+                  {Object.entries(typeLabels).map(([key, label]) => (
+                    <option key={key} value={key}>{label.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
+                <Clock size={14} className="text-slate-500" />
+                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado:</span>
+                <select
+                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="">TODOS LOS ESTADOS</option>
+                  {Object.entries(statusLabels).map(([key, label]) => (
+                    <option key={key} value={key}>{label.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sede</label>
-              <select
-                className="block w-full pl-3 pr-10 py-2 text-xs sm:text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-              >
-                <option value="">Todas las Sedes</option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>{loc.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Orden</label>
-              <select
-                value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : ''}
-                onChange={(e) => {
-                  const [key, direction] = e.target.value.split('-');
-                  if (key) {
-                    setSortConfig({ key, direction: direction as 'asc' | 'desc' });
-                  } else {
-                    setSortConfig(null);
-                  }
-                }}
-                className="block w-full pl-3 pr-10 py-2 text-xs sm:text-sm border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400 rounded-md bg-white font-medium text-slate-700"
-              >
-                <option value="">Ordenar por...</option>
-                <option value="date-desc">Fecha (Reciente)</option>
-                <option value="date-asc">Fecha (Antiguo)</option>
-                <option value="asset-asc">Activo (A-Z)</option>
-                <option value="asset-desc">Activo (Z-A)</option>
-                <option value="total_cost-desc">Costo (Mayor)</option>
-                <option value="total_cost-asc">Costo (Menor)</option>
-                <option value="status-asc">Estado (A-Z)</option>
-                <option value="status-desc">Estado (Z-A)</option>
-              </select>
+
+            {/* View Toggle */}
+            <div className="flex items-center gap-2">
+              <div className="flex bg-slate-100 p-1 border border-slate-200">
+                <button onClick={() => setViewMode('grid')} className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}><LayoutGrid size={16} /></button>
+                <button onClick={() => setViewMode('table')} className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}><ListIcon size={16} /></button>
+              </div>
+              {hasActiveFilters && (
+                <button onClick={clearFilters} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" title="Limpiar Filtros">
+                  <X size={18} />
+                </button>
+              )}
             </div>
           </div>
-
-          {hasActiveFilters && (
-            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-              <div className="flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wider">
-                {searchTerm && <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-100">"{searchTerm}"</span>}
-                {statusFilter && <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-100">{statusLabels[statusFilter as StatusKey]}</span>}
-                {typeFilter && <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded border border-purple-100">{typeLabels[typeFilter as MaintenanceTypeKey]}</span>}
-                {locationFilter && <span className="px-2 py-0.5 bg-rose-50 text-rose-700 rounded border border-rose-100">{locations.find(l => l.id === locationFilter)?.name}</span>}
-              </div>
-              <button onClick={clearFilters} className="text-xs font-bold text-gray-400 hover:text-rose-600 flex items-center gap-1">
-                <X size={14} /> Limpiar filtros
-              </button>
-            </div>
-          )}
-        </div>
 
         {
           loading ? (
@@ -426,279 +407,149 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
             </div>
           ) : sortedRecords.length === 0 ? (
             <div className="text-center py-12">
-              <Wrench size={48} className="mx-auto mb-4 text-gray-300" />
-              <p className="text-gray-500 text-lg mb-2">No se encontraron registros de mantenimiento</p>
-              <p className="text-gray-400">
-                {hasActiveFilters ? 'Intenta con otros términos de búsqueda' : 'Comienza agregando un nuevo mantenimiento'}
+              <Wrench size={48} className="mx-auto mb-4 text-[#002855] opacity-20" />
+              <p className="text-[#002855] font-black uppercase text-xs tracking-widest mb-2">Sin mantenimientos</p>
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-tight">
+                {hasActiveFilters ? 'Intenta ajustando los filtros' : 'Aún no se han registrado mantenimientos'}
               </p>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedRecords.map(record => {
-                const isOverdue = record.scheduled_date && record.status !== 'completed' && new Date(record.scheduled_date) < new Date();
-                return (
-                  <div key={record.id} className={`group bg-white rounded-xl shadow-sm border transition-all duration-200 hover:shadow-md ${isOverdue ? 'border-rose-200 bg-rose-50/20' : 'border-gray-200 hover:border-blue-200'}`}>
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`${statusColors[record.status]} border rounded-lg p-1.5 shadow-sm group-hover:scale-105 transition-transform`}>
-                            {getStatusIcon(record.status)}
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-gray-900 text-sm leading-tight group-hover:text-blue-700 transition-colors line-clamp-1">
-                              {record.assets?.asset_types?.name}
-                            </h3>
-                            <p className="text-[10px] text-gray-500 font-medium">#{record.id.slice(0, 8)}</p>
-                          </div>
-                        </div>
-                        {record.total_cost && record.total_cost > 0 && (
-                          <div className="text-right">
-                            <p className="text-[9px] font-black text-blue-500 tracking-tighter leading-none italic">S/ {record.total_cost.toFixed(2)}</p>
-                          </div>
-                        )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {paginatedData.map(record => (
+                <div
+                  key={record.id}
+                  className="bg-white rounded-none shadow-sm border border-slate-100 transition-all duration-300 flex flex-col group overflow-hidden relative hover:bg-slate-50/80 hover:border-blue-200/50"
+                  onClick={() => handleViewRecord(record)}
+                >
+                  <div className="p-4 flex-1">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-none flex items-center justify-center bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                        <Wrench size={16} />
                       </div>
-
-                      <div className="mb-3">
-                        <p className="text-xs text-gray-700 font-semibold line-clamp-1 mb-1">{record.description}</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${statusColors[record.status]}`}>{statusLabels[record.status]}</span>
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${typeColors[record.maintenance_type]}`}>{typeLabels[record.maintenance_type]}</span>
-                          {record.warranty_claim && <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200">Garantía</span>}
-                        </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-tight truncate">
+                          {record.assets?.brand} {record.assets?.model}
+                        </h3>
+                        <span className={`inline-block px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest border mt-1 ${typeColors[record.maintenance_type]}`}>
+                          {typeLabels[record.maintenance_type]}
+                        </span>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-2 py-2 border-t border-gray-50 mb-3 overflow-hidden">
-                        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium truncate">
-                          <MapPin size={12} className="text-rose-400 shrink-0" />
-                          <span className="truncate">{record.locations?.name || record.assets?.locations?.name || 'Sede N/A'}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium truncate">
-                          <CheckCircle size={12} className="text-blue-400 shrink-0" />
-                          <span className="truncate">{record.technician || 'Sin técnico'}</span>
-                        </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="p-2 border bg-slate-50 border-slate-100">
+                        <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Sede</label>
+                        <p className="text-[9px] font-mono font-black text-slate-600 truncate">{record.locations?.name || 'Sede N/A'}</p>
                       </div>
-
-                      <div className="flex gap-2">
-                        <button onClick={() => handleViewRecord(record)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[10px] bg-slate-50 text-slate-600 rounded-lg hover:bg-slate-100 transition-colors font-bold border border-slate-100">
-                          <Eye size={14} /> Ver
-                        </button>
-                        {canEdit() && (
-                          <div className="flex gap-1">
-                            <button onClick={() => handleEditRecord(record)} className="p-1.5 bg-slate-50 text-slate-500 rounded-lg hover:bg-slate-100 transition-colors border border-slate-100">
-                              <Edit size={14} />
-                            </button>
-                            <button onClick={() => handleDeleteRecord(record)} className="p-1.5 bg-slate-50 text-slate-400 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-colors border border-slate-100">
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        )}
+                      <div className="p-2 border bg-slate-50 border-slate-100">
+                        <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Técnico</label>
+                        <p className="text-[9px] font-mono font-black text-slate-600 truncate">{record.technician || 'S.A.'}</p>
                       </div>
                     </div>
                   </div>
-                );
-              })}
+                  <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); handleViewRecord(record); }} className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 hover:text-blue-600 hover:border-blue-200 transition-all">Informe</button>
+                    {canEdit() && (
+                      <div className="flex gap-2">
+                        <button onClick={(e) => { e.stopPropagation(); handleEditRecord(record); }} className="w-7 h-7 flex items-center justify-center text-amber-600 bg-white border border-amber-100 hover:bg-amber-500 hover:text-white transition-all"><Edit size={12} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteRecord(record); }} className="w-7 h-7 flex items-center justify-center text-rose-500 bg-white border border-rose-100 hover:bg-rose-500 hover:text-white transition-all"><Trash2 size={12} /></button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              {/* Desktop Table */}
-              <div className="hidden lg:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th
-                        scope="col"
-                        className="px-4 py-3 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors"
-                        onClick={() => handleSort('asset')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Activo / Informe
-                          {sortConfig?.key === 'asset' ? (
-                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                          ) : null}
-                        </div>
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-4 py-3 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors"
-                        onClick={() => handleSort('description')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Descripción / Causa
-                          {sortConfig?.key === 'description' ? (
-                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                          ) : null}
-                        </div>
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-4 py-3 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors"
-                        onClick={() => handleSort('status')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Estado / Tipo
-                          {sortConfig?.key === 'status' ? (
-                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                          ) : null}
-                        </div>
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-4 py-3 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors"
-                        onClick={() => handleSort('technician')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Responsable
-                          {sortConfig?.key === 'technician' ? (
-                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                          ) : null}
-                        </div>
-                      </th>
-                      <th
-                        scope="col"
-                        className="px-4 py-3 text-right text-[10px] font-black text-gray-500 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors"
-                        onClick={() => handleSort('total_cost')}
-                      >
-                        <div className="flex items-center justify-end gap-1">
-                          Inversión
-                          {sortConfig?.key === 'total_cost' ? (
-                            sortConfig.direction === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                          ) : null}
-                        </div>
-                      </th>
-                      <th scope="col" className="px-4 py-3 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-100">
-                    {sortedRecords.map(record => {
-                      const isOverdue = record.scheduled_date && record.status !== 'completed' && new Date(record.scheduled_date) < new Date();
-                      return (
-                        <tr key={record.id} className={`hover:bg-slate-50 transition-colors ${isOverdue ? 'bg-rose-50/10' : ''}`}>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-3">
-                              <div className={`${statusColors[record.status]} p-1.5 rounded-lg border flex items-center justify-center shrink-0`}>
-                                {getStatusIcon(record.status)}
-                              </div>
-                              <div>
-                                <div className="text-xs font-black text-gray-900 leading-none">{record.assets?.asset_types?.name}</div>
-                                <div className="text-[10px] font-bold text-gray-400 mt-1 font-mono uppercase">#{record.id.slice(0, 8)}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="max-w-xs xl:max-w-md">
-                              <div className="text-[11px] font-bold text-gray-800 truncate" title={record.description}>{record.description}</div>
-                              {record.failure_cause && (
-                                <div className="text-[9px] text-rose-500 font-bold mt-0.5 truncate flex items-center gap-1 italic">
-                                  <span className="w-1 h-1 bg-rose-400 rounded-full"></span> {record.failure_cause}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex flex-col gap-1">
-                              <div className="flex gap-1">
-                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${statusColors[record.status]}`}>
-                                  {statusLabels[record.status]}
-                                </span>
-                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${typeColors[record.maintenance_type]}`}>
-                                  {typeLabels[record.maintenance_type]}
-                                </span>
-                              </div>
-                              {record.warranty_claim && (
-                                <span className="text-[8px] font-black text-indigo-500 uppercase flex items-center gap-0.5">
-                                  <ShieldCheck size={10} /> Garantía Activa
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="flex items-center gap-2 text-[10px] font-black text-gray-600 uppercase tracking-tighter">
-                              <CheckCircle size={12} className="text-blue-400" /> {record.technician || 'S.A'}
-                            </div>
-                            <div className="text-[9px] text-gray-400 mt-0.5 font-bold flex items-center gap-1">
-                              <MapPin size={10} className="text-rose-300" /> {record.locations?.name || record.assets?.locations?.name || 'Sede N/A'}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-right">
-                            <div className="text-xs font-black text-slate-900 font-mono italic">
-                              {record.total_cost && record.total_cost > 0 ? `S/ ${record.total_cost.toFixed(2)}` : 'S/ 0.00'}
-                            </div>
-                            {record.work_hours && (
-                              <div className="text-[9px] font-bold text-blue-500 mt-0.5 italic">{record.work_hours} hs</div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button onClick={() => handleViewRecord(record)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Ver Detalles">
-                                <Eye size={16} />
-                              </button>
-                              {canEdit() && (
-                                <>
-                                  <button onClick={() => handleEditRecord(record)} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar">
-                                    <Edit size={16} />
-                                  </button>
-                                  <button onClick={() => handleDeleteRecord(record)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Eliminar">
-                                    <Trash2 size={16} />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+              <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={sortedRecords.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                />
               </div>
 
-              {/* Mobile Card View (List Mode) */}
-              <div className="lg:hidden divide-y divide-slate-100">
-                {sortedRecords.map(record => {
-                  const isOverdue = record.scheduled_date && record.status !== 'completed' && new Date(record.scheduled_date) < new Date();
-                  return (
-                    <div key={record.id} className={`p-4 hover:bg-slate-50 transition-colors ${isOverdue ? 'bg-rose-50/5' : ''}`}>
-                      <div className="flex items-start justify-between gap-4 mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`${statusColors[record.status]} p-2 rounded-lg border`}>
-                            {getStatusIcon(record.status)}
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-black text-slate-900 uppercase">{record.assets?.brand} {record.assets?.model}</h4>
-                            <p className="text-[10px] text-slate-400 font-mono">#{record.id.slice(0, 8)}</p>
-                          </div>
-                        </div>
-                        {record.total_cost && record.total_cost > 0 ? (
-                          <div className="text-right">
-                            <p className="text-xs font-black text-blue-600">S/ {record.total_cost.toFixed(2)}</p>
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <p className="text-xs font-medium text-slate-600 mb-3 line-clamp-2">{record.description}</p>
-
-                      <div className="flex flex-wrap gap-1.5 mb-4">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${statusColors[record.status]}`}>{statusLabels[record.status]}</span>
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${typeColors[record.maintenance_type]}`}>{typeLabels[record.maintenance_type]}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-50">
-                        <button onClick={() => handleViewRecord(record)} className="flex items-center gap-2 px-4 py-1.5 text-[10px] font-bold text-slate-500 bg-slate-50 rounded-md hover:bg-slate-100 uppercase tracking-widest">
-                          <Eye size={14} /> Detalle
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse border-spacing-0">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-5 text-left">
+                        <button onClick={() => handleSort('asset')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+                          <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Activo</span>
                         </button>
-                        {canEdit() && (
-                          <div className="flex gap-2">
-                            <button onClick={() => handleEditRecord(record)} className="p-1.5 text-slate-400 hover:text-slate-900 bg-slate-50 rounded-md transition-all border border-slate-100">
-                              <Edit size={16} />
-                            </button>
-                            <button onClick={() => handleDeleteRecord(record)} className="p-1.5 text-slate-400 hover:text-rose-600 bg-red-50 rounded-md transition-all border border-red-100">
-                              <Trash2 size={16} />
-                            </button>
+                      </th>
+                      <th className="px-4 py-5 text-left">
+                        <button onClick={() => handleSort('type')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+                          <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tipo</span>
+                        </button>
+                      </th>
+                      <th className="px-4 py-5 text-left">
+                        <button onClick={() => handleSort('location')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+                          <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span>
+                        </button>
+                      </th>
+                      <th className="px-4 py-5 text-left">
+                        <button onClick={() => handleSort('status')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+                          <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span>
+                        </button>
+                      </th>
+                      <th className="px-4 py-5 text-left">
+                        <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Responsable</span>
+                      </th>
+                      <th className="px-6 py-5 text-center">
+                        <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedData.map(record => (
+                      <tr key={record.id} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0" onClick={() => handleViewRecord(record)}>
+                        <td className="px-6 py-5 font-bold text-left">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white">
+                              <Wrench size={14} />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{record.assets?.brand} {record.assets?.model}</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">#{record.id.slice(0, 8)}</span>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${typeColors[record.maintenance_type] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                            {typeLabels[record.maintenance_type]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block">{record.locations?.name || record.assets?.locations?.name || 'Sede N/A'}</span>
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${statusColors[record.status] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                            {statusLabels[record.status]}
+                          </span>
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          <div className="flex flex-col">
+                            <span className="text-[14px] font-black text-slate-900 uppercase leading-tight">{record.technician || 'S.A.'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-center">
+                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={e => { e.stopPropagation(); handleViewRecord(record); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm" title="Ver Informe"><Eye size={14} /></button>
+                            {canEdit() && (
+                              <>
+                                <button onClick={e => { e.stopPropagation(); handleEditRecord(record); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Edit size={14} /></button>
+                                <button onClick={e => { e.stopPropagation(); handleDeleteRecord(record); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Trash2 size={14} /></button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )
@@ -706,7 +557,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
         {
           showForm && (
-            <MaintenanceForm editRecord={editingRecord} onClose={handleCloseForm} onSave={handleSaveRecord} />
+            <MaintenanceForm editMaintenance={editingRecord} onClose={handleCloseForm} onSave={handleSaveRecord} />
           )
         }
 

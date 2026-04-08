@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Camera, Eye, EyeOff } from 'lucide-react';
 import { supabase, Location } from '../../lib/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
+import CameraDiskManager from '../CameraDiskManager';
 
 type CameraType = {
   id: string;
@@ -371,6 +372,15 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
           />
         </FormField>
       </FormSection>
+
+      {/* Section: Discos de Almacenamiento (Solo si ya existe en la DB) */}
+      {editCamera?.id && (
+        <FormSection title="Discos Duros (DVR/NVR)" color="indigo">
+          <div className="bg-white p-4 border border-slate-200 rounded-lg">
+            <CameraDiskManager cameraId={editCamera.id} />
+          </div>
+        </FormSection>
+      )}
     </BaseForm>
   );
 }

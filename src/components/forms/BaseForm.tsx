@@ -40,8 +40,8 @@ export default function BaseForm({
   }[maxWidth];
 
   return (
-    <div className="fixed inset-0 bg-[#001529]/85 backdrop-blur-md flex items-center justify-center p-0 md:p-8 z-[100] animate-in fade-in duration-300">
-      <div className={`bg-white w-full h-full md:h-[85vh] ${maxWidthClass} rounded-none shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-white/10`}>
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-0 md:p-8 z-[100] animate-in fade-in duration-300">
+      <div className={`bg-white w-full h-full md:h-[90vh] ${maxWidthClass} rounded-none shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200`}>
         {/* Header Corporativo (Cuadrado) */}
         <div className="bg-[#001529] px-6 py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
@@ -57,7 +57,7 @@ export default function BaseForm({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+            className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
             disabled={loading}
           >
             <X size={24} />
@@ -68,9 +68,9 @@ export default function BaseForm({
           <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8">
             {/* Error Message */}
             {error && (
-              <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 flex items-center gap-3 text-rose-800">
+              <div className="bg-rose-50 border border-rose-100 rounded-none p-4 flex items-center gap-3 text-rose-800">
                 <AlertCircle size={20} />
-                <p className="text-sm font-medium">{error}</p>
+                <p className="text-[11px] font-black uppercase tracking-widest">{error}</p>
               </div>
             )}
 
@@ -83,17 +83,17 @@ export default function BaseForm({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-6 py-2.5 text-sm font-bold text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2.5 text-sm font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-10 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg"
             >
-              {loading && <Loader2 size={16} className="animate-spin" />}
-              {loading ? 'Guardando...' : 'Guardar'}
+              {loading && <Loader2 size={14} className="animate-spin" />}
+              {loading ? 'Procesando...' : 'Guardar Cambios'}
             </button>
           </div>
         </form>
@@ -126,11 +126,11 @@ export function FormSection({
   };
 
   return (
-    <section className={`bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6 ${className}`}>
-      <div className="flex items-center justify-between border-b border-gray-50 pb-4">
-        <div className="flex items-center gap-2">
-          <div className={`w-1.5 h-6 ${colorClasses[color]} rounded-full`}></div>
-          <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest">{title}</h3>
+    <section className={`bg-white rounded-none border border-slate-100 p-8 space-y-8 ${className}`}>
+      <div className="flex items-center justify-between border-b border-slate-50 pb-5">
+        <div className="flex items-center gap-3">
+          <div className={`w-1 h-5 ${colorClasses[color]}`}></div>
+          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">{title}</h3>
         </div>
         {titleRight && (
           <div className="flex items-center">
@@ -180,7 +180,7 @@ export function FormInput({
   error,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { error?: string }) {
-  const baseClasses = "w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium text-gray-900 placeholder-gray-400";
+  const baseClasses = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] uppercase tracking-wider placeholder:text-slate-300";
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
 
   return (
@@ -198,7 +198,7 @@ export function FormSelect({
   children,
   ...props
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: string }) {
-  const baseClasses = "w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium text-gray-900";
+  const baseClasses = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] uppercase tracking-wider";
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
 
   return (
@@ -218,7 +218,7 @@ export function FormTextarea({
   rows = 3,
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { error?: string }) {
-  const baseClasses = "w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm font-medium text-gray-900 placeholder-gray-400 resize-none";
+  const baseClasses = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] uppercase tracking-wider placeholder:text-slate-300 resize-none";
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
 
   return (

@@ -208,7 +208,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
         'maintenance-view', 'maintenance-create', 'maintenance-edit',
         'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
-        'flota-view', 'flota-edit',
+        'flota-vehicular-view', 'flota-vehicular-edit',
         'users-view', 'users-create', 'users-edit', 'users-delete',
         'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
         'sutran-view', 'sutran-edit',
@@ -237,7 +237,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
         'maintenance-view', 'maintenance-create', 'maintenance-edit',
         'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
-        'flota-view', 'flota-edit',
+        'flota-vehicular-view', 'flota-vehicular-edit',
         'users-view', 'users-create', 'users-edit', 'users-delete',
         'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
         'sutran-view', 'sutran-edit',
@@ -265,7 +265,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
         'maintenance-view', 'maintenance-create', 'maintenance-edit',
         'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
-        'flota-view', 'flota-edit',
+        'flota-vehicular-view', 'flota-vehicular-edit',
         'users-view', 'users-create', 'users-edit', 'users-delete',
         'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
         'sutran-view', 'sutran-edit',
@@ -291,7 +291,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view',
         'maintenance-view', 'maintenance-create', 'maintenance-edit',
         'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
-        'flota-view', 'flota-edit',
+        'flota-vehicular-view', 'flota-vehicular-edit',
         'locations-view', 'sutran-view', 'mtc-view',
         'sent-view', 'sent-create', 'sent-edit',
         'sent-lima-view', 'sent-provincias-view'
@@ -307,7 +307,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'spare-parts-view',
         'cameras-view', // Solo ver cámaras de su sede
         'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', // Solo cámaras de su sede
-        'flota-view', // Solo ver flota
+        'flota-vehicular-view', // Solo ver flota
         'locations-view', // Solo ver sedes, no editar
         'sutran-view', // Solo ver sutran
         'sent-lima-view', 'sent-provincias-view'
@@ -318,15 +318,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     // Para permisos base del sidebar (ej: 'dashboard', 'tickets'), verificar si tiene acceso al módulo
-    const hasModuleAccess = rolePermissions[user.role as keyof typeof rolePermissions]?.some(p => 
+    const rolePerms = rolePermissions[user.role as keyof typeof rolePermissions] || [];
+    const hasModuleAccess = rolePerms.some(p => 
       p === `${permission}-view` || 
       p === `${permission}-create` || 
       p === `${permission}-edit` || 
       p === `${permission}-delete` ||
       p === permission
-    ) || false;
+    );
 
-    return hasModuleAccess;
+    if (hasModuleAccess) return true;
+
+    // Fallback: Si es un sub-permiso (contiene guion o empieza con 'sub-'), 
+    // verificar si tiene acceso al módulo principal
+    const modulePrefix = permission.startsWith('sub-') ? 'inventory' : permission.split('-')[0];
+    return rolePerms.some(p => p.startsWith(`${modulePrefix}-`));
   };
 
 

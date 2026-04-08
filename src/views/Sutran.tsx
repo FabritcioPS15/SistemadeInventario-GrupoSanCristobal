@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Building2, Calendar, FileText, User, MapPin, Clock, AlertTriangle, Edit, X, Star, Send, Activity, Globe, LayoutGrid, List, Search } from 'lucide-react';
+import { Plus, Building2, Calendar, FileText, User, AlertTriangle, Edit, X, LayoutGrid, List, Search } from 'lucide-react';
+import { FaFilePdf } from "react-icons/fa6";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
@@ -221,12 +222,13 @@ export default function Sutran() {
                 <Plus size={14} /> Nuevo
               </button>
             )}
-            
+
             <button
               onClick={handleGeneratePDF}
-              className="px-4 py-3 text-[10px] font-black uppercase tracking-widest bg-slate-100 text-[#002855] border border-slate-200 hover:bg-slate-200 transition-all shadow-sm"
+              className="flex items-center justify-center w-10 h-10 bg-slate-100 text-[#002855] border border-slate-200 hover:bg-slate-200 transition-all shadow-sm"
+              title="Exportar a PDF"
             >
-              PDF
+              <FaFilePdf size={18} />
             </button>
           </div>
         </div>
