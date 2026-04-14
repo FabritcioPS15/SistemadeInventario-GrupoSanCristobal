@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef} from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 // Forzar importación para evitar caché
-import {  Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid } from 'lucide-react';
+import {  Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle } from 'lucide-react';
 import { supabase, SutranVisit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationsFinal from './NotificationsFinal';
@@ -216,10 +216,14 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
     const actionsRef = useRef<HTMLDivElement>(null);
     const [showNotifications, setShowNotifications] = useState(false);
     const [showUserSettings, setShowUserSettings] = useState(false);
+    const [showSutranPopup, setShowSutranPopup] = useState(false);
+    const [showHelpModal, setShowHelpModal] = useState(false);
     const [sutranNotifications, setSutranNotifications] = useState<SutranVisit[]>([]);
     const [userLocation, setUserLocation] = useState<string>('');
     const notificationRef = useRef<HTMLDivElement>(null);
     const settingsRef = useRef<HTMLDivElement>(null);
+    const sutranPopupRef = useRef<HTMLDivElement>(null);
+    const helpRef = useRef<HTMLDivElement>(null);
 
     // Forzar actualización del breadcrumb cuando cambia la ruta
     useEffect(() => {
@@ -293,16 +297,16 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
         const fetchNotifications = async () => {
             try {
                 const today = new Date();
-                const fifteenDaysFromNow = new Date();
-                fifteenDaysFromNow.setDate(today.getDate() + 15);
+                const thirtyDaysFromNow = new Date();
+                thirtyDaysFromNow.setDate(today.getDate() + 30);
 
                 const { data } = await supabase
                     .from('sutran_visits')
                     .select('*')
                     .eq('status', 'pending')
                     .gte('visit_date', today.toISOString().split('T')[0])
-                    .lte('visit_date', fifteenDaysFromNow.toISOString().split('T')[0])
-                    .order('visit_date', { ascending: true });
+                    .lte('visit_date', thirtyDaysFromNow.toISOString().split('T')[0])
+                    .order('visit_date', { ascending: false });
 
                 if (data) {
                     setSutranNotifications(data as SutranVisit[]);
@@ -325,6 +329,12 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
             }
             if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
                 setShowUserSettings(false);
+            }
+            if (sutranPopupRef.current && !sutranPopupRef.current.contains(event.target as Node)) {
+                setShowSutranPopup(false);
+            }
+            if (helpRef.current && !helpRef.current.contains(event.target as Node)) {
+                setShowHelpModal(false);
             }
         };
 
@@ -555,10 +565,137 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                     
                     <NotificationsFinal />
 
-                    {/* Help Button - Después de notificaciones */}
-                    <button title="Ayuda" onClick={() => alert('Soporte no disponible')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700">
-                        <HelpCircle size={18} />
-                    </button>
+                    {/* SUTRAN Indicator */}
+                    <div className="relative" ref={sutranPopupRef}>
+                        <button
+                            onClick={() => setShowSutranPopup(!showSutranPopup)}
+                            className={`relative p-2 rounded-lg transition-colors ${showSutranPopup ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-700'}`}
+                            title="Visitas SUTRAN"
+                        >
+                            <AlertTriangle size={18} />
+                            {sutranNotifications.length > 0 && (
+                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                    {sutranNotifications.length}
+                                </span>
+                            )}
+                        </button>
+
+                        {showSutranPopup && (
+                            <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[200] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                <div className="p-4 border-b border-gray-100 bg-[#001529] text-white">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-white/20 rounded-lg">
+                                            <AlertTriangle size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-sm">Visitas SUTRAN</h4>
+                                            <p className="text-[10px] opacity-80">Próximas visitas programadas</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
+                                    {sutranNotifications.length > 0 ? (
+                                        sutranNotifications.map((visit) => (
+                                            <div
+                                                key={visit.id}
+                                                onClick={() => { navigate('/sutran'); setShowSutranPopup(false); }}
+                                                className="p-3 bg-orange-50 rounded-lg border border-orange-100 hover:bg-orange-100 transition-colors cursor-pointer"
+                                            >
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <div className="flex-1">
+                                                        <p className="text-xs font-bold text-gray-900 mb-1">{visit.location_name}</p>
+                                                        <p className="text-[10px] text-gray-600">Inspector: {visit.inspector_name}</p>
+                                                    </div>
+                                                    <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-full ${
+                                                        visit.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                                        visit.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-green-100 text-green-700'
+                                                    }`}>
+                                                        {visit.status === 'pending' ? 'Pendiente' :
+                                                         visit.status === 'in_progress' ? 'En Progreso' :
+                                                         'Completada'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar size={12} className="text-orange-600" />
+                                                    <span className="text-xs font-bold text-orange-700">
+                                                        {new Date(visit.visit_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-500">•</span>
+                                                    <span className="text-[10px] font-medium text-gray-600">{getDaysRemaining(visit.visit_date)}</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-6">
+                                            <AlertTriangle size={32} className="text-gray-300 mx-auto mb-2" />
+                                            <p className="text-sm text-gray-500">No hay visitas próximas</p>
+                                            <p className="text-xs text-gray-400 mt-1">en los próximos 30 días</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="p-2 bg-gray-50 border-t border-gray-100">
+                                    <button
+                                        onClick={() => { navigate('/sutran'); setShowSutranPopup(false); }}
+                                        className="w-full py-2 text-[10px] font-bold text-orange-600 hover:bg-orange-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        Ver Todas las Visitas
+                                        <ChevronRight size={12} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Help Button - Solo visible en cámaras */}
+                    {currentPath.startsWith('/cameras') && (
+                        <div className="relative" ref={helpRef}>
+                            <button
+                                onClick={() => setShowHelpModal(!showHelpModal)}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-700"
+                                title="Ayuda Cámaras"
+                            >
+                                <HelpCircle size={18} />
+                            </button>
+                            {showHelpModal && (
+                                <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                    <div className="p-4 border-b border-gray-100 bg-[#001529] text-white">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-white/20 rounded-lg">
+                                                <HelpCircle size={20} />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-sm">Tutorial Cámaras</h4>
+                                                <p className="text-[10px] opacity-80">Guía de uso del sistema de cámaras</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="aspect-video bg-gray-900 rounded-lg mb-4 overflow-hidden">
+                                            <video
+                                                controls
+                                                className="w-full h-full object-cover"
+                                            >
+                                                <source src="/Video Explicativo.MP4" type="video/mp4" />
+                                                Tu navegador no soporta el elemento de video.
+                                            </video>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h5 className="font-bold text-xs text-gray-700 uppercase tracking-widest">Temas cubiertos:</h5>
+                                            <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
+                                                <li>Configuración de cámaras</li>
+                                                <li>Acceso por URL</li>
+                                                <li>Códigos de autenticación</li>
+                                                <li>Visualización en tiempo real</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     <div className="h-8 w-[1px] bg-gray-300 mx-1" />
 
@@ -591,7 +728,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                         {showUserSettings && (
                             <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden text-gray-800 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                                <div className="p-4 border-b border-gray-100 bg-gradient-to-br from-[#002855] to-[#004e92] text-white">
+                                <div className="p-4 border-b border-gray-100 bg-[#001529] text-white">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-lg font-bold uppercase overflow-hidden border border-white/20">
                                             {user?.avatar_url ? (

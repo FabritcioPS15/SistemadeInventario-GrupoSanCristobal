@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Eye, Star, X, MapPin, ShieldCheck, Package, LayoutGrid, List as ListIcon } from 'lucide-react';
+import { Plus, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Eye, Star, X, MapPin, ShieldCheck, Package, LayoutGrid, List as ListIcon, Search } from 'lucide-react';
 import { supabase, AssetWithDetails, Location } from '../lib/supabase';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,7 +52,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingRecord, setEditingRecord] = useState<MaintenanceRecord | undefined>();
   const [viewingRecord, setViewingRecord] = useState<MaintenanceRecord | undefined>();
-  const [searchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   // itemsPerPage, setItemsPerPage and isHeaderVisible no longer needed if not used in the UI
   const [typeFilter, setTypeFilter] = useState('');
@@ -272,60 +272,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
-      {/* Standard Application Header (h-14) */}
-      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out translate-y-0`}>
-        <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
-            <Wrench size={20} />
-          </div>
-          <div className="hidden lg:block">
-            <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Mantenimiento y Soporte</h2>
-          </div>
-        </div>
-
-
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
-            <div className="flex bg-[#f1f5f9] p-1 rounded-lg">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                title="Vista Cuadrícula"
-              >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                title="Vista Tabla"
-              >
-                <ListIcon size={16} />
-              </button>
-            </div>
-            {canEdit() && (
-              <button
-                onClick={() => {
-                  setEditingRecord(undefined);
-                  setShowForm(true);
-                }}
-                className="p-2 ml-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
-                title="Nuevo Mantenimiento"
-              >
-                <Plus size={18} />
-              </button>
-            )}
-          </div>
-
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <Star size={18} />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-      </div>
-
+      
       <div className="p-6 space-y-6">
 
 
@@ -337,15 +284,26 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3 flex-1">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
-                <MapPin size={14} className="text-slate-500" />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sede:</span>
+            {/* Search */}
+            <div className="flex-1 relative group/search">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+              <input
+                type="text"
+                placeholder="BUSCAR MANTENIMIENTO POR ACTIVO, TÉCNICO O DESCRIPCIÓN..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+              />
+            </div>
+
+            {/* Filters + Toggle */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest min-w-[220px]">
+                <MapPin size={14} className="text-rose-500" />
                 <select
-                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
                   value={locationFilter}
-                  onChange={(e) => setLocationFilter(e.target.value)}
+                  onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}
+                  className="bg-transparent outline-none cursor-pointer flex-1"
                 >
                   <option value="">TODAS LAS SEDES</option>
                   {locations.map((loc) => (
@@ -354,45 +312,64 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 </select>
               </div>
 
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
-                <ShieldCheck size={14} className="text-slate-500" />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Tipo:</span>
-                <select
-                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                >
-                  <option value="">TODOS LOS TIPOS</option>
-                  {Object.entries(typeLabels).map(([key, label]) => (
-                    <option key={key} value={key}>{label.toUpperCase()}</option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={typeFilter}
+                onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
+              >
+                <option value="">TODOS LOS TIPOS</option>
+                {Object.entries(typeLabels).map(([key, label]) => (
+                  <option key={key} value={key}>{label.toUpperCase()}</option>
+                ))}
+              </select>
 
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
-                <Clock size={14} className="text-slate-500" />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado:</span>
-                <select
-                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="">TODOS LOS ESTADOS</option>
-                  {Object.entries(statusLabels).map(([key, label]) => (
-                    <option key={key} value={key}>{label.toUpperCase()}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
+              >
+                <option value="">TODOS LOS ESTADOS</option>
+                {Object.entries(statusLabels).map(([key, label]) => (
+                  <option key={key} value={key}>{label.toUpperCase()}</option>
+                ))}
+              </select>
 
-            {/* View Toggle */}
-            <div className="flex items-center gap-2">
               <div className="flex bg-slate-100 p-1 border border-slate-200">
-                <button onClick={() => setViewMode('grid')} className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}><LayoutGrid size={16} /></button>
-                <button onClick={() => setViewMode('table')} className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}><ListIcon size={16} /></button>
+                <button 
+                  onClick={() => setViewMode('grid')} 
+                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                  title="Vista Cuadrícula"
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button 
+                  onClick={() => setViewMode('table')} 
+                  className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                  title="Vista Tabla"
+                >
+                  <ListIcon size={16} />
+                </button>
               </div>
+
+              {canEdit() && (
+                <button
+                  onClick={() => {
+                    setEditingRecord(undefined);
+                    setShowForm(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+                >
+                  <Plus size={14} />
+                  Nuevo Mantenimiento
+                </button>
+              )}
+
               {hasActiveFilters && (
-                <button onClick={clearFilters} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" title="Limpiar Filtros">
+                <button 
+                  onClick={clearFilters} 
+                  className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" 
+                  title="Limpiar Filtros"
+                >
                   <X size={18} />
                 </button>
               )}

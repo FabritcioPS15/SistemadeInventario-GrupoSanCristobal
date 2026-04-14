@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Plus, Building2, Calendar, FileText, User, AlertTriangle, Edit, X, LayoutGrid, List, Search } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Building2, Calendar, FileText, User, AlertTriangle, Edit, X, LayoutGrid, List, Search, MapPin, ChevronDown } from 'lucide-react';
 import { FaFilePdf } from "react-icons/fa6";
+import { RiFileExcel2Fill } from "react-icons/ri";
+import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
@@ -12,10 +14,14 @@ import Pagination from '../components/Pagination';
 export default function Sutran() {
   const { canEdit } = useAuth();
   const [visits, setVisits] = useState<SutranVisit[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [visitTypeFilter, setVisitTypeFilter] = useState('');
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingVisit, setEditingVisit] = useState<SutranVisit | undefined>();
   const [viewingVisit, setViewingVisit] = useState<SutranVisit | undefined>();
@@ -25,6 +31,17 @@ export default function Sutran() {
 
   useEffect(() => {
     fetchVisits();
+    fetchLocations();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const fetchVisits = async () => {
@@ -36,7 +53,7 @@ export default function Sutran() {
         .order('visit_date', { ascending: false });
 
       if (error) {
-        console.error('❌ Error al cargar visitas:', error);
+        console.error('Error al cargar visitas:', error);
         alert(`Error al cargar visitas: ${error.message}`);
         return;
       }
@@ -47,10 +64,30 @@ export default function Sutran() {
         setVisits([]);
       }
     } catch (err) {
-      console.error('❌ Error inesperado al cargar visitas:', err);
+      console.error('Error inesperado al cargar visitas:', err);
       alert('Error inesperado al cargar visitas: ' + err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLocations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .order('name');
+
+      if (error) {
+        console.error('Error al cargar sedes:', error);
+        return;
+      }
+
+      if (data) {
+        setLocations(data);
+      }
+    } catch (err) {
+      console.error('Error inesperado al cargar sedes:', err);
     }
   };
 
@@ -63,8 +100,9 @@ export default function Sutran() {
 
     const matchesStatus = !statusFilter || visit.status === statusFilter;
     const matchesType = !visitTypeFilter || visit.visit_type === visitTypeFilter;
+    const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(visit.location_id || '');
 
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesStatus && matchesType && matchesLocation;
   });
 
   const totalPages = Math.ceil(filteredVisits.length / itemsPerPage);
@@ -142,6 +180,52 @@ export default function Sutran() {
     setEditingVisit(undefined);
   };
 
+  const handleGenerateExcel = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Visitas SUTRAN');
+      
+      worksheet.columns = [
+        { header: 'Fecha', key: 'visit_date', width: 15 },
+        { header: 'Inspector', key: 'inspector_name', width: 25 },
+        { header: 'Sede', key: 'location_name', width: 20 },
+        { header: 'Tipo', key: 'visit_type', width: 15 },
+        { header: 'Estado', key: 'status', width: 12 },
+        { header: 'Hallazgos', key: 'findings', width: 30 }
+      ];
+      
+      worksheet.getRow(1).font = { bold: true, size: 12 };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      };
+      
+      filteredVisits.forEach(visit => {
+        worksheet.addRow({
+          visit_date: new Date(visit.visit_date).toLocaleDateString(),
+          inspector_name: visit.inspector_name || '',
+          location_name: visit.location_name || '',
+          visit_type: getVisitTypeLabel(visit.visit_type),
+          status: statusLabels[visit.status],
+          findings: visit.findings || 'Sin hallazgos'
+        });
+      });
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `visitas_sutran_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exportando Excel:', error);
+      alert('Error al exportar a Excel');
+    }
+  };
+
   const handleGeneratePDF = () => {
     const doc = new jsPDF();
     const tableData = filteredVisits.map(v => [
@@ -187,48 +271,124 @@ export default function Sutran() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
+              >
+                <MapPin size={14} className="text-rose-500" />
+                <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === locations.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
+                <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              {showLocationDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  <div className="p-2 border-b border-slate-200 bg-[#001529]">
+                    <button
+                      onClick={() => {
+                        setSelectedLocations(locations.map(loc => loc.id));
+                        setShowLocationDropdown(false);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-white hover:bg-white/10 rounded transition-colors"
+                    >
+                      Seleccionar todas las sedes
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedLocations([]);
+                        setShowLocationDropdown(false);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-white hover:bg-white/10 rounded transition-colors"
+                    >
+                      Limpiar selección
+                    </button>
+                  </div>
+                  {locations.map(location => (
+                    <label key={location.id} className="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedLocations.includes(location.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedLocations([...selectedLocations, location.id]);
+                          } else {
+                            setSelectedLocations(selectedLocations.filter(id => id !== location.id));
+                          }
+                          setCurrentPage(1);
+                        }}
+                        className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mr-3"
+                      />
+                      <span className="text-xs font-medium text-slate-700">{location.name.toUpperCase()}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <select
               value={statusFilter}
               onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[160px] appearance-none cursor-pointer"
+              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
             >
-              <option value="">Todos los estados</option>
+              <option value="">TODOS LOS ESTADOS</option>
               {Object.entries(statusLabels).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
+                <option key={val} value={val}>{label.toUpperCase()}</option>
               ))}
             </select>
 
             <select
               value={visitTypeFilter}
               onChange={e => { setVisitTypeFilter(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[160px] appearance-none cursor-pointer"
+              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
             >
-              <option value="">Todos los tipos</option>
-              <option value="programada">Programada</option>
-              <option value="no_programada">No Programada</option>
-              <option value="de_gabinete">De Gabinete</option>
+              <option value="">TODOS LOS TIPOS</option>
+              <option value="programada">PROGRAMADA</option>
+              <option value="no_programada">NO PROGRAMADA</option>
+              <option value="de_gabinete">DE GABINETE</option>
             </select>
 
             <div className="flex bg-slate-100 p-1 border border-slate-200">
-              <button onClick={() => setViewMode('grid')} className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`} title="Vista Cuadrícula"><LayoutGrid size={16} /></button>
-              <button onClick={() => setViewMode('table')} className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`} title="Vista Tabla"><List size={16} /></button>
+              <button 
+                onClick={() => setViewMode('grid')} 
+                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                title="Vista Cuadrícula"
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button 
+                onClick={() => setViewMode('table')} 
+                className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                title="Vista Tabla"
+              >
+                <List size={16} />
+              </button>
             </div>
 
             {canEdit() && (
               <button
                 onClick={() => { setEditingVisit(undefined); setShowForm(true); }}
-                className="flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest bg-[#002855] text-white hover:bg-blue-800 transition-all shadow-sm"
+                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
               >
-                <Plus size={14} /> Nuevo
+                <Plus size={14} />
+                Nuevo Registro
               </button>
             )}
 
             <button
+              onClick={handleGenerateExcel}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
+              title="Exportar a Excel"
+            >
+              <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+            </button>
+
+            <button
               onClick={handleGeneratePDF}
-              className="flex items-center justify-center w-10 h-10 bg-slate-100 text-[#002855] border border-slate-200 hover:bg-slate-200 transition-all shadow-sm"
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
               title="Exportar a PDF"
             >
-              <FaFilePdf size={18} />
+              <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
             </button>
           </div>
         </div>

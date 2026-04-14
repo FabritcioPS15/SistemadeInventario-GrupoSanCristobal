@@ -95,7 +95,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
           .from('locations')
           .select('*')
           .order('name');
-        
+
         if (data) {
           setLocations(data);
         }
@@ -149,7 +149,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
 
     try {
       const location = locations.find(loc => loc.id === formData.location_id);
-      
+
       const payload: any = {
         ...formData,
         updated_at: new Date().toISOString(),
@@ -223,7 +223,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
 
   return (
     <div className="fixed inset-0 bg-[#001529]/85 backdrop-blur-md flex items-start justify-start p-0 md:items-center md:justify-center md:p-8 z-[999] animate-in fade-in duration-300">
-      <div 
+      <div
         className="bg-white absolute top-0 left-0 w-screen h-screen md:relative md:w-full md:h-[85vh] md:max-w-6xl md:mx-auto md:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-white/10"
       >
         {/* Header Corporativo (Cuadrado) */}
@@ -241,8 +241,8 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
               </p>
             </div>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
             disabled={loading}
           >

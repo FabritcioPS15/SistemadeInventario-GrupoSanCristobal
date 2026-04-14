@@ -446,36 +446,44 @@ export default function Dashboard() {
         {/* Mixed Size Cards Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Large Card - Inventario */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group"
+          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group"
                onClick={() => navigate('/inventory')}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-blue-50 group-hover:scale-110 transition-transform">
-                <Package className="text-blue-600" size={28} />
+            {/* Blue Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Package className="text-white" size={24} />
+                  <span className="text-white font-semibold">Inventario</span>
+                </div>
+                <ArrowRight size={18} className="text-white/70 group-hover:text-white transition-colors" />
               </div>
-              <ArrowRight size={20} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
             </div>
-            <h3 className="text-gray-900 text-3xl font-bold mb-1">{stats.totalAssets}</h3>
-            <p className="text-gray-800 text-lg font-semibold mb-2">Inventario</p>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-gray-600">{stats.activeAssets} activos</span>
+            <div className="p-6">
+              <h3 className="text-gray-900 text-4xl font-bold mb-2">{stats.totalAssets}</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">{stats.activeAssets} activos</span>
+              </div>
+              <p className="text-xs text-gray-500">Equipos y activos operativos</p>
             </div>
-            <p className="text-sm text-gray-500">Equipos y activos operativos</p>
           </div>
 
           {/* Medium Card - Tickets */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group"
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group"
                onClick={() => navigate('/tickets')}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-orange-50 group-hover:scale-110 transition-transform">
-                <CheckSquare className="text-orange-600" size={24} />
+            {/* Blue Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CheckSquare className="text-white" size={20} />
+                  <span className="text-white font-semibold">Tickets</span>
+                </div>
+                <ArrowRight size={18} className="text-white/70 group-hover:text-white transition-colors" />
               </div>
-              <ArrowRight size={20} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
             </div>
-            <h3 className="text-gray-900 text-2xl font-bold mb-1">{stats.totalTickets}</h3>
-            <p className="text-gray-800 text-sm font-semibold mb-2">Tickets</p>
-            <div className="space-y-1">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="p-6">
+              <h3 className="text-gray-900 text-3xl font-bold mb-3">{stats.totalTickets}</h3>
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                   <span className="text-xs text-gray-600">{stats.openTickets} abiertos</span>
@@ -488,261 +496,228 @@ export default function Dashboard() {
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                   <span className="text-xs text-gray-600">{stats.resolvedTickets} resueltos</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-                  <span className="text-xs text-gray-600">{stats.closedTickets} cerrados</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                  <span className="text-xs text-gray-600">{stats.archivedTickets} archivados</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-3">Mesa de ayuda</p>
-            
-            {/* Ticket Participants */}
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-500 font-medium">Participantes recientes</span>
-                <div className="flex -space-x-2">
-                  {stats.recentTicketParticipants.slice(0, 4).map((participant) => (
-                    <div key={participant.id} className="relative group">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-white shadow-sm flex items-center justify-center text-white text-xs font-bold overflow-hidden">
-                        {participant.avatar ? (
-                          <img src={participant.avatar} alt={participant.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span>{participant.name.charAt(0).toUpperCase()}</span>
-                        )}
-                      </div>
-                      
-                      {/* Tooltip with name on hover */}
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                        {participant.name}
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1 w-2 h-2 bg-gray-900 rotate-45"></div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Show more indicator if there are more participants */}
-                  {stats.recentTicketParticipants.length > 4 && (
-                    <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white shadow-sm flex items-center justify-center text-gray-600 text-xs font-bold">
-                      +{stats.recentTicketParticipants.length - 4}
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </div>
 
           {/* Small Card - Cámaras */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group"
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group"
                onClick={() => navigate('/cameras')}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="p-3 rounded-xl bg-green-50 group-hover:scale-110 transition-transform">
-                <Camera className="text-green-600" size={24} />
+            {/* Blue Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Camera className="text-white" size={20} />
+                  <span className="text-white font-semibold">Cámaras</span>
+                </div>
+                <ArrowRight size={18} className="text-white/70 group-hover:text-white transition-colors" />
               </div>
-              <ArrowRight size={20} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
             </div>
-            <h3 className="text-gray-900 text-2xl font-bold mb-1">{stats.totalCameras}</h3>
-            <p className="text-gray-800 text-sm font-semibold mb-2">Cámaras</p>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span className="text-xs text-gray-600">{stats.activeCameras} activas</span>
+            <div className="p-6">
+              <h3 className="text-gray-900 text-3xl font-bold mb-2">{stats.totalCameras}</h3>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-xs text-gray-600">{stats.activeCameras} activas</span>
+              </div>
+              <p className="text-xs text-gray-500">Vigilancia</p>
             </div>
-            <p className="text-xs text-gray-500 mt-3">Vigilancia</p>
           </div>
         </div>
 
         {/* Vehicle Document Cards */}
 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
           {/* SOAT Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
                onClick={() => setShowDocumentPopup('soat')}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-50">
-                  <AlertTriangle className="text-red-600" size={20} />
+            {/* Blue Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="text-white" size={18} />
+                  <span className="text-white font-semibold">SOAT</span>
+                </div>
+                <ArrowRight size={16} className="text-white/70 group-hover:text-white transition-colors" />
+              </div>
+            </div>
+            <div className="p-6 flex-grow">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <span className="text-xs text-gray-500 block mb-1">Vencidos</span>
+                  <span className="text-2xl font-bold text-red-600">{stats.vehiclesByDocument.soat.expired}</span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">SOAT</h3>
-                  <p className="text-xs text-gray-600">Seguro obligatorio</p>
+                  <span className="text-xs text-gray-500 block mb-1">Por vencer</span>
+                  <span className="text-2xl font-bold text-yellow-600">{stats.vehiclesByDocument.soat.warning}</span>
                 </div>
               </div>
-              <ArrowRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              {stats.vehiclesByDocument.soat.nextExpiring.length > 0 && (
+                <div className="pt-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-500 mb-2">Próximos a vencer:</p>
+                  {stats.vehiclesByDocument.soat.nextExpiring.map((vehicle, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs">
+                      <span className="font-medium text-gray-700">{vehicle.plate}</span>
+                      <span className="text-orange-600 font-bold">{vehicle.days} días</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-2 flex-grow">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-red-600 font-medium">Vencidos</span>
-                <span className="text-lg font-bold text-red-600">{stats.vehiclesByDocument.soat.expired}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-yellow-600 font-medium">Por vencer</span>
-                <span className="text-lg font-bold text-yellow-600">{stats.vehiclesByDocument.soat.warning}</span>
-              </div>
-            </div>
-            {stats.vehiclesByDocument.soat.nextExpiring.length > 0 && (
-              <div className="mt-auto pt-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500 mb-2">Próximos a vencer:</p>
-                {stats.vehiclesByDocument.soat.nextExpiring.map((vehicle, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-xs">
-                    <span className="font-medium text-gray-700">{vehicle.plate}</span>
-                    <span className="text-orange-600 font-bold">{vehicle.days} días</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* CITV Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
                onClick={() => setShowDocumentPopup('citv')}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-50">
-                  <AlertTriangle className="text-orange-600" size={20} />
+            {/* Blue Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="text-white" size={18} />
+                  <span className="text-white font-semibold">Revisión Técnica</span>
+                </div>
+                <ArrowRight size={16} className="text-white/70 group-hover:text-white transition-colors" />
+              </div>
+            </div>
+            <div className="p-6 flex-grow">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <span className="text-xs text-gray-500 block mb-1">Vencidas</span>
+                  <span className="text-2xl font-bold text-red-600">{stats.vehiclesByDocument.citv.expired}</span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Revisión Técnica</h3>
-                  <p className="text-xs text-gray-600">Inspección vehicular</p>
+                  <span className="text-xs text-gray-500 block mb-1">Por vencer</span>
+                  <span className="text-2xl font-bold text-yellow-600">{stats.vehiclesByDocument.citv.warning}</span>
                 </div>
               </div>
-              <ArrowRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              {stats.vehiclesByDocument.citv.nextExpiring.length > 0 && (
+                <div className="pt-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-500 mb-2">Próximas a vencer:</p>
+                  {stats.vehiclesByDocument.citv.nextExpiring.map((vehicle, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs">
+                      <span className="font-medium text-gray-700">{vehicle.plate}</span>
+                      <span className="text-orange-600 font-bold">{vehicle.days} días</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-2 flex-grow">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-red-600 font-medium">Vencidas</span>
-                <span className="text-lg font-bold text-red-600">{stats.vehiclesByDocument.citv.expired}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-yellow-600 font-medium">Por vencer</span>
-                <span className="text-lg font-bold text-yellow-600">{stats.vehiclesByDocument.citv.warning}</span>
-              </div>
-            </div>
-            {stats.vehiclesByDocument.citv.nextExpiring.length > 0 && (
-              <div className="mt-auto pt-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500 mb-2">Próximas a vencer:</p>
-                {stats.vehiclesByDocument.citv.nextExpiring.map((vehicle, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-xs">
-                    <span className="font-medium text-gray-700">{vehicle.plate}</span>
-                    <span className="text-orange-600 font-bold">{vehicle.days} días</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Póliza Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
                onClick={() => setShowDocumentPopup('poliza')}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-50">
-                  <AlertTriangle className="text-purple-600" size={20} />
+            {/* Blue Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="text-white" size={18} />
+                  <span className="text-white font-semibold">Póliza</span>
+                </div>
+                <ArrowRight size={16} className="text-white/70 group-hover:text-white transition-colors" />
+              </div>
+            </div>
+            <div className="p-6 flex-grow">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <span className="text-xs text-gray-500 block mb-1">Vencidas</span>
+                  <span className="text-2xl font-bold text-red-600">{stats.vehiclesByDocument.poliza.expired}</span>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Póliza</h3>
-                  <p className="text-xs text-gray-600">Seguro vehicular</p>
+                  <span className="text-xs text-gray-500 block mb-1">Por vencer</span>
+                  <span className="text-2xl font-bold text-yellow-600">{stats.vehiclesByDocument.poliza.warning}</span>
                 </div>
               </div>
-              <ArrowRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
+              {stats.vehiclesByDocument.poliza.nextExpiring.length > 0 && (
+                <div className="pt-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-500 mb-2">Próximas a vencer:</p>
+                  {stats.vehiclesByDocument.poliza.nextExpiring.map((vehicle, idx) => (
+                    <div key={idx} className="flex justify-between items-center text-xs">
+                      <span className="font-medium text-gray-700">{vehicle.plate}</span>
+                      <span className="text-orange-600 font-bold">{vehicle.days} días</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-2 flex-grow">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-red-600 font-medium">Vencidas</span>
-                <span className="text-lg font-bold text-red-600">{stats.vehiclesByDocument.poliza.expired}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-yellow-600 font-medium">Por vencer</span>
-                <span className="text-lg font-bold text-yellow-600">{stats.vehiclesByDocument.poliza.warning}</span>
-              </div>
-            </div>
-            {stats.vehiclesByDocument.poliza.nextExpiring.length > 0 && (
-              <div className="mt-auto pt-3 border-t border-gray-100">
-                <p className="text-xs text-gray-500 mb-2">Próximas a vencer:</p>
-                {stats.vehiclesByDocument.poliza.nextExpiring.map((vehicle, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-xs">
-                    <span className="font-medium text-gray-700">{vehicle.plate}</span>
-                    <span className="text-orange-600 font-bold">{vehicle.days} días</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Fleet Overview Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <Truck className="text-indigo-600" size={20} />
-              <h3 className="text-lg font-semibold text-gray-900">Estado General de la Flota</h3>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {/* Blue Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Truck className="text-white" size={18} />
+                  <span className="text-white font-semibold">Estado General de la Flota</span>
+                </div>
+                <button
+                  onClick={() => navigate('/flota-vehicular')}
+                  className="text-[10px] bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-colors"
+                >
+                  Ver Detalles
+                </button>
+              </div>
             </div>
-            <button
-              onClick={() => navigate('/flota-vehicular')}
-              className="text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-colors"
-            >
-              Ver Detalles
-            </button>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Simple Bar Chart */}
+                <div className="md:col-span-2">
+                  <h4 className="text-sm font-medium text-gray-700 mb-4">Distribución de Vehículos</h4>
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-gray-600">Operativos</span>
+                        <span className="text-sm font-bold text-green-600">{stats.activeVehicles}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-green-500 h-3 rounded-full transition-all duration-500"
+                          style={{ width: `${stats.totalVehicles > 0 ? (stats.activeVehicles / stats.totalVehicles) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-gray-600">En Mantenimiento</span>
+                        <span className="text-sm font-bold text-orange-600">{stats.maintenanceVehicles}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-orange-500 h-3 rounded-full transition-all duration-500"
+                          style={{ width: `${stats.totalVehicles > 0 ? (stats.maintenanceVehicles / stats.totalVehicles) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm text-gray-600">Otros Estados</span>
+                        <span className="text-sm font-bold text-gray-600">{stats.totalVehicles - stats.activeVehicles - stats.maintenanceVehicles}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-gray-500 h-3 rounded-full transition-all duration-500"
+                          style={{ width: `${stats.totalVehicles > 0 ? ((stats.totalVehicles - stats.activeVehicles - stats.maintenanceVehicles) / stats.totalVehicles) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Summary Stats */}
+                <div className="space-y-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <p className="text-3xl font-bold text-blue-900">{stats.totalVehicles}</p>
+                    <p className="text-sm text-blue-700 font-medium">Total Vehículos</p>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <p className="text-2xl font-bold text-green-900">
+                      {stats.totalVehicles > 0 ? Math.round((stats.activeVehicles / stats.totalVehicles) * 100) : 0}%
+                    </p>
+                    <p className="text-sm text-green-700 font-medium">Disponibilidad</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Simple Bar Chart */}
-            <div className="md:col-span-2">
-              <h4 className="text-sm font-medium text-gray-700 mb-4">Distribución de Vehículos</h4>
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-gray-600">Operativos</span>
-                    <span className="text-sm font-bold text-green-600">{stats.activeVehicles}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-green-500 h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${stats.totalVehicles > 0 ? (stats.activeVehicles / stats.totalVehicles) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-gray-600">En Mantenimiento</span>
-                    <span className="text-sm font-bold text-orange-600">{stats.maintenanceVehicles}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-orange-500 h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${stats.totalVehicles > 0 ? (stats.maintenanceVehicles / stats.totalVehicles) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm text-gray-600">Otros Estados</span>
-                    <span className="text-sm font-bold text-gray-600">{stats.totalVehicles - stats.activeVehicles - stats.maintenanceVehicles}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-gray-500 h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${stats.totalVehicles > 0 ? ((stats.totalVehicles - stats.activeVehicles - stats.maintenanceVehicles) / stats.totalVehicles) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Summary Stats */}
-            <div className="space-y-4">
-              <div className="text-center p-4 bg-indigo-50 rounded-lg">
-                <p className="text-3xl font-bold text-indigo-900">{stats.totalVehicles}</p>
-                <p className="text-sm text-indigo-700 font-medium">Total Vehículos</p>
-              </div>
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <p className="text-2xl font-bold text-green-900">
-                  {stats.totalVehicles > 0 ? Math.round((stats.activeVehicles / stats.totalVehicles) * 100) : 0}%
-                </p>
-                <p className="text-sm text-green-700 font-medium">Disponibilidad</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
         {/* Simplified SUTRAN Alert */}

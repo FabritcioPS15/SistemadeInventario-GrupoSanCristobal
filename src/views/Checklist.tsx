@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Car, ChevronRight, Building2, Stethoscope, GraduationCap, FileText, ExternalLink, Edit, LayoutGrid, List, MapPin } from 'lucide-react';
+import { Car, ChevronRight, Stethoscope, GraduationCap, FileText, ExternalLink, Edit, LayoutGrid, List, MapPin } from 'lucide-react';
 import { supabase, Location } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -101,34 +101,41 @@ export default function Checklist({ type }: { type?: string }) {
                   <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-none text-[10px] font-black uppercase tracking-widest">{locations.filter(l => l.type === 'escuela_conductores').length} sedes</span>
                </div>
                <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-left border-collapse border-spacing-0">
                      <thead>
-                        <tr className="bg-white border-b border-slate-100">
-                           <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Sede</th>
-                           <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Dirección</th>
-                           <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Documentos</th>
-                           <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                           <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span></th>
+                           <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Dirección</span></th>
+                           <th className="px-4 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Documentos</span></th>
+                           <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-100">
                         {locations.filter(l => l.type === 'escuela_conductores').map(location => (
-                           <tr key={location.id} className="hover:bg-slate-50 cursor-pointer transition-all duration-200 group border-b border-slate-50 last:border-0" onClick={() => navigate('/checklist/escon')}>
-                              <td className="px-8 py-6">
-                                 <span className="text-[13px] font-black text-[#002855] uppercase tracking-tight group-hover:text-blue-600 transition-colors">{location.name}</span>
-                              </td>
-                              <td className="px-4 py-6">
-                                 <div className="flex items-center gap-2">
-                                    <MapPin size={12} className="text-slate-300" />
-                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
+                           <tr key={location.id} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0" onClick={() => navigate(`/checklist/escon/${location.id}`)}>
+                              <td className="px-6 py-5 font-bold text-left">
+                                 <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
+                                       <GraduationCap size={14} />
+                                    </div>
+                                    <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-blue-600 transition-colors">{location.name}</span>
                                  </div>
                               </td>
-                              <td className="px-4 py-6 text-center">
-                                 <span className="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest border border-blue-200 text-blue-600 rounded-none bg-white">2 documentos</span>
+                              <td className="px-4 py-5 text-left">
+                                 <div className="flex items-center gap-2">
+                                    <MapPin size={12} className="text-slate-400" />
+                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
+                                 </div>
                               </td>
-                              <td className="px-8 py-6 text-right">
-                                 <span className="text-[10px] font-black text-blue-600 group-hover:text-blue-800 uppercase tracking-widest">
-                                    Ver checklist →
-                                 </span>
+                              <td className="px-4 py-5 text-center">
+                                 <span className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border border-blue-200 text-blue-600 bg-blue-50 rounded-none">2 documentos</span>
+                              </td>
+                              <td className="px-6 py-5 text-center">
+                                 <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">
+                                       Ver checklist →
+                                    </span>
+                                 </div>
                               </td>
                            </tr>
                         ))}
@@ -147,34 +154,41 @@ export default function Checklist({ type }: { type?: string }) {
                   <span className="bg-emerald-50 text-emerald-600 px-3 py-1 rounded-none text-[10px] font-black uppercase tracking-widest">{locations.filter(l => l.type === 'policlinico').length} sedes</span>
                </div>
                <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-left border-collapse border-spacing-0">
                      <thead>
-                        <tr className="bg-white border-b border-slate-100">
-                           <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Sede</th>
-                           <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Dirección</th>
-                           <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Documentos</th>
-                           <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                           <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span></th>
+                           <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Dirección</span></th>
+                           <th className="px-4 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Documentos</span></th>
+                           <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-100">
                         {locations.filter(l => l.type === 'policlinico').map(location => (
-                           <tr key={location.id} className="hover:bg-slate-50 cursor-pointer transition-all duration-200 group border-b border-slate-50 last:border-0" onClick={() => navigate('/checklist/ecsal')}>
-                              <td className="px-8 py-6">
-                                 <span className="text-[13px] font-black text-[#002855] uppercase tracking-tight group-hover:text-emerald-600 transition-colors">{location.name}</span>
-                              </td>
-                              <td className="px-4 py-6">
-                                 <div className="flex items-center gap-2">
-                                    <MapPin size={12} className="text-slate-300" />
-                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
+                           <tr key={location.id} className="hover:bg-emerald-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0" onClick={() => navigate(`/checklist/ecsal/${location.id}`)}>
+                              <td className="px-6 py-5 font-bold text-left">
+                                 <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-emerald-600 group-hover:text-white group-hover:shadow-md">
+                                       <Stethoscope size={14} />
+                                    </div>
+                                    <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-emerald-600 transition-colors">{location.name}</span>
                                  </div>
                               </td>
-                              <td className="px-4 py-6 text-center">
-                                 <span className="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest border border-emerald-200 text-emerald-600 rounded-none bg-white">2 documentos</span>
+                              <td className="px-4 py-5 text-left">
+                                 <div className="flex items-center gap-2">
+                                    <MapPin size={12} className="text-slate-400" />
+                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
+                                 </div>
                               </td>
-                              <td className="px-8 py-6 text-right">
-                                 <span className="text-[10px] font-black text-emerald-600 group-hover:text-emerald-800 uppercase tracking-widest">
-                                    Ver checklist →
-                                 </span>
+                              <td className="px-4 py-5 text-center">
+                                 <span className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border border-emerald-200 text-emerald-600 bg-emerald-50 rounded-none">2 documentos</span>
+                              </td>
+                              <td className="px-6 py-5 text-center">
+                                 <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">
+                                       Ver checklist →
+                                    </span>
+                                 </div>
                               </td>
                            </tr>
                         ))}
@@ -193,34 +207,41 @@ export default function Checklist({ type }: { type?: string }) {
                   <span className="bg-orange-50 text-orange-600 px-3 py-1 rounded-none text-[10px] font-black uppercase tracking-widest">{locations.filter(l => l.type === 'revision').length} sedes</span>
                </div>
                <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-left border-collapse border-spacing-0">
                      <thead>
-                        <tr className="bg-white border-b border-slate-100">
-                           <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Sede</th>
-                           <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Dirección</th>
-                           <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Documentos</th>
-                           <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                           <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span></th>
+                           <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Dirección</span></th>
+                           <th className="px-4 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Documentos</span></th>
+                           <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-100">
                         {locations.filter(l => l.type === 'revision').map(location => (
-                           <tr key={location.id} className="hover:bg-slate-50 cursor-pointer transition-all duration-200 group border-b border-slate-50 last:border-0" onClick={() => navigate('/checklist/citv')}>
-                              <td className="px-8 py-6">
-                                 <span className="text-[13px] font-black text-[#002855] uppercase tracking-tight group-hover:text-orange-600 transition-colors">{location.name}</span>
-                              </td>
-                              <td className="px-4 py-6">
-                                 <div className="flex items-center gap-2">
-                                    <MapPin size={12} className="text-slate-300" />
-                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
+                           <tr key={location.id} className="hover:bg-orange-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0" onClick={() => navigate(`/checklist/citv/${location.id}`)}>
+                              <td className="px-6 py-5 font-bold text-left">
+                                 <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-orange-600 group-hover:text-white group-hover:shadow-md">
+                                       <Car size={14} />
+                                    </div>
+                                    <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-orange-600 transition-colors">{location.name}</span>
                                  </div>
                               </td>
-                              <td className="px-4 py-6 text-center">
-                                 <span className="px-4 py-1.5 text-[9px] font-black uppercase tracking-widest border border-orange-200 text-orange-600 rounded-none bg-white">2 documentos</span>
+                              <td className="px-4 py-5 text-left">
+                                 <div className="flex items-center gap-2">
+                                    <MapPin size={12} className="text-slate-400" />
+                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
+                                 </div>
                               </td>
-                              <td className="px-8 py-6 text-right">
-                                 <span className="text-[10px] font-black text-orange-600 group-hover:text-orange-800 uppercase tracking-widest">
-                                    Ver checklist →
-                                 </span>
+                              <td className="px-4 py-5 text-center">
+                                 <span className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border border-orange-200 text-orange-600 bg-orange-50 rounded-none">2 documentos</span>
+                              </td>
+                              <td className="px-6 py-5 text-center">
+                                 <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">
+                                       Ver checklist →
+                                    </span>
+                                 </div>
                               </td>
                            </tr>
                         ))}
@@ -305,38 +326,38 @@ export default function Checklist({ type }: { type?: string }) {
 
             {viewMode === 'list' && (
                <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-left border-collapse border-spacing-0">
                      <thead>
-                        <tr className="bg-white border-b border-slate-100">
-                           <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Sede</th>
-                           <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Dirección</th>
-                           <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Documentos</th>
-                           <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                           <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span></th>
+                           <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Dirección</span></th>
+                           <th className="px-4 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Documentos</span></th>
+                           <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-100">
                         {filteredLocations.map((location) => (
-                           <tr key={location.id} className="hover:bg-slate-50 transition-all duration-200 group border-b border-slate-50 last:border-0" onClick={() => navigate(`/checklist/${unitType}`)}>
-                              <td className="px-8 py-6">
-                                 <div className="flex items-center gap-4">
-                                    <div className={`w-9 h-9 flex items-center justify-center transition-all duration-300 bg-slate-50 text-slate-400 group-hover:bg-${unitColor}-600 group-hover:text-white`}>
+                           <tr key={location.id} className={`hover:bg-${unitColor}-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0`} onClick={() => navigate(`/checklist/${unitType}/${location.id}`)}>
+                              <td className="px-6 py-5 font-bold text-left">
+                                 <div className="flex items-center gap-3">
+                                    <div className={`w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-${unitColor}-600 group-hover:text-white group-hover:shadow-md`}>
                                        {icon}
                                     </div>
-                                    <span className="text-[13px] font-black text-[#002855] uppercase tracking-tight group-hover:text-blue-600 transition-colors">{location.name}</span>
+                                    <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-${unitColor}-600 transition-colors">{location.name}</span>
                                  </div>
                               </td>
-                              <td className="px-4 py-6">
+                              <td className="px-4 py-5 text-left">
                                  <div className="flex items-center gap-2">
-                                    <MapPin size={12} className="text-slate-300" />
-                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
+                                    <MapPin size={12} className="text-slate-400" />
+                                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{location.address || 'Sin dirección'}</p>
                                  </div>
                               </td>
-                              <td className="px-4 py-6 text-center">
-                                 <span className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-widest border border-${unitColor}-200 text-${unitColor}-600 rounded-none bg-white`}>2 documentos</span>
+                              <td className="px-4 py-5 text-center">
+                                 <span className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border border-${unitColor}-200 text-${unitColor}-600 bg-${unitColor}-50 rounded-none`}>2 documentos</span>
                               </td>
-                              <td className="px-8 py-6 text-right">
-                                 <div className="flex items-center justify-end gap-3">
-                                    <span className={`text-[10px] font-black text-${unitColor}-600 group-hover:text-${unitColor}-800 uppercase tracking-widest`}>
+                              <td className="px-6 py-5 text-center">
+                                 <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className={`text-[10px] font-black text-${unitColor}-600 uppercase tracking-widest`}>
                                        Ver checklist →
                                     </span>
                                     {canEdit() && (
@@ -345,7 +366,7 @@ export default function Checklist({ type }: { type?: string }) {
                                              e.stopPropagation();
                                              handleEditLinks(location);
                                           }}
-                                          className="p-1.5 text-slate-300 hover:text-amber-600 hover:bg-amber-50 shadow-sm border border-transparent hover:border-amber-100 transition-all opacity-0 group-hover:opacity-100"
+                                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white rounded-none border border-slate-100 hover:border-amber-200 transition-all shadow-sm"
                                        >
                                           <Edit size={14} />
                                        </button>

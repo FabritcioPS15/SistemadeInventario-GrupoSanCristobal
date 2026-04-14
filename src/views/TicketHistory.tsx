@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, ShieldCheck, Lock, Search, Calendar, Filter, RefreshCw } from 'lucide-react';
+import { History, ShieldCheck, Search, Calendar, Filter, RefreshCw, Ticket as TicketIcon, Clock, User } from 'lucide-react';
 import { FaFilePdf } from "react-icons/fa6";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { supabase } from '../lib/supabase';
@@ -360,108 +360,71 @@ export default function TicketHistory() {
                         </p>
                     </div>
                 ) : (
-                    <div className="bg-white rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.03)] border border-slate-50 overflow-hidden">
-                        <table className="w-full text-left border-collapse">
+                    <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+                        <table className="w-full text-left border-collapse border-spacing-0">
                             <thead>
-                                <tr className="bg-slate-50/30">
-                                    <th className="px-8 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">ID Ticket</th>
-                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Incidente</th>
-                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Descripción</th>
-                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Estado</th>
-                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Solicitante</th>
-                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Atendido por</th>
-                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Prioridad</th>
-                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha Creación</th>
-                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha Cierre</th>
-                                    <th className="px-6 py-6 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Tiempo cierre</th>
+                                <tr className="bg-slate-50 border-b border-slate-200">
+                                    <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">ID Ticket</span></th>
+                                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Incidente</span></th>
+                                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Solicitante</span></th>
+                                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Atendido por</span></th>
+                                    <th className="px-4 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Prioridad</span></th>
+                                    <th className="px-4 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Fecha Cierre</span></th>
+                                    <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tiempo</span></th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-50">
+                            <tbody className="divide-y divide-slate-100">
                                 {filteredTickets.map((ticket) => {
                                     const prio = PRIORITY_STYLES[ticket.priority] || PRIORITY_STYLES.medium;
                                     return (
-                                        <tr key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)} className="hover:bg-blue-50/10 transition-all cursor-pointer group active:bg-blue-50/30">
-                                            <td className="px-8 py-6">
-                                                <span className="text-[11px] font-black text-[#002855] tracking-tight">#TK-{ticket.id.slice(0, 6).toUpperCase()}</span>
-                                            </td>
-                                            <td className="px-6 py-6">
-                                                <div>
-                                                    <p className="text-[12px] font-black text-slate-700 uppercase tracking-tight line-clamp-1">{ticket.title}</p>
-                                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{ticket.locations?.name || 'Central'}</p>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-6">
-                                                <p className="text-[10px] text-slate-600 line-clamp-2 max-w-[200px]">
-                                                    {ticket.description || 'Sin descripción'}
-                                                </p>
-                                            </td>
-                                            <td className="px-6 py-6 text-center">
-                                                <span className="px-4 py-1.5 rounded-lg bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest flex items-center gap-2 border border-slate-100">
-                                                    <Lock size={12} />
-                                                    Archivado
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-6">
+                                        <tr key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0">
+                                            <td className="px-6 py-5 font-bold text-left">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase overflow-hidden shadow-inner group-hover:bg-white transition-all">
-                                                        {ticket.requester?.avatar_url ? (
-                                                            <img src={ticket.requester.avatar_url} alt="" className="w-full h-full object-cover" />
-                                                        ) : ticket.requester?.full_name?.charAt(0)}
+                                                    <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
+                                                        <TicketIcon size={14} />
                                                     </div>
-                                                    <div>
-                                                        <p className="text-[11px] font-black text-slate-700 uppercase leading-none mb-1">{ticket.requester?.full_name}</p>
-                                                        <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest truncate max-w-[80px]">{ticket.locations?.name || 'Central'}</p>
-                                                    </div>
+                                                    <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-blue-600 transition-colors">#TK-{ticket.id.slice(0, 6).toUpperCase()}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-6">
+                                            <td className="px-4 py-5 text-left">
+                                                <div>
+                                                    <p className="text-[13px] font-black text-slate-900 uppercase tracking-tight line-clamp-1">{ticket.title}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{ticket.locations?.name || 'Central'}</p>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-5 text-left">
+                                                <div className="flex items-center gap-2">
+                                                    <User size={12} className="text-slate-400" />
+                                                    <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{ticket.requester?.full_name || 'N/A'}</p>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-5 text-left">
                                                 {ticket.attendant ? (
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-[10px] font-black text-blue-600 uppercase overflow-hidden shadow-inner group-hover:bg-white transition-all">
-                                                            {ticket.attendant?.avatar_url ? (
-                                                                <img src={ticket.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
-                                                            ) : ticket.attendant?.full_name?.charAt(0)}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[11px] font-black text-slate-700 uppercase leading-none">{ticket.attendant?.full_name}</p>
-                                                        </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{ticket.attendant.full_name}</p>
                                                     </div>
                                                 ) : (
-                                                    <span className="text-[10px] text-slate-300 font-black uppercase">Sin asignar</span>
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sin asignar</span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-6">
-                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${prio.color} border-current/10`}>
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest">{prio.label}</span>
-                                                </div>
+                                            <td className="px-4 py-5 text-center">
+                                                <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${prio.color.replace('bg-', 'bg-')} border-current/20 rounded-none`}>
+                                                    {prio.label}
+                                                </span>
                                             </td>
-                                            <td className="px-6 py-6">
+                                            <td className="px-4 py-5 text-center">
                                                 <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
-                                                    <Calendar size={12} />
-                                                    {new Date(ticket.created_at).toLocaleDateString('es-PE', {
-                                                        day: '2-digit',
-                                                        month: 'short',
-                                                        year: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    })}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-6">
-                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
-                                                    <Calendar size={12} />
+                                                    <Calendar size={12} className="text-slate-400" />
                                                     {ticket.closed_at ? new Date(ticket.closed_at).toLocaleDateString('es-PE', {
                                                         day: '2-digit',
                                                         month: 'short',
-                                                        year: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
+                                                        year: 'numeric'
                                                     }) : 'N/A'}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-6">
-                                                <div className="text-[10px] font-bold text-slate-600">
+                                            <td className="px-6 py-5 text-center">
+                                                <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-slate-600">
+                                                    <Clock size={12} className="text-slate-400" />
                                                     {getTimeToClose(ticket)}
                                                 </div>
                                             </td>

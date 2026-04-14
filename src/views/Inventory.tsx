@@ -334,73 +334,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
-      {/* Dynamic Header */}
-      <div className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm transition-all duration-300">
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-2 rounded-lg text-white shadow-lg shadow-blue-200">
-            <Package size={20} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">
-              <span>Inventario</span>
-              <ChevronRight size={10} />
-              <span className="text-slate-500">{currentCategoryName}</span>
-              {currentSubcatLabel && (
-                <>
-                  <ChevronRight size={10} />
-                  <span className="text-blue-500">{currentSubcatLabel}</span>
-                </>
-              )}
-            </div>
-            <h1 className="text-sm font-black text-slate-800 uppercase tracking-tight">
-              {currentSubcatLabel || currentCategoryName}
-            </h1>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && canEdit() && (
-            <div className="flex items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex bg-white border border-slate-200 rounded-lg overflow-hidden h-9 shadow-sm">
-                <div className="px-3 flex items-center bg-slate-50 border-r border-slate-200">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{selectedIds.size} seleccionados</span>
-                </div>
-                <select
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      handleBulkStatusUpdate(e.target.value);
-                      e.target.value = '';
-                    }
-                  }}
-                  className="px-3 bg-transparent text-[10px] font-bold text-slate-600 uppercase tracking-widest outline-none cursor-pointer border-r border-slate-200 hover:bg-slate-50"
-                >
-                  <option value="">Cambiar Estado</option>
-                  <option value="active">✓ Activo</option>
-                  <option value="inactive">✕ Inactivo</option>
-                  <option value="maintenance">⚠ Mantenimiento</option>
-                  <option value="extracted">⤵ Extraído</option>
-                </select>
-                <button
-                  onClick={handleBulkDelete}
-                  className="px-3 text-rose-600 hover:bg-rose-50 transition-colors"
-                  title="Eliminar seleccionados"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-          {canEdit() && (
-            <button
-              onClick={() => { setEditingAsset(undefined); setShowAssetForm(true); }}
-              className="px-3 py-1.5 bg-[#002855] text-white rounded-lg text-[11px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all flex items-center gap-2"
-            >
-              <Plus size={14} /> Nuevo
-            </button>
-          )}
-        </div>
-      </div>
-
+      
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
         {/* Action Bar — Standardized */}
         <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
@@ -547,6 +481,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
                 onItemsPerPageChange={setItemsPerPage}
+                selectedCount={selectedIds.size}
+                onDeleteSelected={handleBulkDelete}
               />
             </div>
             <div className="overflow-x-auto">
@@ -665,6 +601,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
                 onItemsPerPageChange={setItemsPerPage}
+                selectedCount={selectedIds.size}
+                onDeleteSelected={handleBulkDelete}
               />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

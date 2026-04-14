@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 
 interface PaginationProps {
     currentPage: number;
@@ -8,6 +8,8 @@ interface PaginationProps {
     onPageChange: (page: number) => void;
     onItemsPerPageChange: (itemsPerPage: number) => void;
     children?: React.ReactNode;
+    selectedCount?: number;
+    onDeleteSelected?: () => void;
 }
 
 export default function Pagination({
@@ -18,6 +20,8 @@ export default function Pagination({
     onPageChange,
     onItemsPerPageChange,
     children,
+    selectedCount = 0,
+    onDeleteSelected,
 }: PaginationProps) {
     const startItem = (currentPage - 1) * itemsPerPage + 1;
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
@@ -82,6 +86,15 @@ export default function Pagination({
                             <option value={50}>50 REGISTROS</option>
                             <option value={100}>100 REGISTROS</option>
                         </select>
+                        {selectedCount > 0 && onDeleteSelected && (
+                            <button
+                                onClick={onDeleteSelected}
+                                className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all rounded-lg shadow-sm active:scale-95"
+                            >
+                                <Trash2 size={14} />
+                                Eliminar {selectedCount} {selectedCount === 1 ? 'seleccionado' : 'seleccionados'}
+                            </button>
+                        )}
                     </div>
                 </div>
 

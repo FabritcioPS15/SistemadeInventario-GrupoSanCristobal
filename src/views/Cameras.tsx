@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List, Star, Video, ArrowRight } from 'lucide-react';
-import { useHeaderVisible } from '../hooks/useHeaderVisible';
+import { useEffect, useState, useRef } from 'react';
+import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List, Star, Video, ArrowRight, Search } from 'lucide-react';
+
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
@@ -29,7 +29,9 @@ export default function Cameras({ subview }: CamerasProps) {
   const [selectedCamera, setSelectedCamera] = useState<Camera | undefined>();
   const [expandedStorage, setExpandedStorage] = useState<Set<string>>(new Set());
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
-  const [filterLocation, setFilterLocation] = useState('todos');
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterStorage, setFilterStorage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +39,6 @@ export default function Cameras({ subview }: CamerasProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
-  const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
 
   useEffect(() => {
     // Show welcome popup only once per session or on first entry
@@ -46,6 +47,16 @@ export default function Cameras({ subview }: CamerasProps) {
       setTimeout(() => setShowWelcomePopup(true), 800);
       sessionStorage.setItem('cameras_welcome_seen', 'true');
     }
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -73,7 +84,7 @@ export default function Cameras({ subview }: CamerasProps) {
       window.removeEventListener('cameras:export-pdf', handleExportPdf);
       window.removeEventListener('cameras:toggle-view', handleToggleView);
     };
-  }, [cameras, filterLocation, filterStatus, filterStorage, viewMode]);
+  }, [cameras, selectedLocations, filterStatus, filterStorage, viewMode, searchTerm, subview]);
 
   const fetchCameras = async () => {
     let query = supabase
@@ -164,18 +175,6 @@ export default function Cameras({ subview }: CamerasProps) {
     return t.toUpperCase();
   };
 
-  // Función para obtener el subtítulo basado en el subview
-  const getSubtitleFromSubview = (subview?: string) => {
-    if (!subview) return '';
-    const map: Record<string, string> = {
-      'cameras-revision': 'Revisión',
-      'cameras-escuela': 'Escuela',
-      'cameras-policlinico': 'Policlínico',
-      'cameras-circuito': 'Circuito',
-    };
-    return map[subview] || '';
-  };
-
   const filteredCameras = cameras.filter((c) => {
     // Filtro por subview (tipo de ubicación)
     const locationType = getLocationTypeFromSubview(subview);
@@ -192,9 +191,12 @@ export default function Cameras({ subview }: CamerasProps) {
 
     if (!matchesSearch) return false;
 
-    // Filtro por Sede
-    if (filterLocation !== 'todos' && (c as any).locations?.id !== filterLocation) {
-      return false;
+    // Filtro por Sede - CORREGIDO
+    if (selectedLocations.length > 0) {
+      const cameraLocationId = (c as any).locations?.id;
+      if (!cameraLocationId || !selectedLocations.includes(cameraLocationId)) {
+        return false;
+      }
     }
 
     // Filtro por Estado
@@ -205,10 +207,9 @@ export default function Cameras({ subview }: CamerasProps) {
     // Filtro por Almacenamiento Crítico (algún disco > 75%)
     if (filterStorage) {
       const hasCriticalDisk = c.camera_disks?.some(d => {
-        const total = Number(d.total_capacity_gb) || 0;
-        const used = Number(d.used_space_gb) || 0;
-        const percent = total > 0 ? (used / total) * 100 : 0;
-        return percent > 75;
+        if (!d.used_space_gb || !d.total_capacity_gb) return false;
+        const usedPercent = (d.used_space_gb / d.total_capacity_gb) * 100;
+        return usedPercent > 75;
       });
       if (!hasCriticalDisk) return false;
     }
@@ -219,6 +220,12 @@ export default function Cameras({ subview }: CamerasProps) {
   const totalPages = Math.ceil(filteredCameras.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredCameras.slice(startIndex, startIndex + itemsPerPage);
+
+  // Debug: Verificar estado de cámaras filtradas
+  console.log('Cameras total:', cameras.length);
+  console.log('Filtered cameras:', filteredCameras.length);
+  console.log('Selected locations:', selectedLocations);
+  console.log('Paginated data:', paginatedData.length);
 
   const handleExportPDF = async () => {
     try {
@@ -369,86 +376,6 @@ export default function Cameras({ subview }: CamerasProps) {
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
-      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl border border-[#e2e8f0]">
-            <Video className="text-[#002855]" size={20} />
-          </div>
-          <div className="hidden lg:block">
-            <h1 className="text-[13px] font-black text-[#002855] uppercase tracking-wider leading-none">Cámaras</h1>
-            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-0.5 block leading-none">{subview ? getSubtitleFromSubview(subview).toUpperCase() : 'MONITOREO INTEGRAL'}</span>
-          </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="hidden md:flex flex-1 max-w-md mx-8">
-          <div className="relative w-full group">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Plus size={14} className="text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-            </div>
-            <input
-              type="text"
-              placeholder="BUSCAR CÁMARA POR NOMBRE, IP, MARCA..."
-              className="block w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-none text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all placeholder:text-slate-400"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex bg-slate-100 p-1 border border-slate-200">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-              title="Vista Cuadrícula"
-            >
-              <LayoutGrid size={16} />
-            </button>
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-              title="Vista Tabla"
-            >
-              <List size={16} />
-            </button>
-          </div>
-
-          <div className="h-6 w-px bg-slate-200 mx-1" />
-
-          {canEdit() && (
-            <>
-              <button
-                onClick={handleExportPDF}
-                className="p-2 text-rose-600 hover:bg-rose-50 rounded-none transition-all"
-                title="Exportar PDF"
-              >
-                <FaFilePdf size={18} />
-              </button>
-              <button
-                onClick={handleExportExcel}
-                className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-none transition-all"
-                title="Exportar Excel"
-              >
-                <RiFileExcel2Fill size={18} />
-              </button>
-            </>
-          )}
-
-          <div className="h-6 w-px bg-slate-200 mx-1" />
-
-          <button
-            onClick={() => setShowWelcomePopup(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all shadow-sm"
-          >
-            <Star size={14} />
-            Indicaciones
-          </button>
-
-          <div className="h-6 w-px bg-slate-200 mx-1" />
-          <button className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-none transition-colors" onClick={() => window.location.href = '#'}><X size={18} /></button>
-        </div>
-      </div>
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
 
@@ -459,60 +386,145 @@ export default function Cameras({ subview }: CamerasProps) {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 flex-1">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
-              <MapPin size={14} className="text-slate-500" />
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Sede:</span>
-              <select
-                className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
-                value={filterLocation}
-                onChange={(e) => setFilterLocation(e.target.value)}
+          {/* Search */}
+          <div className="flex-1 relative group/search">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+            <input
+              type="text"
+              placeholder="BUSCAR CÁMARA POR NOMBRE, IP, MARCA..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+            />
+          </div>
+
+          {/* Filters + Toggle */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
               >
-                <option value="todos">TODAS LAS SEDES</option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-                ))}
-              </select>
+                <MapPin size={14} className="text-rose-500" />
+                <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === locations.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
+                <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              {showLocationDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  <div className="p-2 border-b border-slate-100">
+                    <button
+                      onClick={() => {
+                        setSelectedLocations(locations.map(loc => loc.id));
+                        setShowLocationDropdown(false);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    >
+                      Seleccionar todas las sedes
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedLocations([]);
+                        setShowLocationDropdown(false);
+                        setCurrentPage(1);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                    >
+                      Limpiar selección
+                    </button>
+                  </div>
+                  {locations.map(location => (
+                    <label key={location.id} className="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedLocations.includes(location.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedLocations([...selectedLocations, location.id]);
+                          } else {
+                            setSelectedLocations(selectedLocations.filter(id => id !== location.id));
+                          }
+                          setCurrentPage(1);
+                        }}
+                        className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mr-3"
+                      />
+                      <span className="text-xs font-medium text-slate-700">{location.name.toUpperCase()}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
-              <Plus size={14} className="text-slate-500" />
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado:</span>
-              <select
-                className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="todos">TODOS LOS ESTADOS</option>
-                <option value="active">ACTIVO</option>
-                <option value="maintenance">MANTENIMIENTO</option>
-                <option value="inactive">INACTIVO</option>
-              </select>
-            </div>
+            <select
+              value={filterStatus}
+              onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
+            >
+              <option value="todos">TODOS LOS ESTADOS</option>
+              <option value="active">ACTIVO</option>
+              <option value="maintenance">MANTENIMIENTO</option>
+              <option value="inactive">INACTIVO</option>
+            </select>
 
-            <div className="flex items-center gap-3 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1"><Star size={12} /> Crítico:</span>
+            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30">
+              <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-1">
+                <Star size={12} />
+                Crítico:
+              </span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   className="sr-only peer"
                   checked={filterStorage}
-                  onChange={(e) => setFilterStorage(e.target.checked)}
+                  onChange={(e) => { setFilterStorage(e.target.checked); setCurrentPage(1); }}
                 />
                 <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
-          </div>
 
-          {canEdit() && (
+            <div className="flex bg-slate-100 p-1 border border-slate-200">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+                title="Vista Cuadrícula"
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+                title="Vista Tabla"
+              >
+                <List size={16} />
+              </button>
+            </div>
+
+            {canEdit() && (
+              <button
+                onClick={openCreate}
+                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+              >
+                <Plus size={14} />
+                Agregar Equipo
+              </button>
+            )}
+
             <button
-              onClick={openCreate}
-              className="bg-[#002855] text-white px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] shadow-lg hover:bg-blue-800 transition-all flex items-center justify-center gap-2 group"
+              onClick={handleExportExcel}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
+              title="Exportar a Excel"
             >
-              <Plus size={16} className="group-hover:rotate-90 transition-transform" />
-              Agregar Equipo
+              <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
             </button>
-          )}
+
+            <button
+              onClick={handleExportPDF}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
+              title="Exportar a PDF"
+            >
+              <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
+            </button>
+          </div>
         </div>
 
         {

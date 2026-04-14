@@ -1,5 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Plus, Edit, Trash2, Package, Star, X, Download, FileText, LayoutGrid, List as ListIcon, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Plus, Edit, Trash2, Package, Star, X, Download, FileText, LayoutGrid, List as ListIcon, AlertTriangle, Search, MapPin, ChevronDown } from 'lucide-react';
+import { RiFileExcel2Fill } from "react-icons/ri";
+import { FaFilePdf } from "react-icons/fa6";
+import ExcelJS from 'exceljs';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase } from '../lib/supabase';
 import SparePartForm from '../components/forms/SparePartForm';
@@ -33,6 +38,10 @@ export default function SpareParts() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [locations, setLocations] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
 
@@ -53,8 +62,33 @@ export default function SpareParts() {
     }
   };
 
+  const fetchLocations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      if (data) setLocations(data);
+    } catch (error) {
+      console.error('Error fetching locations:', error);
+    }
+  };
+
   useEffect(() => {
     fetchData();
+    fetchLocations();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleSort = (key: string) => {
@@ -84,6 +118,10 @@ export default function SpareParts() {
 
     if (lowStockOnly) {
       result = result.filter(part => part.quantity <= part.min_quantity);
+    }
+
+    if (selectedLocations.length > 0) {
+      result = result.filter(part => part.location && selectedLocations.includes(part.location));
     }
 
     if (sortConfig) {
@@ -127,45 +165,92 @@ export default function SpareParts() {
     setLowStockOnly(false);
   };
 
+  const handleExportExcel = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Repuestos');
+      
+      worksheet.columns = [
+        { header: 'Nombre', key: 'name', width: 30 },
+        { header: 'Código', key: 'part_number', width: 20 },
+        { header: 'Categoría', key: 'category', width: 15 },
+        { header: 'Marca', key: 'manufacturer', width: 20 },
+        { header: 'Cantidad', key: 'quantity', width: 12 },
+        { header: 'Unidad', key: 'unit', width: 10 },
+        { header: 'Precio Unit.', key: 'unit_price', width: 15 },
+        { header: 'Stock Mínimo', key: 'min_quantity', width: 12 },
+        { header: 'Ubicación', key: 'location', width: 20 },
+        { header: 'Proveedor', key: 'supplier', width: 20 }
+      ];
+      
+      worksheet.getRow(1).font = { bold: true, size: 12 };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      };
+      
+      filteredParts.forEach(part => {
+        worksheet.addRow({
+          name: part.name || '',
+          part_number: part.part_number || '',
+          category: part.category || '',
+          manufacturer: part.manufacturer || '',
+          quantity: part.quantity || 0,
+          unit: part.unit || '',
+          unit_price: part.unit_price || 0,
+          min_quantity: part.min_quantity || 0,
+          location: part.location || '',
+          supplier: part.supplier || ''
+        });
+      });
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `repuestos_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exportando Excel:', error);
+      alert('Error al exportar a Excel');
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const tableData = filteredParts.map(part => [
+        part.name || '',
+        part.part_number || '',
+        part.category || '',
+        part.manufacturer || '',
+        part.quantity || 0,
+        part.unit || '',
+        `$${(part.unit_price || 0).toFixed(2)}`,
+        part.location || ''
+      ]);
+      
+      autoTable(doc, {
+        head: [['Nombre', 'Código', 'Categoría', 'Marca', 'Cantidad', 'Unidad', 'Precio', 'Ubicación']],
+        body: tableData,
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [0, 40, 85] }
+      });
+      
+      doc.save(`repuestos_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error exportando PDF:', error);
+      alert('Error al exportar a PDF');
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
-      {/* Standard Application Header (h-14) */}
-      <div className={`bg-white border-b border-[#e2e8f0] px-6 h-14 flex items-center justify-between shadow-sm sticky top-0 z-30 font-sans transition-transform duration-500 ease-in-out ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-        <div className="flex items-center gap-4">
-          <div className="bg-[#f1f5f9] p-2 rounded-xl text-[#002855]">
-            <Package size={20} />
-          </div>
-          <div className="hidden lg:block">
-            <h2 className="text-[13px] font-black text-[#002855] uppercase tracking-wider">Gestión de Repuestos</h2>
-          </div>
-        </div>
-
-
-
-        <div className="flex items-center gap-2">
-          {canEdit() && (
-            <div className="flex items-center gap-1 border-r border-gray-200 pr-3 mr-1">
-              <button
-                onClick={() => {
-                  setEditingPart(undefined);
-                  setShowForm(true);
-                }}
-                className="p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors"
-                title="Nuevo Repuesto"
-              >
-                <Plus size={22} />
-              </button>
-            </div>
-          )}
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#002855] transition-colors">
-            <Star size={18} />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-rose-500 transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-      </div>
-
+      
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -210,64 +295,154 @@ export default function SpareParts() {
           </div>
         </div>
 
-        {/* Control Bar */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
-                <FileText size={14} className="text-slate-500" />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoría:</span>
-                <select
-                  className="bg-transparent text-[11px] font-bold text-[#002855] outline-none cursor-pointer"
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <option value="all">TODAS LAS CATEGORÍAS</option>
-                  {categories.filter(c => c !== 'all').map(c => (
-                    <option key={c} value={c}>{c.toUpperCase()}</option>
+        <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
+          <div className="absolute -top-3 -left-3">
+            <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+              {filteredParts.length} Repuestos
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="flex-1 relative group/search">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+            <input
+              type="text"
+              placeholder="BUSCAR REPUESTO POR NOMBRE, CÓDIGO, MARCA..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); }}
+              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+            />
+          </div>
+
+          {/* Filters + Toggle */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest min-w-[220px]">
+              <FileText size={14} className="text-rose-500" />
+              <select
+                value={categoryFilter}
+                onChange={(e) => { setCategoryFilter(e.target.value); }}
+                className="bg-transparent outline-none cursor-pointer flex-1"
+              >
+                <option value="all">TODAS LAS CATEGORÍAS</option>
+                {categories.filter(c => c !== 'all').map(c => (
+                  <option key={c} value={c}>{c.toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
+              >
+                <MapPin size={14} className="text-rose-500" />
+                <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === locations.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
+                <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
+              </button>
+              {showLocationDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                  <div className="p-2 border-b border-slate-100">
+                    <button
+                      onClick={() => {
+                        setSelectedLocations(locations.map(loc => loc.id));
+                        setShowLocationDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    >
+                      Seleccionar todas las sedes
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedLocations([]);
+                        setShowLocationDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                    >
+                      Limpiar selección
+                    </button>
+                  </div>
+                  {locations.map(location => (
+                    <label key={location.id} className="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedLocations.includes(location.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedLocations([...selectedLocations, location.id]);
+                          } else {
+                            setSelectedLocations(selectedLocations.filter(id => id !== location.id));
+                          }
+                        }}
+                        className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mr-3"
+                      />
+                      <span className="text-xs font-medium text-slate-700">{location.name.toUpperCase()}</span>
+                    </label>
                   ))}
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f5f9] border border-slate-200 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="low-stock"
-                  className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500"
-                  checked={lowStockOnly}
-                  onChange={(e) => setLowStockOnly(e.target.checked)}
-                />
-                <label htmlFor="low-stock" className="text-[10px] font-black text-slate-500 uppercase tracking-widest cursor-pointer">
-                  Solo Stock Bajo
-                </label>
-              </div>
-
-              {(searchTerm || categoryFilter !== 'all' || lowStockOnly) && (
-                <button
-                  onClick={clearFilters}
-                  className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-700 transition-colors"
-                >
-                  Limpiar Filtros
-                </button>
+                </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex bg-[#f1f5f9] p-1 rounded-lg">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                >
-                  <LayoutGrid size={16} />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-                >
-                  <ListIcon size={16} />
-                </button>
-              </div>
+            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30">
+              <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-1">
+                <AlertTriangle size={12} />
+                Stock Bajo:
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={lowStockOnly}
+                  onChange={(e) => { setLowStockOnly(e.target.checked); }}
+                />
+                <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
             </div>
+
+            <div className="flex bg-slate-100 p-1 border border-slate-200">
+              <button 
+                onClick={() => setViewMode('grid')} 
+                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                title="Vista Cuadrícula"
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button 
+                onClick={() => setViewMode('list')} 
+                className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                title="Vista Tabla"
+              >
+                <ListIcon size={16} />
+              </button>
+            </div>
+
+            {canEdit() && (
+              <button
+                onClick={() => {
+                  setEditingPart(undefined);
+                  setShowForm(true);
+                }}
+                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+              >
+                <Plus size={14} />
+                Agregar Repuesto
+              </button>
+            )}
+
+            <button
+              onClick={handleExportExcel}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
+              title="Exportar a Excel"
+            >
+              <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+            </button>
+
+            <button
+              onClick={handleExportPDF}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
+              title="Exportar a PDF"
+            >
+              <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
+            </button>
           </div>
         </div>
 

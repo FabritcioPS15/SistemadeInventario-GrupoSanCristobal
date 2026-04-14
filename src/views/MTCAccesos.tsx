@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, List, LayoutGrid } from 'lucide-react';
+import { RiFileExcel2Fill } from "react-icons/ri";
+import { FaFilePdf } from "react-icons/fa6";
+import ExcelJS from 'exceljs';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 import { supabase } from '../lib/supabase';
 import MTCAccesoForm from '../components/forms/MTCAccesoForm';
@@ -140,6 +145,76 @@ export default function MTCAccesos() {
     }
   };
 
+  const handleExportExcel = async () => {
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Accesos MTC');
+      
+      worksheet.columns = [
+        { header: 'Nombre', key: 'name', width: 30 },
+        { header: 'URL', key: 'url', width: 40 },
+        { header: 'Usuario', key: 'username', width: 20 },
+        { header: 'Tipo', key: 'access_type', width: 15 },
+        { header: 'Notas', key: 'notes', width: 30 }
+      ];
+      
+      worksheet.getRow(1).font = { bold: true, size: 12 };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      };
+      
+      filteredAccesos.forEach(acceso => {
+        worksheet.addRow({
+          name: acceso.name || '',
+          url: acceso.url || '',
+          username: acceso.username || '',
+          access_type: acceso.access_type || '',
+          notes: acceso.notes || ''
+        });
+      });
+      
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `accesos_mtc_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exportando Excel:', error);
+      alert('Error al exportar a Excel');
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF();
+      const tableData = filteredAccesos.map(acceso => [
+        acceso.name || '',
+        acceso.url || '',
+        acceso.username || '',
+        acceso.access_type || '',
+        acceso.notes || 'Sin notas'
+      ]);
+      
+      autoTable(doc, {
+        head: [['Nombre', 'URL', 'Usuario', 'Tipo', 'Notas']],
+        body: tableData,
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [0, 40, 85] }
+      });
+      
+      doc.save(`accesos_mtc_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Error exportando PDF:', error);
+      alert('Error al exportar a PDF');
+    }
+  };
+
   const filteredAccesos = accesos.filter(acceso => {
     const matchesSearch = acceso.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       acceso.access_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -177,19 +252,31 @@ export default function MTCAccesos() {
             <select
               value={accessTypeFilter}
               onChange={e => { setAccessTypeFilter(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[200px] appearance-none cursor-pointer"
+              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
             >
-              <option value="">Todos los tipos</option>
-              <option value="web">Web Services</option>
-              <option value="api">APIs & Endpoints</option>
-              <option value="database">Bases de Datos</option>
-              <option value="ssh">Terminal SSH</option>
-              <option value="ftp">Servidores FTP</option>
+              <option value="">TODOS LOS TIPOS</option>
+              <option value="web">WEB SERVICES</option>
+              <option value="api">APIS & ENDPOINTS</option>
+              <option value="database">BASES DE DATOS</option>
+              <option value="ssh">TERMINAL SSH</option>
+              <option value="ftp">SERVIDORES FTP</option>
             </select>
 
             <div className="flex bg-slate-100 p-1 border border-slate-200">
-              <button onClick={() => setViewMode('grid')} className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`} title="Vista Cuadrícula"><LayoutGrid size={16} /></button>
-              <button onClick={() => setViewMode('table')} className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`} title="Vista Tabla"><List size={16} /></button>
+              <button 
+                onClick={() => setViewMode('grid')} 
+                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                title="Vista Cuadrícula"
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button 
+                onClick={() => setViewMode('table')} 
+                className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                title="Vista Tabla"
+              >
+                <List size={16} />
+              </button>
             </div>
 
             {canEdit() && (
@@ -198,9 +285,25 @@ export default function MTCAccesos() {
                 className={`flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${view === 'form' ? 'bg-slate-800 text-white' : 'bg-[#002855] text-white hover:bg-blue-800'}`}
               >
                 {view === 'form' ? <List size={14} /> : <Plus size={14} />}
-                {view === 'form' ? 'Ver Lista' : 'Nuevo'}
+                {view === 'form' ? 'Ver Lista' : 'Nuevo Acceso'}
               </button>
             )}
+
+            <button
+              onClick={handleExportExcel}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
+              title="Exportar a Excel"
+            >
+              <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+            </button>
+
+            <button
+              onClick={handleExportPDF}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
+              title="Exportar a PDF"
+            >
+              <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
+            </button>
           </div>
         </div>
 

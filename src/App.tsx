@@ -8,6 +8,7 @@ import Inventory from './views/Inventory';
 import Maintenance from './views/Maintenance';
 import Enviados from './views/Enviados';
 import Sutran from './views/Sutran';
+import SutranFutureVisits from './views/SutranFutureVisits';
 import Sedes from './views/Sedes';
 import MTCAccesos from './views/MTCAccesos';
 import Users from './views/Users';
@@ -25,6 +26,7 @@ import Login from './components/Login';
 import PasswordSetup from './components/PasswordSetup';
 import Checklist from './views/Checklist';
 import ChecklistInteractive from './views/ChecklistInteractive';
+import ChecklistDetail from './views/ChecklistDetail';
 import Vacations from './views/Vacations';
 import Tickets from './views/Tickets';
 import TicketHistory from './views/TicketHistory';
@@ -191,6 +193,7 @@ function AppContent() {
             {/* Checklist */}
             <Route path="/checklist" element={<ProtectedRoute permission="checklist"><Checklist /></ProtectedRoute>} />
             <Route path="/checklist/:type" element={<ProtectedRoute><ChecklistWrapper /></ProtectedRoute>} />
+            <Route path="/checklist/:type/:id" element={<ProtectedRoute><ChecklistDetail /></ProtectedRoute>} />
             <Route path="/checklist-interactive" element={<ProtectedRoute permission="checklist-interactive"><ChecklistInteractive /></ProtectedRoute>} />
 
             {/* Vacaciones */}
@@ -198,6 +201,7 @@ function AppContent() {
 
             {/* Otras Rutas */}
             <Route path="/sutran" element={<ProtectedRoute permission="sutran"><Sutran /></ProtectedRoute>} />
+            <Route path="/sutran/future-visits" element={<ProtectedRoute permission="sutran"><SutranFutureVisits /></ProtectedRoute>} />
             <Route path="/locations" element={<ProtectedRoute permission="locations"><Sedes /></ProtectedRoute>} />
             <Route path="/mtc" element={<ProtectedRoute permission="mtc"><MTCAccesos /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute permission="users"><Users /></ProtectedRoute>} />

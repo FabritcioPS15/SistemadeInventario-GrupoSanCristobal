@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { Edit, Trash2, MapPin, X, Eye, Building, Package, Users, ChevronDown, ChevronUp, LayoutGrid, List, Globe } from 'lucide-react';
+import { Edit, Trash2, MapPin, X, Eye, Building, Package, Users, ChevronDown, ChevronUp, LayoutGrid, List, Globe, Search, Plus } from 'lucide-react';
+import { RiFileExcel2Fill } from "react-icons/ri";
+import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -217,7 +219,7 @@ export default function Sedes() {
 
             {/* Search */}
             <div className="flex-1 relative group/search">
-              <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
                 placeholder="BUSCAR SEDE, DIRECCIÓN O NOTAS..."
@@ -273,6 +275,32 @@ export default function Sedes() {
                 <button onClick={() => setViewMode('grid')} className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}><LayoutGrid size={16} /></button>
                 <button onClick={() => setViewMode('list')} className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}><List size={16} /></button>
               </div>
+
+              {canEdit() && (
+                <button
+                  onClick={openCreate}
+                  className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+                >
+                  <Plus size={14} />
+                  Nueva Sede
+                </button>
+              )}
+
+              <button
+                onClick={exportToExcel}
+                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
+                title="Exportar a Excel"
+              >
+                <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+              </button>
+
+              <button
+                onClick={exportToPdf}
+                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
+                title="Exportar a PDF"
+              >
+                <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
+              </button>
             </div>
           </div>
 

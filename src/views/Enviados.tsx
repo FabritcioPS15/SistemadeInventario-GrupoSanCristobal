@@ -214,12 +214,12 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
 
                 {/* Filters + Toggle */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center gap-2 px-3 py-3 bg-slate-50 border border-slate-200 rounded-none min-w-[210px]">
-                    <MapPin size={14} className="text-slate-400" />
+                  <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest min-w-[220px]">
+                    <MapPin size={14} className="text-rose-500" />
                     <select
                       value={toLocationIdFilter}
                       onChange={e => { setToLocationIdFilter(e.target.value); setCurrentPage(1); }}
-                      className="bg-transparent text-[10px] font-black text-[#002855] uppercase outline-none cursor-pointer flex-1"
+                      className="bg-transparent outline-none cursor-pointer flex-1"
                     >
                       <option value="">TODOS LOS DESTINOS</option>
                       {locations.map(loc => (
@@ -231,13 +231,13 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                   <select
                     value={statusFilter}
                     onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                    className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[160px] appearance-none cursor-pointer"
+                    className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
                   >
-                    <option value="">Todos los estados</option>
-                    <option value="shipped">Enviado</option>
-                    <option value="in_transit">En Tránsito</option>
-                    <option value="delivered">Entregado</option>
-                    <option value="returned">Devuelto</option>
+                    <option value="">TODOS LOS ESTADOS</option>
+                    <option value="shipped">ENVIADO</option>
+                    <option value="in_transit">EN TRÁNSITO</option>
+                    <option value="delivered">ENTREGADO</option>
+                    <option value="returned">DEVUELTO</option>
                   </select>
 
                   {(searchTerm || statusFilter || toLocationIdFilter) && (

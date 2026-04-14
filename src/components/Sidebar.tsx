@@ -232,7 +232,17 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       items: [
         { id: 'users', label: 'Usuarios', icon: Users, path: '/users' },
         { id: 'locations', label: 'Sedes', icon: MapPin, path: '/locations' },
-        { id: 'sutran', label: 'Sutran', icon: Building2, path: '/sutran' },
+        {
+          id: 'sutran',
+          label: 'Sutran',
+          icon: Building2,
+          path: '/sutran',
+          hasSubmenu: true,
+          submenu: [
+            { id: 'sutran-visits', label: 'Visitas SUTRAN', path: '/sutran' },
+            { id: 'sutran-future', label: 'Futuras Visitas', path: '/sutran/future-visits' },
+          ]
+        },
         { id: 'mtc', label: 'MTC Accesos', icon: Key, path: '/mtc' },
         { id: 'servers', label: 'Servidores', icon: GrServerCluster, path: '/servers' },
         { id: 'painpoint', label: 'Painpoints', icon: Zap, path: '/painpoint' },
@@ -290,11 +300,8 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       >
         <div className="h-16 flex items-center justify-between px-4 border-b border-white/5 shrink-0 overflow-hidden">
           {!collapsed && (
-            <div className="flex items-center gap-3 transition-opacity duration-300">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
-                <Settings size={18} className="animate-spin-slow" />
-              </div>
-              <span className="font-black text-white text-[15px] tracking-widest uppercase truncate animate-in fade-in duration-500">Sistema GSC</span>
+            <div className="flex items-center justify-center transition-opacity duration-300 w-full">
+              <img src="/Enblanco.png" alt="Logo" className="h-12 object-contain" />
             </div>
           )}
 

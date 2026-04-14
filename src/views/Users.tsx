@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Plus, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, Shield, Crown, LayoutGrid, List, Lock, Settings, TrendingUp, User as UserIcon } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Plus, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, Shield, Crown, LayoutGrid, List, Lock, Settings, TrendingUp, User as UserIcon, Search, ChevronDown } from 'lucide-react';
+import { RiFileExcel2Fill } from "react-icons/ri";
+import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -40,7 +42,9 @@ export default function Users() {
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [currentPage, setCurrentPage] = useState(1);
@@ -63,6 +67,16 @@ export default function Users() {
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -205,10 +219,10 @@ export default function Users() {
         user.role.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesRole = !roleFilter || user.role === roleFilter;
       const matchesStatus = !statusFilter || user.status === statusFilter;
-      const matchesLocation = !locationFilter || user.location_id === locationFilter;
+      const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(user.location_id || '');
       return matchesSearch && matchesRole && matchesStatus && matchesLocation;
     });
-  }, [users, searchTerm, roleFilter, statusFilter, locationFilter]);
+  }, [users, searchTerm, roleFilter, statusFilter, selectedLocations]);
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -268,7 +282,7 @@ export default function Users() {
 
             {/* Search */}
             <div className="flex-1 relative group/search">
-              <UsersIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
                 placeholder="BUSCAR USUARIO, EMAIL O ROL..."
@@ -280,26 +294,67 @@ export default function Users() {
 
             {/* Filters + Toggle */}
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-3 bg-slate-50 border border-slate-200 rounded-none min-w-[180px]">
-                <MapPin size={14} className="text-slate-400" />
-                <select
-                  value={locationFilter}
-                  onChange={e => { setLocationFilter(e.target.value); setCurrentPage(1); }}
-                  className="bg-transparent text-[10px] font-black text-[#002855] uppercase outline-none cursor-pointer flex-1"
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowLocationDropdown(!showLocationDropdown)}
+                  className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
                 >
-                  <option value="">TODAS LAS SEDES</option>
-                  {locations.map(loc => (
-                    <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-                  ))}
-                </select>
+                  <MapPin size={14} className="text-rose-500" />
+                  <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === locations.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
+                  <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                {showLocationDropdown && (
+                  <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    <div className="p-2 border-b border-slate-100">
+                      <button
+                        onClick={() => {
+                          setSelectedLocations(locations.map(loc => loc.id));
+                          setShowLocationDropdown(false);
+                          setCurrentPage(1);
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      >
+                        Seleccionar todas las sedes
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedLocations([]);
+                          setShowLocationDropdown(false);
+                          setCurrentPage(1);
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                      >
+                        Limpiar selección
+                      </button>
+                    </div>
+                    {locations.map(location => (
+                      <label key={location.id} className="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={selectedLocations.includes(location.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLocations([...selectedLocations, location.id]);
+                            } else {
+                              setSelectedLocations(selectedLocations.filter(id => id !== location.id));
+                            }
+                            setCurrentPage(1);
+                          }}
+                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mr-3"
+                        />
+                        <span className="text-xs font-medium text-slate-700">{location.name.toUpperCase()}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <select
                 value={roleFilter}
                 onChange={e => { setRoleFilter(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[160px] appearance-none cursor-pointer"
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
               >
-                <option value="">Todos los roles</option>
+                <option value="">TODOS LOS ROLES</option>
                 <option value="super_admin">Super Admin</option>
                 <option value="gerencia">Gerencia</option>
                 <option value="sistemas">Sistemas</option>
@@ -311,16 +366,28 @@ export default function Users() {
               <select
                 value={statusFilter}
                 onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[140px] appearance-none cursor-pointer"
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
               >
-                <option value="">Todos los estados</option>
+                <option value="">TODOS LOS ESTADOS</option>
                 <option value="active">Activo</option>
                 <option value="inactive">Inactivo</option>
               </select>
 
               <div className="flex bg-slate-100 p-1 border border-slate-200">
-                <button onClick={() => setViewMode('grid')} className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`} title="Vista Cuadrícula"><LayoutGrid size={16} /></button>
-                <button onClick={() => setViewMode('list')} className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`} title="Vista Tabla"><List size={16} /></button>
+                <button 
+                  onClick={() => setViewMode('grid')} 
+                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                  title="Vista Cuadrícula"
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button 
+                  onClick={() => setViewMode('list')} 
+                  className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                  title="Vista Tabla"
+                >
+                  <List size={16} />
+                </button>
               </div>
 
               {canEditValue && (
@@ -328,9 +395,26 @@ export default function Users() {
                   onClick={handleNewUserClick}
                   className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
                 >
-                  <Plus size={14} /> Nuevo
+                  <Plus size={14} />
+                  Nuevo Usuario
                 </button>
               )}
+
+              <button
+                onClick={exportToExcel}
+                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
+                title="Exportar a Excel"
+              >
+                <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+              </button>
+
+              <button
+                onClick={exportToPdf}
+                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
+                title="Exportar a PDF"
+              >
+                <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
+              </button>
             </div>
           </div>
 

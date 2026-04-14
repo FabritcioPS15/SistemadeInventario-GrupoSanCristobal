@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Edit, Trash2, MapPin, X, Eye, Globe, Copy, Server as ServerLucide, ChevronDown, ChevronUp, LayoutGrid, List, Plus } from 'lucide-react';
+import { Edit, Trash2, MapPin, X, Eye, Globe, Copy, Server as ServerLucide, ChevronDown, ChevronUp, LayoutGrid, List, Plus, Search } from 'lucide-react';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 import { SiAnydesk } from "react-icons/si";
+import { RiFileExcel2Fill } from "react-icons/ri";
+import { FaFilePdf } from "react-icons/fa6";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase, Server, Location } from '../lib/supabase';
@@ -243,59 +245,77 @@ export default function Servers() {
               </div>
             </div>
 
-            {/* Búsqueda Principal (Lado Izquierdo) */}
-            <div className="flex-1 relative group/search">
-              <Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
-              <input
-                type="text"
-                placeholder="BUSCAR SERVIDOR, IP, ID O SEDE..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); resetPagination(); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
-              />
+            {/* Search */}
+          <div className="flex-1 relative group/search">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+            <input
+              type="text"
+              placeholder="BUSCAR SERVIDOR, IP, ID O SEDE..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); resetPagination(); }}
+              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+            />
+          </div>
+
+          {/* Filters + Toggle */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest min-w-[220px]">
+              <MapPin size={14} className="text-rose-500" />
+              <select
+                value={selectedLocations[0] || ''}
+                onChange={e => { setSelectedLocations(e.target.value ? [e.target.value] : []); resetPagination(); }}
+                className="bg-transparent outline-none cursor-pointer flex-1"
+              >
+                <option value="">TODAS LAS SEDES</option>
+                {locations.map(loc => (
+                  <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+                ))}
+              </select>
             </div>
 
-            {/* Controles de Filtrado (Lado Derecho) */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-3 bg-slate-50 border border-slate-200 rounded-none min-w-[280px]">
-                <MapPin size={14} className="text-slate-400" />
-                <select
-                  value={selectedLocations[0] || ''}
-                  onChange={e => { setSelectedLocations(e.target.value ? [e.target.value] : []); resetPagination(); }}
-                  className="bg-transparent text-[10px] font-black text-[#002855] uppercase outline-none cursor-pointer flex-1"
-                >
-                  <option value="">TODAS LAS SEDES</option>
-                  {locations.map(loc => (
-                    <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Vistas */}
-              <div className="flex bg-slate-100 p-1 border border-slate-200">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}
-                >
-                  <LayoutGrid size={16} />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}
-                >
-                  <List size={16} />
-                </button>
-              </div>
-
-              {canEdit() && (
-                <button
-                  onClick={openCreate}
-                  className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-                >
-                  <Plus size={14} /> Nuevo
-                </button>
-              )}
+            <div className="flex bg-slate-100 p-1 border border-slate-200">
+              <button 
+                onClick={() => setViewMode('grid')} 
+                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                title="Vista Cuadrícula"
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button 
+                onClick={() => setViewMode('list')} 
+                className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                title="Vista Tabla"
+              >
+                <List size={16} />
+              </button>
             </div>
+
+            {canEdit() && (
+              <button
+                onClick={openCreate}
+                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+              >
+                <Plus size={14} />
+                Nuevo Servidor
+              </button>
+            )}
+
+            <button
+              onClick={downloadServersReport}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
+              title="Exportar a Excel"
+            >
+              <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+            </button>
+
+            <button
+              onClick={downloadServersReportPdf}
+              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
+              title="Exportar a PDF"
+            >
+              <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
+            </button>
+          </div>
           </div>
 
           {loading ? (

@@ -430,9 +430,9 @@ export default function NotificationsFinal() {
           />
 
           <div className="absolute left-1/2 sm:right-0 top-12 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 max-h-96 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 sm:left-auto left-1/2 sm:translate-x-0 -translate-x-1/2">
-            <div className="p-3 sm:p-4 border-b border-slate-200">
+            <div className="p-3 sm:p-4 border-b border-slate-200 bg-[#001529]">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-black text-slate-900 text-sm sm:text-base">Notificaciones</h3>
+                <h3 className="font-black text-white text-sm sm:text-base">Notificaciones</h3>
                 <div className="flex items-center gap-2">
                   {unreadCount > 0 && (
                     <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
