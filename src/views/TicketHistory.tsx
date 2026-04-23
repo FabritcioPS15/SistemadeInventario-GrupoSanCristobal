@@ -232,209 +232,210 @@ export default function TicketHistory() {
     }
 
     return (
-        <div className="min-h-screen bg-[#f8f9fc]">
-            <div className="px-8 pt-8 pb-6">
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-2xl bg-[#002855] flex items-center justify-center text-white shadow-xl">
-                                <History size={24} />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-black text-[#002855] tracking-tight">Historial de Tickets</h1>
-                                <p className="text-sm text-slate-500">Tickets cerrados y archivados automáticamente</p>
+        <div className="flex flex-col h-full bg-white font-sans min-h-screen relative overflow-hidden">
+            <div className="flex-1 overflow-y-auto bg-[#f8fafc]">
+                <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-4">
+                    
+                    {/* Action Bar */}
+                    <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
+                        <div className="absolute -top-3 -left-3">
+                            <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+                                {filteredTickets.length} Tickets
                             </div>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={handleRefresh}
-                            disabled={refreshing}
-                            className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 rounded-lg transition-all shadow-sm active:scale-95 disabled:opacity-50"
-                        >
-                            <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
-                            <span className="font-medium">Refrescar</span>
-                        </button>
-                        <button
-                            onClick={generateHistoryPDF}
-                            disabled={filteredTickets.length === 0}
-                            className="flex items-center justify-center w-10 h-10 bg-rose-600 text-white hover:bg-rose-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Exportar a PDF"
-                        >
-                            <FaFilePdf size={20} />
-                        </button>
-                        <button
-                            onClick={generateHistoryExcel}
-                            disabled={filteredTickets.length === 0}
-                            className="flex items-center justify-center w-10 h-10 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Exportar a Excel"
-                        >
-                            <RiFileExcel2Fill size={20} />
-                        </button>
-                    </div>
-                </div>
 
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-                    <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex-1 min-w-[300px]">
+                        {/* Search */}
+                        <div className="flex-1 relative group/search">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+                            <input
+                                type="text"
+                                placeholder="BUSCAR POR TÍTULO, SOLICITANTE O SEDE..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+                            />
+                        </div>
+
+                        {/* Filters & Actions */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            {/* Priority Filter */}
                             <div className="relative">
-                                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <select
+                                    value={filterPriority}
+                                    onChange={(e) => setFilterPriority(e.target.value)}
+                                    className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center transition-all outline-none"
+                                >
+                                    <option value="all">Todas las prioridades</option>
+                                    <option value="critical">P1 - Crítica</option>
+                                    <option value="high">P2 - Alta</option>
+                                    <option value="medium">P3 - Media</option>
+                                    <option value="low">P4 - Baja</option>
+                                </select>
+                            </div>
+
+                            {/* Date Filter */}
+                            <div className="relative">
+                                <select
+                                    value={filterDateRange}
+                                    onChange={(e) => setFilterDateRange(e.target.value)}
+                                    className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center transition-all outline-none"
+                                >
+                                    <option value="all">Todo el tiempo</option>
+                                    <option value="7days">Últimos 7 días</option>
+                                    <option value="30days">Últimos 30 días</option>
+                                    <option value="90days">Últimos 90 días</option>
+                                    <option value="custom">Rango Personalizado</option>
+                                </select>
+                            </div>
+
+                            {/* Refrescar */}
+                            <button
+                                onClick={handleRefresh}
+                                disabled={refreshing}
+                                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm disabled:opacity-50"
+                            >
+                                <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+                                Refrescar
+                            </button>
+
+                            <button
+                                onClick={generateHistoryExcel}
+                                disabled={filteredTickets.length === 0}
+                                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm disabled:opacity-50"
+                                title="Exportar a Excel"
+                            >
+                                <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+                            </button>
+
+                            <button
+                                onClick={generateHistoryPDF}
+                                disabled={filteredTickets.length === 0}
+                                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm disabled:opacity-50"
+                                title="Exportar a PDF"
+                            >
+                                <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {filterDateRange === 'custom' && (
+                        <div className="flex items-center gap-3 animate-in slide-in-from-left-2 duration-300">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Desde</span>
                                 <input
-                                    type="text"
-                                    placeholder="Buscar por título, solicitante o sede..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855]"
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-none text-[#002855] focus:outline-none focus:border-[#002855]/30 text-sm font-medium"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hasta</span>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-none text-[#002855] focus:outline-none focus:border-[#002855]/30 text-sm font-medium"
                                 />
                             </div>
                         </div>
+                    )}
 
-                        <div className="flex items-center gap-2">
-                            <Filter size={18} className="text-slate-400" />
-                            <select
-                                value={filterPriority}
-                                onChange={(e) => setFilterPriority(e.target.value)}
-                                className="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] text-sm"
-                            >
-                                <option value="all">Todas las prioridades</option>
-                                <option value="critical">P1 - Crítica</option>
-                                <option value="high">P2 - Alta</option>
-                                <option value="medium">P3 - Media</option>
-                                <option value="low">P4 - Baja</option>
-                            </select>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <Calendar size={18} className="text-slate-400" />
-                            <select
-                                value={filterDateRange}
-                                onChange={(e) => setFilterDateRange(e.target.value)}
-                                className="px-4 py-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] text-sm font-bold uppercase tracking-wider"
-                            >
-                                <option value="all">Todo el tiempo</option>
-                                <option value="7days">Últimos 7 días</option>
-                                <option value="30days">Últimos 30 días</option>
-                                <option value="90days">Últimos 90 días</option>
-                                <option value="custom">Rango Personalizado</option>
-                            </select>
-                        </div>
-
-                        {filterDateRange === 'custom' && (
-                            <div className="flex items-center gap-3 animate-in slide-in-from-left-2 duration-300">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Desde</span>
-                                    <input
-                                        type="date"
-                                        value={startDate}
-                                        onChange={(e) => setStartDate(e.target.value)}
-                                        className="px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] text-sm font-medium"
-                                    />
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hasta</span>
-                                    <input
-                                        type="date"
-                                        value={endDate}
-                                        onChange={(e) => setEndDate(e.target.value)}
-                                        className="px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#002855] text-sm font-medium"
-                                    />
-                                </div>
+                    {filteredTickets.length === 0 ? (
+                        <div className="bg-white border border-slate-200 rounded-none p-16 text-center shadow-sm">
+                            <div className="w-24 h-24 rounded-full bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center mx-auto mb-6">
+                                <ShieldCheck size={48} className="text-slate-300" />
                             </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div className="px-8 pb-12">
-                {filteredTickets.length === 0 ? (
-                    <div className="bg-white rounded-3xl border border-slate-200 p-16 text-center">
-                        <div className="w-24 h-24 rounded-full bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center mx-auto mb-6">
-                            <ShieldCheck size={48} className="text-slate-300" />
+                            <h3 className="text-xl font-bold text-[#002855] uppercase tracking-widest mb-2">No se encontraron tickets</h3>
+                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                                {searchTerm || filterPriority !== 'all' || filterDateRange !== 'all'
+                                    ? 'Intenta ajustar los filtros de búsqueda'
+                                    : 'Los tickets cerrados aparecerán aquí después de 10 minutos'
+                                }
+                            </p>
                         </div>
-                        <h3 className="text-xl font-bold text-slate-700 mb-2">No se encontraron tickets archivados</h3>
-                        <p className="text-slate-500">
-                            {searchTerm || filterPriority !== 'all' || filterDateRange !== 'all'
-                                ? 'Intenta ajustar los filtros de búsqueda'
-                                : 'Los tickets cerrados aparecerán aquí después de 10 minutos'
-                            }
-                        </p>
-                    </div>
-                ) : (
-                    <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
-                        <table className="w-full text-left border-collapse border-spacing-0">
-                            <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200">
-                                    <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">ID Ticket</span></th>
-                                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Incidente</span></th>
-                                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Solicitante</span></th>
-                                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Atendido por</span></th>
-                                    <th className="px-4 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Prioridad</span></th>
-                                    <th className="px-4 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Fecha Cierre</span></th>
-                                    <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tiempo</span></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {filteredTickets.map((ticket) => {
-                                    const prio = PRIORITY_STYLES[ticket.priority] || PRIORITY_STYLES.medium;
-                                    return (
-                                        <tr key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0">
-                                            <td className="px-6 py-5 font-bold text-left">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
-                                                        <TicketIcon size={14} />
-                                                    </div>
-                                                    <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-blue-600 transition-colors">#TK-{ticket.id.slice(0, 6).toUpperCase()}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-5 text-left">
-                                                <div>
-                                                    <p className="text-[13px] font-black text-slate-900 uppercase tracking-tight line-clamp-1">{ticket.title}</p>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{ticket.locations?.name || 'Central'}</p>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-5 text-left">
-                                                <div className="flex items-center gap-2">
-                                                    <User size={12} className="text-slate-400" />
-                                                    <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{ticket.requester?.full_name || 'N/A'}</p>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-5 text-left">
-                                                {ticket.attendant ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{ticket.attendant.full_name}</p>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sin asignar</span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-5 text-center">
-                                                <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${prio.color.replace('bg-', 'bg-')} border-current/20 rounded-none`}>
-                                                    {prio.label}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-5 text-center">
-                                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-600">
-                                                    <Calendar size={12} className="text-slate-400" />
-                                                    {ticket.closed_at ? new Date(ticket.closed_at).toLocaleDateString('es-PE', {
-                                                        day: '2-digit',
-                                                        month: 'short',
-                                                        year: 'numeric'
-                                                    }) : 'N/A'}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-5 text-center">
-                                                <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-slate-600">
-                                                    <Clock size={12} className="text-slate-400" />
-                                                    {getTimeToClose(ticket)}
-                                                </div>
-                                            </td>
+                    ) : (
+                        <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse border-spacing-0">
+                                    <thead>
+                                        <tr className="bg-slate-50 border-b border-slate-200">
+                                            <th className="px-6 py-5 text-left w-12"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">ID</span></th>
+                                            <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Incidente</span></th>
+                                            <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Solicitante</span></th>
+                                            <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Atendido por</span></th>
+                                            <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Prioridad</span></th>
+                                            <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tiempos</span></th>
                                         </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {filteredTickets.map((ticket) => {
+                                            const prio = PRIORITY_STYLES[ticket.priority] || PRIORITY_STYLES.medium;
+                                            return (
+                                                <tr key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0">
+                                                    <td className="px-6 py-5 font-bold text-left w-12">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
+                                                                <TicketIcon size={14} />
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-5 text-left">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-blue-600 transition-colors">
+                                                                #{ticket.id.slice(0, 6).toUpperCase()} - {ticket.title}
+                                                            </span>
+                                                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                                {ticket.locations?.name || 'Central'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-5 text-left">
+                                                        <div className="flex items-center gap-2">
+                                                            <User size={12} className="text-slate-400" />
+                                                            <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{ticket.requester?.full_name || 'N/A'}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-5 text-left">
+                                                        {ticket.attendant ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{ticket.attendant.full_name}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sin asignar</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-5 text-left">
+                                                        <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
+                                                            <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
+                                                            {prio.label}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-5 text-left">
+                                                        <div className="flex flex-col gap-1 text-[10px] font-bold text-slate-600">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Calendar size={12} className="text-slate-400" />
+                                                                <span className="uppercase tracking-widest">
+                                                                    {ticket.closed_at ? new Date(ticket.closed_at).toLocaleDateString('es-PE', {
+                                                                        day: '2-digit', month: 'short', year: 'numeric'
+                                                                    }) : 'N/A'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Clock size={12} className="text-slate-400" />
+                                                                <span className="uppercase tracking-widest">Resuelto en {getTimeToClose(ticket)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

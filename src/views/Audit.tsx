@@ -85,7 +85,7 @@ export default function Audit() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-none font-black text-[10px] uppercase tracking-widest text-[#002855] outline-none hover:border-blue-500 transition-all cursor-pointer"
+            className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-none font-black text-[10px] tracking-widest text-[#002855] outline-none hover:border-blue-500 transition-all cursor-pointer"
           >
             <option value="">TODOS LOS ESTADOS</option>
             <option value="excellent">EXCELENTE</option>

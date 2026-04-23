@@ -277,24 +277,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'audit-view', 'audit-export'
       ],
       
-      // Supervisores: Acceso a operaciones básicas y gestión de su equipo
+      // Supervisores: Acceso total igualado a Sistemas
       supervisores: [
-        'dashboard-view',
-        'tickets-view', 'tickets-create', 'tickets-edit',
-        'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view',
-        'checklist-view', 'checklist-edit',
+        'dashboard-view', 'dashboard-edit',
+        'tickets-view', 'tickets-create', 'tickets-edit', 'tickets-delete',
+        'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
+        'checklist-view', 'checklist-edit', 'checklist-create',
         'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
-        'inventory-view', 'inventory-create', 'inventory-edit',
-        'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
-        'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
+        'checklist-interactive-view',
+        'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
+        'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
+        'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
+        'inventory-chip-view', 'inventory-tinte-view', 'inventory-fuente-view', 'inventory-ram-view', 'inventory-disco-view',
+        'inventory-disco-extraido-view', 'inventory-maquinaria-view',
         'cameras-view', 'cameras-edit',
-        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view',
+        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
         'maintenance-view', 'maintenance-create', 'maintenance-edit',
         'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
         'flota-vehicular-view', 'flota-vehicular-edit',
-        'locations-view', 'sutran-view', 'mtc-view',
+        'users-view', 'users-create', 'users-edit', 'users-delete',
+        'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
+        'sutran-view', 'sutran-edit',
+        'mtc-view', 'mtc-edit',
+        'servers-view', 'servers-edit',
+        'painpoint-view', 'painpoint-create', 'painpoint-edit',
         'sent-view', 'sent-create', 'sent-edit',
-        'sent-lima-view', 'sent-provincias-view'
+        'sent-lima-view', 'sent-provincias-view',
+        'audit-view', 'audit-export'
       ],
       
       // Administradores: Acceso limitado - solo visualización y gestión básica

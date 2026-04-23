@@ -16,7 +16,7 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
-  
+
   const [loading, setLoading] = useState(false);
   const [fetchingSubcategories, setFetchingSubcategories] = useState(false);
   const [fetchingAreas, setFetchingAreas] = useState(false);
@@ -37,7 +37,6 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
     phone_number: editAsset?.phone_number || '',
     capacity: editAsset?.capacity || '',
     status: editAsset?.status || 'active',
-    notes: editAsset?.notes || '',
 
     // Technical fields
     processor: editAsset?.processor || '',
@@ -45,7 +44,7 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
     operating_system: editAsset?.operating_system || '',
     bios_mode: editAsset?.bios_mode || '',
     placa: editAsset?.placa || '',
-    
+
     // Inventory details
     item: editAsset?.item || '',
     descripcion: editAsset?.descripcion || '',
@@ -141,7 +140,7 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
         supabase.from('categories').select('*').order('name'),
         supabase.from('locations').select('*').order('name')
       ]);
-      
+
       if (catRes.error) {
         console.error('Error fetching categories:', catRes.error);
         setErrors(prev => ({ ...prev, submit: `Error cargando categorías: ${catRes.error.message}` }));
@@ -209,7 +208,9 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
         'Equipos Médicos',
         'Mobiliario',
         'Seguridad',
-        'Útiles de Oficina'
+        'Útiles de Oficina',
+        'Herramientas',
+        'Repuestos'
       ];
 
       // 1. Create Categories
@@ -224,39 +225,48 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
       // 3. Create Subcategories
       const subcatMap: Record<string, string[]> = {
         'Equipos de Cómputo y TI': [
-          'Computadoras (CPU)', 'Monitores', 'Laptops', 'Teclados', 'Mouse', 
-          'Impresoras', 'Impresoras multifuncionales', 'Estabilizadores', 
-          'Proyectores', 'Audio (parlantes y micrófonos)', 'Redes (router y DVR)', 
+          'Computadoras (CPU)', 'Monitores', 'Laptops', 'Teclados', 'Mouse',
+          'Impresoras', 'Impresoras multifuncionales', 'Estabilizadores',
+          'Proyectores', 'Audio (parlantes y micrófonos)', 'Redes (router y DVR)',
           'Cámaras', 'Accesorios TI'
         ],
         'Equipos Biométricos y Control': [
           'Biométricos', 'Control de huella', 'Accesorios biométricos (tampón y tampón de huella)'
         ],
         'Equipos Médicos': [
-          'Diagnóstico general', 'Equipos de medición', 'Equipos clínicos', 
-          'Equipos de oftalmología', 'Equipos de otorrinolaringología', 
-          'Equipos psicotécnicos', 'Instrumentos médicos', 
-          'Laboratorio - Equipos de análisis', 'Laboratorio - Equipos de esterilización', 
+          'Diagnóstico general', 'Equipos de medición', 'Equipos clínicos',
+          'Equipos de oftalmología', 'Equipos de otorrinolaringología',
+          'Equipos psicotécnicos', 'Instrumentos médicos',
+          'Laboratorio - Equipos de análisis', 'Laboratorio - Equipos de esterilización',
           'Laboratorio - Equipos de muestras', 'Laboratorio - Equipos ópticos',
-          'Evaluación Técnica - Equipos de evaluación visual', 
-          'Evaluación Técnica - Equipos de evaluación auditiva', 
-          'Evaluación Técnica - Equipos psicotécnicos', 
+          'Evaluación Técnica - Equipos de evaluación visual',
+          'Evaluación Técnica - Equipos de evaluación auditiva',
+          'Evaluación Técnica - Equipos psicotécnicos',
           'Evaluación Técnica - Equipos de simulación o pruebas'
         ],
         'Mobiliario': [
-          'Escritorios', 'Mesas', 'Sillas', 'Estantes', 'Armarios', 
-          'Muebles de archivo', 'Módulos', 'Biombos', 
-          'Infraestructura - Refrigeración', 'Infraestructura - Lavaderos', 
-          'Infraestructura - Instalaciones de agua', 'Infraestructura - Dispensadores', 
+          'Escritorios', 'Mesas', 'Sillas', 'Estantes', 'Armarios',
+          'Muebles de archivo', 'Módulos', 'Biombos',
+          'Infraestructura - Refrigeración', 'Infraestructura - Lavaderos',
+          'Infraestructura - Instalaciones de agua', 'Infraestructura - Dispensadores',
           'Infraestructura - Ventilación', 'Infraestructura - Instalaciones del local'
         ],
         'Seguridad': [
-          'Extintores', 'Detectores de humo', 'Luces de emergencia', 
+          'Extintores', 'Detectores de humo', 'Luces de emergencia',
           'Botiquines', 'Seguridad electrónica (cámaras)'
         ],
         'Útiles de Oficina': [
           'Herramientas de oficina', 'Organización de escritorio', 'Papelería', 'Accesorios'
-        ]
+        ],
+        'Herramientas': [
+          'Herramienta manual', 'Herramienta eléctrica'
+        ],
+        'Repuestos': [
+          'Repuesto para equipos electrónicos', 'Repuesto para maquinaria Línea',
+          'Repuesto para equipos de oficina', 'Repuesto para equipos médicos',
+          'Repuesto para equipos de seguridad', 'Repuesto para equipos de transporte',
+          'Repuesto para equipos de telecomunicaciones', 'Repuesto para equipos de audio y video',
+          'Repuesto para equipos de instrumentos medicos']
       };
 
       for (const cat of newCats) {
@@ -278,10 +288,10 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     setFormData(prev => {
       const newData = { ...prev, [name]: value };
-      
+
       // Reset dependent fields
       if (name === 'category_id') {
         newData.subcategory_id = '';
@@ -289,7 +299,7 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
       if (name === 'location_id') {
         newData.area_id = '';
       }
-      
+
       return newData;
     });
 
@@ -302,28 +312,32 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
     try {
       if (!formData.category_id) throw new Error('La categoría es obligatoria');
       if (!formData.subcategory_id) throw new Error('La subcategoría es obligatoria');
-      
+
       const dataToSave = {
         // Core Identity
         brand: formData.brand,
         model: formData.model,
         serial_number: formData.serial_number,
         codigo_unico: formData.codigo_unico,
-        
+
         // Relationships
         category_id: formData.category_id,
         subcategory_id: formData.subcategory_id,
-        location_id: formData.location_id,
-        area_id: formData.area_id,
-        
+        location_id: formData.location_id || null,
+        area_id: formData.area_id || null,
+
         // General Info
         status: formData.status,
-        notes: formData.notes,
+        descripcion: formData.descripcion,
+        unidad_medida: formData.unidad_medida,
         condicion: formData.condicion,
+        color: formData.color,
+        gama: formData.gama,
+        estado_uso: formData.estado_uso,
         cantidad: parseInt(formData.cantidad) || 1,
         valor_estimado: formData.valor_estimado ? parseFloat(formData.valor_estimado) : null,
         fecha_adquisicion: formData.fecha_adquisicion || null,
-        
+
         // Technical Info (Core)
         anydesk_id: formData.anydesk_id,
         ip_address: formData.ip_address,
@@ -332,7 +346,7 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
         ram: formData.ram,
         operating_system: formData.operating_system,
         bios_mode: formData.bios_mode,
-        
+
         updated_at: new Date().toISOString()
       };
 
@@ -354,7 +368,7 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
   const selectedCategoryName = categories.find(c => c.id === formData.category_id)?.name || '';
   const isCómputo = selectedCategoryName === 'Equipos de Cómputo y TI';
   const isBiométrico = selectedCategoryName === 'Equipos Biométricos y Control';
-  
+
   return (
     <BaseForm
       title={editAsset ? 'Editar Activo' : 'Nuevo Activo'}
@@ -367,20 +381,20 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
       icon={<Package size={24} className="text-blue-600" />}
       showChangesWarning={hasChanges}
     >
-      {/* SECCIÓN 1: Clasificación y Ubicación */}
-      <FormSection title="Clasificación y Ubicación" color="blue">
+      {/* SECCIÓN 1: Datos Universales de Inventario */}
+      <FormSection title="Datos Principales de Inventario" color="blue">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <FormField label="Código Único">
             <div className="flex gap-2">
-              <FormInput 
-                type="text" 
-                name="codigo_unico" 
-                value={formData.codigo_unico} 
-                readOnly 
+              <FormInput
+                type="text"
+                name="codigo_unico"
+                value={formData.codigo_unico}
+                readOnly
                 className="bg-gray-50 font-mono font-bold text-blue-700"
               />
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={generateUniqueCode}
                 className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 shadow-sm transition-colors"
                 title="Regenerar código"
@@ -390,43 +404,19 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
             </div>
           </FormField>
 
-          <FormField label="Categoría" required error={errors.category_id}>
-            {categories.length === 0 ? (
-              <div className="flex flex-col gap-2">
-                <p className="text-[10px] text-amber-600 font-bold bg-amber-50 p-2 rounded-lg border border-amber-100">
-                  ⚠ No hay categorías definidas. Por favor, ejecuta la migración SQL o usa el botón de abajo.
-                </p>
-                <div className="flex gap-2">
-                  <button 
-                    type="button"
-                    onClick={fetchInitialData}
-                    className="text-[10px] text-blue-600 font-black uppercase hover:underline flex items-center gap-1"
-                  >
-                    <RefreshCw size={12} /> Refrescar
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={initializeDefaultStructure}
-                    className="text-[10px] text-emerald-600 font-black uppercase hover:underline flex items-center gap-1"
-                  >
-                    <Package size={12} /> Inicializar con datos por defecto
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <FormSelect name="category_id" value={formData.category_id} onChange={handleChange} required>
-                <option value="">Seleccionar categoría...</option>
-                {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-              </FormSelect>
-            )}
+          <FormField label="Tipo / Categoría" required error={errors.category_id}>
+            <FormSelect name="category_id" value={formData.category_id} onChange={handleChange} required>
+              <option value="">Seleccionar categoría...</option>
+              {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+            </FormSelect>
           </FormField>
 
           <FormField label="Subcategoría" required error={errors.subcategory_id}>
-            <FormSelect 
-              name="subcategory_id" 
-              value={formData.subcategory_id} 
-              onChange={handleChange} 
-              required 
+            <FormSelect
+              name="subcategory_id"
+              value={formData.subcategory_id}
+              onChange={handleChange}
+              required
               disabled={!formData.category_id || fetchingSubcategories}
             >
               <option value="">{fetchingSubcategories ? 'Cargando...' : 'Seleccionar subcategoría...'}</option>
@@ -434,18 +424,18 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
             </FormSelect>
           </FormField>
 
-          <FormField label="Sede (Ubicación)" error={errors.location_id}>
+          <FormField label="Ubicación del Activo" error={errors.location_id}>
             <FormSelect name="location_id" value={formData.location_id} onChange={handleChange}>
               <option value="">Sin asignar</option>
               {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
             </FormSelect>
           </FormField>
 
-          <FormField label="Área / Departamento" error={errors.area_id}>
-            <FormSelect 
-              name="area_id" 
-              value={formData.area_id} 
-              onChange={handleChange} 
+          <FormField label="Área / Ubicación del Activo" error={errors.area_id}>
+            <FormSelect
+              name="area_id"
+              value={formData.area_id}
+              onChange={handleChange}
               disabled={!formData.location_id || fetchingAreas}
             >
               <option value="">{fetchingAreas ? 'Cargando áreas...' : 'Seleccionar área...'}</option>
@@ -461,66 +451,42 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
               <option value="extracted">Extraído</option>
             </FormSelect>
           </FormField>
-        </div>
-      </FormSection>
 
-      {/* SECCIÓN 2: Información Técnica Principal */}
-      <FormSection title="Detalles Técnicos" color="emerald">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <FormField label="Descripción" className="md:col-span-2">
+            <FormInput name="descripcion" value={formData.descripcion} onChange={handleChange} placeholder="Descripción completa del activo" />
+          </FormField>
+
+          <FormField label="Unidad de Medida">
+            <FormInput name="unidad_medida" value={formData.unidad_medida} onChange={handleChange} placeholder="Ej: UNIDAD, CAJA" />
+          </FormField>
+
           <FormField label="Marca">
             <FormInput name="brand" value={formData.brand} onChange={handleChange} placeholder="Ej: Dell, Lenovo" />
           </FormField>
-          
+
           <FormField label="Modelo">
             <FormInput name="model" value={formData.model} onChange={handleChange} placeholder="Ej: Precision 3660" />
           </FormField>
-          
+
           <FormField label="Nº de Serie">
             <FormInput name="serial_number" value={formData.serial_number} onChange={handleChange} className="font-mono" placeholder="S/N" />
           </FormField>
 
-          {(isCómputo || isBiométrico) && (
-            <>
-              <FormField label="AnyDesk / Acceso">
-                <FormInput name="anydesk_id" value={formData.anydesk_id} onChange={handleChange} placeholder="ID Acceso" />
-              </FormField>
-              <FormField label="Dirección IP">
-                <FormInput name="ip_address" value={formData.ip_address} onChange={handleChange} placeholder="192.168.1.X" />
-              </FormField>
-            </>
-          )}
-
-          {isCómputo && selectedCategoryName.includes('Computadoras') && (
-            <>
-              <FormField label="Procesador">
-                <FormInput name="processor" value={formData.processor} onChange={handleChange} placeholder="Ej: Intel Core i7" />
-              </FormField>
-              <FormField label="Memoria RAM">
-                <FormInput name="ram" value={formData.ram} onChange={handleChange} placeholder="Ej: 16GB DDR4" />
-              </FormField>
-              <FormField label="Sis. Operativo">
-                <FormSelect name="operating_system" value={formData.operating_system} onChange={handleChange}>
-                  <option value="">Seleccionar...</option>
-                  <option value="Windows 10">Windows 10</option>
-                  <option value="Windows 11">Windows 11</option>
-                  <option value="macOS">macOS</option>
-                  <option value="Linux">Linux</option>
-                </FormSelect>
-              </FormField>
-            </>
-          )}
-        </div>
-      </FormSection>
-
-      {/* SECCIÓN 3: Inventario y Administrativo */}
-      <FormSection title="Inventario y Valor" color="amber">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <FormField label="ITEM">
-            <FormInput name="item" value={formData.item} onChange={handleChange} placeholder="Nombre corto" />
+          <FormField label="Color">
+            <FormInput name="color" value={formData.color} onChange={handleChange} placeholder="Ej: Negro, Plateado" />
           </FormField>
 
-          <FormField label="Descripción" className="lg:col-span-2">
-            <FormInput name="descripcion" value={formData.descripcion} onChange={handleChange} placeholder="Descripción completa" />
+          <FormField label="Gama">
+            <FormSelect name="gama" value={formData.gama} onChange={handleChange}>
+              <option value="">Seleccionar...</option>
+              <option value="Alta">Gama Alta</option>
+              <option value="Media">Gama Media</option>
+              <option value="Baja">Gama Baja</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Cantidad">
+            <FormInput type="number" name="cantidad" value={formData.cantidad} onChange={handleChange} />
           </FormField>
 
           <FormField label="Condición">
@@ -532,11 +498,16 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
             </FormSelect>
           </FormField>
 
-          <FormField label="Cantidad">
-            <FormInput type="number" name="cantidad" value={formData.cantidad} onChange={handleChange} />
+          <FormField label="Estado de Uso">
+            <FormSelect name="estado_uso" value={formData.estado_uso} onChange={handleChange}>
+              <option value="Operativo">Operativo</option>
+              <option value="Inoperativo">Inoperativo</option>
+              <option value="En Reparación">En Reparación</option>
+              <option value="Baja">De Baja</option>
+            </FormSelect>
           </FormField>
 
-          <FormField label="Valor Estimado ($)">
+          <FormField label="Valor Estimado (S/.)">
             <FormInput type="number" name="valor_estimado" value={formData.valor_estimado} onChange={handleChange} step="0.01" />
           </FormField>
 
@@ -544,13 +515,59 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
             <FormInput type="date" name="fecha_adquisicion" value={formData.fecha_adquisicion} onChange={handleChange} />
           </FormField>
         </div>
-        
-        <div className="mt-6">
-          <FormField label="Notas y Observaciones">
-            <FormTextarea name="notes" value={formData.notes} onChange={handleChange} placeholder="Detalles adicionales..." rows={3} />
-          </FormField>
-        </div>
       </FormSection>
+
+      {/* SECCIÓN 2: Detalles Técnicos Especializados (Cómputo/Seguridad) */}
+      {(isCómputo || isBiométrico) && (
+        <FormSection title="Especificaciones Técnicas" color="emerald">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <FormField label="AnyDesk / Acceso">
+              <FormInput name="anydesk_id" value={formData.anydesk_id} onChange={handleChange} placeholder="ID Acceso" />
+            </FormField>
+            <FormField label="Dirección IP">
+              <FormInput name="ip_address" value={formData.ip_address} onChange={handleChange} placeholder="192.168.1.X" />
+            </FormField>
+            {isCómputo && (
+              <>
+                <FormField label="Procesador">
+                  <FormInput name="processor" value={formData.processor} onChange={handleChange} placeholder="Ej: i7 12th Gen" />
+                </FormField>
+                <FormField label="Memoria RAM">
+                  <FormInput name="ram" value={formData.ram} onChange={handleChange} placeholder="Ej: 16GB" />
+                </FormField>
+                <FormField label="Sis. Operativo">
+                  <FormSelect name="operating_system" value={formData.operating_system} onChange={handleChange}>
+                    <option value="">Seleccionar...</option>
+                    <option value="Windows 10">Windows 10</option>
+                    <option value="Windows 11">Windows 11</option>
+                    <option value="macOS">macOS</option>
+                    <option value="Linux">Linux</option>
+                  </FormSelect>
+                </FormField>
+              </>
+            )}
+          </div>
+        </FormSection>
+      )}
+
+      {!editAsset && (
+        <FormSection title="Configuración del Sistema" color="indigo">
+            <div className="flex items-center justify-between bg-blue-50 p-4 rounded-none border border-blue-100">
+              <div>
+                <h4 className="text-[11px] font-black text-blue-800 uppercase tracking-widest">Configuración del Sistema</h4>
+                <p className="text-[10px] text-blue-600 font-bold uppercase mt-1">Carga las categorías y subcategorías estándar en la base de datos.</p>
+              </div>
+              <button
+                type="button"
+                onClick={initializeDefaultStructure}
+                disabled={loading}
+                className="px-4 py-2 bg-white text-blue-600 border border-blue-200 text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
+              >
+                {loading ? 'Inicializando...' : 'Inicializar Estructura'}
+              </button>
+            </div>
+        </FormSection>
+      )}
     </BaseForm>
   );
 }

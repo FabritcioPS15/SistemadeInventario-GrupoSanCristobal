@@ -222,10 +222,10 @@ export default function Sedes() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="BUSCAR SEDE, DIRECCIÓN O NOTAS..."
+                placeholder="Buscar por nombre, dirección o notas..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </div>
 
@@ -235,7 +235,7 @@ export default function Sedes() {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowTypeDropdown(!showTypeDropdown)}
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
+                  className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
                 >
                   <MapPin size={14} className="text-rose-500" />
                   <span className="truncate">{selectedTypes.length === 0 || selectedTypes.length === typeEntries.length ? 'Todos los tipos' : `${selectedTypes.length} tipos`}</span>

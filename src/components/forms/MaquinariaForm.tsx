@@ -36,7 +36,6 @@ export default function MaquinariaForm({ onClose, onSave, editingMaquinaria }: M
     proximo_mantenimiento: editingMaquinaria?.proximo_mantenimiento || '',
     responsable: editingMaquinaria?.responsable || '',
     estado: editingMaquinaria?.estado || 'operativo',
-    observaciones: editingMaquinaria?.observaciones || '',
     // Campos técnicos
     potencia: editingMaquinaria?.potencia || '',
     voltaje: editingMaquinaria?.voltaje || '',
@@ -90,6 +89,7 @@ export default function MaquinariaForm({ onClose, onSave, editingMaquinaria }: M
 
     const dataToSave = {
       ...formData,
+      ubicacion: formData.ubicacion || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -445,19 +445,6 @@ export default function MaquinariaForm({ onClose, onSave, editingMaquinaria }: M
         </div>
       </FormSection>
 
-      {/* Section: Observaciones */}
-      <FormSection title="Observaciones" color="rose">
-        <FormField label="Observaciones y Notas" error={errors.observaciones}>
-          <FormTextarea
-            name="observaciones"
-            value={formData.observaciones}
-            onChange={handleChange}
-            placeholder="Notas adicionales sobre el equipo, historial, recomendaciones, etc..."
-            rows={4}
-            error={errors.observaciones}
-          />
-        </FormField>
-      </FormSection>
     </BaseForm>
   );
 }

@@ -18,7 +18,11 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
     total_capacity_gb: '',
     remaining_capacity_gb: '',
     disk_type: 'HDD' as 'HDD' | 'SSD' | 'NVMe' | 'Other',
-    status: 'active' as 'active' | 'full' | 'error' | 'maintenance',
+    status: 'active' as 'active' | 'full' | 'error' | 'maintenance' | 'extracted',
+    brand: '',
+    serial_number: '',
+    stored_from: '',
+    stored_to: '',
     notes: ''
   });
 
@@ -83,6 +87,10 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
         remaining_capacity_gb: remainingCapacity,
         disk_type: formData.disk_type,
         status: formData.status,
+        brand: formData.brand || null,
+        serial_number: formData.serial_number || null,
+        stored_from: formData.stored_from || null,
+        stored_to: formData.stored_to || null,
         notes: formData.notes || null
       };
 
@@ -136,6 +144,10 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
       remaining_capacity_gb: '',
       disk_type: 'HDD',
       status: 'active',
+      brand: '',
+      serial_number: '',
+      stored_from: '',
+      stored_to: '',
       notes: ''
     });
     setShowAddForm(false);
@@ -149,6 +161,10 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
       remaining_capacity_gb: disk.remaining_capacity_gb.toString(),
       disk_type: disk.disk_type,
       status: disk.status,
+      brand: disk.brand || '',
+      serial_number: disk.serial_number || '',
+      stored_from: disk.stored_from || '',
+      stored_to: disk.stored_to || '',
       notes: disk.notes || ''
     });
     setEditingDisk(disk);
@@ -177,6 +193,8 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
         return <AlertCircle className="h-4 w-4 text-red-600" />;
       case 'maintenance':
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      case 'extracted':
+        return <HardDrive className="h-4 w-4 text-rose-500" />;
       default:
         return <AlertCircle className="h-4 w-4 text-gray-500" />;
     }
@@ -192,6 +210,8 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
         return 'bg-red-100 text-red-800';
       case 'maintenance':
         return 'bg-yellow-100 text-yellow-800';
+      case 'extracted':
+        return 'bg-rose-100 text-rose-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -248,7 +268,7 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
                 <HardDrive className="h-5 w-5 text-gray-600" />
                 <div>
                   <h4 className="font-medium text-gray-900">
-                    Disco {disk.disk_number} - {disk.disk_type}
+                    Disco {disk.disk_number} - {disk.disk_type} {disk.brand ? `(${disk.brand})` : ''}
                   </h4>
                   <div className="flex items-center gap-2">
                     {getStatusIcon(disk.status)}
@@ -304,6 +324,18 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
                 {getUsagePercentage(disk.remaining_capacity_gb, disk.total_capacity_gb)}% usado
               </div>
             </div>
+
+            {disk.serial_number && (
+              <div className="mt-1 text-sm text-slate-500 font-mono">
+                <strong>S/N:</strong> {disk.serial_number}
+              </div>
+            )}
+
+            {(disk.stored_from || disk.stored_to) && (
+              <div className="mt-1 text-xs text-blue-600 font-bold uppercase tracking-tight">
+                Grabación: {disk.stored_from ? new Date(disk.stored_from).toLocaleDateString() : '—'} al {disk.stored_to ? new Date(disk.stored_to).toLocaleDateString() : '—'}
+              </div>
+            )}
 
             {disk.notes && (
               <div className="mt-2 text-sm text-gray-600">
@@ -406,7 +438,63 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
                 <option value="full">Lleno</option>
                 <option value="error">Error</option>
                 <option value="maintenance">Mantenimiento</option>
+                <option value="extracted">Extraído/Almacenado</option>
               </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Marca
+                </label>
+                <input
+                  type="text"
+                  value={formData.brand}
+                  onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: WD, Seagate..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Número de Serie
+                </label>
+                <input
+                  type="text"
+                  value={formData.serial_number}
+                  onChange={(e) => setFormData(prev => ({ ...prev, serial_number: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ej: WD-WCC7K1..."
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Grabación Desde
+                </label>
+                <input
+                  type="date"
+                  value={formData.stored_from}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stored_from: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Grabación Hasta
+                </label>
+                <input
+                  type="date"
+                  value={formData.stored_to}
+                  onChange={(e) => setFormData(prev => ({ ...prev, stored_to: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
 
             <div>

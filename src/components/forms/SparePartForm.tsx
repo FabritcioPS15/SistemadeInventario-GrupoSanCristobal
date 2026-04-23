@@ -16,7 +16,6 @@ type SparePartType = {
   min_quantity: number;
   location: string;
   supplier: string;
-  notes: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -43,7 +42,6 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
     min_quantity: editRecord?.min_quantity || 1,
     location: editRecord?.location || '',
     supplier: editRecord?.supplier || '',
-    notes: editRecord?.notes || '',
   });
 
   const categories = [
@@ -121,7 +119,6 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
       min_quantity: formData.min_quantity,
       location: formData.location.trim() || null,
       supplier: formData.supplier.trim() || null,
-      notes: formData.notes.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -346,19 +343,7 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
         </div>
       </FormSection>
 
-      {/* Section: Notas */}
-      <FormSection title="Notas Adicionales" color="rose">
-        <FormField label="Notas y Observaciones" error={errors.notes}>
-          <FormTextarea
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            placeholder="Notas adicionales sobre el repuesto, recomendaciones de almacenamiento, observaciones especiales, etc..."
-            rows={4}
-            error={errors.notes}
-          />
-        </FormField>
-      </FormSection>
+
     </BaseForm>
   );
 }

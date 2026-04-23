@@ -210,6 +210,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             { id: 'cameras-escuela', label: 'Escuela', path: '/cameras/escuela' },
             { id: 'cameras-policlinico', label: 'Policlínico', path: '/cameras/policlinico' },
             { id: 'cameras-circuito', label: 'Circuito', path: '/cameras/circuito' },
+            { id: 'cameras-disks', label: 'Discos Extraídos', path: '/cameras/disks' },
           ]
         },
         {

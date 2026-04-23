@@ -213,24 +213,24 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
   return (
     <div className="relative">
       {/* Información de usuario y ubicación fija en esquina superior derecha */}
-      <div className="absolute top-4 right-4 z-10 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 shadow-sm">
+      <div className="absolute top-4 right-4 z-10 bg-slate-50 border border-slate-200 rounded-none px-3 py-2 shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-          <span className="text-xs font-semibold text-blue-700">Usuario:</span>
-          <span className="text-xs font-bold text-blue-900">{user?.full_name}</span>
+          <div className="w-1.5 h-1.5 bg-[#002855] rounded-none"></div>
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Usuario:</span>
+          <span className="text-[10px] font-black text-[#002855] uppercase tracking-tight">{user?.full_name}</span>
         </div>
         {user?.location_id ? (
           <div className="flex items-center gap-2 mt-1">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <span className="text-xs font-semibold text-blue-700">Sede:</span>
-            <span className="text-xs font-bold text-blue-900">
+            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-none"></div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sede:</span>
+            <span className="text-[10px] font-black text-[#002855] uppercase tracking-tight">
               {locations.find(loc => loc.id === user.location_id)?.name || 'Cargando...'}
             </span>
           </div>
         ) : (
           <div className="flex items-center gap-2 mt-1">
-            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-            <span className="text-xs font-semibold text-orange-700">Sin sede asignada</span>
+            <div className="w-1.5 h-1.5 bg-orange-500 rounded-none"></div>
+            <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Sin sede asignada</span>
           </div>
         )}
       </div>
@@ -242,12 +242,12 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
         onSubmit={handleSubmit}
         loading={loading}
         error={errors.submit}
-        icon={<Send size={24} className="text-blue-600" />}
+        icon={<Send size={20} className="text-white" />}
       >
       {/* Section: Información del Ticket */}
-      <FormSection title="Información del Ticket" color="blue">
+      <FormSection title="Detalles del Incidente" color="blue">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <FormField label="Asunto de la Incidencia" required error={errors.title} className="h-12 pt-0">
+          <FormField label="Asunto o Título" required error={errors.title} className="h-12 pt-0">
             <div className="relative h-full mt-4" ref={suggestionRef}>
               <FormInput
                 type="text"
@@ -261,16 +261,19 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
               />
 
               {showSuggestions && formData.title && filteredSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl z-20 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute top-full left-0 right-0 mt-0 bg-white border border-slate-200 shadow-2xl z-20 overflow-hidden py-0 animate-in fade-in slide-in-from-top-2">
                   {filteredSuggestions.map((issue, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => handleSelectIssue(issue)}
-                      className="w-full text-left px-5 py-3 hover:bg-slate-50 transition-colors flex items-center justify-between border-b border-slate-50 last:border-0"
+                      className="w-full text-left px-5 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between border-b border-slate-100 last:border-0"
                     >
-                      <span className="text-xs font-black text-slate-700 uppercase">{issue.title}</span>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{issue.category}</span>
+                      <div className="flex flex-col">
+                        <span className="text-[11px] font-black text-[#002855] uppercase">{issue.title}</span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{issue.description.slice(0, 60)}...</span>
+                      </div>
+                      <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-none uppercase tracking-widest">{issue.category}</span>
                     </button>
                   ))}
                 </div>
@@ -278,7 +281,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             </div>
           </FormField>
 
-          <FormField label="Categoría" required error={errors.category}>
+          <FormField label="Tipo de Categoría" required error={errors.category}>
             <FormSelect
               name="category"
               value={formData.category}
@@ -288,13 +291,13 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             >
               {categories.map((cat) => (
                 <option key={cat.value} value={cat.value}>
-                  {cat.label}
+                  {cat.label.toUpperCase()}
                 </option>
               ))}
             </FormSelect>
           </FormField>
 
-          <FormField label="Prioridad" required error={errors.priority}>
+          <FormField label="Prioridad Técnica" required error={errors.priority}>
             <FormSelect
               name="priority"
               value={formData.priority}
@@ -304,19 +307,19 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             >
               {priorities.map((pri) => (
                 <option key={pri.value} value={pri.value}>
-                  {pri.label}
+                  {pri.label.toUpperCase()}
                 </option>
               ))}
             </FormSelect>
           </FormField>
 
-          <FormField label="AnyDesk" error={errors.anydesk}>
+          <FormField label="Acceso AnyDesk" error={errors.anydesk}>
             <FormInput
               type="text"
               name="anydesk"
               value={formData.anydesk}
               onChange={handleChange}
-              placeholder="ID de AnyDesk (opcional)"
+              placeholder="ID de AnyDesk (si aplica)"
               error={errors.anydesk}
             />
           </FormField>
@@ -324,29 +327,30 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
       </FormSection>
 
       {/* Section: Información de Ubicación */}
-      <FormSection title="Información de Ubicación" color="emerald">
-        <FormField label="Sede Asignada">
-          <div className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-700">
-            {locations.find(loc => loc.id === formData.location_id)?.name || 'Cargando...'}
+      <FormSection title="Origen del Reporte" color="emerald">
+        <FormField label="Sede de la Incidencia">
+          <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-black text-[#002855] uppercase tracking-tight">
+            {locations.find(loc => loc.id === formData.location_id)?.name || 'ASIGNANDO SEDE...'}
           </div>
         </FormField>
       </FormSection>
 
       {/* Section: Descripción */}
-      <FormSection title="Descripción del Problema" color="emerald">
-        <FormField label="Descripción Detallada" required error={errors.description}>
+      <FormSection title="Análisis y Descripción" color="emerald">
+        <FormField label="Descripción Detallada del Fallo" required error={errors.description}>
           <FormTextarea
             name="description"
             value={formData.description}
             onChange={handleChange}
-            placeholder="Describe detalladamente el problema que estás experimentando. Incluye los pasos para reproducirlo, mensajes de error que aparecen, y cualquier otra información relevante que pueda ayudar a resolverlo más rápidamente."
-            rows={6}
+            placeholder="Describe el problema, mensajes de error y pasos para reproducirlo..."
+            rows={8}
             required
             error={errors.description}
           />
         </FormField>
       </FormSection>
     </BaseForm>
+
     </div>
   );
 }

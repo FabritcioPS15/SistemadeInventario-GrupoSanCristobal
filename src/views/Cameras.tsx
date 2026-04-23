@@ -1,16 +1,17 @@
 import { useEffect, useState, useRef } from 'react';
-import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List, Star, Video, ArrowRight, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List, Star, Video, ArrowRight, Search, HardDrive } from 'lucide-react';
 
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { supabase, Camera as CameraType, Location } from '../lib/supabase';
+import { supabase, Camera as CameraType, Location, StoredDisk } from '../lib/supabase';
 import CameraForm from '../components/forms/CameraForm';
 import { useAuth } from '../contexts/AuthContext';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import Pagination from '../components/Pagination';
+import StoredDiskForm from '../components/forms/StoredDiskForm';
 
 type Camera = CameraType;
 
@@ -36,9 +37,11 @@ export default function Cameras({ subview }: CamerasProps) {
   const [filterStorage, setFilterStorage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [showStoredDiskForm, setShowStoredDiskForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+  const [storedDisks, setStoredDisks] = useState<StoredDisk[]>([]);
 
   useEffect(() => {
     // Show welcome popup only once per session or on first entry
@@ -62,7 +65,7 @@ export default function Cameras({ subview }: CamerasProps) {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      await Promise.all([fetchCameras(), fetchLocations()]);
+      await Promise.all([fetchCameras(), fetchLocations(), fetchStoredDisks()]);
       setLoading(false);
     })();
   }, []);
@@ -105,6 +108,24 @@ export default function Cameras({ subview }: CamerasProps) {
     if (data) setLocations(data);
   };
 
+  const fetchStoredDisks = async () => {
+    const { data, error } = await supabase
+      .from('stored_disks')
+      .select('*, cameras(name, location_id, locations(name))')
+      .order('created_at', { ascending: false });
+    
+    if (!error && data) {
+      setStoredDisks(data as any);
+    }
+  };
+
+  const handleDeleteDisk = async (id: string) => {
+    if (!confirm('¿Eliminar registro de disco almacenado?')) return;
+    const { error } = await supabase.from('stored_disks').delete().eq('id', id);
+    if (error) return alert('Error al eliminar: ' + error.message);
+    await fetchStoredDisks();
+  };
+
   const openCreate = () => {
     setEditing(undefined);
     setShowForm(true);
@@ -125,7 +146,7 @@ export default function Cameras({ subview }: CamerasProps) {
   const onSave = async () => {
     setShowForm(false);
     setEditing(undefined);
-    await fetchCameras();
+    await Promise.all([fetchCameras(), fetchStoredDisks()]);
   };
 
   const handleView = (cam: Camera) => {
@@ -175,93 +196,151 @@ export default function Cameras({ subview }: CamerasProps) {
     return t.toUpperCase();
   };
 
-  const filteredCameras = cameras.filter((c) => {
-    // Filtro por subview (tipo de ubicación)
-    const locationType = getLocationTypeFromSubview(subview);
-    if (locationType && (c as any).locations?.type !== locationType) {
-      return false;
-    }
+  // Helper: calcula el porcentaje máximo de uso de disco de una cámara
+  const getMaxDiskUsagePercent = (cam: Camera): number => {
+    if (!cam.camera_disks || cam.camera_disks.length === 0) return 0;
+    return Math.max(
+      ...cam.camera_disks.map(d => {
+        if (!d.total_capacity_gb || d.total_capacity_gb === 0) return 0;
+        return (Number(d.used_space_gb) / Number(d.total_capacity_gb)) * 100;
+      })
+    );
+  };
 
-    // Filtro por búsqueda
-    const matchesSearch = !searchTerm ||
-      c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.ip_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.model?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredCameras = cameras
+    .filter((c) => {
+      // Filtro por subview (tipo de ubicación)
+      const locationType = getLocationTypeFromSubview(subview);
+      if (locationType && (c as any).locations?.type !== locationType) return false;
 
-    if (!matchesSearch) return false;
+      // Filtro por búsqueda
+      const matchesSearch = !searchTerm ||
+        c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.ip_address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.model?.toLowerCase().includes(searchTerm.toLowerCase());
+      if (!matchesSearch) return false;
 
-    // Filtro por Sede - CORREGIDO
-    if (selectedLocations.length > 0) {
-      const cameraLocationId = (c as any).locations?.id;
-      if (!cameraLocationId || !selectedLocations.includes(cameraLocationId)) {
-        return false;
+      // Filtro por Sede
+      if (selectedLocations.length > 0) {
+        const cameraLocationId = (c as any).locations?.id;
+        if (!cameraLocationId || !selectedLocations.includes(cameraLocationId)) return false;
       }
-    }
 
-    // Filtro por Estado
-    if (filterStatus !== 'todos' && c.status !== filterStatus) {
-      return false;
-    }
+      // Filtro por Estado
+      if (filterStatus !== 'todos' && c.status !== filterStatus) return false;
 
-    // Filtro por Almacenamiento Crítico (algún disco > 75%)
-    if (filterStorage) {
-      const hasCriticalDisk = c.camera_disks?.some(d => {
-        if (!d.used_space_gb || !d.total_capacity_gb) return false;
-        const usedPercent = (d.used_space_gb / d.total_capacity_gb) * 100;
-        return usedPercent > 75;
-      });
-      if (!hasCriticalDisk) return false;
-    }
+      // Filtro por Almacenamiento Crítico: algún disco >= 75% lleno
+      if (filterStorage) {
+        const hasCriticalDisk = c.camera_disks?.some(d => {
+          if (!d.total_capacity_gb || Number(d.total_capacity_gb) === 0) return false;
+          const usedPercent = (Number(d.used_space_gb) / Number(d.total_capacity_gb)) * 100;
+          return usedPercent >= 75;
+        });
+        if (!hasCriticalDisk) return false;
+      }
 
-    return true;
-  });
+      return true;
+    })
+    // Cuando el filtro crítico está activo, ordenar de mayor a menor uso (más crítico primero)
+    .sort((a, b) => {
+      if (!filterStorage) return 0; // Sin filtro crítico, mantener orden original
+      return getMaxDiskUsagePercent(b) - getMaxDiskUsagePercent(a);
+    });
 
   const totalPages = Math.ceil(filteredCameras.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredCameras.slice(startIndex, startIndex + itemsPerPage);
 
-  // Debug: Verificar estado de cámaras filtradas
-  console.log('Cameras total:', cameras.length);
-  console.log('Filtered cameras:', filteredCameras.length);
-  console.log('Selected locations:', selectedLocations);
-  console.log('Paginated data:', paginatedData.length);
+  const processedStoredDisks = storedDisks.map(disk => ({
+    ...disk,
+    camera_name: (disk as any).cameras?.name,
+    location_name: (disk as any).cameras?.locations?.name,
+    location_id: (disk as any).cameras?.location_id
+  }));
+
+  const filteredDisks = processedStoredDisks.filter(disk => {
+    const matchesSearch = !searchTerm || 
+      disk.camera_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      disk.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      disk.disk_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      disk.serial_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesLocation = selectedLocations.length === 0 || 
+      (disk.location_id && selectedLocations.includes(disk.location_id));
+
+    return matchesSearch && matchesLocation;
+  });
+
+  const paginatedDisks = filteredDisks.slice(startIndex, startIndex + itemsPerPage);
+  const totalDisksPages = Math.ceil(filteredDisks.length / itemsPerPage);
+
+
+
 
   const handleExportPDF = async () => {
     try {
       const doc = new jsPDF('l', 'mm', 'a4');
-      const title = `Reporte Detallado de Cámaras - ${new Date().toLocaleDateString()}`;
+      const isDisksView = subview === 'cameras-disks';
+      const title = isDisksView 
+        ? `Inventario de Discos Extraídos - ${new Date().toLocaleDateString()}`
+        : `Reporte Detallado de Cámaras - ${new Date().toLocaleDateString()}`;
 
       doc.setFontSize(18);
       doc.setTextColor(0, 40, 85);
       doc.text(title, 14, 20);
 
-      const tableData = filteredCameras.map(c => [
-        c.name,
-        (c as any).locations?.name || '—',
-        c.brand || '—',
-        c.model || '—',
-        c.ip_address || '—',
-        c.display_count || '0', // Capacidad
-        c.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
-        c.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join('\n') || '—'
-      ]);
+      if (isDisksView) {
+        const tableData = filteredDisks.map(d => [
+          `Disco #${d.disk_number}`,
+          d.serial_number || '—',
+          d.brand || '—',
+          d.camera_name || '—',
+          d.location_name || '—',
+          d.stored_from ? `${new Date(d.stored_from).toLocaleDateString()} - ${new Date(d.stored_to || '').toLocaleDateString()}` : '—',
+          `${d.used_space_gb}/${d.total_capacity_gb} GB`,
+          d.notes || '—'
+        ]);
 
-      autoTable(doc, {
-        startY: 30,
-        head: [['Cámara', 'Ubicación', 'Marca', 'Modelo', 'IP', 'Cap.', 'Discos Duros', 'Espacio Libre']],
-        body: tableData,
-        theme: 'striped',
-        headStyles: { fillColor: [0, 40, 85], textColor: 255, fontSize: 10 },
-        styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-        columnStyles: {
-          5: { halign: 'center', cellWidth: 15 }, // Capacidad
-          6: { fontSize: 7, cellWidth: 35 }, // Discos
-          7: { fontSize: 7, cellWidth: 25 } // Espacio Libre
-        }
-      });
+        autoTable(doc, {
+          startY: 30,
+          head: [['Disco', 'Serie', 'Marca', 'Cámara Origen', 'Sede', 'Periodo Grabación', 'Capacidad', 'Notas']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [190, 18, 60], textColor: 255, fontSize: 10 },
+          styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+        });
+      } else {
+        const tableData = filteredCameras.map(c => [
+          c.name,
+          (c as any).locations?.name || '—',
+          c.brand || '—',
+          c.model || '—',
+          c.ip_address || '—',
+          c.display_count || '0', // Capacidad
+          c.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
+          c.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join('\n') || '—'
+        ]);
 
-      doc.save(`Reporte_Camaras_${new Date().toISOString().split('T')[0]}.pdf`);
+        autoTable(doc, {
+          startY: 30,
+          head: [['Cámara', 'Ubicación', 'Marca', 'Modelo', 'IP', 'Cap.', 'Discos Duros', 'Espacio Libre']],
+          body: tableData,
+          theme: 'striped',
+          headStyles: { fillColor: [0, 40, 85], textColor: 255, fontSize: 10 },
+          styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+          columnStyles: {
+            5: { halign: 'center', cellWidth: 15 }, // Capacidad
+            6: { fontSize: 7, cellWidth: 35 }, // Discos
+            7: { fontSize: 7, cellWidth: 25 } // Espacio Libre
+          }
+        });
+      }
+
+      doc.save(isDisksView 
+        ? `Discos_Extraidos_${new Date().toISOString().split('T')[0]}.pdf`
+        : `Reporte_Camaras_${new Date().toISOString().split('T')[0]}.pdf`
+      );
     } catch (error) {
       console.error('Error al exportar PDF:', error);
       alert('Error al generar el PDF');
@@ -269,107 +348,102 @@ export default function Cameras({ subview }: CamerasProps) {
   };
 
   const handleExportExcel = async () => {
-    // Crear un nuevo libro de trabajo
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Cámaras');
+    const isDisksView = subview === 'cameras-disks';
+    const worksheet = workbook.addWorksheet(isDisksView ? 'Discos Extraídos' : 'Cámaras');
 
-    // Definir columnas con anchos apropiados
-    worksheet.columns = [
-      { header: 'Nombre', key: 'name', width: 25 },
-      { header: 'Marca', key: 'brand', width: 15 },
-      { header: 'Modelo', key: 'model', width: 20 },
-      { header: 'Sede', key: 'location', width: 25 },
-      { header: 'IP', key: 'ip', width: 15 },
-      { header: 'Puerto', key: 'port', width: 10 },
-      { header: 'Usuario', key: 'username', width: 20 },
-      { header: 'Contraseña', key: 'password', width: 20 },
-      { header: 'URL', key: 'url', width: 40 },
-      { header: 'Tipo Acceso', key: 'access_type', width: 15 },
-      { header: 'Estado', key: 'status', width: 15 },
-      { header: 'Capacidad', key: 'capacity', width: 15 },
-      { header: 'Discos Duros', key: 'disks', width: 35 },
-      { header: 'Espacio Libre', key: 'free_space', width: 25 },
-      { header: 'Notas', key: 'notes', width: 30 }
-    ];
+    if (isDisksView) {
+      worksheet.columns = [
+        { header: 'Disco', key: 'disk_number', width: 10 },
+        { header: 'Serie', key: 'serial', width: 20 },
+        { header: 'Marca', key: 'brand', width: 20 },
+        { header: 'Cámara Origen', key: 'camera_name', width: 25 },
+        { header: 'Sede', key: 'location_name', width: 25 },
+        { header: 'Grabación Desde', key: 'from', width: 15 },
+        { header: 'Grabación Hasta', key: 'to', width: 15 },
+        { header: 'Capacidad Total (GB)', key: 'total', width: 15 },
+        { header: 'Espacio Usado (GB)', key: 'used', width: 15 },
+        { header: 'Notas', key: 'notes', width: 40 }
+      ];
 
-    // Estilizar la fila de encabezados
+      filteredDisks.forEach(disk => {
+        const row = worksheet.addRow({
+          disk_number: `Disco #${disk.disk_number}`,
+          serial: disk.serial_number || '',
+          brand: disk.brand || '',
+          camera_name: disk.camera_name,
+          location_name: disk.location_name,
+          from: disk.stored_from || '',
+          to: disk.stored_to || '',
+          total: disk.total_capacity_gb,
+          used: disk.used_space_gb,
+          notes: disk.notes || ''
+        });
+        row.eachCell(cell => {
+          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+          cell.alignment = { vertical: 'middle', wrapText: true };
+        });
+      });
+    } else {
+      worksheet.columns = [
+        { header: 'Nombre', key: 'name', width: 25 },
+        { header: 'Marca', key: 'brand', width: 15 },
+        { header: 'Modelo', key: 'model', width: 20 },
+        { header: 'Sede', key: 'location', width: 25 },
+        { header: 'IP', key: 'ip', width: 15 },
+        { header: 'Puerto', key: 'port', width: 10 },
+        { header: 'Usuario', key: 'username', width: 20 },
+        { header: 'Contraseña', key: 'password', width: 20 },
+        { header: 'URL', key: 'url', width: 40 },
+        { header: 'Tipo Acceso', key: 'access_type', width: 15 },
+        { header: 'Estado', key: 'status', width: 15 },
+        { header: 'Capacidad', key: 'capacity', width: 15 },
+        { header: 'Discos Duros', key: 'disks', width: 35 },
+        { header: 'Espacio Libre', key: 'free_space', width: 25 },
+        { header: 'Notas', key: 'notes', width: 30 }
+      ];
+
+      filteredCameras.forEach((camera) => {
+        const row = worksheet.addRow({
+          name: camera.name || '',
+          brand: camera.brand || '',
+          model: camera.model || '',
+          location: (camera as any).locations?.name || '',
+          ip: camera.ip_address || '',
+          port: camera.port || '',
+          username: camera.username || '',
+          password: camera.password || '',
+          url: camera.url || '',
+          access_type: humanAccess(camera.access_type),
+          status: camera.status === 'active' ? 'Activo' : camera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo',
+          capacity: camera.display_count || '0',
+          disks: camera.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
+          free_space: camera.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join('\n') || '—',
+          notes: camera.notes || ''
+        });
+        row.eachCell(cell => {
+          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+          cell.alignment = { vertical: 'middle', wrapText: true };
+        });
+      });
+    }
+
     worksheet.getRow(1).font = { bold: true, size: 12 };
-    worksheet.getRow(1).fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFE0E0E0' }
-    };
+    worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isDisksView ? 'FFF1F5F9' : 'FFE0E0E0' } };
     worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
     worksheet.getRow(1).height = 25;
-
-    // Agregar bordes a los encabezados
-    worksheet.getRow(1).eachCell((cell) => {
-      cell.border = {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' }
-      };
+    worksheet.getRow(1).eachCell(cell => {
+      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     });
 
-    // Agregar datos
-    filteredCameras.forEach((camera) => {
-      const locationName = (camera as any).locations?.name || '';
-      const statusLabel = camera.status === 'active' ? 'Activo' :
-        camera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo';
-
-      const row = worksheet.addRow({
-        name: camera.name || '',
-        brand: camera.brand || '',
-        model: camera.model || '',
-        location: locationName,
-        ip: camera.ip_address || '',
-        port: camera.port || '',
-        username: camera.username || '',
-        password: camera.password || '',
-        url: camera.url || '',
-        access_type: humanAccess(camera.access_type),
-        status: statusLabel,
-        capacity: camera.display_count || '0',
-        disks: camera.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
-        free_space: camera.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join('\n') || '—',
-        notes: camera.notes || ''
-      });
-
-      // Agregar bordes a cada celda de datos
-      row.eachCell((cell) => {
-        cell.border = {
-          top: { style: 'thin' },
-          left: { style: 'thin' },
-          bottom: { style: 'thin' },
-          right: { style: 'thin' }
-        };
-        cell.alignment = { vertical: 'middle', wrapText: true };
-      });
-    });
-
-    // Generar el archivo
     const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-
-    // Crear enlace de descarga
-    const link = document.createElement('a');
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
-
+    const link = document.createElement('a');
+    link.href = url;
     const dateStr = new Date().toISOString().split('T')[0];
-    const fileName = `camaras_${subview ? subview.replace('cameras-', '') : 'general'}_${dateStr}.xlsx`;
-
-    link.setAttribute('href', url);
-    link.setAttribute('download', fileName);
-    link.style.visibility = 'hidden';
-
-    document.body.appendChild(link);
+    link.download = isDisksView ? `Discos_Extraidos_${dateStr}.xlsx` : `Reporte_Camaras_${dateStr}.xlsx`;
     link.click();
-    document.body.removeChild(link);
-
-    // Limpiar
     URL.revokeObjectURL(url);
   };
 
@@ -382,7 +456,7 @@ export default function Cameras({ subview }: CamerasProps) {
         <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
           <div className="absolute -top-3 -left-3">
             <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-              {filteredCameras.length} Equipos
+              {subview === 'cameras-disks' ? `${filteredDisks.length} Discos` : `${filteredCameras.length} Equipos`}
             </div>
           </div>
 
@@ -391,10 +465,10 @@ export default function Cameras({ subview }: CamerasProps) {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
             <input
               type="text"
-              placeholder="BUSCAR CÁMARA POR NOMBRE, IP, MARCA..."
+              placeholder="Buscar cámara por nombre, IP, marca..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
             />
           </div>
 
@@ -455,51 +529,65 @@ export default function Cameras({ subview }: CamerasProps) {
               )}
             </div>
 
-            <select
-              value={filterStatus}
-              onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
-            >
-              <option value="todos">TODOS LOS ESTADOS</option>
-              <option value="active">ACTIVO</option>
-              <option value="maintenance">MANTENIMIENTO</option>
-              <option value="inactive">INACTIVO</option>
-            </select>
-
-            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30">
-              <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-1">
-                <Star size={12} />
-                Crítico:
-              </span>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={filterStorage}
-                  onChange={(e) => { setFilterStorage(e.target.checked); setCurrentPage(1); }}
-                />
-                <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex bg-slate-100 p-1 border border-slate-200">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                title="Vista Cuadrícula"
+            {subview !== 'cameras-disks' && (
+              <select
+                value={filterStatus}
+                onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
               >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                title="Vista Tabla"
-              >
-                <List size={16} />
-              </button>
-            </div>
+                <option value="todos">TODOS LOS ESTADOS</option>
+                <option value="active">ACTIVO</option>
+                <option value="maintenance">MANTENIMIENTO</option>
+                <option value="inactive">INACTIVO</option>
+              </select>
+            )}
 
-            {canEdit() && (
+            {subview !== 'cameras-disks' && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30">
+                <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-1">
+                  <Star size={12} />
+                  Crítico:
+                </span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={filterStorage}
+                    onChange={(e) => { setFilterStorage(e.target.checked); setCurrentPage(1); }}
+                  />
+                  <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            )}
+
+            {subview !== 'cameras-disks' && (
+              <div className="flex bg-slate-100 p-1 border border-slate-200">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+                  title="Vista Cuadrícula"
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+                  title="Vista Tabla"
+                >
+                  <List size={16} />
+                </button>
+              </div>
+            )}
+
+            {subview === 'cameras-disks' ? (
+              <button
+                onClick={() => setShowStoredDiskForm(true)}
+                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+              >
+                <Plus size={14} />
+                Nuevo Disco Almacenado
+              </button>
+            ) : canEdit() && (
               <button
                 onClick={openCreate}
                 className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
@@ -786,6 +874,108 @@ export default function Cameras({ subview }: CamerasProps) {
                 </div>
               ))}
             </div>
+          ) : subview === 'cameras-disks' ? (
+            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+              <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalDisksPages}
+                  totalItems={filteredDisks.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                />
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse border-spacing-0">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Disco / Serie</span></th>
+                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Marca</span></th>
+                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Origen</span></th>
+                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Periodo Grabación</span></th>
+                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Capacidad</span></th>
+                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
+                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Notas</span></th>
+                      <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {paginatedDisks.map((disk) => (
+                      <tr key={disk.id} className="hover:bg-blue-50/70 transition-colors duration-200 border-b border-slate-50 last:border-0 group">
+                        <td className="px-6 py-5 font-bold text-left">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm bg-rose-50 text-rose-600 border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                              <HardDrive size={18} />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">Disco #{disk.disk_number}</span>
+                              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest mt-1">S/N: {disk.serial_number || 'S/N DESCONOCIDA'}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          <span className="text-[11px] font-black text-slate-500 uppercase tracking-tighter">{disk.brand || '—'}</span>
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-black text-slate-600 uppercase">{disk.camera_name || '—'}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{disk.location_name || 'SEDE N/A'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          <div className="flex items-center gap-2">
+                             <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded text-[10px] font-black text-blue-600 uppercase">
+                               {disk.stored_from ? new Date(disk.stored_from).toLocaleDateString() : 'INICIO N/A'}
+                             </div>
+                             <span className="text-slate-300">—</span>
+                             <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded text-[10px] font-black text-blue-600 uppercase">
+                               {disk.stored_to ? new Date(disk.stored_to).toLocaleDateString() : 'FIN N/A'}
+                             </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          <div className="flex flex-col gap-1">
+                             <span className="text-[12px] font-black text-[#002855]">{disk.used_space_gb}/{disk.total_capacity_gb} GB</span>
+                             <div className="w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
+                                <div className="bg-rose-500 h-full" style={{ width: `${Math.min(100, Math.round((Number(disk.used_space_gb)/Number(disk.total_capacity_gb))*100))}%` }} />
+                             </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border bg-rose-50 text-rose-700 border-rose-100">
+                            ALMACENADO
+                          </span>
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          <span className="text-[11px] font-medium text-slate-500 italic max-w-xs block truncate">{disk.notes || 'Sin observaciones'}</span>
+                        </td>
+                        <td className="px-6 py-5 text-center">
+                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                             {canEdit() && (
+                               <button 
+                                 onClick={() => handleDeleteDisk(disk.id)}
+                                 className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"
+                               >
+                                 <Trash2 size={14} />
+                               </button>
+                             )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {paginatedDisks.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="px-6 py-10 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                          No se encontraron discos extraídos almacenados
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           ) : (
             <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
               <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
@@ -841,7 +1031,10 @@ export default function Cameras({ subview }: CamerasProps) {
                           {cam.camera_disks && cam.camera_disks.length > 0 ? (
                             <div className="flex flex-col gap-1 min-w-[120px]">
                               {(() => {
-                                const totals = cam.camera_disks!.reduce(
+                                const activeDisks = cam.camera_disks!.filter(d => d.status !== 'extracted');
+                                if (activeDisks.length === 0) return <span className="text-[10px] font-bold text-slate-400">SIN DISCOS ACTIVOS</span>;
+                                
+                                const totals = activeDisks.reduce(
                                   (acc, d) => ({
                                     total: acc.total + (Number(d.total_capacity_gb) || 0),
                                     used: acc.used + (Number(d.used_space_gb) || 0)
@@ -1219,8 +1412,14 @@ export default function Cameras({ subview }: CamerasProps) {
           </div>
         </div>
       )}
-    </div>
-  );
+        {showStoredDiskForm && (
+          <StoredDiskForm
+            onClose={() => setShowStoredDiskForm(false)}
+            onSuccess={() => fetchCameras()}
+          />
+        )}
+      </div>
+    );
 }
 
 

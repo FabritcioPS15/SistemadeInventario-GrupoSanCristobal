@@ -24,7 +24,6 @@ export default function FlotaVehicularForm({ onClose, onSave, editVehicle }: Flo
     ubicacion_actual: editVehicle?.ubicacion_actual || '',
     imagen_url: editVehicle?.imagen_url || '',
     fecha_ultimo_mantenimiento: editVehicle?.fecha_ultimo_mantenimiento || new Date().toISOString().split('T')[0],
-    notas: editVehicle?.notas || '',
     // Documentación
     citv_emision: editVehicle?.citv_emision || '',
     citv_vencimiento: editVehicle?.citv_vencimiento || '',
@@ -97,7 +96,6 @@ export default function FlotaVehicularForm({ onClose, onSave, editVehicle }: Flo
       ubicacion_actual: formData.ubicacion_actual.trim() || null,
       imagen_url: formData.imagen_url.trim() || null,
       fecha_ultimo_mantenimiento: formData.fecha_ultimo_mantenimiento || null,
-      notas: formData.notas.trim() || null,
       citv_emision: formData.citv_emision || null,
       citv_vencimiento: formData.citv_vencimiento || null,
       soat_emision: formData.soat_emision || null,
@@ -359,16 +357,7 @@ export default function FlotaVehicularForm({ onClose, onSave, editVehicle }: Flo
           </FormField>
         </div>
 
-        <FormField label="Notas y Observaciones" error={errors.notas}>
-          <FormTextarea
-            name="notas"
-            value={formData.notas}
-            onChange={handleChange}
-            placeholder="Detalles adicionales sobre el vehículo, historial, reparaciones, etc..."
-            rows={4}
-            error={errors.notas}
-          />
-        </FormField>
+
       </FormSection>
     </BaseForm>
   );

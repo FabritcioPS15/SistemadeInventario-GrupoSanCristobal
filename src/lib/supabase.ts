@@ -203,7 +203,28 @@ export type CameraDisk = {
   remaining_capacity_gb: number;
   used_space_gb: number;
   disk_type: 'HDD' | 'SSD' | 'NVMe' | 'Other';
-  status: 'active' | 'full' | 'error' | 'maintenance';
+  status: 'active' | 'full' | 'error' | 'maintenance' | 'extracted';
+  brand?: string;
+  serial_number?: string;
+  stored_from?: string;
+  stored_to?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type StoredDisk = {
+  id: string;
+  camera_id?: string;
+  disk_number?: number;
+  brand?: string;
+  serial_number?: string;
+  disk_type?: string;
+  total_capacity_gb: number;
+  used_space_gb: number;
+  remaining_capacity_gb: number;
+  stored_from?: string;
+  stored_to?: string;
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -266,6 +287,8 @@ export type SutranVisit = {
   findings?: string;
   recommendations?: string;
   documents: string[];
+  estimated_duration?: string;
+  estimated_cost?: number;
   created_by?: string;
   created_at: string;
   updated_at: string;

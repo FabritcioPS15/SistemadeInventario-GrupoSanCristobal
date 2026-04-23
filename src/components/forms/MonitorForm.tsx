@@ -26,8 +26,7 @@ export default function MonitorForm({ editMonitor, onClose, onSave }: MonitorFor
     tipo_panel: editMonitor?.tipo_panel || '',
     tasa_refresco: editMonitor?.tasa_refresco || '',
     puertos: editMonitor?.puertos || '',
-    estado_fisico: editMonitor?.estado_fisico || '',
-    notas: editMonitor?.notas || ''
+    estado_fisico: editMonitor?.estado_fisico || ''
   });
 
   const panelTypes = [
@@ -118,7 +117,7 @@ export default function MonitorForm({ editMonitor, onClose, onSave }: MonitorFor
 
     const dataToSave = {
       code: formData.code.trim(),
-      sede: formData.sede.trim(),
+      sede: formData.sede.trim() || null,
       area: formData.area.trim() || null,
       marca: formData.marca.trim(),
       modelo: formData.modelo.trim(),
@@ -129,7 +128,6 @@ export default function MonitorForm({ editMonitor, onClose, onSave }: MonitorFor
       tasa_refresco: formData.tasa_refresco.trim() || null,
       puertos: formData.puertos.trim() || null,
       estado_fisico: formData.estado_fisico.trim() || null,
-      notas: formData.notas.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -364,19 +362,7 @@ export default function MonitorForm({ editMonitor, onClose, onSave }: MonitorFor
         </FormField>
       </FormSection>
 
-      {/* Section: Notas */}
-      <FormSection title="Notas Adicionales" color="purple">
-        <FormField label="Notas y Observaciones" error={errors.notas}>
-          <FormTextarea
-            name="notas"
-            value={formData.notas}
-            onChange={handleChange}
-            placeholder="Notas adicionales sobre el monitor, problemas conocidos, historial de reparaciones, etc..."
-            rows={4}
-            error={errors.notas}
-          />
-        </FormField>
-      </FormSection>
+
     </BaseForm>
   );
 }

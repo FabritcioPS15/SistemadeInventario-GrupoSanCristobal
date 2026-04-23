@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, User, AlertCircle, MessageSquare, ShieldCheck, Copy, ArrowLeft, Lock, Smile, Bold, Italic, List, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Send, User, AlertCircle, MessageSquare, Copy, ArrowLeft, Lock, Smile, Bold, Italic, List, Image as ImageIcon, Loader2, Clock, Activity, CheckCircle2, XCircle, Underline, Strikethrough, Monitor, Eye, Briefcase, Terminal } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { FaWhatsapp, FaTrashAlt } from "react-icons/fa";
@@ -18,8 +18,10 @@ export default function TicketDetail() {
     const [loading, setLoading] = useState(true);
     const [copiedItem, setCopiedItem] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-    const [showFormatting, setShowFormatting] = useState(false);
+    const [showListMenu, setShowListMenu] = useState(false);
     const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
+    const [activeFormats, setActiveFormats] = useState<string[]>([]);
+    const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
     const commentsEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
@@ -75,29 +77,66 @@ export default function TicketDetail() {
         }, 100);
     };
 
+    useEffect(() => {
+        if (!ticketId || !user) return;
+
+        // Configurar presencia en tiempo real
+        const presenceChannel = supabase.channel(`presence-ticket-${ticketId}`, {
+            config: { presence: { key: user.id } }
+        });
+
+        presenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                const state = presenceChannel.presenceState();
+                const onlineIds = new Set(Object.keys(state));
+                setOnlineUsers(onlineIds);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await presenceChannel.track({
+                        online_at: new Date().toISOString(),
+                    });
+                }
+            });
+
+        return () => {
+            supabase.removeChannel(presenceChannel);
+        };
+    }, [ticketId, user]);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (showListMenu && !(event.target as Element).closest('.list-menu-container')) {
+                setShowListMenu(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showListMenu]);
+
     const fetchTicket = async () => {
         try {
             const { data, error } = await supabase
                 .from('tickets')
                 .select(`
                     *,
-                    requester:requester_id(full_name, email, avatar_url),
-                    attendant:assigned_to(full_name, email, avatar_url),
+                    requester:requester_id(full_name, email, avatar_url, role),
+                    attendant:assigned_to(full_name, email, avatar_url, role),
                     locations(name),
-                    ticket_assignments(user_id, assigned_at, user:users(id, full_name, email, avatar_url))
+                    ticket_assignments(user_id, assigned_at, user:users(id, full_name, email, avatar_url, role))
                 `)
                 .eq('id', ticketId)
                 .single();
 
             if (error) throw error;
-            
+
             // Buscar AnyDesk en los comentarios
             const { data: comments } = await supabase
                 .from('ticket_comments')
                 .select('content')
                 .eq('ticket_id', ticketId)
                 .ilike('content', '%anydesk%');
-            
+
             if (comments && comments.length > 0) {
                 // Buscar en todos los comentarios que contienen "anydesk"
                 for (const comment of comments) {
@@ -110,7 +149,7 @@ export default function TicketDetail() {
                     }
                 }
             }
-            
+
             setTicket(data);
         } catch (error) {
             console.error('Error fetching ticket:', error);
@@ -126,7 +165,7 @@ export default function TicketDetail() {
                 .from('ticket_comments')
                 .select(`
                     *,
-                    author:user_id(full_name, email, avatar_url)
+                    author:user_id(full_name, email, avatar_url, role)
                 `)
                 .eq('ticket_id', ticketId)
                 .order('created_at', { ascending: true });
@@ -181,10 +220,23 @@ export default function TicketDetail() {
     };
 
     const handlePaste = async (e: React.ClipboardEvent) => {
-        const item = e.clipboardData.items[0];
-        if (item?.type.startsWith('image/')) {
-            const file = item.getAsFile();
-            if (file) await uploadFile(file);
+        const items = e.clipboardData.items;
+        let hasImage = false;
+
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                e.preventDefault();
+                const file = items[i].getAsFile();
+                if (file) await uploadFile(file);
+                hasImage = true;
+                break;
+            }
+        }
+
+        if (!hasImage) {
+            e.preventDefault();
+            const text = e.clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
         }
     };
 
@@ -194,15 +246,19 @@ export default function TicketDetail() {
 
         setSending(true);
         try {
+            const content = editorRef.current ? htmlToMarkdown(editorRef.current.innerHTML) : '';
+            if (!content.trim()) return;
+
             const { error } = await supabase
                 .from('ticket_comments')
                 .insert([{
                     ticket_id: ticketId,
                     user_id: user?.id,
-                    content: newComment.trim()
+                    content: content
                 }]);
 
             if (error) throw error;
+            if (editorRef.current) editorRef.current.innerHTML = '';
             setNewComment('');
             await fetchComments();
         } catch (error) {
@@ -214,73 +270,68 @@ export default function TicketDetail() {
 
     // Funciones para emojis y formato
     const commonEmojis = [
-        '😀', '😊', '😂', '❤️', '👍', '👎', '🎉', '🔥', '💯', '✅', 
+        '😀', '😊', '😂', '❤️', '👍', '👎', '🎉', '🔥', '💯', '✅',
         '❌', '🚀', '💪', '🙏', '👏', '🤝', '💡', '⚡', '🌟', '✨',
         '😎', '🤔', '😅', '🤗', '🎯', '💎', '🏆', '🌈', '🎨', '📌',
         '🔔', '📢', '📝', '📋', '🔧', '⚙️', '🎯', '📊', '📈', '📉',
         '⭐', '🌟', '💫', '🌙', '☀️', '🌺', '🦁', '🐧', '🦊', '🐼'
     ];
-    
+
+    const editorRef = useRef<HTMLDivElement>(null);
+
     const addEmoji = (emoji: string) => {
-        setNewComment(prev => prev + emoji);
+        if (!editorRef.current) return;
+
+        // Enfocar el editor antes de insertar
+        editorRef.current.focus();
+
+        // Insertar el emoji en la posición del cursor
+        document.execCommand('insertText', false, emoji);
+
+        // Actualizar el estado manualmente ya que execCommand no dispara onInput siempre
+        setNewComment(editorRef.current.innerText);
+
         setShowEmojiPicker(false);
     };
 
-    const addFormat = (format: string) => {
-        const textarea = document.getElementById('comment-input') as HTMLTextAreaElement;
-        if (!textarea) return;
-        
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const selectedText = newComment.substring(start, end);
-        let formattedText = '';
-        
-        switch (format) {
-            case 'bold':
-                formattedText = `**${selectedText || 'texto en negrita'}**`;
-                break;
-            case 'italic':
-                formattedText = `*${selectedText || 'texto en cursiva'}*`;
-                break;
-            case 'underline':
-                formattedText = `__${selectedText || 'texto subrayado'}__`;
-                break;
-            case 'strikethrough':
-                formattedText = `~~${selectedText || 'texto tachado'}~~`;
-                break;
-            case 'code':
-                formattedText = `\`${selectedText || 'código'}\``;
-                break;
-            case 'codeblock':
-                formattedText = `\`\`\`${selectedText || 'bloque de código'}\`\`\``;
-                break;
-            case 'quote':
-                formattedText = `> ${selectedText || 'cita'}`;
-                break;
-            case 'highlight':
-                formattedText = `==${selectedText || 'texto destacado'}==`;
-                break;
-            case 'list':
-                formattedText = `\n• ${selectedText || 'Item de lista'}`;
-                break;
-            case 'numberedlist':
-                formattedText = `\n1. ${selectedText || 'Primer item'}`;
-                break;
-            case 'checklist':
-                formattedText = `\n- [ ] ${selectedText || 'Tarea pendiente'}`;
-                break;
-            case 'title':
-                formattedText = `\n# ${selectedText || 'Título'}`;
-                break;
-            case 'subtitle':
-                formattedText = `\n## ${selectedText || 'Subtítulo'}`;
-                break;
-            default:
-                formattedText = selectedText;
-        }
-        
-        setNewComment(prev => prev.substring(0, start) + formattedText + prev.substring(end));
-        setShowFormatting(false);
+    const updateActiveFormats = () => {
+        const formats = ['bold', 'italic', 'underline', 'strikeThrough', 'insertUnorderedList', 'insertOrderedList'];
+        setActiveFormats(formats.filter(f => document.queryCommandState(f)));
+    };
+
+    const toggleFormat = (command: string) => {
+        document.execCommand(command, false);
+        updateActiveFormats();
+        if (editorRef.current) editorRef.current.focus();
+    };
+
+
+    const htmlToMarkdown = (html: string) => {
+        let text = html
+            // Listas
+            .replace(/<ul[^>]*>([\s\S]*?)<\/ul>/g, (_match: string, content: string) => {
+                return content.replace(/<li[^>]*>(.*?)<\/li>/g, (_liMatch: string, liContent: string) => `• ${liContent}\n`);
+            })
+            .replace(/<ol[^>]*>([\s\S]*?)<\/ol>/g, (_match: string, content: string) => {
+                let index = 1;
+                return content.replace(/<li[^>]*>(.*?)<\/li>/g, (_liMatch: string, liContent: string) => `${index++}. ${liContent}\n`);
+            })
+            // Formatos de texto
+            .replace(/<b>(.*?)<\/b>/g, '**$1**')
+            .replace(/<strong>(.*?)<\/strong>/g, '**$1**')
+            .replace(/<i>(.*?)<\/i>/g, '_$1_')
+            .replace(/<em>(.*?)<\/em>/g, '_$1_')
+            .replace(/<u>(.*?)<\/u>/g, '__$1__')
+            .replace(/<strike>(.*?)<\/strike>/g, '~~$1~~')
+            .replace(/<del>(.*?)<\/del>/g, '~~$1~~')
+            // Saltos y bloques
+            .replace(/<br\s*\/?>/g, '\n')
+            .replace(/<div>(.*?)<\/div>/g, '\n$1')
+            .replace(/&nbsp;/g, ' ')
+            // Limpiar tags restantes
+            .replace(/<[^>]*>/g, '');
+
+        return text.trim();
     };
 
     // Función mejorada para renderizar markdown
@@ -292,36 +343,36 @@ export default function TicketDetail() {
             .replace(/__(.*?)__/g, '<u>$1</u>') // __subrayado__
             .replace(/~~(.*?)~~/g, '<del>$1</del>') // ~~tachado~~
             .replace(/==(.*?)==/g, '<mark>$1</mark>') // ==destacado==
-            
+
             // Código
             .replace(/`(.*?)`/g, '<code class="inline-code">$1</code>') // `código`
             .replace(/```(.*?)```/gs, '<pre class="code-block"><code>$1</code></pre>') // ```código```
-            
+
             // Citas
             .replace(/^> (.*?)$/gm, '<blockquote class="quote">$1</blockquote>') // > cita
-            
+
             // Encabezados
             .replace(/^# (.*?)$/gm, '<h1 class="title">$1</h1>') // # Título
             .replace(/^## (.*?)$/gm, '<h2 class="subtitle">$1</h2>') // ## Subtítulo
-            
+
             // Listas
             .replace(/^• (.*?)$/gm, '<li class="bullet-item">$1</li>') // • lista
             .replace(/^\d+\. (.*?)$/gm, '<li class="numbered-item">$1</li>') // 1. lista numerada
             .replace(/^-\s*\[\s*\] (.*?)$/gm, '<li class="checklist-item">☐ $1</li>') // - [ ] checklist
             .replace(/^-\s*\[x\] (.*?)$/gm, '<li class="checklist-item">☑ $1</li>') // - [x] checklist completado
-            
+
             // Imágenes
             .replace(/!\[imagen\]\((.*?)\)/g, '<img src="$1" alt="Adjunto" class="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity mt-2" onclick="window.open(\'$1\', \'_blank\')" />')
-            
+
             // Envolver listas
             .replace(/(<li class="bullet-item">.*<\/li>)/gs, '<ul class="bullet-list">$1</ul>')
             .replace(/(<li class="numbered-item">.*<\/li>)/gs, '<ol class="numbered-list">$1</ol>')
             .replace(/(<li class="checklist-item">.*<\/li>)/gs, '<ul class="checklist">$1</ul>')
-            
+
             .replace(/\n/g, '<br>'); // saltos de línea
     };
 
-    
+
     const handleDeleteTicket = async () => {
         const now = new Date();
         const createdDate = new Date(ticket.created_at);
@@ -358,7 +409,7 @@ export default function TicketDetail() {
     };
 
     const handleStatusUpdate = async (newStatus: string) => {
-        
+
         if (!canManageStatus) {
             return;
         }
@@ -369,9 +420,9 @@ export default function TicketDetail() {
 
         try {
             setStatusUpdating(true);
-            
+
             const updatePayload: any = { status: newStatus };
-            
+
             if (newStatus === 'in_progress') {
                 updatePayload.assigned_to = user?.id;
                 updatePayload.attended_at = new Date().toISOString();
@@ -383,11 +434,11 @@ export default function TicketDetail() {
 
 
             const { error } = await supabase.from('tickets').update(updatePayload).eq('id', ticketId);
-            
+
             if (error) {
                 throw error;
             }
-            
+
             // Enviar notificaciones según el nuevo estado
             if (newStatus === 'resolved') {
                 await notifyTicketResolved(
@@ -423,10 +474,10 @@ export default function TicketDetail() {
 
     const handleWhatsAppContact = () => {
         if (!ticket.requester?.email) return;
-        
-        const phoneNumber = ticket.requester.email.includes('@') ? 
+
+        const phoneNumber = ticket.requester.email.includes('@') ?
             ticket.requester.email.split('@')[0].replace(/\D/g, '') : '';
-        
+
         if (phoneNumber) {
             const message = encodeURIComponent(`Hola ${ticket.requester.full_name}, te escribo del soporte técnico sobre tu ticket #${ticket.id.slice(0, 8).toUpperCase()}. ¿Cómo podemos ayudarte?`);
             window.open(`https://wa.me/51${phoneNumber}?text=${message}`, '_blank');
@@ -464,18 +515,18 @@ export default function TicketDetail() {
 
         try {
             setStatusUpdating(true);
-            
+
             // Actualizar a en_progreso y asignar como técnico responsable
             const { error } = await supabase.from('tickets').update({
                 status: 'in_progress',
                 assigned_to: user?.id,
                 attended_at: new Date().toISOString()
             }).eq('id', ticketId);
-            
+
             if (error) {
                 throw error;
             }
-            
+
             // Enviar notificación de ticket atendido
             await notifyTicketAttended(
                 ticketId || '',
@@ -484,14 +535,14 @@ export default function TicketDetail() {
                 user?.full_name || '',
                 ticket.locations?.name || ''
             );
-            
+
             // Agregar comentario de atención
             await supabase.from('ticket_comments').insert([{
                 ticket_id: ticketId,
                 user_id: user?.id,
                 content: `**ATENDIENDO**: Ticket atendido y asignado a ${user?.full_name}`,
             }]);
-            
+
             fetchComments();
         } catch (error) {
             alert('Error al atender ticket: ' + (error as any)?.message || 'Error desconocido');
@@ -501,29 +552,29 @@ export default function TicketDetail() {
     };
 
     const handleJoinTicket = async () => {
-        
+
         if (!canManageStatus || !ticket) {
             return;
         }
-        
+
         // Verificar si ya está asignado (evitar duplicados)
         const isAlreadyAssigned = ticket.ticket_assignments?.some((assignment: any) => assignment.user_id === user?.id);
-        
+
         if (isAlreadyAssigned) {
             alert('Ya estás asignado a este ticket');
             return;
         }
-        
+
         // Verificar límite de 4 personas
         const currentAssignments = ticket.ticket_assignments?.length || 0;
-        
+
         if (currentAssignments >= 4) {
             alert('Máximo de 4 personas asignadas a este ticket');
             return;
         }
-        
+
         try {
-            
+
             const { error } = await supabase
                 .from('ticket_assignments')
                 .insert([{
@@ -531,34 +582,34 @@ export default function TicketDetail() {
                     user_id: user?.id,
                     assigned_at: new Date().toISOString()
                 }]);
-            
+
             if (error) {
                 throw error;
             }
-            
-            
+
+
             // No cambiar estado automáticamente - solo participar sin atender
-            
+
             // Agregar notificación de unión al chat
             await supabase.from('ticket_comments').insert([{
                 ticket_id: ticketId,
                 user_id: user?.id,
                 content: `**${user?.full_name || 'Un usuario'}** se ha unido al ticket.`
             }]);
-            
+
             // Actualizar el ticket para reflejar los cambios
             await fetchTicket();
-            
+
         } catch (error) {
         }
     };
 
     const getAssignedUsers = () => {
-        
+
         if (!ticket?.ticket_assignments) {
             return [];
         }
-        
+
         const result = ticket.ticket_assignments.map((assignment: any) => {
             return {
                 ...assignment,
@@ -571,7 +622,7 @@ export default function TicketDetail() {
                 isCurrentUser: assignment.user_id === user?.id
             };
         });
-        
+
         return result;
     };
 
@@ -582,24 +633,24 @@ export default function TicketDetail() {
 
         try {
             setStatusUpdating(true);
-            
+
             // Actualizar directamente a archivado con timestamp
             const { error } = await supabase.from('tickets').update({
                 status: 'archived',
                 closed_at: new Date().toISOString()
             }).eq('id', ticketId);
-            
+
             if (error) {
                 throw error;
             }
-            
+
             // Agregar comentario de finalización
             await supabase.from('ticket_comments').insert([{
                 ticket_id: ticketId,
                 user_id: user?.id,
                 content: `**FINALIZADO**: Ticket finalizado y archivado manualmente por ${user?.full_name}`,
             }]);
-            
+
             setShowFinalizeConfirm(false);
             alert('¡El ticket fue cerrado correctamente! Puedes verlo en el apartado de historial de tickets :D');
             navigate('/tickets');
@@ -613,22 +664,32 @@ export default function TicketDetail() {
     // Verificar si el usuario está asignado al ticket
     const isUserAssigned = getAssignedUsers().some((u: any) => u.isCurrentUser);
     const canFinalizeTicket = canManageStatus && ticket?.status !== 'archived';
-    
+
     // Permitir unirse si el ticket está abierto o en progreso
     const hasPermission = canManageStatus;
     const isOpen = ticket?.status === 'open' || ticket?.status === 'in_progress';
     const hasSpace = getAssignedUsers().length < 4;
     const canJoinTicket = hasPermission && isOpen && hasSpace;
-    
+
 
     // Auto-unir al ticket si es el creador y no está asignado
     useEffect(() => {
-        
+
         if (ticket && user && !isUserAssigned && user.id === ticket.requester_id && canJoinTicket) {
             handleJoinTicket();
         } else {
         }
     }, [ticket, user, isUserAssigned, canJoinTicket]);
+
+    const getRoleIcon = (role: string, size: number = 14) => {
+        switch (role) {
+            case 'super_admin': return <Terminal size={size} />;
+            case 'sistemas': return <Monitor size={size} />;
+            case 'gerencia': return <Briefcase size={size} />;
+            case 'supervisores': return <Eye size={size} />;
+            default: return <User size={size} />;
+        }
+    };
 
     const getStatusLabel = (status: string) => {
         switch (status) {
@@ -637,6 +698,16 @@ export default function TicketDetail() {
             case 'resolved': return 'Resuelto';
             case 'closed': return 'Cerrado';
             default: return status;
+        }
+    };
+
+    const getStatusIcon = (status: string) => {
+        switch (status) {
+            case 'open': return <Clock size={14} />;
+            case 'in_progress': return <Activity size={14} className="animate-pulse" />;
+            case 'resolved': return <CheckCircle2 size={14} />;
+            case 'closed': return <XCircle size={14} />;
+            default: return <Clock size={14} />;
         }
     };
 
@@ -672,7 +743,7 @@ export default function TicketDetail() {
 
         try {
             setStatusUpdating(true);
-            
+
             const { error } = await supabase.from('tickets').update({
                 status: 'open',
                 // Limpiar campos de cierre
@@ -721,843 +792,599 @@ export default function TicketDetail() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="h-screen bg-white flex flex-col overflow-hidden font-sans">
             <style>{`
-                .inline-code {
-                    background-color: rgba(0, 0, 0, 0.1);
-                    padding: 2px 6px;
-                    border-radius: 4px;
-                    font-family: 'Courier New', monospace;
-                    font-size: 0.9em;
-                }
-                .code-block {
-                    background-color: rgba(0, 0, 0, 0.05);
-                    padding: 12px;
-                    border-radius: 8px;
-                    border-left: 4px solid #3b82f6;
-                    font-family: 'Courier New', monospace;
-                    font-size: 0.9em;
-                    overflow-x: auto;
-                    margin: 8px 0;
-                }
-                .quote {
-                    border-left: 3px solid #e5e7eb;
-                    padding-left: 12px;
-                    margin: 8px 0;
-                    font-style: italic;
-                    color: #6b7280;
-                }
-                .title {
-                    font-size: 1.5em;
-                    font-weight: bold;
-                    margin: 16px 0 8px 0;
-                    color: #1f2937;
-                }
-                .subtitle {
-                    font-size: 1.3em;
-                    font-weight: bold;
-                    margin: 12px 0 6px 0;
-                    color: #374151;
-                }
-                .bullet-list, .numbered-list, .checklist {
-                    margin: 8px 0;
-                    padding-left: 20px;
-                }
-                .bullet-item, .numbered-item, .checklist-item {
-                    margin: 4px 0;
-                    line-height: 1.5;
-                }
-                .checklist-item {
-                    list-style: none;
-                }
-                mark {
-                    background-color: #fef3c7;
-                    padding: 1px 2px;
-                    border-radius: 2px;
-                }
+                .inline-code { background-color: rgba(0, 0, 0, 0.1); padding: 2px 6px; font-family: 'Courier New', monospace; font-size: 0.9em; }
+                .code-block { background-color: rgba(0, 0, 0, 0.05); padding: 12px; border-left: 4px solid #002855; font-family: 'Courier New', monospace; font-size: 0.9em; overflow-x: auto; margin: 8px 0; }
+                .quote { border-left: 3px solid #e5e7eb; padding-left: 12px; margin: 8px 0; font-style: italic; color: #6b7280; }
+                .title { font-size: 1.2em; font-weight: 900; margin: 16px 0 8px 0; color: #002855; text-transform: uppercase; }
+                .subtitle { font-size: 1.1em; font-weight: 900; margin: 12px 0 6px 0; color: #002855; text-transform: uppercase; }
+                .bullet-list, .numbered-list, .checklist { margin: 8px 0; padding-left: 20px; }
+                .bullet-item, .numbered-item, .checklist-item { margin: 4px 0; line-height: 1.5; }
+                .checklist-item { list-style: none; }
+                mark { background-color: #fef3c7; padding: 1px 2px; }
+                b, strong { font-weight: 900 !important; color: inherit; }
             `}</style>
+
             {/* Header Fijo */}
-            <div className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-                <div className="bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="max-w-full mx-auto flex items-center gap-2 text-sm text-gray-500">
-                        <button
-                            onClick={() => navigate('/tickets')}
-                            className="hover:text-gray-700 transition-colors hidden sm:block"
-                        >
-                            Mesa de Ayuda
-                        </button>
-                        <span className="hidden sm:block">/</span>
-                        <span className="text-gray-900 font-medium">Ticket #{ticket.id.slice(0, 8).toUpperCase()}</span>
+            <div className="flex-none bg-[#002855] px-6 py-4 flex items-center justify-between shadow-sm z-50">
+                <div className="flex items-center gap-3 text-[14px] font-black uppercase tracking-widest text-slate-300">
+                    <button onClick={() => navigate('/tickets')} className="hover:text-white transition-colors flex items-center gap-1">
+                        <ArrowLeft size={18} /> Mesa de Ayuda
+                    </button>
+                    <span className="text-slate-500">/</span>
+                    <span className="text-white">Ticket #{ticket.id.slice(0, 8)}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className={`px-2 py-1 text-[10px] rounded-none font-black uppercase border ${getPriorityStyle(ticket.priority)}`}>
+                        {getPriorityLabel(ticket.priority)}
                     </div>
                 </div>
             </div>
 
-            <div className="p-4 sm:p-6 lg:p-8">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    {/* Left side: Ticket Details (1/4 del ancho) */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-                            <div className="flex items-center justify-between mb-6">
-                                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">#TK-{ticket.id.slice(0, 8)}</span>
-                                <div className={`px-3 py-1 rounded-lg text-xs font-black uppercase border ${getPriorityStyle(ticket.priority)}`}>
-                                    {getPriorityLabel(ticket.priority)}
-                                </div>
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+                {/* Left side: Ticket Details */}
+                <div className="w-full lg:w-[320px] xl:w-[350px] flex-none border-r border-slate-200 bg-slate-50 overflow-y-auto max-h-[40vh] lg:max-h-full">
+                    <div className="p-6">
+                        <h2 className="text-sm font-black text-[#002855] leading-tight mb-6 uppercase">{ticket.title}</h2>
+
+                        <div className="space-y-6">
+                            {/* Detalle Inicial */}
+                            <div>
+                                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">Detalle Inicial</span>
+                                <p className="text-[14px] text-slate-700 leading-relaxed font-medium">
+                                    {ticket.description}
+                                </p>
                             </div>
 
-                            <h2 className="text-lg font-black text-[#002855] leading-tight mb-6 uppercase">{ticket.title}</h2>
-
-                            <div className="space-y-6">
-                                {/* Detalle Inicial */}
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Detalle Inicial</span>
-                                    <p className="text-sm text-gray-600 leading-relaxed mt-2">
-                                        {ticket.description}
-                                    </p>
-                                </div>
-
-                                {/* Anydesk */}
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                    <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Acceso Remoto</span>
-                                    <div className="mt-2 space-y-3">
-                                        {/* AnyDesk ID */}
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1">
-                                                <p className="text-sm font-bold text-gray-900">AnyDesk: {ticket.anydesk_id || 'No proporcionado'}</p>
-                                            </div>
-                                            {ticket.anydesk_id && (
-                                                <button
-                                                    onClick={() => handleCopy(ticket.anydesk_id, 'anydesk')}
-                                                    className="ml-2 w-8 h-8 rounded-lg bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 transition-all flex items-center justify-center hover:bg-blue-50"
-                                                    title="Copiar ID"
-                                                >
-                                                    {copiedItem === 'anydesk' ? (
-                                                        <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
-                                                            <div className="w-2 h-1 bg-white rounded-full transform rotate-45 translate-x-[-1px]"></div>
-                                                        </div>
-                                                    ) : (
-                                                        <Copy size={14} />
-                                                    )}
-                                                </button>
-                                            )}
+                            {/* Anydesk */}
+                            <div>
+                                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">Acceso Remoto</span>
+                                <div className="space-y-3">
+                                    {/* AnyDesk ID */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <p className="text-xs font-bold text-slate-900">AnyDesk: <span className="text-slate-600 font-normal">{ticket.anydesk_id || 'No proporcionado'}</span></p>
                                         </div>
-                                        
-                                        {/* Contraseña */}
-                                        {ticket.anydesk_password && (
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex-1">
-                                                    <p className="text-xs text-gray-600">Contraseña: {ticket.anydesk_password}</p>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleCopy(ticket.anydesk_password, 'password')}
-                                                    className="ml-2 w-8 h-8 rounded-lg bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 transition-all flex items-center justify-center hover:bg-blue-50"
-                                                    title="Copiar contraseña"
-                                                >
-                                                    {copiedItem === 'password' ? (
-                                                        <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
-                                                            <div className="w-2 h-1 bg-white rounded-full transform rotate-45 translate-x-[-1px]"></div>
-                                                        </div>
-                                                    ) : (
-                                                        <Copy size={14} />
-                                                    )}
-                                                </button>
-                                            </div>
-                                        )}
-                                        
-                                        {/* Botón copiar todo */}
                                         {ticket.anydesk_id && (
                                             <button
-                                                onClick={() => handleCopy(`AnyDesk: ${ticket.anydesk_id}${ticket.anydesk_password ? `\nContraseña: ${ticket.anydesk_password}` : ''}`, 'all')}
-                                                className="w-full px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+                                                onClick={() => handleCopy(ticket.anydesk_id, 'anydesk')}
+                                                className="w-6 h-6 rounded-none bg-white border border-slate-200 text-slate-600 hover:text-[#002855] hover:border-[#002855] transition-all flex items-center justify-center"
                                             >
-                                                {copiedItem === 'all' ? (
-                                                    <>
-                                                        <div className="w-3 h-3 rounded-full bg-white flex items-center justify-center">
-                                                            <div className="w-1.5 h-0.5 bg-blue-600 rounded-full transform rotate-45 translate-x-[-0.5px]"></div>
-                                                        </div>
-                                                        ¡Copiado!
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Copy size={12} />
-                                                        Copiar Todo
-                                                    </>
-                                                )}
+                                                {copiedItem === 'anydesk' ? <div className="w-2 h-2 bg-green-500 rounded-none shrink-0" /> : <Copy size={12} />}
                                             </button>
                                         )}
                                     </div>
-                                </div>
 
-                                {/* Gestión de Estado */}
-                                <div className="pt-6 border-t border-gray-200">
-                                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Gestión de Estado</p>
-                                    {ticket?.status === 'archived' ? (
-                                        <div className="text-center py-8">
-                                            <div className="w-12 h-12 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center mx-auto mb-4">
-                                                <Lock size={24} className="text-gray-400" />
-                                            </div>
-                                            <h3 className="text-sm font-bold text-gray-700 mb-2">Estado Bloqueado</h3>
-                                            <p className="text-xs text-gray-500">
-                                                Este ticket está archivado y no permite cambios de estado.
-                                            </p>
-                                        </div>
-                                    ) : isTicketCreator ? (
-                                        // Vista informativa para el creador del ticket
-                                        <div className="space-y-3">
-                                            {['open', 'in_progress', 'resolved', 'closed'].map(st => (
-                                                <div
-                                                    key={st}
-                                                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-between ${
-                                                        ticket.status === st 
-                                                            ? 'bg-[#002855] text-white shadow-lg' 
-                                                            : 'bg-gray-100 text-gray-400'
-                                                    }`}
-                                                >
-                                                    <span>{getStatusLabel(st)}</span>
-                                                    {ticket.status === st && (
-                                                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        // Vista funcional para el staff
-                                        <div className="space-y-3 mb-4">
-                                            
-                                            {['open', 'in_progress', 'resolved', 'closed'].map(st => (
-                                                <button
-                                                    key={st}
-                                                    onClick={() => {
-                                                        handleStatusUpdate(st);
-                                                    }}
-                                                    disabled={!canManageStatus || statusUpdating}
-                                                    className={`w-full px-4 py-3 rounded-xl text-xs font-black uppercase transition-all transform hover:scale-105 active:scale-95 flex items-center justify-between ${
-                                                        ticket.status === st 
-                                                            ? 'bg-[#002855] text-white shadow-lg' 
-                                                            : 'bg-gray-100 text-gray-400 hover:text-gray-600 disabled:opacity-50'
-                                                    }`}
-                                                >
-                                                    <span>{statusUpdating && ticket.status === st ? (
-                                                        <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                                                    ) : (
-                                                        getStatusLabel(st)
-                                                    )}</span>
-                                                    {ticket.status === st && (
-                                                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                    
-                                    {/* Botón de Reapertura para Creador */}
-                                    {canReopenTicket && isWithinReopenWindow && (
-                                        <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
-                                                    <span className="text-xs font-black text-amber-700 uppercase tracking-widest">Opción de Reapertura</span>
-                                                </div>
-                                                <span className="text-xs font-black text-amber-600">
-                                                    {10 - timeSinceClosed}min restantes
-                                                </span>
+                                    {/* Contraseña */}
+                                    {ticket.anydesk_password && (
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex-1">
+                                                <p className="text-xs font-bold text-slate-900">Pass: <span className="text-slate-600 font-normal">{ticket.anydesk_password}</span></p>
                                             </div>
                                             <button
-                                                onClick={handleReopenTicket}
-                                                disabled={statusUpdating}
-                                                className="w-full px-4 py-3 bg-amber-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-700 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                onClick={() => handleCopy(ticket.anydesk_password, 'password')}
+                                                className="w-6 h-6 rounded-none bg-white border border-slate-200 text-slate-600 hover:text-[#002855] hover:border-[#002855] transition-all flex items-center justify-center"
                                             >
-                                                {statusUpdating ? (
-                                                    <>
-                                                        <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                                                        Reabriendo...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <ArrowLeft size={14} />
-                                                        Reabrir Ticket
-                                                    </>
-                                                )}
+                                                {copiedItem === 'password' ? <div className="w-2 h-2 bg-green-500 rounded-none shrink-0" /> : <Copy size={12} />}
                                             </button>
-                                            <p className="text-xs text-amber-600 mt-2 text-center">
-                                                Puedes reabrir este ticket antes de que sea archivado
-                                            </p>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Mensaje cuando no se puede reabrir */}
-                                    {canReopenTicket && !isWithinReopenWindow && (
-                                        <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <div className="w-2 h-2 bg-slate-400 rounded-full" />
-                                                <span className="text-xs font-black text-slate-600 uppercase tracking-widest">Ticket No Reabrible</span>
-                                            </div>
-                                            <p className="text-xs text-slate-500 text-center">
-                                                El tiempo para reabrir ha expirado (más de 10 minutos)
-                                            </p>
-                                        </div>
-                                    )}
-                                    
-                                    {/* Botón Finalizar Ticket */}
-                                    {canFinalizeTicket && (
-                                        <div className="mt-4">
-                                            <button
-                                                onClick={() => setShowFinalizeConfirm(true)}
-                                                disabled={statusUpdating}
-                                                className="w-full px-4 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:from-red-700 hover:to-red-800 transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                                            >
-                                                <AlertCircle size={16} />
-                                                Finalizar Ticket
-                                            </button>
-                                            <p className="text-xs text-gray-500 mt-2 text-center">
-                                                Al finalizar, el ticket se archivará y no podrá ser modificado
-                                            </p>
                                         </div>
                                     )}
                                 </div>
+                            </div>
+
+                            {/* Gestión de Estado */}
+                            <div>
+                                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">Gestión de Estado</span>
+                                {ticket?.status === 'archived' ? (
+                                    <div className="text-center py-4 bg-white border border-slate-200 p-4">
+                                        <Lock size={18} className="text-slate-400 mx-auto mb-2" />
+                                        <h3 className="text-[15px] font-black text-slate-700 uppercase mb-1">Bloqueado</h3>
+                                        <p className="text-[12px] text-slate-500 uppercase tracking-wider">Ticket archivado.</p>
+                                    </div>
+                                ) : isTicketCreator ? (
+                                    // Vista informativa
+                                    <div className="space-y-2">
+                                        {['open', 'in_progress', 'resolved', 'closed'].map(st => (
+                                            <div
+                                                key={st}
+                                                className={`w-full px-4 py-2.5 rounded-none text-[12px] font-black uppercase tracking-widest flex items-center justify-between border ${ticket.status === st
+                                                    ? 'bg-[#002855] text-white border-[#002855]'
+                                                    : 'bg-white text-slate-400 border-slate-200'
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    {getStatusIcon(st)}
+                                                    <span>{getStatusLabel(st)}</span>
+                                                </div>
+                                                {ticket.status === st && <div className="w-1.5 h-1.5 bg-white rounded-none" />}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    // Vista funcional
+                                    <div className="space-y-2 mb-4">
+                                        {['open', 'in_progress', 'resolved', 'closed'].map(st => (
+                                            <button
+                                                key={st}
+                                                onClick={() => handleStatusUpdate(st)}
+                                                disabled={!canManageStatus || statusUpdating}
+                                                className={`w-full px-4 py-2.5 rounded-none text-[12px] font-black uppercase tracking-widest flex items-center justify-between border transition-colors ${ticket.status === st
+                                                    ? 'bg-[#002855] text-white border-[#002855]'
+                                                    : 'bg-white text-slate-600 border-slate-200 hover:border-[#002855] disabled:opacity-50'
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    {getStatusIcon(st)}
+                                                    <span>{statusUpdating && ticket.status === st ? '...' : getStatusLabel(st)}</span>
+                                                </div>
+                                                {ticket.status === st && <div className="w-1.5 h-1.5 bg-white rounded-none animate-pulse" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {canReopenTicket && isWithinReopenWindow && (
+                                    <div className="mt-4 p-3 bg-white border border-slate-200 rounded-none">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest">Reapertura</span>
+                                            <span className="text-[9px] font-black text-[#002855]">{10 - timeSinceClosed}m</span>
+                                        </div>
+                                        <button onClick={handleReopenTicket} disabled={statusUpdating} className="w-full py-2 bg-[#002855] text-white rounded-none text-[10px] font-black uppercase tracking-widest flex justify-center border border-[#002855] hover:bg-white hover:text-[#002855] transition-colors">
+                                            Reabrir
+                                        </button>
+                                    </div>
+                                )}
+
+                                {canFinalizeTicket && (
+                                    <div className="mt-6">
+                                        <button onClick={() => setShowFinalizeConfirm(true)} disabled={statusUpdating} className="w-full py-3 bg-rose-600 text-white rounded-none text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-700 transition-colors border border-rose-600">
+                                            <AlertCircle size={14} /> Finalizar
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    {/* Center: Chat (2/4 del ancho) */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden h-full flex flex-col">
-                            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-blue-50">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg">
-                                        <IoChatbubbles size={24} />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-black text-[#002855]">CANAL DE SEGUIMIENTO</h3>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <p className="text-xs text-gray-600 uppercase tracking-widest">Interacción directa en tiempo real</p>
-                                            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                            <span className="text-xs text-green-600 font-black uppercase">Activo</span>
-                                        </div>
-                                    </div>
-                                </div>
+                {/* Center: Chat */}
+                <div className="flex-1 flex flex-col bg-white border-r border-slate-200 min-w-0 min-h-0">
+                    <div className="flex-none px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-none bg-[#002855] text-white flex items-center justify-center">
+                                <IoChatbubbles size={16} />
+                            </div>
+                            <div className="flex flex-col">
+                                <h3 className="text-[15px] font-black text-[#002855] uppercase tracking-[0.2em]">Canal de Seguimiento</h3>
                                 <div className="flex items-center gap-2">
-                                    {shouldShowWhatsApp() && (
-                                        <button
-                                            onClick={handleWhatsAppContact}
-                                            className="w-10 h-10 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-all flex items-center justify-center shadow-lg hover:scale-110"
-                                            title="Contactar por WhatsApp"
-                                        >
-                                            <FaWhatsapp size={18} />
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={handleDeleteTicket}
-                                        className="w-10 h-10 rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-red-500 transition-all flex items-center justify-center hover:bg-red-50 shadow-sm"
-                                        title="Eliminar ticket"
-                                    >
-                                        <FaTrashAlt size={18} />
-                                    </button>
+                                    <div className="w-2 h-2 bg-green-500 rounded-none animate-pulse" />
+                                    <span className="text-[11px] text-green-600 font-black uppercase tracking-widest">Sincronización Activa</span>
                                 </div>
                             </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {shouldShowWhatsApp() && (
+                                <button onClick={handleWhatsAppContact} className="w-8 h-8 rounded-none bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center justify-center">
+                                    <FaWhatsapp size={14} />
+                                </button>
+                            )}
+                            <button onClick={handleDeleteTicket} className="w-8 h-8 rounded-none bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-600 transition-colors flex items-center justify-center">
+                                <FaTrashAlt size={14} />
+                            </button>
+                        </div>
+                    </div>
 
-                            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50/50 to-white custom-scrollbar" style={{ height: '600px', maxHeight: '580px' }}>
-                                {isUserAssigned ? (
-                                    <>
-                                        {comments.length === 0 ? (
-                                            <div className="h-full flex flex-col items-center justify-center text-gray-300 space-y-4">
-                                                <div className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-white">
-                                                    <MessageSquare size={32} className="opacity-20" />
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-slate-50/30">
+                        {isUserAssigned ? (
+                            <>
+                                {comments.length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                                        <MessageSquare size={40} className="mb-4 opacity-10" />
+                                        <p className="text-[10px] font-black uppercase tracking-[0.3em]">No hay registros en el log</p>
+                                    </div>
+                                ) : comments.map((c) => {
+                                    const isMe = c.user_id === user?.id;
+                                    const isSystem = c.content.includes('Cambió el estado') ||
+                                        c.content.includes('ATENDIENDO') ||
+                                        c.content.includes('FINALIZADO') ||
+                                        c.content.includes('REAPERTURA') ||
+                                        c.content.includes('se ha unido al ticket') ||
+                                        c.content.includes('asignado a');
+
+                                    if (isSystem) {
+                                        return (
+                                            <div key={c.id} className="flex flex-col items-center my-2">
+                                                <div className="flex items-center gap-2 mb-1.5">
+                                                    <div className="h-px w-8 bg-slate-200" />
+                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Registro de Sistema</span>
+                                                    <div className="h-px w-8 bg-slate-200" />
                                                 </div>
-                                                <div className="text-center">
-                                                    <p className="text-sm font-black uppercase tracking-widest opacity-30">Aún no hay mensajes</p>
-                                                    <p className="text-xs text-gray-400 mt-2">Sé el primero en responder</p>
+                                                <div className="bg-white px-4 py-2 border border-slate-200 shadow-sm flex items-center gap-3 relative overflow-hidden group">
+                                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#002855]" />
+                                                    <div className="w-1.5 h-1.5 bg-[#002855] rounded-none shrink-0" />
+                                                    <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest leading-none">
+                                                        {c.content.replace(/\*\*/g, '')}
+                                                    </span>
+                                                </div>
+                                                <span className="text-[8px] font-black text-slate-400 uppercase mt-2 tracking-widest">
+                                                    {new Date(c.created_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div key={c.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : ''}`}>
+                                            <div className={`w-8 h-8 flex-none rounded-none overflow-hidden border ${isMe ? 'bg-[#002855] border-[#002855]' : 'bg-slate-200 border-slate-300'}`}>
+                                                {c.author?.avatar_url ? (
+                                                    <img src={c.author.avatar_url} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className={`w-full h-full flex items-center justify-center ${isMe ? 'text-white' : 'text-slate-500'}`}>
+                                                        {getRoleIcon(c.author?.role, 14)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[90%] lg:max-w-[85%]`}>
+                                                <div className={`px-4 py-3 border shadow-sm ${isMe ? 'bg-[#002855] border-[#002855] text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
+                                                    <p className="text-[14px] leading-relaxed font-medium break-words overflow-hidden" dangerouslySetInnerHTML={{ __html: renderMarkdown(c.content) }} />
+                                                    <div className={`text-[8px] mt-2 font-black uppercase tracking-widest ${isMe ? 'text-slate-300' : 'text-slate-400'}`}>
+                                                        {new Date(c.created_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        ) : comments.map((c, index) => {
-                                            const isMe = c.user_id === user?.id;
-                                            const isSystem = c.content.includes('Cambió el estado');
-
-                                            if (isSystem) {
-                                                return (
-                                                    <div key={c.id} className="flex flex-col items-center animate-fadeIn">
-                                                        <div className="w-full flex items-center gap-4 my-4">
-                                                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent"></div>
-                                                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 px-4 py-2 rounded-full shadow-sm text-xs font-black text-blue-700 uppercase tracking-widest flex items-center gap-2">
-                                                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
-                                                                {c.content.replace(/\*\*/g, '')}
-                                                            </div>
-                                                            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-200 to-transparent"></div>
-                                                        </div>
-                                                        <span className="text-xs font-black text-blue-400 uppercase tracking-widest">
-                                                            {new Date(c.created_at).toLocaleString('es-PE', { 
-                                                                day: '2-digit', 
-                                                                month: 'short', 
-                                                                hour: '2-digit', 
-                                                                minute: '2-digit' 
-                                                            })}
-                                                        </span>
-                                                    </div>
-                                                );
-                                            }
-
-                                            return (
-                                                <div key={c.id} className={`flex gap-4 ${isMe ? 'flex-row-reverse' : ''} group animate-slideIn`} style={{ animationDelay: `${index * 50}ms` }}>
-                                                    <div className={`w-10 h-10 rounded-xl overflow-hidden border-2 shadow-lg flex-shrink-0 transform transition-all group-hover:scale-110 ${isMe ? 'bg-blue-600 border-blue-700' : 'bg-[#002855] border-[#003366]'}`}>
-                                                        {c.author?.avatar_url ? (
-                                                            <img src={c.author.avatar_url} className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-white font-black text-sm">
-                                                                {c.author?.full_name?.charAt(0)}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]`}>
-                                                        <div className={`p-4 rounded-2xl shadow-sm text-sm leading-relaxed transition-all group-hover:shadow-md ${isMe ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-br-none' : 'bg-gray-50 text-gray-900 rounded-bl-none'}`}>
-                                                            <p 
-                                                                className="break-words mb-2" 
-                                                                dangerouslySetInnerHTML={{ __html: renderMarkdown(c.content) }}
-                                                            />
-                                                            <div className="text-xs opacity-70 font-medium">
-                                                                {new Date(c.created_at).toLocaleString('es-PE', { 
-                                                                    day: '2-digit', 
-                                                                    month: 'short',
-                                                                    hour: '2-digit', 
-                                                                    minute: '2-digit' 
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-gray-300 space-y-4">
-                                        <div className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-white">
-                                            <MessageSquare size={32} className="opacity-20" />
                                         </div>
-                                        <div className="text-center">
-                                            <p className="text-sm font-black uppercase tracking-widest opacity-30">No puedes ver los mensajes</p>
-                                            <p className="text-xs text-gray-400 mt-2">Debes unirte al ticket para ver la conversación</p>
-                                        </div>
-                                    </div>
-                                )}
-                                <div ref={commentsEndRef} />
+                                    );
+                                })}
+                            </>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-slate-300">
+                                <Lock size={40} className="mb-4 opacity-10" />
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em]">Acceso Restringido</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest mt-2">{canJoinTicket ? 'Inicie sesión en el ticket para visualizar' : 'No tiene permisos para este canal'}</p>
                             </div>
+                        )}
+                        <div ref={commentsEndRef} />
+                    </div>
 
-                            <div className="p-4 bg-white border-t border-gray-100 bg-gradient-to-t from-gray-50 to-white">
-                                {ticket?.status === 'archived' ? (
-                                    <div className="text-center py-8">
-                                        <div className="w-16 h-16 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center mx-auto mb-4">
-                                            <Lock size={32} className="text-gray-400" />
+                    <div className="flex-none p-4 lg:p-6 bg-white border-t border-slate-200 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] z-20">
+                        {ticket?.status === 'archived' ? (
+                            <div className="text-center py-2">
+                                <p className="text-[14px] font-black text-rose-600 uppercase tracking-widest flex items-center justify-center gap-2">
+                                    <Lock size={16} /> Archivo Histórico (Solo Lectura)
+                                </p>
+                            </div>
+                        ) : !isUserAssigned ? (
+                            <div className="text-center py-2">
+                                <button onClick={handleJoinTicket} className="px-8 py-3 bg-[#002855] text-white text-[14px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg border border-[#002855] flex items-center gap-2 mx-auto">
+                                    <MessageSquare size={18} /> Ingresar al Ticket
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="max-w-4xl mx-auto w-full">
+                                {/* Barra de Herramientas Superior */}
+                                <div className="flex items-center justify-between mb-3 px-1">
+                                    <div className="flex flex-wrap items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleFormat('bold')}
+                                            className={`w-9 h-9 flex items-center justify-center transition-all ${activeFormats.includes('bold') ? 'bg-[#002855] text-white shadow-inner' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 border border-transparent hover:border-slate-200'}`}
+                                            title="Negrita (Ctrl+B)"
+                                        >
+                                            <Bold size={16} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleFormat('italic')}
+                                            className={`w-9 h-9 flex items-center justify-center transition-all ${activeFormats.includes('italic') ? 'bg-[#002855] text-white shadow-inner' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 border border-transparent hover:border-slate-200'}`}
+                                            title="Cursiva (Ctrl+I)"
+                                        >
+                                            <Italic size={16} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleFormat('underline')}
+                                            className={`w-9 h-9 flex items-center justify-center transition-all ${activeFormats.includes('underline') ? 'bg-[#002855] text-white shadow-inner' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 border border-transparent hover:border-slate-200'}`}
+                                            title="Subrayado (Ctrl+U)"
+                                        >
+                                            <Underline size={16} />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleFormat('strikeThrough')}
+                                            className={`w-9 h-9 flex items-center justify-center transition-all ${activeFormats.includes('strikeThrough') ? 'bg-[#002855] text-white shadow-inner' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 border border-transparent hover:border-slate-200'}`}
+                                            title="Tachado"
+                                        >
+                                            <Strikethrough size={16} />
+                                        </button>
+
+                                        <div className="w-px h-5 bg-slate-200 mx-1" />
+
+                                        <div className="relative list-menu-container">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowListMenu(!showListMenu)}
+                                                className={`w-9 h-9 flex items-center justify-center transition-all ${(activeFormats.includes('insertUnorderedList') || activeFormats.includes('insertOrderedList') || showListMenu) ? 'bg-[#002855] text-white shadow-inner' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 border border-transparent hover:border-slate-200'}`}
+                                                title="Opciones de Lista"
+                                            >
+                                                <List size={16} />
+                                            </button>
+
+                                            {showListMenu && (
+                                                <div className="absolute bottom-full left-0 mb-2 bg-white border-2 border-[#002855] shadow-2xl p-1 z-[110] w-40 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { toggleFormat('insertUnorderedList'); setShowListMenu(false); }}
+                                                        className="w-full px-3 py-2 text-[10px] font-black uppercase flex items-center gap-3 hover:bg-slate-50 text-slate-600"
+                                                    >
+                                                        <List size={14} className="text-slate-400" />
+                                                        <span>Viñetas</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { toggleFormat('insertOrderedList'); setShowListMenu(false); }}
+                                                        className="w-full px-3 py-2 text-[10px] font-black uppercase flex items-center gap-3 hover:bg-slate-50 text-slate-600 border-t border-slate-100"
+                                                    >
+                                                        <div className="font-black text-[10px] text-slate-400">1.</div>
+                                                        <span>Numerada</span>
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-                                        <h3 className="text-lg font-bold text-gray-700 mb-2">Ticket Archivado</h3>
-                                        <p className="text-sm text-gray-500">
-                                            Este ticket ha sido archivado y no permite nuevas interacciones.
-                                            Solo está disponible como referencia histórica.
-                                        </p>
-                                    </div>
-                                ) : !isUserAssigned ? (
-                                    <div className="text-center py-8">
-                                        <div className="w-16 h-16 rounded-full bg-purple-100 border-2 border-dashed border-purple-300 flex items-center justify-center mx-auto mb-4">
-                                            <Lock size={32} className="text-purple-400" />
-                                        </div>
-                                        <h3 className="text-lg font-bold text-purple-700 mb-2">Unión Requerida</h3>
-                                        <p className="text-sm text-purple-500">
-                                            Debes unirte al ticket para participar en la conversación.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <form onSubmit={handleCommentSubmit} className="flex gap-2">
-                                        <input
-                                            type="file"
-                                            ref={fileInputRef}
-                                            onChange={handleImageUpload}
-                                            className="hidden"
-                                            accept="image/*"
-                                        />
+
+                                        <div className="w-px h-5 bg-slate-200 mx-1" />
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                            className={`w-9 h-9 flex items-center justify-center transition-all ${showEmojiPicker ? 'bg-[#002855] text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600 border border-transparent hover:border-slate-200'}`}
+                                            title="Insertar Emoji"
+                                        >
+                                            <Smile size={16} />
+                                        </button>
+
                                         <button
                                             type="button"
                                             onClick={() => fileInputRef.current?.click()}
                                             disabled={uploadingImage}
-                                            className="p-2 sm:p-3 text-[#002855] bg-blue-50 border border-blue-100 hover:bg-blue-100 rounded-xl transition-all shadow-sm flex items-center justify-center shrink-0"
-                                            title="Subir imagen"
+                                            className="h-9 px-3 flex items-center gap-2 text-slate-400 hover:bg-slate-100 hover:text-[#002855] border border-transparent hover:border-slate-200 transition-all"
+                                            title="Adjuntar Imagen"
                                         >
-                                            {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+                                            {uploadingImage ? <Loader2 size={16} className="animate-spin text-[#002855]" /> : <ImageIcon size={16} />}
+                                            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Imagen</span>
                                         </button>
-                                        <div className="flex-1 relative">
-                                            <textarea
-                                                id="comment-input"
-                                                value={newComment}
-                                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewComment(e.target.value)}
-                                                onPaste={handlePaste}
-                                                placeholder={uploadingImage ? "Subiendo imagen..." : "Escribe tu mensaje aquí (o pega una imagen)..."}
-                                                className="w-full px-4 py-3 pr-24 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
-                                                rows={1}
-                                                disabled={sending}
-                                            />
-                                            
-                                            {/* Botones de formato */}
-                                            <div className="absolute right-2 top-2 flex gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                                    className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
-                                                    title="Agregar emoji"
-                                                >
-                                                    <Smile size={16} className="text-gray-600" />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowFormatting(!showFormatting)}
-                                                    className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center"
-                                                    title="Opciones de formato"
-                                                >
-                                                    <Bold size={16} className="text-gray-600" />
-                                                </button>
+                                    </div>
+
+                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Registrar Avance</span>
+                                </div>
+
+                                {/* Contenedor de Escritura */}
+                                <form onSubmit={handleCommentSubmit} className="relative flex items-end gap-3">
+                                    <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
+
+                                    <div className="flex-1 relative bg-white">
+                                        {/* Placeholder Real */}
+                                        {!newComment.trim() && (
+                                            <div className="absolute inset-0 px-5 py-4 text-slate-300 pointer-events-none text-[14px] font-medium select-none uppercase tracking-wider">
+                                                Escribe aquí tu mensaje...
                                             </div>
-                                            
-                                            {/* Selector de emojis */}
-                                            {showEmojiPicker && (
-                                                <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-xl shadow-lg p-3 z-10 w-80">
-                                                    <div className="mb-2">
-                                                        <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Emojis Comunes</p>
-                                                        <div className="grid grid-cols-10 gap-1">
-                                                            {commonEmojis.slice(0, 30).map((emoji, index) => (
-                                                                <button
-                                                                    key={index}
-                                                                    type="button"
-                                                                    onClick={() => addEmoji(emoji)}
-                                                                    className="w-7 h-7 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-lg"
-                                                                >
-                                                                    {emoji}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Personalizados</p>
-                                                        <div className="grid grid-cols-10 gap-1">
-                                                            {commonEmojis.slice(30).map((emoji, index) => (
-                                                                <button
-                                                                    key={index + 30}
-                                                                    type="button"
-                                                                    onClick={() => addEmoji(emoji)}
-                                                                    className="w-7 h-7 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-lg"
-                                                                >
-                                                                    {emoji}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
+                                        )}
+
+                                        <div
+                                            ref={editorRef}
+                                            contentEditable={!sending}
+                                            onPaste={handlePaste}
+                                            onInput={() => {
+                                                if (editorRef.current) {
+                                                    setNewComment(editorRef.current.innerText);
+                                                }
+                                            }}
+                                            onKeyUp={updateActiveFormats}
+                                            onClick={updateActiveFormats}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleCommentSubmit(e);
+                                                }
+                                                // Atajos de teclado para formato
+                                                if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                                                    e.preventDefault();
+                                                    toggleFormat('bold');
+                                                }
+                                                if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+                                                    e.preventDefault();
+                                                    toggleFormat('italic');
+                                                }
+                                                if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+                                                    e.preventDefault();
+                                                    toggleFormat('underline');
+                                                }
+                                            }}
+                                            className="w-full px-5 py-4 bg-transparent border-2 border-slate-200 rounded-none focus:outline-none focus:border-[#002855] text-[14px] font-medium transition-all min-h-[56px] max-h-[300px] overflow-y-auto block custom-scrollbar relative z-10"
+                                        />
+
+                                        {/* Pickers Absolutos */}
+                                        {showEmojiPicker && (
+                                            <div className="absolute bottom-full left-0 mb-4 bg-white border-2 border-[#002855] shadow-2xl p-4 z-[100] w-[300px]">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Emojis Frecuentes</span>
+                                                    <button onClick={() => setShowEmojiPicker(false)} className="text-slate-400 hover:text-rose-600 font-bold">×</button>
                                                 </div>
-                                            )}
-                                            
-                                            {/* Selector de formato */}
-                                            {showFormatting && (
-                                                <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-xl shadow-lg p-2 z-10 w-56">
-                                                    <div className="grid grid-cols-2 gap-1">
+                                                <div className="grid grid-cols-7 gap-2">
+                                                    {commonEmojis.slice(0, 35).map((emoji, i) => (
                                                         <button
+                                                            key={i}
                                                             type="button"
-                                                            onClick={() => addFormat('bold')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
+                                                            onMouseDown={(e) => e.preventDefault()} // Evita pérdida de foco
+                                                            onClick={() => addEmoji(emoji)}
+                                                            className="text-xl hover:scale-125 transition-transform p-1"
                                                         >
-                                                            <Bold size={14} />
-                                                            <span>Negrita</span>
+                                                            {emoji}
                                                         </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('italic')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <Italic size={14} />
-                                                            <span>Cursiva</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('underline')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <u className="text-xs font-bold">U</u>
-                                                            <span>Subrayado</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('strikethrough')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <del className="text-xs font-bold">S</del>
-                                                            <span>Tachado</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('code')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <code className="text-xs bg-gray-200 px-1 rounded">&lt;/&gt;</code>
-                                                            <span>Código</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('codeblock')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <code className="text-xs bg-gray-200 px-1">{}</code>
-                                                            <span>Bloque</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('quote')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <span className="text-xs">"</span>
-                                                            <span>Cita</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('highlight')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <mark className="text-xs bg-yellow-200 px-1">H</mark>
-                                                            <span>Destacar</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('list')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <List size={14} />
-                                                            <span>Lista</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('numberedlist')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <span className="text-xs font-bold">1.</span>
-                                                            <span>Numerada</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('checklist')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <span className="text-xs">☐</span>
-                                                            <span>Checklist</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('title')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <span className="text-xs font-bold">H1</span>
-                                                            <span>Título</span>
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => addFormat('subtitle')}
-                                                            className="px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2 text-sm"
-                                                        >
-                                                            <span className="text-xs font-bold">H2</span>
-                                                            <span>Subtítulo</span>
-                                                        </button>
-                                                    </div>
+                                                    ))}
                                                 </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={sending || !newComment.trim()}
+                                        className="w-14 h-14 bg-[#002855] text-white border-2 border-[#002855] flex items-center justify-center hover:bg-white hover:text-[#002855] transition-all active:scale-90 shadow-xl disabled:opacity-50 disabled:grayscale shrink-0"
+                                        title="Enviar Mensaje"
+                                    >
+                                        {sending ? <Loader2 size={24} className="animate-spin" /> : <Send size={24} />}
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right side: People Info */}
+                <div className="w-full lg:w-[280px] xl:w-[300px] flex-none bg-slate-50 overflow-y-auto max-h-[40vh] lg:max-h-full border-t lg:border-t-0 border-slate-200">
+                    <div className="p-6 space-y-8">
+                        {/* Participantes */}
+                        <div>
+                            <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-4">Participantes</span>
+                            <div className="space-y-4">
+                                {/* Solicitante */}
+                                <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 shadow-sm">
+                                    <div className="w-12 h-12 bg-slate-200 border border-slate-300 rounded-none overflow-hidden flex-none">
+                                        {ticket.requester?.avatar_url ? <img src={ticket.requester.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-500">{getRoleIcon(ticket.requester?.role, 18)}</div>}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[11px] font-black text-[#002855] uppercase truncate">
+                                            {ticket.requester?.full_name} {ticket.requester_id === user?.id && <span className="opacity-50 text-[9px] ml-1">(YO)</span>}
+                                        </p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className={onlineUsers.has(ticket.requester_id) ? 'text-emerald-500' : 'text-slate-400'}>
+                                                {getRoleIcon(ticket.requester?.role, 14)}
+                                            </div>
+                                            {onlineUsers.has(ticket.requester_id) ? (
+                                                <span className="flex items-center gap-1.5 text-[9px] font-black uppercase text-emerald-500 tracking-widest">
+                                                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                                    En Línea
+                                                </span>
+                                            ) : (
+                                                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Solicitante</span>
                                             )}
                                         </div>
-                                        <button
-                                            type="submit"
-                                            disabled={sending || !newComment.trim()}
-                                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2 shadow-lg"
-                                        >
-                                            {sending ? (
-                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                            ) : (
-                                                <Send size={16} />
-                                            )}
-                                        </button>
-                                    </form>
+                                    </div>
+                                </div>
+
+                                {/* Técnico Asignado Principal */}
+                                {ticket.attendant && (
+                                    <div className="flex items-center gap-3 p-4 bg-[#002855] shadow-lg">
+                                        <div className="w-12 h-12 bg-[#002855] border border-white/20 rounded-none overflow-hidden flex-none">
+                                            {ticket.attendant?.avatar_url ? <img src={ticket.attendant.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white">{getRoleIcon(ticket.attendant?.role, 18)}</div>}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-black text-white uppercase truncate">
+                                                {ticket.attendant?.full_name} {ticket.assigned_to === user?.id && <span className="opacity-50 text-[9px] ml-1">(YO)</span>}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <div className={onlineUsers.has(ticket.assigned_to) ? 'text-emerald-400' : 'text-slate-300'}>
+                                                    {getRoleIcon(ticket.attendant?.role, 14)}
+                                                </div>
+                                                {onlineUsers.has(ticket.assigned_to) ? (
+                                                    <span className="flex items-center gap-1.5 text-[9px] font-black uppercase text-emerald-400 tracking-widest">
+                                                        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                                                        En Línea
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[9px] font-black uppercase text-slate-300 tracking-widest">Responsable</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Atender Ticket Button */}
+                                {canAttendTicket && (
+                                    <button onClick={handleAttendTicket} disabled={statusUpdating} className="w-full py-2 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-colors border border-[#002855]">
+                                        Asignar a mí
+                                    </button>
                                 )}
                             </div>
                         </div>
-                    </div>
 
-                    {/* Right side: People Info (1/4 del ancho) */}
-                    <div className="lg:col-span-1">
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-                            <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-6">Información de Participantes</h3>
-                            
-                            <div className="space-y-4">
-                                {/* Fecha de Apertura y Tiempo Transcurrido */}
-                                <div className="flex flex-col items-center text-center p-4 bg-gray-50 rounded-xl">
-                                    <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Tiempo Activo</p>
-                                    <p className="text-sm font-bold text-gray-900 mt-1">
-                                        {(() => {
-                                            const now = new Date();
-                                            const created = new Date(ticket.created_at);
-                                            const diffMs = now.getTime() - created.getTime();
-                                            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                                            const diffDays = Math.floor(diffHours / 24);
-                                            
-                                            if (diffDays > 0) {
-                                                return `${diffDays} día${diffDays > 1 ? 's' : ''}`;
-                                            } else if (diffHours > 0) {
-                                                return `${diffHours} hora${diffHours > 1 ? 's' : ''}`;
-                                            } else {
-                                                const diffMins = Math.floor(diffMs / (1000 * 60));
-                                                return `${diffMins} minuto${diffMins > 1 ? 's' : ''}`;
-                                            }
-                                        })()}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        {new Date(ticket.created_at).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' })}
-                                    </p>
-                                </div>
-
-                                {/* Reportado Por */}
-                                <div className="flex flex-col items-center text-center p-4 bg-gray-50 rounded-xl">
-                                    <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center text-gray-500 overflow-hidden mb-3">
-                                        {ticket.requester?.avatar_url ? (
-                                            <img src={ticket.requester.avatar_url} className="w-full h-full object-cover" />
-                                        ) : <User size={20} />}
-                                    </div>
-                                    <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Reportado Por</p>
-                                    <p className="text-sm font-bold text-gray-900 uppercase mt-1">{ticket.requester?.full_name}</p>
-                                    <p className="text-xs text-blue-500 uppercase mt-1 hidden sm:block">{ticket.locations?.name || 'Sede Central'}</p>
-                                </div>
-
-                       {/* Botones de Acción */}
-                                <div className="space-y-3">
-
-                                    {/* Botón Atender Ticket */}
-                                    {canAttendTicket && (
-                                        <button
-                                            onClick={handleAttendTicket}
-                                            disabled={statusUpdating}
-                                            className="w-full p-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
-                                        >
-                                            {statusUpdating ? (
-                                                <>
-                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                    Atendiendo...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ShieldCheck size={18} />
-                                                    Atender Ticket
-                                                </>
-                                            )}
-                                        </button>
-                                    )}
-                                </div>
-                                {/* Participantes Asignados */}
-                                {getAssignedUsers().length > 0 && (
-                                    <div className="p-4 bg-gray-50 rounded-xl">
-                                        <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3 text-center">
-                                            Participantes ({getAssignedUsers().length}/4)
-                                        </p>
-                                        <div className="space-y-2">
-                                            {getAssignedUsers().map((assignment: any) => (
-                                                <div key={assignment.user_id} className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-200">
-                                                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 overflow-hidden">
-                                                        {assignment.user?.avatar_url ? (
-                                                            <img src={assignment.user.avatar_url} className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <div className="text-xs font-black text-blue-600">
-                                                                {assignment.user?.full_name?.charAt(0) || 'U'}
-                                                            </div>
-                                                        )}
+                        {/* Equipo de Soporte */}
+                        {getAssignedUsers().length > 0 && (
+                            <div>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-4">Personal en Sitio</span>
+                                <div className="space-y-2">
+                                    {getAssignedUsers().map((assignment: any) => (
+                                        <div key={assignment.user_id} className="flex items-center gap-3 p-3 bg-white border border-slate-200 shadow-sm">
+                                            <div className="w-10 h-10 bg-slate-100 border border-slate-200 rounded-none overflow-hidden flex-none">
+                                                {assignment.user?.avatar_url ? <img src={assignment.user.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400">{getRoleIcon(assignment.user?.role, 16)}</div>}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black text-slate-800 uppercase truncate leading-tight">
+                                                    {assignment.user?.full_name} {assignment.user_id === user?.id && <span className="text-[#002855] opacity-50 text-[8px] ml-1">(YO)</span>}
+                                                </p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <div className={onlineUsers.has(assignment.user_id) ? 'text-emerald-500' : 'text-slate-400'}>
+                                                        {getRoleIcon(assignment.user?.role, 14)}
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-xs font-bold text-gray-900 truncate">
-                                                            {assignment.user?.full_name || 'Usuario'}
-                                                        </p>
-                                                        {assignment.isCurrentUser && (
-                                                            <p className="text-xs text-blue-600">Tú</p>
-                                                        )}
-                                                    </div>
+                                                    {onlineUsers.has(assignment.user_id) && (
+                                                        <span className="flex items-center gap-1.5 text-[9px] font-black uppercase text-emerald-500 tracking-widest">
+                                                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                                            En Línea
+                                                        </span>
+                                                    )}
                                                 </div>
-                                            ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                                                                    {/* Botón Unirse al Ticket */}
-                                    {canJoinTicket && !isUserAssigned && (
-                                        <button
-                                            onClick={handleJoinTicket}
-                                            className="w-full p-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-purple-700 hover:to-purple-800 transition-all transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2"
-                                        >
-                                            <User size={18} />
-                                            Unirse al Ticket
-                                        </button>
-                                    )}
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-                                {/* Técnico Asignado */}
-                                {ticket.attendant && (
-                                    <div className="flex flex-col items-center text-center p-4 bg-blue-600 rounded-xl">
-                                        <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center text-white overflow-hidden mb-3">
-                                            {ticket.attendant?.avatar_url ? (
-                                                <img src={ticket.attendant.avatar_url} className="w-full h-full object-cover" />
-                                            ) : <ShieldCheck size={20} />}
-                                        </div>
-                                        <p className="text-xs font-black text-white/70 uppercase tracking-widest">Técnico Asignado</p>
-                                        <p className="text-sm font-bold text-white uppercase mt-1">{ticket.attendant?.full_name}</p>
-                                    </div>
-                                )}
-
-                                                            </div>
+                        {/* Cronología */}
+                        <div className="pt-4 border-t border-slate-200">
+                            <div className="bg-white border border-slate-200 p-4">
+                                <p className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center font-mono">Referencia Temporal</p>
+                                <p className="text-[17px] font-black text-[#002855] text-center mb-1">
+                                    {(() => {
+                                        const now = new Date();
+                                        const created = new Date(ticket.created_at);
+                                        const diffMs = now.getTime() - created.getTime();
+                                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                                        const diffDays = Math.floor(diffHours / 24);
+                                        if (diffDays > 0) return `${diffDays}D ${diffHours % 24}H`;
+                                        else if (diffHours > 0) return `${diffHours}H ${Math.floor((diffMs / (1000 * 60)) % 60)}M`;
+                                        else return `${Math.floor(diffMs / (1000 * 60))} MIN`;
+                                    })()}
+                                </p>
+                                <p className="text-[12px] text-slate-500 font-bold uppercase text-center">{new Date(ticket.created_at).toLocaleDateString()}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            {/* Popup de Confirmación para Finalizar Ticket */}
+
+            {/* Confirmation Modals (Standardized) */}
             {showFinalizeConfirm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full mx-4 transform transition-all">
+                <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[100] px-4">
+                    <div className="bg-white rounded-none border-2 border-[#002855] shadow-2xl p-6 max-w-sm w-full animate-in fade-in zoom-in duration-200">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                                <AlertCircle size={24} className="text-red-600" />
+                            <div className="w-10 h-10 rounded-none bg-rose-100 flex items-center justify-center text-rose-600">
+                                <AlertCircle size={20} />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900">Finalizar Ticket</h3>
-                                <p className="text-sm text-gray-600">Esta acción es irreversible</p>
+                                <h3 className="text-xs font-black text-[#002855] uppercase tracking-widest">Finalizar Ciclo</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase">Acción irreversible en DB</p>
                             </div>
                         </div>
-                        
-                        <div className="mb-6">
-                            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                                <p className="text-sm text-red-800 font-medium mb-2">
-                                    ⚠️ Al hacer esto el ticket se archivará
-                                </p>
-                                <ul className="text-xs text-red-700 space-y-1">
-                                    <li>• Ya no se podrá escribir ni editar nada en este ticket</li>
-                                    <li>• El ticket pasará a estado "archivado"</li>
-                                    <li>• Solo quedará como referencia histórica</li>
-                                    <li>• No podrá ser reabierto ni modificado</li>
-                                </ul>
-                            </div>
+                        <div className="bg-rose-50 border border-rose-100 p-4 mb-6">
+                            <p className="text-[10px] text-rose-800 font-bold uppercase leading-relaxed">
+                                El ticket será marcado como ARCHIVADO. No se admitirán nuevos registros ni cambios de estado.
+                            </p>
                         </div>
-                        
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setShowFinalizeConfirm(false)}
-                                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-gray-200 transition-all"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleFinalizeTicket}
-                                disabled={statusUpdating}
-                                className="flex-1 px-4 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:from-red-700 hover:to-red-800 transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {statusUpdating ? (
-                                    <>
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Finalizando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <AlertCircle size={16} />
-                                        Confirmar
-                                    </>
-                                )}
-                            </button>
+                        <div className="flex gap-2">
+                            <button onClick={() => setShowFinalizeConfirm(false)} className="flex-1 py-2 bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-200 transition-colors">Cancelar</button>
+                            <button onClick={handleFinalizeTicket} disabled={statusUpdating} className="flex-1 py-2 bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest border border-rose-600 hover:bg-rose-700 transition-colors shadow-lg">Finalizar</button>
                         </div>
                     </div>
                 </div>

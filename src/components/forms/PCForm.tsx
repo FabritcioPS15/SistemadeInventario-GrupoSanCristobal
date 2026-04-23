@@ -95,14 +95,29 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const newErrors: Record<string, string> = {};
+    if (!formData.location_id) newErrors.location_id = 'La sede es requerida';
+    if (!formData.brand) newErrors.brand = 'La marca es requerida';
+    if (!formData.model) newErrors.model = 'El modelo es requerido';
+    
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
+
     setLoading(true);
     try {
       const dataToSave = {
         ...formData,
-        asset_type_id: formData.pc_laptop === 'pc' ? 'pc-id' : 'laptop-id', // Use real IDs in prod
+        location_id: formData.location_id || null,
         status: 'active',
         updated_at: new Date().toISOString()
       };
+
+      // Remove asset_type_id if we don't have valid UUIDs yet, 
+      // or ensure it's a valid UUID if required by DB.
+      // For now, removing the invalid 'pc-id' placeholders.
+      delete (dataToSave as any).pc_laptop; 
+
       if (editPC) {
         const { error } = await supabase.from('assets').update(dataToSave).eq('id', editPC.id);
         if (error) throw error;
@@ -377,7 +392,7 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
             />
           </FormField>
           
-          <FormField label="Valor Estimado ($)">
+          <FormField label="Valor Estimado (S/.)">
             <FormInput 
               type="number" 
               name="valor_estimado" 

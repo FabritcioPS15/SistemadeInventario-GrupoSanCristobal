@@ -37,7 +37,7 @@ export async function createNotification(data: NotificationData) {
       type: data.type,
       title: data.title,
       message: data.message,
-      ticket_id: data.ticket_id,
+      ticket_id: data.ticket_id || null,
       user_name: data.user_name,
       location_name: data.location_name,
       target_role: role, // Rol objetivo de la notificación

@@ -27,7 +27,9 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
     observations: visit?.observations || '',
     findings: visit?.findings || '',
     recommendations: visit?.recommendations || '',
-    documents: visit?.documents || []
+    documents: visit?.documents || [],
+    estimated_duration: visit?.estimated_duration || '',
+    estimated_cost: visit?.estimated_cost || ''
   });
 
   const [newDocument, setNewDocument] = useState('');
@@ -62,7 +64,9 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
         observations: visit.observations || '',
         findings: visit.findings || '',
         recommendations: visit.recommendations || '',
-        documents: visit.documents || []
+        documents: visit.documents || [],
+        estimated_duration: visit.estimated_duration || '',
+        estimated_cost: visit.estimated_cost || ''
       });
     } else {
       setFormData({
@@ -76,7 +80,9 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
         observations: '',
         findings: '',
         recommendations: '',
-        documents: []
+        documents: [],
+        estimated_duration: '',
+        estimated_cost: ''
       });
     }
     setNewDocument('');
@@ -152,6 +158,8 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
 
       const payload: any = {
         ...formData,
+        location_id: formData.location_id || null,
+        estimated_cost: formData.estimated_cost ? parseFloat(formData.estimated_cost.toString()) : null,
         updated_at: new Date().toISOString(),
         ...(visit ? {} : { created_at: new Date().toISOString() }),
         location_name: location?.name || 'Sede desconocida'
@@ -382,6 +390,29 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                     error={errors.inspector_phone}
                   />
                   <p className="text-xs text-gray-500 mt-1">Celular peruano (opcional)</p>
+                </FormField>
+
+                <FormField label="Duración Estimada" error={errors.estimated_duration}>
+                  <FormInput
+                    type="text"
+                    name="estimated_duration"
+                    value={formData.estimated_duration}
+                    onChange={handleChange}
+                    placeholder="Ej: 4 horas, 1 día"
+                    error={errors.estimated_duration}
+                  />
+                </FormField>
+
+                <FormField label="Costo Estimado" error={errors.estimated_cost}>
+                  <FormInput
+                    type="number"
+                    name="estimated_cost"
+                    value={formData.estimated_cost}
+                    onChange={handleChange}
+                    placeholder="Ej: 500.00"
+                    step="0.01"
+                    error={errors.estimated_cost}
+                  />
                 </FormField>
               </div>
             </FormSection>

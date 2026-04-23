@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Wrench, Plus, Trash2 } from 'lucide-react';
 import { supabase, AssetWithDetails } from '../../lib/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
+import SearchableAssetSelect from '../SearchableAssetSelect';
 
 type PartUsed = {
   id?: string;
@@ -39,6 +40,7 @@ type MaintenanceFormProps = {
 
 export default function MaintenanceForm({ onClose, onSave, editMaintenance, assetId }: MaintenanceFormProps) {
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
+  const [spareParts, setSpareParts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [partsUsed, setPartsUsed] = useState<PartUsed[]>(editMaintenance?.parts_used || []);
@@ -59,7 +61,18 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
 
   useEffect(() => {
     fetchAssets();
+    fetchSpareParts();
   }, []);
+
+  const fetchSpareParts = async () => {
+    try {
+      const { data, error } = await supabase.from('spare_parts').select('*').order('name');
+      // Si la tabla no existe (404) simplemente dejamos la lista vacía
+      if (!error && data) setSpareParts(data);
+    } catch {
+      // Tabla spare_parts no disponible, continuar sin repuestos
+    }
+  };
 
   const fetchAssets = async () => {
     const { data } = await supabase
@@ -89,8 +102,17 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
     const updatedParts = [...partsUsed];
     updatedParts[index] = { ...updatedParts[index], [field]: value };
     
+    if (field === 'name') {
+      const sp = spareParts.find(s => s.name === value);
+      if (sp) {
+        updatedParts[index].unit = sp.unit;
+        updatedParts[index].unit_price = sp.unit_price;
+        updatedParts[index].id = sp.id;
+      }
+    }
+
     // Recalculate total cost
-    if (field === 'quantity' || field === 'unit_price') {
+    if (field === 'quantity' || field === 'unit_price' || field === 'name') {
       updatedParts[index].total_cost = updatedParts[index].quantity * updatedParts[index].unit_price;
     }
     
@@ -134,10 +156,21 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
 
     setLoading(true);
 
+    const VALID_TYPES = ['preventive', 'corrective', 'technical_review', 'repair'] as const;
+    const VALID_STATUSES = ['pending', 'in_progress', 'completed', 'waiting_parts'] as const;
+
+    const safeType = VALID_TYPES.includes(formData.maintenance_type as any)
+      ? formData.maintenance_type
+      : 'preventive';
+
+    const safeStatus = VALID_STATUSES.includes(formData.status as any)
+      ? formData.status
+      : 'pending';
+
     const dataToSave = {
-      asset_id: formData.asset_id,
-      maintenance_type: formData.maintenance_type,
-      status: formData.status,
+      asset_id: formData.asset_id || null,
+      maintenance_type: safeType,
+      status: safeStatus,
       description: formData.description.trim(),
       scheduled_date: formData.scheduled_date || null,
       completed_date: formData.completed_date || null,
@@ -171,6 +204,20 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
           setErrors({ submit: 'Error al crear el mantenimiento: ' + error.message });
           setLoading(false);
           return;
+        }
+        
+        // Descontar inventario de repuestos si es creación
+        if (partsUsed.length > 0) {
+          for (const p of partsUsed) {
+            if (p.id) {
+              const sp = spareParts.find(s => s.id === p.id);
+              if (sp) {
+                await supabase.from('spare_parts').update({
+                  quantity: Math.max(0, sp.quantity - p.quantity)
+                }).eq('id', sp.id);
+              }
+            }
+          }
         }
       }
 
@@ -209,20 +256,16 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
       <FormSection title="Información del Mantenimiento" color="blue">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <FormField label="Activo" required error={errors.asset_id}>
-            <FormSelect
-              name="asset_id"
+            <SearchableAssetSelect
+              assets={assets}
               value={formData.asset_id}
-              onChange={handleChange}
-              required
+              onChange={(val) => {
+                setFormData(prev => ({ ...prev, asset_id: val }));
+                if (errors.asset_id) setErrors(prev => ({ ...prev, asset_id: '' }));
+              }}
               error={errors.asset_id}
-            >
-              <option value="">Seleccionar activo</option>
-              {assets.map((asset) => (
-                <option key={asset.id} value={asset.id}>
-                  {asset.asset_types?.name} - {asset.brand} {asset.model}
-                </option>
-              ))}
-            </FormSelect>
+              placeholder="Escribe marca, modelo o serie..."
+            />
           </FormField>
 
           <FormField label="Tipo de Mantenimiento" required error={errors.maintenance_type}>
@@ -367,13 +410,17 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
               {partsUsed.map((part, index) => (
                 <div key={index} className="bg-white border rounded-lg p-4">
                   <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                    <FormField label="Nombre del Repuesto">
-                      <FormInput
-                        type="text"
+                    <FormField label="Repuesto">
+                      <FormSelect
+                        name="name"
                         value={part.name}
                         onChange={(e) => updatePart(index, 'name', e.target.value)}
-                        placeholder="Nombre del repuesto"
-                      />
+                      >
+                        <option value="">Seleccionar repuesto</option>
+                        {spareParts.map(sp => (
+                          <option key={sp.id} value={sp.name}>{sp.name} - Stock: {sp.quantity}</option>
+                        ))}
+                      </FormSelect>
                     </FormField>
 
                     <FormField label="Cantidad">

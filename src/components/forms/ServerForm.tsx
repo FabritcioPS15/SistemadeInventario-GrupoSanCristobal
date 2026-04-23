@@ -21,7 +21,6 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
     anydesk_id: string;
     username: string;
     password: string;
-    notes: string;
     windows_credentials: WindowsCredential[];
   }>({
     name: editServer?.name || '',
@@ -30,7 +29,6 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
     anydesk_id: editServer?.anydesk_id || '',
     username: editServer?.username || '',
     password: editServer?.password || '',
-    notes: editServer?.notes || '',
     windows_credentials: editServer?.windows_credentials || []
   });
 
@@ -107,7 +105,6 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
       anydesk_id: formData.anydesk_id.trim() || null,
       username: formData.username.trim() || null,
       password: formData.password.trim() || null,
-      notes: formData.notes.trim() || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -193,7 +190,6 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
               <li>• <strong>IP válida:</strong> Formato IPv4 (ej: 192.168.1.100)</li>
               <li>• <strong>AnyDesk:</strong> 8-12 dígitos numéricos (ej: 123456789)</li>
               <li>• <strong>Credenciales:</strong> Agregue usuarios de Windows para acceso remoto</li>
-              <li>• <strong>Notas:</strong> Incluya configuraciones especiales o servicios instalados</li>
             </ul>
           </div>
         </div>
@@ -348,19 +344,7 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
         </div>
       </FormSection>
 
-      {/* Section: Notas */}
-      <FormSection title="Notas Adicionales" color="purple">
-        <FormField label="Notas y Observaciones" error={errors.notes}>
-          <FormTextarea
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            placeholder="Notas adicionales sobre el servidor, configuraciones especiales, servicios instalados, etc..."
-            rows={4}
-            error={errors.notes}
-          />
-        </FormField>
-      </FormSection>
+
     </BaseForm>
   );
 }

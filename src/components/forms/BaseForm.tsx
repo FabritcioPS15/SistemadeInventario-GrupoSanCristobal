@@ -180,7 +180,7 @@ export function FormInput({
   error,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { error?: string }) {
-  const baseClasses = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] uppercase tracking-wider placeholder:text-slate-300";
+  const baseClasses = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] tracking-wider placeholder:text-slate-300";
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
 
   return (
@@ -198,7 +198,7 @@ export function FormSelect({
   children,
   ...props
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: string }) {
-  const baseClasses = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] uppercase tracking-wider";
+  const baseClasses = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] tracking-wider";
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
 
   return (
@@ -218,7 +218,7 @@ export function FormTextarea({
   rows = 3,
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { error?: string }) {
-  const baseClasses = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] uppercase tracking-wider placeholder:text-slate-300 resize-none";
+  const baseClasses = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] tracking-wider placeholder:text-slate-300 resize-none";
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
 
   return (

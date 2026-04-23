@@ -427,12 +427,12 @@ export default function Dashboard() {
 
       <div className="p-6 space-y-6">
         {/* Date and Time Display */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg p-8 text-white">
+        <div className="bg-[#002855] rounded-none shadow-sm p-8 text-white border border-[#002855]">
           <div className="text-center">
-            <div className="text-5xl font-bold mb-2">
+            <div className="text-5xl font-black mb-2 tracking-wider">
               {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </div>
-            <div className="text-xl font-medium opacity-90">
+            <div className="text-[12px] font-bold opacity-90 uppercase tracking-[0.2em]">
               {currentTime.toLocaleDateString('es-ES', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -446,80 +446,79 @@ export default function Dashboard() {
         {/* Mixed Size Cards Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Large Card - Inventario */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group"
+          <div className="lg:col-span-2 bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group"
                onClick={() => navigate('/inventory')}>
-            {/* Blue Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+            {/* Dark Header */}
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Package className="text-white" size={24} />
-                  <span className="text-white font-semibold">Inventario</span>
+                  <Package className="text-[#002855]" size={20} />
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Inventario General</span>
                 </div>
-                <ArrowRight size={18} className="text-white/70 group-hover:text-white transition-colors" />
+                <ArrowRight size={18} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
             </div>
             <div className="p-6">
-              <h3 className="text-gray-900 text-4xl font-bold mb-2">{stats.totalAssets}</h3>
+              <h3 className="text-[#002855] text-4xl font-black mb-2">{stats.totalAssets}</h3>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">{stats.activeAssets} activos</span>
+                <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats.activeAssets} activos</span>
               </div>
-              <p className="text-xs text-gray-500">Equipos y activos operativos</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Equipos y activos operativos</p>
             </div>
           </div>
 
           {/* Medium Card - Tickets */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group"
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group"
                onClick={() => navigate('/tickets')}>
-            {/* Blue Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+            {/* Header */}
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <CheckSquare className="text-white" size={20} />
-                  <span className="text-white font-semibold">Tickets</span>
+                  <CheckSquare className="text-[#002855]" size={20} />
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Tickets</span>
                 </div>
-                <ArrowRight size={18} className="text-white/70 group-hover:text-white transition-colors" />
+                <ArrowRight size={18} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
             </div>
             <div className="p-6">
-              <h3 className="text-gray-900 text-3xl font-bold mb-3">{stats.totalTickets}</h3>
+              <h3 className="text-[#002855] text-3xl font-black mb-3">{stats.totalTickets}</h3>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-xs text-gray-600">{stats.openTickets} abiertos</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats.openTickets} abiertos</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span className="text-xs text-gray-600">{stats.attendedTickets} en atención</span>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats.attendedTickets} en atención</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-xs text-gray-600">{stats.resolvedTickets} resueltos</span>
+                  <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats.resolvedTickets} resueltos</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Small Card - Cámaras */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group"
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group"
                onClick={() => navigate('/cameras')}>
-            {/* Blue Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Camera className="text-white" size={20} />
-                  <span className="text-white font-semibold">Cámaras</span>
+                  <Camera className="text-[#002855]" size={20} />
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Cámaras</span>
                 </div>
-                <ArrowRight size={18} className="text-white/70 group-hover:text-white transition-colors" />
+                <ArrowRight size={18} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
             </div>
             <div className="p-6">
-              <h3 className="text-gray-900 text-3xl font-bold mb-2">{stats.totalCameras}</h3>
+              <h3 className="text-[#002855] text-3xl font-black mb-2">{stats.totalCameras}</h3>
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-xs text-gray-600">{stats.activeCameras} activas</span>
+                <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats.activeCameras} activas</span>
               </div>
-              <p className="text-xs text-gray-500">Vigilancia</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Vigilancia</p>
             </div>
           </div>
         </div>
@@ -527,16 +526,15 @@ export default function Dashboard() {
         {/* Vehicle Document Cards */}
 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
           {/* SOAT Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group h-full flex flex-col"
                onClick={() => setShowDocumentPopup('soat')}>
-            {/* Blue Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <AlertTriangle className="text-white" size={18} />
-                  <span className="text-white font-semibold">SOAT</span>
+                  <AlertTriangle className="text-[#002855]" size={18} />
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">SOAT</span>
                 </div>
-                <ArrowRight size={16} className="text-white/70 group-hover:text-white transition-colors" />
+                <ArrowRight size={16} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
             </div>
             <div className="p-6 flex-grow">
@@ -565,16 +563,15 @@ export default function Dashboard() {
           </div>
 
           {/* CITV Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group h-full flex flex-col"
                onClick={() => setShowDocumentPopup('citv')}>
-            {/* Blue Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <AlertTriangle className="text-white" size={18} />
-                  <span className="text-white font-semibold">Revisión Técnica</span>
+                  <AlertTriangle className="text-[#002855]" size={18} />
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Revisión Técnica</span>
                 </div>
-                <ArrowRight size={16} className="text-white/70 group-hover:text-white transition-colors" />
+                <ArrowRight size={16} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
             </div>
             <div className="p-6 flex-grow">
@@ -603,16 +600,15 @@ export default function Dashboard() {
           </div>
 
           {/* Póliza Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all cursor-pointer group h-full flex flex-col"
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group h-full flex flex-col"
                onClick={() => setShowDocumentPopup('poliza')}>
-            {/* Blue Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <AlertTriangle className="text-white" size={18} />
-                  <span className="text-white font-semibold">Póliza</span>
+                  <AlertTriangle className="text-[#002855]" size={18} />
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Póliza</span>
                 </div>
-                <ArrowRight size={16} className="text-white/70 group-hover:text-white transition-colors" />
+                <ArrowRight size={16} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
             </div>
             <div className="p-6 flex-grow">
@@ -641,17 +637,16 @@ export default function Dashboard() {
           </div>
 
           {/* Fleet Overview Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            {/* Blue Header */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Truck className="text-white" size={18} />
-                  <span className="text-white font-semibold">Estado General de la Flota</span>
+                  <Truck className="text-[#002855]" size={18} />
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Estado General Flota</span>
                 </div>
                 <button
                   onClick={() => navigate('/flota-vehicular')}
-                  className="text-[10px] bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-colors"
+                  className="text-[9px] bg-white border border-slate-200 text-[#002855] hover:bg-slate-100 px-3 py-1.5 rounded-none font-black uppercase tracking-[0.2em] transition-colors"
                 >
                   Ver Detalles
                 </button>
@@ -721,20 +716,21 @@ export default function Dashboard() {
       </div>
 
         {/* Simplified SUTRAN Alert */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        {/* Simplified SUTRAN Alert */}
+        <div className="bg-white shadow-sm border border-slate-200 rounded-none p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-50 rounded-lg">
+              <div className="p-2 bg-orange-50 border border-orange-100 rounded-none">
                 <AlertTriangle className="text-orange-600" size={20} />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-900">Próxima Visita SUTRAN</h3>
-                <p className="text-xs text-gray-600">Estimación para todas las sedes</p>
+                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#002855]">Próxima Visita SUTRAN</h3>
+                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Estimación global</p>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-lg font-bold text-orange-600">15 días</div>
-              <div className="text-xs text-gray-500">Promedio restante</div>
+              <div className="text-lg font-black text-orange-600">15 DÍAS</div>
+              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Promedio restante</div>
             </div>
           </div>
         </div>
@@ -747,18 +743,18 @@ export default function Dashboard() {
               <div
                 key={alert.title}
                 onClick={() => navigate(alert.path)}
-                className={`bg-white rounded-xl shadow-sm border border-${alert.color}-200 p-6 hover:shadow-md transition-all cursor-pointer group`}
+                className={`bg-white rounded-none shadow-sm border border-slate-200 p-6 hover:border-[#002855] transition-all cursor-pointer group`}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-xl bg-${alert.color}-50`}>
-                    <Icon className={`text-${alert.color}-600`} size={24} />
+                  <div className={`p-3 rounded-none bg-${alert.color}-50 border border-${alert.color}-100`}>
+                    <Icon className={`text-${alert.color}-600`} size={20} />
                   </div>
                   <div className="flex-1">
-                    <h3 className={`text-${alert.color}-900 text-xl font-bold mb-1`}>{alert.count}</h3>
-                    <p className={`text-${alert.color}-800 text-sm font-semibold`}>{alert.title}</p>
-                    <p className="text-xs text-gray-600 mt-1">{alert.description}</p>
+                    <h3 className={`text-${alert.color}-600 text-xl font-black mb-1`}>{alert.count}</h3>
+                    <p className={`text-${alert.color}-900 text-[10px] uppercase font-black tracking-widest`}>{alert.title}</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{alert.description}</p>
                   </div>
-                  <ArrowRight size={20} className={`text-${alert.color}-300 group-hover:text-${alert.color}-500 transition-colors`} />
+                  <ArrowRight size={18} className={`text-${alert.color}-300 group-hover:text-${alert.color}-500 transition-colors`} />
                 </div>
               </div>
             );
@@ -766,36 +762,36 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
+        <div className="bg-white rounded-none shadow-sm border border-slate-200 p-6">
+          <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#002855] mb-4">Acciones Rápidas</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <button
               onClick={() => navigate('/inventory')}
-              className="flex items-center gap-2 p-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors"
+              className="flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 hover:border-[#002855] hover:text-[#002855] text-slate-700 rounded-none transition-colors"
             >
-              <Package size={16} />
-              <span className="text-sm font-medium">Ver Inventario</span>
+              <Package size={14} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Ver Inventario</span>
             </button>
             <button
               onClick={() => navigate('/tickets')}
-              className="flex items-center gap-2 p-3 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg transition-colors"
+              className="flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 hover:border-orange-600 hover:text-orange-600 text-slate-700 rounded-none transition-colors"
             >
-              <CheckSquare size={16} />
-              <span className="text-sm font-medium">Tickets</span>
+              <CheckSquare size={14} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Tickets</span>
             </button>
             <button
               onClick={() => navigate('/flota-vehicular')}
-              className="flex items-center gap-2 p-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg transition-colors"
+              className="flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 hover:border-indigo-600 hover:text-indigo-600 text-slate-700 rounded-none transition-colors"
             >
-              <Truck size={16} />
-              <span className="text-sm font-medium">Flota</span>
+              <Truck size={14} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Flota</span>
             </button>
             <button
               onClick={() => navigate('/cameras')}
-              className="flex items-center gap-2 p-3 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition-colors"
+              className="flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 hover:border-emerald-600 hover:text-emerald-600 text-slate-700 rounded-none transition-colors"
             >
-              <Camera size={16} />
-              <span className="text-sm font-medium">Cámaras</span>
+              <Camera size={14} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Cámaras</span>
             </button>
           </div>
         </div>        

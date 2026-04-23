@@ -23,7 +23,6 @@ type SparePart = {
   min_quantity: number;
   location: string;
   supplier: string;
-  notes: string;
   created_at: string;
   updated_at: string;
 };
@@ -169,7 +168,7 @@ export default function SpareParts() {
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Repuestos');
-      
+
       worksheet.columns = [
         { header: 'Nombre', key: 'name', width: 30 },
         { header: 'Código', key: 'part_number', width: 20 },
@@ -182,14 +181,14 @@ export default function SpareParts() {
         { header: 'Ubicación', key: 'location', width: 20 },
         { header: 'Proveedor', key: 'supplier', width: 20 }
       ];
-      
+
       worksheet.getRow(1).font = { bold: true, size: 12 };
       worksheet.getRow(1).fill = {
         type: 'pattern',
         pattern: 'solid',
         fgColor: { argb: 'FFE0E0E0' }
       };
-      
+
       filteredParts.forEach(part => {
         worksheet.addRow({
           name: part.name || '',
@@ -204,7 +203,7 @@ export default function SpareParts() {
           supplier: part.supplier || ''
         });
       });
-      
+
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -232,7 +231,7 @@ export default function SpareParts() {
         `$${(part.unit_price || 0).toFixed(2)}`,
         part.location || ''
       ]);
-      
+
       autoTable(doc, {
         head: [['Nombre', 'Código', 'Categoría', 'Marca', 'Cantidad', 'Unidad', 'Precio', 'Ubicación']],
         body: tableData,
@@ -240,7 +239,7 @@ export default function SpareParts() {
         styles: { fontSize: 8 },
         headStyles: { fillColor: [0, 40, 85] }
       });
-      
+
       doc.save(`repuestos_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error('Error exportando PDF:', error);
@@ -250,51 +249,8 @@ export default function SpareParts() {
 
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
-      
+
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-        {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-              <Package size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Ítems</p>
-              <h3 className="text-xl font-bold text-slate-900">{stats.total}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-              <AlertTriangle size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Stock Bajo</p>
-              <h3 className="text-xl font-bold text-amber-600">{stats.lowStock}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-              <FileText size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Categorías</p>
-              <h3 className="text-xl font-bold text-emerald-600">{stats.categories}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all hover:shadow-md">
-            <div className="p-3 bg-slate-50 text-slate-600 rounded-xl">
-              <Download size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor Total</p>
-              <h3 className="text-xl font-bold text-slate-800">${stats.totalValue.toFixed(2)}</h3>
-            </div>
-          </div>
-        </div>
-
         <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
           <div className="absolute -top-3 -left-3">
             <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
@@ -307,10 +263,10 @@ export default function SpareParts() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
             <input
               type="text"
-              placeholder="BUSCAR REPUESTO POR NOMBRE, CÓDIGO, MARCA..."
+              placeholder="Buscar repuesto por nombre, código, marca..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); }}
-              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
             />
           </div>
 
@@ -399,16 +355,16 @@ export default function SpareParts() {
             </div>
 
             <div className="flex bg-slate-100 p-1 border border-slate-200">
-              <button 
-                onClick={() => setViewMode('grid')} 
-                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
                 title="Vista Cuadrícula"
               >
                 <LayoutGrid size={16} />
               </button>
-              <button 
-                onClick={() => setViewMode('list')} 
-                className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
                 title="Vista Tabla"
               >
                 <ListIcon size={16} />

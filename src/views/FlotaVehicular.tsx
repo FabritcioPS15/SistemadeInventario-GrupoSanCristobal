@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, Car, LayoutGrid, List, MapPin, Search, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Car, LayoutGrid, List, MapPin, Search, ChevronDown, AlertTriangle } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -50,12 +50,17 @@ export default function FlotaVehicular() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+  const [showVencimientoMenu, setShowVencimientoMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const vencimientoMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowLocationDropdown(false);
+      }
+      if (vencimientoMenuRef.current && !vencimientoMenuRef.current.contains(event.target as Node)) {
+        setShowVencimientoMenu(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -104,15 +109,193 @@ export default function FlotaVehicular() {
 
   const getDateColor = (vencimiento: string | undefined) => {
     if (!vencimiento) return 'text-slate-400';
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const vencDate = new Date(vencimiento);
-    vencDate.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const vencDate = new Date(vencimiento); vencDate.setHours(0, 0, 0, 0);
     const daysUntil = Math.ceil((vencDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
     if (daysUntil <= 0) return 'text-rose-600 font-black';
     if (daysUntil <= 15) return 'text-amber-600 font-black';
     return 'text-slate-600 font-bold';
+  };
+
+  // Días restantes hasta vencimiento (negativo = ya venció)
+  const getDaysUntil = (fecha?: string): number => {
+    if (!fecha) return Infinity;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const d = new Date(fecha); d.setHours(0, 0, 0, 0);
+    return Math.ceil((d.getTime() - today.getTime()) / 86400000);
+  };
+
+  // Vehículos con algún documento vencido o por vencer en <= 30 días
+  const getVencimientoReport = () => {
+    const DIAS_ALERTA = 30;
+    return vehiculos
+      .filter(v => {
+        const dias = [
+          getDaysUntil(v.citv_vencimiento),
+          getDaysUntil(v.soat_vencimiento),
+          getDaysUntil(v.poliza_vencimiento),
+        ];
+        return dias.some(d => d <= DIAS_ALERTA);
+      })
+      .sort((a, b) => {
+        // Ordenar por el documento más urgente primero
+        const minA = Math.min(
+          getDaysUntil(a.citv_vencimiento),
+          getDaysUntil(a.soat_vencimiento),
+          getDaysUntil(a.poliza_vencimiento),
+        );
+        const minB = Math.min(
+          getDaysUntil(b.citv_vencimiento),
+          getDaysUntil(b.soat_vencimiento),
+          getDaysUntil(b.poliza_vencimiento),
+        );
+        return minA - minB;
+      });
+  };
+
+
+  const handleExportVencimientosExcel = async () => {
+    try {
+      const reporte = getVencimientoReport();
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Vencimientos');
+
+      ws.columns = [
+        { header: 'PLACA', key: 'placa', width: 14 },
+        { header: 'MARCA / MODELO', key: 'vehiculo', width: 25 },
+        { header: 'SEDE', key: 'sede', width: 28 },
+        { header: 'CITV VENCE', key: 'citv', width: 16 },
+        { header: 'CITV ESTADO', key: 'citv_estado', width: 20 },
+        { header: 'SOAT VENCE', key: 'soat', width: 16 },
+        { header: 'SOAT ESTADO', key: 'soat_estado', width: 20 },
+        { header: 'PÓLIZA VENCE', key: 'poliza', width: 16 },
+        { header: 'PÓLIZA ESTADO', key: 'poliza_estado', width: 20 },
+      ];
+
+      // Estilo encabezado
+      ws.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002855' } };
+      ws.getRow(1).height = 24;
+
+      const estadoDoc = (fecha?: string) => {
+        if (!fecha) return 'Sin fecha';
+        const d = getDaysUntil(fecha);
+        if (d <= 0) return `VENCIDO (${Math.abs(d)} días)`;
+        if (d <= 7) return `CRÍTICO (${d} días)`;
+        if (d <= 30) return `POR VENCER (${d} días)`;
+        if (d >= 270) return `VIGENTE (${d} días)`;
+        return `OK (${d} días)`;
+      };
+
+      // Color de fila por documento más urgente
+      const fillColor = (minDias: number) => {
+        if (minDias <= 7) return { argb: 'FFFDE8E8' }; // rojo claro
+        if (minDias <= 30) return { argb: 'FFFFF3CD' }; // amarillo
+        if (minDias >= 270) return { argb: 'FFD1FAE5' }; // verde claro
+        return null; // sin color
+      };
+
+      reporte.forEach(v => {
+        const row = ws.addRow({
+          placa: v.placa,
+          vehiculo: `${v.marca} ${v.modelo}`,
+          sede: getEscuelaNombre(v.ubicacion_actual),
+          citv: v.citv_vencimiento ? new Date(v.citv_vencimiento).toLocaleDateString('es-PE') : '—',
+          citv_estado: estadoDoc(v.citv_vencimiento),
+          soat: v.soat_vencimiento ? new Date(v.soat_vencimiento).toLocaleDateString('es-PE') : '—',
+          soat_estado: estadoDoc(v.soat_vencimiento),
+          poliza: v.poliza_vencimiento ? new Date(v.poliza_vencimiento).toLocaleDateString('es-PE') : '—',
+          poliza_estado: estadoDoc(v.poliza_vencimiento),
+        });
+
+        // Colorear fila según urgencia
+        const minDias = Math.min(
+          getDaysUntil(v.citv_vencimiento),
+          getDaysUntil(v.soat_vencimiento),
+          getDaysUntil(v.poliza_vencimiento),
+        );
+        const color = fillColor(minDias);
+        if (color) {
+          row.fill = { type: 'pattern', pattern: 'solid', fgColor: color };
+        }
+
+        row.eachCell(cell => {
+          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+          cell.alignment = { vertical: 'middle' };
+        });
+      });
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Vencimientos_Flota_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setShowVencimientoMenu(false);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleExportVencimientosPdf = () => {
+    try {
+      const reporte = getVencimientoReport();
+      const doc = new jsPDF('l', 'mm', 'a4');
+
+      doc.setFontSize(16);
+      doc.setTextColor(0, 40, 85);
+      doc.text('Reporte de Vencimientos — Flota Vehicular', 14, 18);
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.text(`Generado: ${new Date().toLocaleDateString('es-PE')} | Vehículos con documentos vencidos o por vencer en 30 días`, 14, 25);
+
+      const tableData = reporte.map(v => {
+        const fmtDate = (f?: string) => f ? new Date(f).toLocaleDateString('es-PE') : '—';
+        const fmtDias = (f?: string) => {
+          if (!f) return '—';
+          const d = getDaysUntil(f);
+          if (d <= 0) return `VENCIDO (${Math.abs(d)}d)`;
+          return `${d} días`;
+        };
+        return [
+          v.placa,
+          `${v.marca} ${v.modelo}`,
+          getEscuelaNombre(v.ubicacion_actual),
+          fmtDate(v.citv_vencimiento),
+          fmtDias(v.citv_vencimiento),
+          fmtDate(v.soat_vencimiento),
+          fmtDias(v.soat_vencimiento),
+          fmtDate(v.poliza_vencimiento),
+          fmtDias(v.poliza_vencimiento),
+        ];
+      });
+
+      autoTable(doc, {
+        startY: 30,
+        head: [['Placa', 'Vehículo', 'Sede', 'CITV Vence', 'CITV Estado', 'SOAT Vence', 'SOAT Estado', 'Póliza Vence', 'Póliza Estado']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 40, 85], textColor: 255, fontSize: 8, fontStyle: 'bold' },
+        styles: { fontSize: 7.5, cellPadding: 2 },
+        didParseCell: (data) => {
+          if (data.section === 'body') {
+            const v = reporte[data.row.index];
+            const minDias = Math.min(
+              getDaysUntil(v.citv_vencimiento),
+              getDaysUntil(v.soat_vencimiento),
+              getDaysUntil(v.poliza_vencimiento),
+            );
+            if (minDias <= 7) data.cell.styles.fillColor = [253, 232, 232]; // rojo claro
+            else if (minDias <= 30) data.cell.styles.fillColor = [255, 243, 205]; // amarillo
+            else if (minDias >= 270) data.cell.styles.fillColor = [209, 250, 229]; // verde claro
+            // else: sin color
+          }
+        }
+      });
+
+      doc.save(`Vencimientos_Flota_${new Date().toISOString().split('T')[0]}.pdf`);
+      setShowVencimientoMenu(false);
+    } catch (e) { console.error(e); }
   };
 
   const filteredVehiculos = useMemo(() => {
@@ -307,7 +490,7 @@ export default function FlotaVehicular() {
             <button
               onClick={handleExportExcel}
               className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
-              title="Exportar a Excel"
+              title="Exportar flota completa a Excel"
             >
               <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
             </button>
@@ -315,10 +498,53 @@ export default function FlotaVehicular() {
             <button
               onClick={handleExportPdf}
               className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
-              title="Exportar a PDF"
+              title="Exportar flota completa a PDF"
             >
               <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
             </button>
+
+            {/* Reporte de Vencimientos */}
+            <div className="relative" ref={vencimientoMenuRef}>
+              <button
+                onClick={() => setShowVencimientoMenu(v => !v)}
+                className={`flex items-center gap-2 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest border transition-all shadow-sm ${getVencimientoReport().length > 0
+                  ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+                  : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                  }`}
+                title="Reporte de vencimientos CITV / SOAT / Póliza"
+              >
+                <AlertTriangle size={20} className={getVencimientoReport().length > 0 ? 'text-slate-500' : 'text-slate-300 group-hover:text-slate-500 group-hover:border-slate-500 group-hover:bg-slate-50 group-hover:text-slate-500 transition-colors'} />
+                {getVencimientoReport().length > 0 && (
+                  <span className="bg-slate-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                    {getVencimientoReport().length}
+                  </span>
+                )}
+                <ChevronDown size={16} className={`transition-transform ${showVencimientoMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showVencimientoMenu && (
+                <div className="absolute right-0 top-full mt-2 bg-white border border-slate-200 shadow-2xl z-50 min-w-[230px]">
+                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Descargar Reporte</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">CITV / SOAT / Póliza vencidos o próximos a vencer (30 días)</p>
+                  </div>
+                  <button
+                    onClick={handleExportVencimientosExcel}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  >
+                    <RiFileExcel2Fill size={16} className="text-emerald-600" />
+                    Exportar a Excel
+                  </button>
+                  <button
+                    onClick={handleExportVencimientosPdf}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-[11px] font-bold text-rose-600 hover:bg-rose-50 transition-colors border-t border-slate-50"
+                  >
+                    <FaFilePdf size={16} className="text-rose-500" />
+                    Exportar a PDF
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

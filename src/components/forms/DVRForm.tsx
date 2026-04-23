@@ -140,7 +140,7 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
 
     const dataToSave = {
       code: formData.code.trim(),
-      sede: formData.sede.trim(),
+      sede: formData.sede.trim() || null,
       area: formData.area.trim() || null,
       marca: formData.marca.trim(),
       modelo: formData.modelo.trim(),
