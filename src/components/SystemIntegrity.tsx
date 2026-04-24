@@ -43,7 +43,7 @@ export default function SystemIntegrity() {
   const handleSyncAll = async () => {
     setSyncing(true);
     try {
-      const result = await syncAllAssetsIntegrity();
+      await syncAllAssetsIntegrity();
       // Recargar el reporte después de la sincronización
       await loadReport();
     } catch (error) {
@@ -56,7 +56,7 @@ export default function SystemIntegrity() {
   const handleCleanup = async () => {
     setCleaning(true);
     try {
-      const result = await cleanupOrphanedData();
+      await cleanupOrphanedData();
       // Recargar el reporte después de la limpieza
       await loadReport();
     } catch (error) {

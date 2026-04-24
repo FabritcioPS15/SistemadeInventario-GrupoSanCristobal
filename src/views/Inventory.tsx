@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, Eye, MapPin, Upload, Package, Search, Layers, ChevronRight, ChevronDown, LayoutGrid, List } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, MapPin, Upload, Package, Search, Layers, ChevronDown, LayoutGrid, List } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -58,7 +58,6 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [assetTypes, setAssetTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showAssetForm, setShowAssetForm] = useState(false);
@@ -105,19 +104,13 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         fetchAssets(),
         fetchCategories(),
         fetchSubcategories(),
-        fetchLocations(),
-        fetchAssetTypes()
+        fetchLocations()
       ]);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchAssetTypes = async () => {
-    const { data } = await supabase.from('asset_types').select('*').order('name');
-    if (data) setAssetTypes(data);
   };
 
   const fetchAssets = async () => {
@@ -336,26 +329,13 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
 
   // Map moved to top of file
 
-  const currentCategoryName = categoryFilter ? (pathCategoryMap[categoryFilter.replace('inventory-', '')] || 'Especializado') : 'General';
-  const currentSubcatLabel = subcategoryFilter ? (subcategoryFilter.charAt(0).toUpperCase() + subcategoryFilter.slice(1)) : '';
+  const currentCategoryName = categoryFilter ? pathCategoryMap[categoryFilter.replace('inventory-', '')] : 'General';
+  const currentSubcatLabel = subcategoryFilter ? (Object.keys(subcategorySlugMap).find(k => k === subcategoryFilter) ? subcategoryFilter.charAt(0).toUpperCase() + subcategoryFilter.slice(1) : '') : '';
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
       
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-        {/* Dynamic Title Context */}
-        <div className="mb-2">
-          <h1 className="text-[22px] font-black text-[#002855] uppercase tracking-tight flex items-center gap-3">
-            <Package className="text-slate-300" size={24} />
-            Inventario {currentCategoryName !== 'General' ? `de ${currentCategoryName}` : ''}
-          </h1>
-          {currentSubcatLabel && (
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1 ml-9">
-              Vista específica: <span className="text-[#002855]">{currentSubcatLabel}</span>
-            </p>
-          )}
-        </div>
-
         {/* Action Bar — Standardized */}
         <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
           <div className="absolute -top-3 -left-3">
@@ -369,20 +349,11 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
             <input
               type="text"
-              placeholder="Buscar por código, marca, serie o modelo..."
+              placeholder="BUSCAR POR CÓDIGO, MARCA, SERIE O MODELO..."
               value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
             />
-            {canEdit() && (
-              <button
-                onClick={() => setShowAssetForm(true)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#003366] transition-all rounded shadow-sm flex items-center gap-1"
-              >
-                <Plus size={12} />
-                Nuevo
-              </button>
-            )}
           </div>
 
           {/* Filters + Toggle */}
@@ -391,17 +362,17 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
               <select
                 value={filterCategory}
                 onChange={e => { setFilterCategory(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
               >
                 <option value="">Categorías</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name.toUpperCase()}</option>)}
               </select>
             )}
 
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest flex items-center gap-3 transition-all min-w-[200px]"
+                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[200px]"
               >
                 <MapPin size={14} className="text-rose-500" />
                 <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === locations.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
@@ -442,7 +413,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
             <select
               value={filterStatus}
               onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[130px] appearance-none cursor-pointer"
+              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[130px] appearance-none cursor-pointer"
             >
               <option value="">Estados</option>
               <option value="active">Activo</option>
@@ -534,11 +505,9 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         }}
                       />
                     </th>
-                    <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Código / Marca</span></th>
-                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Descripción</span></th>
+                    <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Código / Activo</span></th>
                     <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Categoría</span></th>
-                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede / Ubicación</span></th>
-                    <th className="px-2 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Cant.</span></th>
+                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Ubicación</span></th>
                     <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
                     <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
                   </tr>
@@ -587,14 +556,6 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                           </div>
                         </td>
                         <td className="px-4 py-5 text-left">
-                          <div className="flex flex-col">
-                            <span className="text-[11px] font-black text-slate-600 uppercase tracking-tight line-clamp-2 max-w-[200px]">
-                              {asset.descripcion || 'Sin descripción'}
-                            </span>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase mt-1">{asset.condicion}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-5 text-left">
                           <div className="flex flex-col gap-1">
                             <span className="text-[13px] font-black text-[#002855] uppercase">{asset.categories?.name}</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{asset.subcategories?.name}</span>
@@ -606,9 +567,6 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                             <span className="text-[13px] font-black text-[#002855] uppercase">{asset.locations?.name}</span>
                           </div>
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-5">{asset.areas?.name || 'Área general'}</span>
-                        </td>
-                        <td className="px-2 py-5 text-center">
-                          <span className="text-sm font-black text-[#002855]">{asset.cantidad || 1}</span>
                         </td>
                         <td className="px-4 py-5 text-left">
                           <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-current bg-opacity-10 bg-${status.color}-500 text-${status.color}-700 border-${status.color}-200`}>
@@ -754,7 +712,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
           isOpen={showUploadModal}
           onClose={() => setShowUploadModal(false)}
           onSuccess={async () => { setShowUploadModal(false); await fetchAssets(); }}
-          assetTypes={assetTypes}
+          assetTypes={[]}
           locations={locations}
         />
       )}

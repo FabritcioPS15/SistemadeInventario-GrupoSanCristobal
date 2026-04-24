@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, Key, Users, FileText, ChevronRight, Zap,
   Wrench, Send, MapPin, Building2,
   Car, ClipboardList, LogOut, Ticket,
-  Settings, ChevronLeft
+  ChevronLeft
 } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { GrServerCluster } from 'react-icons/gr';
@@ -402,38 +402,38 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       {hoveredItem && window.innerWidth >= 1024 && (
         <div
           ref={subMenuRef}
-          className={`fixed z-[120] bg-[#1e293b] border border-blue-500/20 shadow-2xl rounded-2xl transition-all duration-200 ${
-            activeSubmenuItems && activeSubmenuItems.length > 0 ? 'py-3 min-w-[240px]' : 'py-1.5 px-3'
+          className={`fixed z-[120] bg-[#1e293b] border border-blue-500/20 shadow-2xl rounded-2xl transition-all duration-300 animate-in fade-in slide-in-from-left-2 duration-200 ${
+            activeSubmenuItems && activeSubmenuItems.length > 0 ? 'py-2 min-w-[200px]' : 'py-1.5 px-3'
           }`}
           style={{
             top: adjustedTop || menuTop,
             left: collapsed ? '5.5rem' : '18.5rem',
             opacity: 1,
-            transform: 'translateX(0)'
+            transform: 'translateX(0) translateY(-50%)'
           }}
           onMouseEnter={() => { if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current); }}
           onMouseLeave={handleMouseLeave}
         >
           {activeSubmenuItems && activeSubmenuItems.length > 0 ? (
             <>
-              <div className="px-5 py-2 border-b border-white/10 mb-2">
-                <h4 className="text-[11px] font-black text-blue-400 uppercase tracking-[2.5px] flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+              <div className="px-4 py-1.5 border-b border-white/10 mb-1">
+                <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[2px] flex items-center gap-2">
+                  <div className="w-1 h-1 rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.8)]" />
                   {activeItem?.label}
                 </h4>
               </div>
-          <div className="max-h-[calc(100vh-60px)] overflow-y-auto sidebar-scroll px-2 space-y-0.5">
-            {activeSubmenuItems?.filter((sub) => hasPermission(sub.id)).map((sub) => (
-              <div key={sub.id}>
-                <NavLink
-                  to={sub.path}
-                  className={({ isActive }) => `
-                    flex items-center gap-3 px-4 py-2.5 text-[12px] font-bold uppercase tracking-tight rounded-xl transition-all
-                    ${isActive ? 'text-white bg-blue-500 shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}
-                  `}
-                >
-                  {sub.label}
-                </NavLink>
+              <div className="max-h-[calc(100vh-60px)] overflow-y-auto sidebar-scroll px-1 space-y-0.5">
+                {activeSubmenuItems?.filter((sub) => hasPermission(sub.id)).map((sub) => (
+                  <div key={sub.id}>
+                    <NavLink
+                      to={sub.path}
+                      className={({ isActive }) => `
+                        flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold uppercase tracking-tight rounded-lg transition-all
+                        ${isActive ? 'text-white bg-blue-500 shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                      `}
+                    >
+                      {sub.label}
+                    </NavLink>
                 {sub.hasSubmenu && (
                   <div className="ml-4 mt-1 border-l border-white/10 pl-2 space-y-0.5">
                     {sub.submenu?.map(deepSub => (

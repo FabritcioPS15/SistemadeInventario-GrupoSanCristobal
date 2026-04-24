@@ -1,86 +1,93 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell, Clock,Plus, CheckCircle, Archive, User, MapPin, Calendar, CalendarDays, CheckSquare, Trash2, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
-// Función para reproducir sonido de notificación con volumen máximo
-const playNotificationSound = () => {
-  console.log('🔊 INICIANDO playNotificationSound()');
-  
-  try {
-    // Crear un sonido de notificación usando Web Audio API
-    console.log('🎵 Creando AudioContext...');
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    console.log('✅ AudioContext creado:', audioContext.state);
-    
-    // Verificar si el audio está desbloqueado
-    if (audioContext.state === 'suspended') {
-      console.log('⏸️ AudioContext está suspendido, intentando reanudar...');
-      audioContext.resume().then(() => {
-        console.log('✅ AudioContext reanudado, reproduciendo sonido...');
-        executeSound(audioContext);
-      }).catch(error => {
-        console.error('❌ Error reanudando AudioContext:', error);
-      });
-    } else {
-      console.log('▶️ AudioContext está activo, reproduciendo sonido...');
-      executeSound(audioContext);
-    }
-  } catch (error) {
-    console.error('❌ ERROR en playNotificationSound():', error);
-    console.error('❌ Detalles del error:', (error as Error).message);
-    console.error('❌ Stack:', (error as Error).stack);
+// ─── Audio global compartido ───────────────────────────────────────────────
+// Mantenemos un único AudioContext reutilizable para evitar que el navegador
+// lo bloquee por crear demasiados contextos.
+let _audioCtx: AudioContext | null = null;
+
+const getAudioContext = (): AudioContext => {
+  if (!_audioCtx) {
+    _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
+  return _audioCtx;
 };
 
-// Función auxiliar para ejecutar el sonido
-const executeSound = (audioContext: AudioContext) => {
+/**
+ * Desbloquea el AudioContext con la primera interacción del usuario.
+ * Los navegadores modernos requieren un gesto del usuario antes de
+ * permitir la reproducción de audio.
+ */
+const unlockAudioContext = () => {
   try {
-    console.log('🎛️ Creando oscilador y gain...');
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    console.log('🔌 Nodos conectados');
-    
-    oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
-    
-    gainNode.gain.setValueAtTime(1.0, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-    console.log('🔊 Configuración: Freq=1000Hz, Volume=100%');
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.3);
-    console.log('▶️ Oscilador iniciado');
-    
-    setTimeout(() => {
-      try {
-        console.log('🔊 Iniciando segundo beep...');
-        const osc2 = audioContext.createOscillator();
-        const gain2 = audioContext.createGain();
-        
-        osc2.connect(gain2);
-        gain2.connect(audioContext.destination);
-        
-        osc2.frequency.setValueAtTime(1200, audioContext.currentTime);
-        osc2.frequency.exponentialRampToValueAtTime(900, audioContext.currentTime + 0.1);
-        
-        gain2.gain.setValueAtTime(1.0, audioContext.currentTime);
-        gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-        
-        osc2.start(audioContext.currentTime);
-        osc2.stop(audioContext.currentTime + 0.2);
-        console.log('✅ Segundo beep iniciado');
-      } catch (e) {
-        console.error('❌ Error en segundo beep:', e);
-      }
-    }, 400);
-    
-    console.log('🎉 playNotificationSound() completado exitosamente');
-  } catch (error) {
-    console.error('❌ ERROR en executeSound():', error);
+    const ctx = getAudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {/* silencioso */});
+    }
+    // Reproducir un buffer silencioso para activar el contexto en iOS/Safari
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch (_) {/* ignorar */}
+};
+
+/** Alerta de nuevo ticket — 3 dings ascendentes, fuerte y escandaloso. */
+const playNotificationSound = () => {
+  try {
+    const ctx = getAudioContext();
+
+    const fire = () => {
+      // Compresor para empujar el volumen al techo
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.setValueAtTime(-10, ctx.currentTime);
+      comp.ratio.setValueAtTime(12,      ctx.currentTime);
+      comp.attack.setValueAtTime(0.001,  ctx.currentTime);
+      comp.release.setValueAtTime(0.15,  ctx.currentTime);
+      comp.connect(ctx.destination);
+
+      // 3 dings con tono ascendente: Do5 → Mi5 → La5
+      const notes = [
+        { freq: 523, offset: 0.0 },  // Do5
+        { freq: 659, offset: 0.45 }, // Mi5
+        { freq: 880, offset: 0.9  }, // La5
+      ];
+
+      notes.forEach(({ freq, offset }) => {
+        const t = ctx.currentTime + offset;
+
+        // Mezcla sine + square para un tono más rico y escandaloso
+        ['sine', 'square'].forEach((type, i) => {
+          const osc  = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = type as OscillatorType;
+          osc.frequency.setValueAtTime(freq, t);
+
+          // Square más bajo para no distorsionar
+          const vol = type === 'sine' ? 1.2 : 0.35;
+          gain.gain.setValueAtTime(0,   t);
+          gain.gain.linearRampToValueAtTime(vol, t + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
+
+          osc.connect(gain);
+          gain.connect(comp);
+          osc.start(t);
+          osc.stop(t + 0.40);
+        });
+      });
+    };
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(fire).catch(() => {});
+    } else {
+      fire();
+    }
+  } catch (err) {
+    console.warn('⚠️ No se pudo reproducir el sonido de notificación:', err);
   }
 };
 
@@ -105,6 +112,10 @@ export default function NotificationsFinal() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('all');
+  // true una vez que el AudioContext fue desbloqueado por gesto del usuario
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
+  // IDs de notificaciones ya conocidas — no disparan sonido al iniciar
+  const knownIdsRef = useRef<Set<string> | null>(null);
 
   // Roles que deben recibir notificaciones
   const notificationRoles = ['super_admin', 'gerencia', 'sistemas', 'supervisores'];
@@ -115,6 +126,18 @@ export default function NotificationsFinal() {
       Notification.requestPermission();
     }
   }, []);
+
+  /**
+   * Desbloquea el AudioContext. DEBE llamarse desde un handler de clic
+   * (gesto del usuario), no desde un callback asíncrono.
+   */
+  const handleUnlockAndPlay = () => {
+    try {
+      unlockAudioContext();
+      setAudioUnlocked(true);
+      playNotificationSound();
+    } catch (_) {/* ignorar */}
+  };
 
   useEffect(() => {
     if (!user || !notificationRoles.includes(user.role)) {
@@ -179,36 +202,29 @@ export default function NotificationsFinal() {
         }
       });
 
-    // Configurar polling automático como fallback
+    // Polling cada 3 segundos — fuente principal de detección de tickets nuevos.
+    // Es el mecanismo más confiable porque no depende del Realtime de Supabase.
     const pollInterval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        // Solo hacer polling si la pestaña está visible
-        fetchNotifications();
-      }
-    }, 8000); // Cada 8 segundos
+      fetchNotifications();
+    }, 3000);
 
-    // Cargar notificaciones existentes
+    // Cargar notificaciones existentes (primera carga — no sonido)
     fetchNotifications();
 
     return () => {
       supabase.removeChannel(channel);
       
-      // Limpiar intervalo de auto-refresh si existe
       if ((window as any).notificationRefreshInterval) {
         clearInterval((window as any).notificationRefreshInterval);
         delete (window as any).notificationRefreshInterval;
       }
       
-      // Limpiar intervalo de polling
       clearInterval(pollInterval);
     };
   }, [user?.id, user?.role]);
 
   const fetchNotifications = async () => {
     if (!user) return;
-
-    setLoading(true);
-    setError(null);
 
     try {
       const { data, error } = await supabase
@@ -219,14 +235,31 @@ export default function NotificationsFinal() {
         .limit(50);
 
       if (!error && data) {
-        setNotifications(data as Notification[]);
-        setUnreadCount(data.filter(n => !n.read).length);
+        const incoming = data as Notification[];
+
+        if (knownIdsRef.current === null) {
+          // Primera carga: registrar IDs existentes sin sonar
+          knownIdsRef.current = new Set(incoming.map(n => n.id));
+          setLoading(false);
+        } else {
+          // Cargas siguientes: detectar IDs nuevos
+          const newOnes = incoming.filter(n => !knownIdsRef.current!.has(n.id));
+          if (newOnes.length > 0) {
+            // Registrar nuevos IDs para no volver a sonar
+            newOnes.forEach(n => knownIdsRef.current!.add(n.id));
+            // ¡Disparar sonido! El AudioContext ya fue desbloqueado por el usuario.
+            playNotificationSound();
+          }
+        }
+
+        setNotifications(incoming);
+        setUnreadCount(incoming.filter(n => !n.read).length);
       } else if (error) {
         setError(`Error: ${error.message}`);
+        setLoading(false);
       }
     } catch (error) {
       setError('Error al cargar notificaciones');
-    } finally {
       setLoading(false);
     }
   };
@@ -410,7 +443,13 @@ export default function NotificationsFinal() {
   return (
     <div className="relative">
       <button
-        onClick={() => setShowDropdown(!showDropdown)}
+        onClick={() => {
+          // El clic en la campana ES un gesto del usuario → desbloquear audio aquí.
+          if (!audioUnlocked) {
+            try { unlockAudioContext(); setAudioUnlocked(true); } catch (_) {}
+          }
+          setShowDropdown(!showDropdown);
+        }}
         className="relative p-2 rounded-xl hover:bg-white/10 transition-colors group"
         title="Notificaciones"
       >
@@ -439,6 +478,15 @@ export default function NotificationsFinal() {
                       {unreadCount} nuevas
                     </span>
                   )}
+                  {/* Botón de prueba de sonido — también desbloquea el AudioContext */}
+                  <button
+                    onClick={handleUnlockAndPlay}
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg border border-yellow-400 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 transition-all text-xs font-bold"
+                    title={audioUnlocked ? 'Probar sonido de alerta' : 'Activar y probar sonido'}
+                  >
+                    <span>{audioUnlocked ? '🔊' : '🔇'}</span>
+                    <span>{audioUnlocked ? 'Test' : 'Activar'}</span>
+                  </button>
                   {notifications.length > 0 && (
                     <button
                       onClick={clearAllNotifications}
