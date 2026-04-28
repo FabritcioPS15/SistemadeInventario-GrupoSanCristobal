@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef} from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Forzar importación para evitar caché
 
-import {  Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle } from 'lucide-react';
+import { Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle } from 'lucide-react';
 
 import { supabase, SutranVisit } from '../lib/supabase';
 
@@ -118,7 +118,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
     const currentPath = location.pathname;
 
-    
+
 
     // Detectar página actual para acciones específicas
 
@@ -148,7 +148,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         }
 
-        
+
 
         if (currentPath.startsWith('/tickets')) {
 
@@ -176,7 +176,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         }
 
-        
+
 
         if (currentPath.startsWith('/inventory')) {
 
@@ -206,7 +206,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         }
 
-        
+
 
         if (currentPath.startsWith('/users')) {
 
@@ -234,7 +234,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         }
 
-        
+
 
         if (currentPath.startsWith('/flota-vehicular')) {
 
@@ -262,7 +262,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         }
 
-        
+
 
         if (currentPath.startsWith('/sutran')) {
 
@@ -288,7 +288,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         }
 
-        
+
 
         if (currentPath.startsWith('/maintenance')) {
 
@@ -314,7 +314,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         }
 
-        
+
 
         if (currentPath.startsWith('/cameras')) {
 
@@ -344,7 +344,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         }
 
-        
+
 
         if (currentPath.startsWith('/locations') || currentPath.startsWith('/sedes')) {
 
@@ -374,7 +374,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         }
 
-        
+
 
         if (currentPath.startsWith('/servers')) {
 
@@ -402,7 +402,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         }
 
-        
+
 
         // Para otras páginas, no mostrar acciones por ahora
 
@@ -410,11 +410,11 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
     };
 
-    
+
 
     const pageActions = getPageActions();
 
-    
+
 
     // Estado para forzar actualización del breadcrumb
 
@@ -430,7 +430,6 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
     const actionsRef = useRef<HTMLDivElement>(null);
 
-    const [showNotifications, setShowNotifications] = useState(false);
 
     const [showUserSettings, setShowUserSettings] = useState(false);
 
@@ -442,7 +441,6 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
     const [userLocation, setUserLocation] = useState<string>('');
 
-    const notificationRef = useRef<HTMLDivElement>(null);
 
     const settingsRef = useRef<HTMLDivElement>(null);
 
@@ -480,7 +478,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
 
 
-    
+
 
     // Temp state for editing user profile
 
@@ -650,11 +648,6 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         const handleClickOutside = (event: MouseEvent) => {
 
-            if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
-
-                setShowNotifications(false);
-
-            }
 
             if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
 
@@ -764,253 +757,253 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
     return (
 
-            <header className={`h-14 bg-white text-gray-800 flex items-center justify-between sticky top-0 z-[100] shadow-lg border-b border-gray-200 transition-all duration-300 ${sidebarCollapsed ? 'lg:px-6 px-6' : 'lg:px-6 px-6'}`}>
+        <header className={`h-14 bg-white text-gray-800 flex items-center justify-between sticky top-0 z-[100] shadow-lg border-b border-gray-200 transition-all duration-300 ${sidebarCollapsed ? 'lg:px-6 px-6' : 'lg:px-6 px-6'}`}>
 
-                <div className="flex items-center gap-4 lg:gap-8 overflow-hidden">
+            <div className="flex items-center gap-4 lg:gap-8 overflow-hidden">
 
-                    <button
+                <button
 
-                        className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors lg:hidden shrink-0 text-gray-700"
+                    className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors lg:hidden shrink-0 text-gray-700"
 
-                        onClick={onMobileMenuClick}
+                    onClick={onMobileMenuClick}
 
-                    >
+                >
 
-                        <Menu size={20} />
+                    <Menu size={20} />
 
-                    </button>
-
-
-
-                    {/* Improved Breadcrumbs with better UX - Desktop Only */}
-
-                    <nav key={breadcrumbKey} className={`hidden lg:flex items-center gap-2 overflow-hidden min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-0' : 'lg:ml-0'}`} aria-label="Navegación de migajas de pan">
-
-                        {showBreadcrumbs && (
-
-                            <>
-
-                                {/* Sistema GSC Root */}
-
-                                <div className="flex items-center gap-1.5 shrink-0">
-
-                                    <button
-
-                                        onClick={() => navigate('/')}
-
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-800 to-slate-700 text-white rounded-md shadow-sm hover:from-slate-700 hover:to-slate-600 transition-all"
-
-                                        title="Navegar al Dashboard"
-
-                                    >
-
-                                        <div className="w-2 h-2 bg-green-400 rounded-full" />
-
-                                        <span className="text-[11px] font-black uppercase tracking-widest">SISTEMA GSC</span>
-
-                                    </button>
-
-                                </div>
+                </button>
 
 
 
-                                <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                {/* Improved Breadcrumbs with better UX - Desktop Only */}
+
+                <nav key={breadcrumbKey} className={`hidden lg:flex items-center gap-2 overflow-hidden min-w-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:ml-0' : 'lg:ml-0'}`} aria-label="Navegación de migajas de pan">
+
+                    {showBreadcrumbs && (
+
+                        <>
+
+                            {/* Sistema GSC Root */}
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+
+                                <button
+
+                                    onClick={() => navigate('/')}
+
+                                    className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-slate-800 to-slate-700 text-white rounded-md shadow-sm hover:from-slate-700 hover:to-slate-600 transition-all"
+
+                                    title="Navegar al Dashboard"
+
+                                >
+
+                                    <div className="w-2 h-2 bg-green-400 rounded-full" />
+
+                                    <span className="text-[11px] font-black uppercase tracking-widest">SISTEMA GSC</span>
+
+                                </button>
+
+                            </div>
 
 
 
-                                {/* Ticket Icon for Ticket Routes */}
+                            <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
 
-                                {isTicketsRoute && (
 
-                                    <>
 
-                                        <div className="flex items-center gap-1.5 shrink-0">
+                            {/* Ticket Icon for Ticket Routes */}
+
+                            {isTicketsRoute && (
+
+                                <>
+
+                                    <div className="flex items-center gap-1.5 shrink-0">
+
+                                        <button
+
+                                            onClick={() => navigate('/tickets')}
+
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md shadow-sm hover:bg-blue-200 transition-all"
+
+                                            title="Navegar a Tickets"
+
+                                        >
+
+                                            <Ticket size={14} />
+
+                                            <span className="text-[11px] font-black uppercase tracking-widest">TICKETS</span>
+
+                                        </button>
+
+                                    </div>
+
+                                    <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+
+                                </>
+
+                            )}
+
+
+
+                            {/* Main Module */}
+
+                            {pathnames.length > 0 ? (
+
+                                <>
+
+                                    <div className="flex items-center gap-1.5 shrink-0">
+
+                                        {pathnames.length === 1 ? (
 
                                             <button
 
-                                                onClick={() => navigate('/tickets')}
+                                                onClick={() => navigate(`/${pathnames[0]}`)}
 
-                                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md shadow-sm hover:bg-blue-200 transition-all"
+                                                className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
 
-                                                title="Navegar a Tickets"
+                                                title={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
 
                                             >
 
-                                                <Ticket size={14} />
+                                                <span>{ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
 
-                                                <span className="text-[11px] font-black uppercase tracking-widest">TICKETS</span>
+                                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
 
                                             </button>
 
-                                        </div>
+                                        ) : (
 
-                                        <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                                            <button
 
-                                    </>
+                                                onClick={() => navigate(`/${pathnames[0]}`)}
 
-                                )}
+                                                className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
 
+                                                title={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
 
+                                                aria-label={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
 
-                                {/* Main Module */}
+                                            >
 
-                                {pathnames.length > 0 ? (
+                                                <span className="truncate">{ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
 
-                                    <>
+                                            </button>
 
-                                        <div className="flex items-center gap-1.5 shrink-0">
+                                        )}
 
-                                            {pathnames.length === 1 ? (
-
-                                                <button
-
-                                                    onClick={() => navigate(`/${pathnames[0]}`)}
-
-                                                    className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
-
-                                                    title={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
-
-                                                >
-
-                                                    <span>{ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-
-                                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-
-                                                </button>
-
-                                            ) : (
-
-                                                <button
-
-                                                    onClick={() => navigate(`/${pathnames[0]}`)}
-
-                                                    className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-
-                                                    title={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
-
-                                                    aria-label={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
-
-                                                >
-
-                                                    <span className="truncate">{ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
-
-                                                </button>
-
-                                            )}
-
-                                        </div>
+                                    </div>
 
 
 
-                                        {/* Sub-routes */}
+                                    {/* Sub-routes */}
 
-                                        {pathnames.length > 1 && (
+                                    {pathnames.length > 1 && (
 
-                                            <>
+                                        <>
 
-                                                <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                                            <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
 
-                                                {pathnames.slice(1).map((name, index) => {
+                                            {pathnames.slice(1).map((name, index) => {
 
-                                                    const isLast = index === pathnames.slice(1).length - 1;
+                                                const isLast = index === pathnames.slice(1).length - 1;
 
-                                                    const fullPath = `/${pathnames.slice(0, index + 2).join('/')}`;
+                                                const fullPath = `/${pathnames.slice(0, index + 2).join('/')}`;
 
-                                                    const label = ROUTE_LABELS[name.toLowerCase()] || name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                                const label = ROUTE_LABELS[name.toLowerCase()] || name.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-                                                    
 
-                                                    return (
 
-                                                        <div key={fullPath} className="flex items-center gap-1.5 shrink-0 min-w-0">
+                                                return (
 
-                                                            {isLast ? (
+                                                    <div key={fullPath} className="flex items-center gap-1.5 shrink-0 min-w-0">
+
+                                                        {isLast ? (
+
+                                                            <button
+
+                                                                onClick={() => navigate(fullPath)}
+
+                                                                className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[180px] sm:max-w-[250px]"
+
+                                                                title={`Navegar a ${label}`}
+
+                                                            >
+
+                                                                <span className="truncate">{label}</span>
+
+                                                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
+
+                                                            </button>
+
+                                                        ) : (
+
+                                                            <>
+
+                                                                <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
 
                                                                 <button
 
                                                                     onClick={() => navigate(fullPath)}
 
-                                                                    className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[180px] sm:max-w-[250px]"
+                                                                    className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[100px] sm:max-w-[150px] group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
 
                                                                     title={`Navegar a ${label}`}
+
+                                                                    aria-label={`Navegar a ${label}`}
 
                                                                 >
 
                                                                     <span className="truncate">{label}</span>
 
-                                                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-
                                                                 </button>
 
-                                                            ) : (
+                                                            </>
 
-                                                                <>
+                                                        )}
 
-                                                                    <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                                                    </div>
 
-                                                                    <button
+                                                );
 
-                                                                        onClick={() => navigate(fullPath)}
+                                            })}
 
-                                                                        className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[100px] sm:max-w-[150px] group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                        </>
 
-                                                                        title={`Navegar a ${label}`}
+                                    )}
 
-                                                                        aria-label={`Navegar a ${label}`}
+                                </>
 
-                                                                    >
+                            ) : (
 
-                                                                        <span className="truncate">{label}</span>
+                                /* Dashboard como módulo actual cuando no hay pathnames */
 
-                                                                    </button>
+                                <button
 
-                                                                </>
+                                    onClick={() => navigate('/')}
 
-                                                            )}
+                                    className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
 
-                                                        </div>
+                                    title="Navegar al Dashboard"
 
-                                                    );
+                                >
 
-                                                })}
+                                    <span>DASHBOARD</span>
 
-                                            </>
+                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
 
-                                        )}
+                                </button>
 
-                                    </>
+                            )}
 
-                                ) : (
+                        </>
 
-                                    /* Dashboard como módulo actual cuando no hay pathnames */
+                    )}
 
-                                    <button
-
-                                        onClick={() => navigate('/')}
-
-                                        className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
-
-                                        title="Navegar al Dashboard"
-
-                                    >
-
-                                        <span>DASHBOARD</span>
-
-                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-
-                                    </button>
-
-                                )}
-
-                            </>
-
-                        )}
-
-                    </nav>
+                </nav>
 
 
 
-                    
+
 
             </div>
 
@@ -1046,7 +1039,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                             <div className="absolute left-1/3 sm:right-0 top-full mt-2 w-80 sm:w-72 bg-[#001e3c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-[200] animate-in fade-in slide-in-from-top-2 duration-200 sm:left-auto left-1/3 sm:translate-x-0 -translate-x-1/3">
 
-                                 {pageActions.showSearch !== false && (
+                                {pageActions.showSearch !== false && (
 
                                     <div className="p-4 border-b border-white/10">
 
@@ -1126,7 +1119,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                     {/* Sistema de Notificaciones - FUNCIONANDO */}
 
-                    
+
 
                     <NotificationsFinal />
 
@@ -1169,106 +1162,68 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                 <div className="p-4 border-b border-gray-100 bg-[#001529] text-white">
 
                                     <div className="flex items-center gap-3">
-
                                         <div className="p-2 bg-white/20 rounded-lg">
-
                                             <AlertTriangle size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-sm">Visitas SUTRAN</h4>
+                                            <p className="text-[10px] opacity-80">Próximas visitas programadas</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-4 space-y-3 max-h-96 overflow-y-auto"> {sutranNotifications.length > 0 ? (sutranNotifications.map((visit) => (
+                                    <div
+                                        key={visit.id}
+                                        onClick={() => { navigate('/sutran'); setShowSutranPopup(false); }}
+                                        className="p-3 bg-orange-50 rounded-lg border border-orange-100 hover:bg-orange-100 transition-colors cursor-pointer"
+                                    >
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div className="flex-1">
+                                                <p className="text-xs font-bold text-gray-900 mb-1">{visit.location_name}</p>
+                                                <p className="text-[10px] text-gray-600">Inspector: {visit.inspector_name}</p>
+                                            </div>
 
+                                            <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-full ${visit.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                                visit.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                                                    'bg-green-100 text-green-700'
+                                                }`}>
+                                                {visit.status === 'pending' ? 'Pendiente' : visit.status === 'in_progress' ? 'En Progreso' : 'Completada'}
+                                            </span>
                                         </div>
 
-                                        <div>
+                                        <div className="flex items-center gap-2">
 
-                                            <h4 className="font-bold text-sm">Visitas SUTRAN</h4>
+                                            <Calendar size={12} className="text-orange-600" />
 
-                                            <p className="text-[10px] opacity-80">Próximas visitas programadas</p>
+                                            <span className="text-xs font-bold text-orange-700">
+
+                                                {new Date(visit.visit_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+
+                                            </span>
+
+                                            <span className="text-[10px] text-gray-500">•</span>
+
+                                            <span className="text-[10px] font-medium text-gray-600">{getDaysRemaining(visit.visit_date)}</span>
 
                                         </div>
 
                                     </div>
 
-                                </div>
+                                ))
 
+                                ) : (
 
+                                    <div className="text-center py-6">
 
-                                <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
+                                        <AlertTriangle size={32} className="text-gray-300 mx-auto mb-2" />
 
-                                    {sutranNotifications.length > 0 ? (
+                                        <p className="text-sm text-gray-500">No hay visitas próximas</p>
 
-                                        sutranNotifications.map((visit) => (
+                                        <p className="text-xs text-gray-400 mt-1">en los próximos 30 días</p>
 
-                                            <div
+                                    </div>
 
-                                                key={visit.id}
-
-                                                onClick={() => { navigate('/sutran'); setShowSutranPopup(false); }}
-
-                                                className="p-3 bg-orange-50 rounded-lg border border-orange-100 hover:bg-orange-100 transition-colors cursor-pointer"
-
-                                            >
-
-                                                <div className="flex items-start justify-between mb-2">
-
-                                                    <div className="flex-1">
-
-                                                        <p className="text-xs font-bold text-gray-900 mb-1">{visit.location_name}</p>
-
-                                                        <p className="text-[10px] text-gray-600">Inspector: {visit.inspector_name}</p>
-
-                                                    </div>
-
-                                                    <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-full ${
-
-                                                        visit.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-
-                                                        visit.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-
-                                                        'bg-green-100 text-green-700'
-
-                                                    }`}>
-
-                                                        {visit.status === 'pending' ? 'Pendiente' :
-
-                                                         visit.status === 'in_progress' ? 'En Progreso' :
-
-                                                         'Completada'}
-
-                                                    </span>
-
-                                                </div>
-
-                                                <div className="flex items-center gap-2">
-
-                                                    <Calendar size={12} className="text-orange-600" />
-
-                                                    <span className="text-xs font-bold text-orange-700">
-
-                                                        {new Date(visit.visit_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-
-                                                    </span>
-
-                                                    <span className="text-[10px] text-gray-500">•</span>
-
-                                                    <span className="text-[10px] font-medium text-gray-600">{getDaysRemaining(visit.visit_date)}</span>
-
-                                                </div>
-
-                                            </div>
-
-                                        ))
-
-                                    ) : (
-
-                                        <div className="text-center py-6">
-
-                                            <AlertTriangle size={32} className="text-gray-300 mx-auto mb-2" />
-
-                                            <p className="text-sm text-gray-500">No hay visitas próximas</p>
-
-                                            <p className="text-xs text-gray-400 mt-1">en los próximos 30 días</p>
-
-                                        </div>
-
-                                    )}
+                                )}
 
                                 </div>
 
@@ -1356,13 +1311,9 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                                 className="w-full h-full object-cover"
 
-                                                poster="/video-poster.jpg"
-
                                             >
 
                                                 <source src="/camaras-tutorial.mp4" type="video/mp4" />
-
-                                                <source src="/camaras-tutorial.webm" type="video/webm" />
 
                                                 Tu navegador no soporta el elemento de video.
 
@@ -1610,7 +1561,17 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                 </div>
 
-                            </div>  
+                                <div className="py-2 text-center bg-gray-50 border-t border-gray-100">
+
+                                    <p className="text-[7px] font-bold text-gray-300 uppercase tracking-[2px]">
+
+                                        SISTEMA GSC • DESARROLLADO POR FABRITCIO PEÑA
+
+                                    </p>
+
+                                </div>
+
+                            </div>
 
                         )}
 
@@ -1620,15 +1581,15 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
             </div>
 
-            </header>
+        </header>
 
     );
 
 }
 
-                                                                                                                                                                                                                                    
 
-                                                                                                                                                                                                                                                                                                                                                                                
 
-                                                                
+
+
+
 

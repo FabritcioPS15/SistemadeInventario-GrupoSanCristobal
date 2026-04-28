@@ -130,9 +130,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
           hasSubmenu: true,
           submenu: [
             { id: 'inventory-all', label: 'Ver Todo', path: '/inventory/all' },
-            { 
-              id: 'inventory-computo', 
-              label: 'Cómputo y TI', 
+            {
+              id: 'inventory-computo',
+              label: 'Cómputo y TI',
               path: '/inventory/computo-ti',
               hasSubmenu: true,
               submenu: [
@@ -144,9 +144,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                 { id: 'sub-redes', label: 'Redes y DVR', path: '/inventory/computo-ti/redes' },
               ]
             },
-            { 
-              id: 'inventory-biometricos', 
-              label: 'Biométricos', 
+            {
+              id: 'inventory-biometricos',
+              label: 'Biométricos',
               path: '/inventory/biometricos-control',
               hasSubmenu: true,
               submenu: [
@@ -154,9 +154,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                 { id: 'sub-bio-huella', label: 'Control de Huella', path: '/inventory/biometricos-control/huella' },
               ]
             },
-            { 
-              id: 'inventory-medicos', 
-              label: 'Equipos Médicos', 
+            {
+              id: 'inventory-medicos',
+              label: 'Equipos Médicos',
               path: '/inventory/equipos-medicos',
               hasSubmenu: true,
               submenu: [
@@ -166,9 +166,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                 { id: 'sub-med-eval', label: 'Evaluación Técnica', path: '/inventory/equipos-medicos/evaluacion' },
               ]
             },
-            { 
-              id: 'inventory-mobiliario', 
-              label: 'Mobiliario', 
+            {
+              id: 'inventory-mobiliario',
+              label: 'Mobiliario',
               path: '/inventory/mobiliario',
               hasSubmenu: true,
               submenu: [
@@ -176,9 +176,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                 { id: 'sub-mob-infra', label: 'Infraestructura', path: '/inventory/mobiliario/infraestructura' },
               ]
             },
-            { 
-              id: 'inventory-seguridad', 
-              label: 'Seguridad', 
+            {
+              id: 'inventory-seguridad',
+              label: 'Seguridad',
               path: '/inventory/seguridad',
               hasSubmenu: true,
               submenu: [
@@ -186,9 +186,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                 { id: 'sub-seg-alarmas', label: 'Alarmas y Sensores', path: '/inventory/seguridad/alarmas' },
               ]
             },
-            { 
-              id: 'inventory-utiles', 
-              label: 'Útiles de Oficina', 
+            {
+              id: 'inventory-utiles',
+              label: 'Útiles de Oficina',
               path: '/inventory/utiles-oficina',
               hasSubmenu: true,
               submenu: [
@@ -395,6 +395,13 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
               <LogOut size={20} />
             </button>
           )}
+          {!collapsed && (
+            <div className="mt-1 text-center opacity-40 hover:opacity-100 transition-opacity duration-300">
+              <p className="text-[8px] font-bold text-white/20 uppercase tracking-[1px] cursor-default">
+                SISTEMA GSC • <span className="text-blue-500/30">FABRPS15</span>
+              </p>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -402,9 +409,8 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       {hoveredItem && window.innerWidth >= 1024 && (
         <div
           ref={subMenuRef}
-          className={`fixed z-[120] bg-[#1e293b] border border-blue-500/20 shadow-2xl rounded-2xl transition-all duration-300 animate-in fade-in slide-in-from-left-2 duration-200 ${
-            activeSubmenuItems && activeSubmenuItems.length > 0 ? 'py-2 min-w-[200px]' : 'py-1.5 px-3'
-          }`}
+          className={`fixed z-[120] bg-[#1e293b] border border-blue-500/20 shadow-2xl rounded-2xl transition-all duration-300 animate-in fade-in slide-in-from-left-2 duration-200 ${activeSubmenuItems && activeSubmenuItems.length > 0 ? 'py-2 min-w-[200px]' : 'py-1.5 px-3'
+            }`}
           style={{
             top: adjustedTop || menuTop,
             left: collapsed ? '5.5rem' : '18.5rem',
@@ -434,25 +440,25 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                     >
                       {sub.label}
                     </NavLink>
-                {sub.hasSubmenu && (
-                  <div className="ml-4 mt-1 border-l border-white/10 pl-2 space-y-0.5">
-                    {sub.submenu?.map(deepSub => (
-                      <NavLink
-                        key={deepSub.id}
-                        to={deepSub.path}
-                        className={({ isActive }) => `
+                    {sub.hasSubmenu && (
+                      <div className="ml-4 mt-1 border-l border-white/10 pl-2 space-y-0.5">
+                        {sub.submenu?.map(deepSub => (
+                          <NavLink
+                            key={deepSub.id}
+                            to={deepSub.path}
+                            className={({ isActive }) => `
                           block px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all
                           ${isActive ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}
                         `}
-                      >
-                        {deepSub.label}
-                      </NavLink>
-                    ))}
+                          >
+                            {deepSub.label}
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
             </>
           ) : (
             <div className="flex items-center justify-center">

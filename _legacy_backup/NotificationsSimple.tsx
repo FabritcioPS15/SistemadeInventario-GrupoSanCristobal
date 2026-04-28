@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../src/contexts/AuthContext';
+import { supabase } from '../src/lib/supabase';
 
 type Notification = {
   id: string;
@@ -22,19 +22,19 @@ const playNotificationSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
-    
+
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
-    
+
     oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(800, audioContext.currentTime + 0.1);
-    
+
     gainNode.gain.setValueAtTime(1.0, audioContext.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-    
+
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.3);
-    
+
     // Segundo beep
     setTimeout(() => {
       try {
@@ -48,7 +48,7 @@ const playNotificationSound = () => {
         gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
         osc2.start(audioContext.currentTime);
         osc2.stop(audioContext.currentTime + 0.2);
-      } catch (e) {}
+      } catch (e) { }
     }, 400);
   } catch (error) {
     console.error('Error reproduciendo sonido:', error);
@@ -83,15 +83,15 @@ export default function NotificationsSimple() {
         (payload) => {
           console.log('🔔 Nueva notificación recibida:', payload.new);
           const newNotification = payload.new as Notification;
-          
+
           // Agregar notificación
           setNotifications(prev => [newNotification, ...prev].slice(0, 50));
           setUnreadCount(prev => prev + 1);
-          
+
           // Reproducir sonido
           console.log('🔊 Reproduciendo sonido...');
           playNotificationSound();
-          
+
           // Mostrar notificación del navegador
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(newNotification.title, {
@@ -143,7 +143,7 @@ export default function NotificationsSimple() {
         .update({ read: true })
         .eq('id', notificationId);
 
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
@@ -187,7 +187,7 @@ export default function NotificationsSimple() {
                 <span className="text-xs text-red-600 font-medium">{unreadCount} nuevas</span>
               )}
             </div>
-            
+
             <div className="max-h-64 overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="p-8 text-center">
@@ -199,15 +199,13 @@ export default function NotificationsSimple() {
                 notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${
-                      !notification.read ? 'bg-blue-50' : ''
-                    }`}
+                    className={`p-4 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${!notification.read ? 'bg-blue-50' : ''
+                      }`}
                     onClick={() => markAsRead(notification.id)}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                        !notification.read ? 'bg-blue-500' : 'bg-slate-300'
-                      }`} />
+                      <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!notification.read ? 'bg-blue-500' : 'bg-slate-300'
+                        }`} />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-slate-900 text-sm">{notification.title}</p>
                         <p className="text-slate-600 text-xs mt-1">{notification.message}</p>
@@ -220,7 +218,7 @@ export default function NotificationsSimple() {
                 ))
               )}
             </div>
-            
+
             {notifications.length > 0 && (
               <div className="p-3 border-t border-slate-100">
                 <button

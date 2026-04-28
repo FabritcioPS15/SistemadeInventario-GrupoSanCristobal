@@ -42,6 +42,7 @@ export default function Cameras({ subview }: CamerasProps) {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [storedDisks, setStoredDisks] = useState<StoredDisk[]>([]);
+  const [editingDisk, setEditingDisk] = useState<StoredDisk | undefined>();
 
   useEffect(() => {
     // Show welcome popup only once per session or on first entry
@@ -145,7 +146,9 @@ export default function Cameras({ subview }: CamerasProps) {
 
   const onSave = async () => {
     setShowForm(false);
+    setShowStoredDiskForm(false);
     setEditing(undefined);
+    setEditingDisk(undefined);
     await Promise.all([fetchCameras(), fetchStoredDisks()]);
   };
 
@@ -954,12 +957,25 @@ export default function Cameras({ subview }: CamerasProps) {
                         <td className="px-6 py-5 text-center">
                           <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                              {canEdit() && (
-                               <button 
-                                 onClick={() => handleDeleteDisk(disk.id)}
-                                 className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"
-                               >
-                                 <Trash2 size={14} />
-                               </button>
+                               <>
+                                 <button 
+                                   onClick={() => {
+                                     setEditingDisk(disk);
+                                     setShowStoredDiskForm(true);
+                                   }}
+                                   className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"
+                                   title="Editar Disco"
+                                 >
+                                   <Edit size={14} />
+                                 </button>
+                                 <button 
+                                   onClick={() => handleDeleteDisk(disk.id)}
+                                   className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"
+                                   title="Eliminar Disco"
+                                 >
+                                   <Trash2 size={14} />
+                                 </button>
+                               </>
                              )}
                           </div>
                         </td>
@@ -1414,8 +1430,12 @@ export default function Cameras({ subview }: CamerasProps) {
       )}
         {showStoredDiskForm && (
           <StoredDiskForm
-            onClose={() => setShowStoredDiskForm(false)}
-            onSuccess={() => fetchCameras()}
+            onClose={() => {
+              setShowStoredDiskForm(false);
+              setEditingDisk(undefined);
+            }}
+            onSuccess={onSave}
+            editDisk={editingDisk}
           />
         )}
       </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Wrench, Clock, AlertTriangle, CheckCircle, Edit, Trash2, Eye, Star, X, MapPin, ShieldCheck, Package, LayoutGrid, List as ListIcon, Search } from 'lucide-react';
+import { Plus, Wrench, Edit, Trash2, Eye, X, MapPin, ShieldCheck, Package, LayoutGrid, List as ListIcon, Search } from 'lucide-react';
 import { supabase, AssetWithDetails, Location } from '../lib/supabase';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
 import { useAuth } from '../contexts/AuthContext';

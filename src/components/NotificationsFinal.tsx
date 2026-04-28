@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bell, Clock,Plus, CheckCircle, Archive, User, MapPin, Calendar, CalendarDays, CheckSquare, Trash2, X } from 'lucide-react';
+import { Bell, Clock, Plus, CheckCircle, Archive, User, MapPin, Calendar, CalendarDays, CheckSquare, Trash2, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -24,7 +24,7 @@ const unlockAudioContext = () => {
   try {
     const ctx = getAudioContext();
     if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {/* silencioso */});
+      ctx.resume().catch(() => {/* silencioso */ });
     }
     // Reproducir un buffer silencioso para activar el contexto en iOS/Safari
     const buf = ctx.createBuffer(1, 1, 22050);
@@ -32,7 +32,7 @@ const unlockAudioContext = () => {
     src.buffer = buf;
     src.connect(ctx.destination);
     src.start(0);
-  } catch (_) {/* ignorar */}
+  } catch (_) {/* ignorar */ }
 };
 
 /** Alerta de nuevo ticket — 3 dings ascendentes, fuerte y escandaloso. */
@@ -44,16 +44,16 @@ const playNotificationSound = () => {
       // Compresor para empujar el volumen al techo
       const comp = ctx.createDynamicsCompressor();
       comp.threshold.setValueAtTime(-10, ctx.currentTime);
-      comp.ratio.setValueAtTime(12,      ctx.currentTime);
-      comp.attack.setValueAtTime(0.001,  ctx.currentTime);
-      comp.release.setValueAtTime(0.15,  ctx.currentTime);
+      comp.ratio.setValueAtTime(12, ctx.currentTime);
+      comp.attack.setValueAtTime(0.001, ctx.currentTime);
+      comp.release.setValueAtTime(0.15, ctx.currentTime);
       comp.connect(ctx.destination);
 
       // 3 dings con tono ascendente: Do5 → Mi5 → La5
       const notes = [
         { freq: 523, offset: 0.0 },  // Do5
         { freq: 659, offset: 0.45 }, // Mi5
-        { freq: 880, offset: 0.9  }, // La5
+        { freq: 880, offset: 0.9 }, // La5
       ];
 
       notes.forEach(({ freq, offset }) => {
@@ -61,7 +61,7 @@ const playNotificationSound = () => {
 
         // Mezcla sine + square para un tono más rico y escandaloso
         ['sine', 'square'].forEach((type, i) => {
-          const osc  = ctx.createOscillator();
+          const osc = ctx.createOscillator();
           const gain = ctx.createGain();
 
           osc.type = type as OscillatorType;
@@ -69,7 +69,7 @@ const playNotificationSound = () => {
 
           // Square más bajo para no distorsionar
           const vol = type === 'sine' ? 1.2 : 0.35;
-          gain.gain.setValueAtTime(0,   t);
+          gain.gain.setValueAtTime(0, t);
           gain.gain.linearRampToValueAtTime(vol, t + 0.008);
           gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
 
@@ -82,7 +82,7 @@ const playNotificationSound = () => {
     };
 
     if (ctx.state === 'suspended') {
-      ctx.resume().then(fire).catch(() => {});
+      ctx.resume().then(fire).catch(() => { });
     } else {
       fire();
     }
@@ -111,7 +111,7 @@ export default function NotificationsFinal() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('unread');
   // true una vez que el AudioContext fue desbloqueado por gesto del usuario
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   // IDs de notificaciones ya conocidas — no disparan sonido al iniciar
@@ -136,7 +136,7 @@ export default function NotificationsFinal() {
       unlockAudioContext();
       setAudioUnlocked(true);
       playNotificationSound();
-    } catch (_) {/* ignorar */}
+    } catch (_) {/* ignorar */ }
   };
 
   useEffect(() => {
@@ -158,14 +158,14 @@ export default function NotificationsFinal() {
         (payload) => {
           console.log('🔔 RECIBIDO EVENTO DE SUPABASE:', payload);
           const newNotification = payload.new as Notification;
-          
+
           console.log('🔔 NUEVA NOTIFICACIÓN RECIBIDA:', newNotification);
           console.log('🔊 Intentando reproducir sonido...');
-          
+
           // Agregar la notificación inmediatamente
           setNotifications(prev => [newNotification, ...prev].slice(0, 50));
           setUnreadCount(prev => prev + 1);
-          
+
           // Reproducir sonido de notificación con volumen máximo
           try {
             playNotificationSound();
@@ -173,7 +173,7 @@ export default function NotificationsFinal() {
           } catch (error) {
             console.error('❌ Error ejecutando sonido:', error);
           }
-          
+
           // Mostrar notificación del navegador
           try {
             if ('Notification' in window && Notification.permission === 'granted') {
@@ -197,7 +197,7 @@ export default function NotificationsFinal() {
           const autoRefreshInterval = setInterval(() => {
             fetchNotifications();
           }, 5000); // Cada 5 segundos
-          
+
           (window as any).notificationRefreshInterval = autoRefreshInterval;
         }
       });
@@ -213,12 +213,12 @@ export default function NotificationsFinal() {
 
     return () => {
       supabase.removeChannel(channel);
-      
+
       if ((window as any).notificationRefreshInterval) {
         clearInterval((window as any).notificationRefreshInterval);
         delete (window as any).notificationRefreshInterval;
       }
-      
+
       clearInterval(pollInterval);
     };
   }, [user?.id, user?.role]);
@@ -276,10 +276,10 @@ export default function NotificationsFinal() {
       }
 
       // Actualizar estado local inmediatamente
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
-      
+
       // Actualizar contador de no leídas
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
@@ -289,7 +289,7 @@ export default function NotificationsFinal() {
 
   const markAllAsRead = async () => {
     const unreadNotifications = notifications.filter(n => !n.read);
-    
+
     if (unreadNotifications.length === 0) return;
 
     try {
@@ -303,10 +303,10 @@ export default function NotificationsFinal() {
       }
 
       // Actualizar estado local
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => ({ ...n, read: true }))
       );
-      
+
       setUnreadCount(0);
     } catch (error) {
       // Error handling
@@ -356,10 +356,15 @@ export default function NotificationsFinal() {
     }
   };
 
-  // Marcar todas como leídas cuando se abre el dropdown
+  // Marcar todas como leídas cuando se CIERRA el dropdown
   useEffect(() => {
-    if (showDropdown && unreadCount > 0) {
+    if (!showDropdown && unreadCount > 0) {
       markAllAsRead();
+    }
+
+    // Al abrir el dropdown, nos aseguramos de estar en la pestaña de Nuevas
+    if (showDropdown) {
+      setActiveTab('unread');
     }
   }, [showDropdown]);
 
@@ -368,22 +373,22 @@ export default function NotificationsFinal() {
       case 'ticket_created':
         return (
           <div className="relative">
-            <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+            <div className="w-5 h-5 bg-blue-500 rounded-full"></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Plus className="w-2.5 h-2.5 text-white" />
+              <Plus className="w-3 h-3 text-white" />
             </div>
           </div>
         );
       case 'ticket_attended':
-        return <Clock className="w-4 h-4 text-orange-500" />;
+        return <Clock className="w-5 h-5 text-orange-500" />;
       case 'ticket_resolved':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'ticket_closed':
-        return <Archive className="w-4 h-4 text-gray-500" />;
+        return <Archive className="w-5 h-5 text-gray-500" />;
       case 'sutran_visit_scheduled':
-        return <CalendarDays className="w-4 h-4 text-purple-500" />;
+        return <CalendarDays className="w-5 h-5 text-purple-500" />;
       case 'sutran_visit_completed':
-        return <CheckSquare className="w-4 h-4 text-green-600" />;
+        return <CheckSquare className="w-5 h-5 text-green-600" />;
       default:
         return <div className="w-4 h-4 bg-slate-500 rounded-full"></div>;
     }
@@ -446,7 +451,7 @@ export default function NotificationsFinal() {
         onClick={() => {
           // El clic en la campana ES un gesto del usuario → desbloquear audio aquí.
           if (!audioUnlocked) {
-            try { unlockAudioContext(); setAudioUnlocked(true); } catch (_) {}
+            try { unlockAudioContext(); setAudioUnlocked(true); } catch (_) { }
           }
           setShowDropdown(!showDropdown);
         }}
@@ -499,36 +504,33 @@ export default function NotificationsFinal() {
                   )}
                 </div>
               </div>
-              
+
               {/* Tabs */}
               <div className="flex gap-2 border-b border-slate-100">
                 <button
                   onClick={() => setActiveTab('all')}
-                  className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
-                    activeTab === 'all' 
-                      ? 'text-blue-600 border-blue-600' 
-                      : 'text-slate-500 border-transparent hover:text-slate-700'
-                  }`}
+                  className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${activeTab === 'all'
+                    ? 'text-blue-600 border-blue-600'
+                    : 'text-white border-transparent hover:text-slate-700'
+                    }`}
                 >
                   Todas ({notifications.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('unread')}
-                  className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
-                    activeTab === 'unread' 
-                      ? 'text-blue-600 border-blue-600' 
-                      : 'text-slate-500 border-transparent hover:text-slate-700'
-                  }`}
+                  className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${activeTab === 'unread'
+                    ? 'text-blue-600 border-blue-600'
+                    : 'text-white border-transparent hover:text-slate-700'
+                    }`}
                 >
                   Nuevas ({unreadCount})
                 </button>
                 <button
                   onClick={() => setActiveTab('read')}
-                  className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
-                    activeTab === 'read' 
-                      ? 'text-blue-600 border-blue-600' 
-                      : 'text-slate-500 border-transparent hover:text-slate-700'
-                  }`}
+                  className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${activeTab === 'read'
+                    ? 'text-blue-600 border-blue-600'
+                    : 'text-white border-transparent hover:text-slate-700'
+                    }`}
                 >
                   Leídas ({notifications.length - unreadCount})
                 </button>
@@ -545,7 +547,7 @@ export default function NotificationsFinal() {
                 <div className="p-8 text-center">
                   <Bell className="w-12 h-12 text-red-300 mx-auto mb-3" />
                   <p className="text-red-600 font-medium">Error al cargar notificaciones</p>
-                  <button 
+                  <button
                     onClick={fetchNotifications}
                     className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
@@ -557,38 +559,16 @@ export default function NotificationsFinal() {
                   <Bell className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                   <p className="text-slate-600 font-medium">No tienes notificaciones</p>
                   <p className="text-xs text-slate-500 mt-2">Las notificaciones aparecerán aquí cuando se creen, atiendan o resuelvan tickets</p>
-                  <button 
-                    onClick={() => {
-                      // Crear notificación de prueba
-                      const testNotification = {
-                        id: 'test-' + Date.now(),
-                        type: 'ticket_created' as const,
-                        title: '🎫 Notificación de Prueba',
-                        message: 'Esta es una notificación de prueba para verificar el sistema',
-                        user_name: user?.full_name || 'Usuario',
-                        location_name: 'Oficina Principal',
-                        target_role: user?.role || '',
-                        read: false,
-                        created_at: new Date().toISOString()
-                      };
-                      setNotifications([testNotification]);
-                      setUnreadCount(1);
-                    }}
-                    className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Crear Notificación de Prueba
-                  </button>
                 </div>
               ) : (
                 filteredNotifications.map(notification => (
                   <div
                     key={notification.id}
-                    className={`p-3 sm:p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                      !notification.read ? 'bg-blue-50/50' : ''
-                    }`}
+                    className={`p-3 sm:p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors ${!notification.read ? 'bg-blue-50/50' : ''
+                      }`}
                   >
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <div 
+                      <div
                         className="flex-1 cursor-pointer flex items-center gap-2 sm:gap-3"
                         onClick={() => {
                           markAsRead(notification.id);
@@ -597,10 +577,10 @@ export default function NotificationsFinal() {
                           }
                         }}
                       >
-                        <div className="flex items-center justify-center">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center border shadow-sm flex-shrink-0 ${getNotificationColor(notification.type)}`}>
                           {getNotificationIcon(notification.type)}
                         </div>
-                        
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-black text-xs sm:text-sm text-slate-900 truncate">
@@ -610,11 +590,11 @@ export default function NotificationsFinal() {
                               <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0"></span>
                             )}
                           </div>
-                          
+
                           <p className="text-xs text-slate-600 mb-2 line-clamp-2">
                             {notification.message}
                           </p>
-                          
+
                           <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-slate-500">
                             <div className="flex items-center gap-1">
                               <User className="w-3 h-3" />
@@ -633,7 +613,7 @@ export default function NotificationsFinal() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

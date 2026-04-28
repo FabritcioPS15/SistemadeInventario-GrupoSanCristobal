@@ -5,9 +5,10 @@ import { supabase } from '../../lib/supabase';
 interface StoredDiskFormProps {
   onClose: () => void;
   onSuccess: () => void;
+  editDisk?: any;
 }
 
-export default function StoredDiskForm({ onClose, onSuccess }: StoredDiskFormProps) {
+export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredDiskFormProps) {
   const [cameras, setCameras] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -25,7 +26,21 @@ export default function StoredDiskForm({ onClose, onSuccess }: StoredDiskFormPro
 
   useEffect(() => {
     fetchCameras();
-  }, []);
+    if (editDisk) {
+      setFormData({
+        camera_id: editDisk.camera_id || '',
+        disk_number: editDisk.disk_number || 1,
+        total_capacity_gb: editDisk.total_capacity_gb?.toString() || '',
+        used_space_gb: editDisk.used_space_gb?.toString() || '',
+        disk_type: editDisk.disk_type || 'HDD',
+        brand: editDisk.brand || '',
+        serial_number: editDisk.serial_number || '',
+        stored_from: editDisk.stored_from || '',
+        stored_to: editDisk.stored_to || '',
+        notes: editDisk.notes || ''
+      });
+    }
+  }, [editDisk]);
 
   async function fetchCameras() {
     const { data } = await supabase.from('cameras').select('id, name').order('name');
@@ -41,32 +56,38 @@ export default function StoredDiskForm({ onClose, onSuccess }: StoredDiskFormPro
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('stored_disks')
-        .insert([{
-          camera_id: formData.camera_id,
-          disk_number: formData.disk_number,
-          disk_type: formData.disk_type,
-          brand: formData.brand || null,
-          serial_number: formData.serial_number || null,
-          stored_from: formData.stored_from || null,
-          stored_to: formData.stored_to || null,
-          notes: formData.notes || null,
-          total_capacity_gb: Number(formData.total_capacity_gb),
-          used_space_gb: Number(formData.used_space_gb),
-          remaining_capacity_gb: Number(formData.total_capacity_gb) - Number(formData.used_space_gb)
-        }]);
+      const dataToSave = {
+        camera_id: formData.camera_id,
+        disk_number: formData.disk_number,
+        disk_type: formData.disk_type,
+        brand: formData.brand || null,
+        serial_number: formData.serial_number || null,
+        stored_from: formData.stored_from || null,
+        stored_to: formData.stored_to || null,
+        notes: formData.notes || null,
+        total_capacity_gb: Number(formData.total_capacity_gb),
+        used_space_gb: Number(formData.used_space_gb),
+        remaining_capacity_gb: Number(formData.total_capacity_gb) - Number(formData.used_space_gb)
+      };
 
-      if (error) {
-        console.error('Error de Supabase:', error);
-        alert(`Error al guardar: ${error.message} (${error.details || 'no details'})`);
-        throw error;
+      if (editDisk) {
+        const { error } = await supabase
+          .from('stored_disks')
+          .update(dataToSave)
+          .eq('id', editDisk.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('stored_disks')
+          .insert([dataToSave]);
+        if (error) throw error;
       }
+
       onSuccess();
       onClose();
     } catch (error: any) {
       console.error('Error saving disk:', error);
-      // El alert ya se disparó arriba si fue error de Supabase
+      alert(`Error al guardar: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -78,7 +99,9 @@ export default function StoredDiskForm({ onClose, onSuccess }: StoredDiskFormPro
         <div className="bg-[#002855] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 text-white">
             <HardDrive size={20} />
-            <span className="font-black uppercase tracking-widest text-sm">Nuevo Disco Almacenado</span>
+            <span className="font-black uppercase tracking-widest text-sm">
+              {editDisk ? 'Editar Disco Almacenado' : 'Nuevo Disco Almacenado'}
+            </span>
           </div>
           <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
             <X size={20} />
@@ -226,7 +249,7 @@ export default function StoredDiskForm({ onClose, onSuccess }: StoredDiskFormPro
               className="px-8 py-2 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-900 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
             >
               <Save size={14} />
-              {loading ? 'Guardando...' : 'Guardar Disco'}
+              {loading ? 'Guardando...' : editDisk ? 'Actualizar Disco' : 'Guardar Disco'}
             </button>
           </div>
         </form>
