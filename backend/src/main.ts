@@ -1,0 +1,40 @@
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  // Configuración de CORS para permitir que el frontend se conecte
+  app.enableCors({
+    origin: '*', // En producción cambiaremos esto por tu dominio real
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
+
+  // Prefijo global para todas las rutas
+  app.setGlobalPrefix('api');
+
+  // Validaciones globales para los datos que entran
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
+
+  // Configuración de Swagger (Documentación de API automática)
+  const config = new DocumentBuilder()
+    .setTitle('GSC API')
+    .setDescription('API para el Sistema de Inventario Grupo San Cristobal')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('docs', app, document);
+
+  await app.listen(3000);
+  console.log(`🚀 Servidor corriendo en: http://localhost:3000`);
+  console.log(`📄 Documentación disponible en: http://localhost:3000/docs`);
+}
+bootstrap();

@@ -4,6 +4,7 @@ import { supabase, AssetWithDetails, Location } from '../lib/supabase';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
 import { useAuth } from '../contexts/AuthContext';
 import Pagination from '../components/Pagination';
+import { maintenanceService } from '../services/maintenanceService';
 
 type MaintenanceProps = {
   categoryFilter?: string;
@@ -83,21 +84,12 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
   const fetchMaintenanceRecords = async () => {
     try {
-      let query = supabase
-        .from('maintenance_records')
-        .select('*, assets(*, asset_types(*), locations(*)), locations!location_id(*)')
-        .order('created_at', { ascending: false });
-
-      if (statusFilter) query = query.eq('status', statusFilter);
-      if (typeFilter) query = query.eq('maintenance_type', typeFilter);
-      if (machineTypeFilter) query = query.eq('assets.asset_type_id', machineTypeFilter);
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      if (data) {
-        setMaintenanceRecords(data as MaintenanceRecord[]);
-      }
+      const data = await maintenanceService.getAll({
+        status: statusFilter,
+        type: typeFilter,
+        machineType: machineTypeFilter
+      });
+      setMaintenanceRecords(data as MaintenanceRecord[]);
     } catch (err: any) {
       console.error('Error loading maintenance records:', err);
       alert(`Error al cargar registros: ${err.message}`);
@@ -124,8 +116,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const handleDeleteRecord = async (record: MaintenanceRecord) => {
     if (window.confirm(`¿Estás seguro de que quieres eliminar el registro de mantenimiento "${record.description}"?`)) {
       try {
-        const { error } = await supabase.from('maintenance_records').delete().eq('id', record.id);
-        if (error) throw error;
+        await maintenanceService.delete(record.id);
         await fetchMaintenanceRecords();
         alert('Registro de mantenimiento eliminado correctamente');
       } catch (err: any) {

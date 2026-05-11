@@ -10,6 +10,7 @@ import type { SutranVisit } from '../lib/supabase';
 import SutranVisitForm from '../components/forms/SutranVisitForm';
 import { useAuth } from '../contexts/AuthContext';
 import Pagination from '../components/Pagination';
+import { sutranService } from '../services/sutranService';
 
 export default function Sutran() {
   const { canEdit } = useAuth();
@@ -47,25 +48,11 @@ export default function Sutran() {
   const fetchVisits = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('sutran_visits')
-        .select('*, locations(*)')
-        .order('visit_date', { ascending: false });
-
-      if (error) {
-        console.error('Error al cargar visitas:', error);
-        alert(`Error al cargar visitas: ${error.message}`);
-        return;
-      }
-
-      if (data) {
-        setVisits(data);
-      } else {
-        setVisits([]);
-      }
-    } catch (err) {
-      console.error('Error inesperado al cargar visitas:', err);
-      alert('Error inesperado al cargar visitas: ' + err);
+      const data = await sutranService.getAll();
+      setVisits(data || []);
+    } catch (err: any) {
+      console.error('Error al cargar visitas:', err);
+      alert(`Error al cargar visitas: ${err.message || err}`);
     } finally {
       setLoading(false);
     }
@@ -150,21 +137,12 @@ export default function Sutran() {
   const handleDeleteVisit = async (id: string) => {
     if (window.confirm('¿Está seguro de eliminar esta visita? Esta acción no se puede deshacer.')) {
       try {
-        const { error } = await supabase
-          .from('sutran_visits')
-          .delete()
-          .eq('id', id);
-
-        if (error) {
-          console.error('❌ Error al eliminar visita:', error);
-          alert(`Error al eliminar la visita: ${error.message}`);
-        } else {
-          await fetchVisits();
-          alert('Visita eliminada correctamente');
-        }
-      } catch (err) {
-        console.error('❌ Error inesperado al eliminar visita:', err);
-        alert('Error inesperado al eliminar la visita');
+        await sutranService.delete(id);
+        await fetchVisits();
+        alert('Visita eliminada correctamente');
+      } catch (err: any) {
+        console.error('❌ Error al eliminar visita:', err);
+        alert(`Error al eliminar la visita: ${err.message || err}`);
       }
     }
   };

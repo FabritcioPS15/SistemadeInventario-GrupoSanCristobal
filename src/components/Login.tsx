@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, AlertCircle, User, Lock, ArrowRight, UserPlus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
+
+const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
 
 export default function Login() {
   const mountedRef = useRef(true);
@@ -37,40 +40,57 @@ export default function Login() {
     setError('');
 
     try {
-      const isEmail = emailOrDni.includes('@');
-      let query = supabase
-        .from('users')
-        .select('*')
-        .eq('password', password)
-        .eq('status', 'active');
+      if (DB_MODE === 'supabase') {
+        const isEmail = emailOrDni.includes('@');
+        let query = supabase
+          .from('users')
+          .select('*')
+          .eq('password', password)
+          .eq('status', 'active');
 
-      if (isEmail) {
-        query = query.eq('email', emailOrDni);
+        if (isEmail) {
+          query = query.eq('email', emailOrDni);
+        } else {
+          query = query.eq('dni', emailOrDni);
+        }
+
+        const { data: userData, error: userError } = await query.single();
+
+        if (!mountedRef.current) return;
+
+        if (userError || !userData) {
+          setError('Credenciales incorrectas o usuario inactivo');
+          setLoading(false);
+          return;
+        }
+
+        login(userData, rememberMe);
       } else {
-        query = query.eq('dni', emailOrDni);
+        // MODO NESTJS
+        const response = await api.post('/auth/login', { 
+          dni: emailOrDni, // El backend de NestJS usa DNI principalmente
+          password 
+        });
+
+        if (!mountedRef.current) return;
+
+        const { access_token, user: userData } = response.data;
+        
+        // Guardar Token para futuras peticiones
+        localStorage.setItem('auth_token', access_token);
+        
+        login(userData, rememberMe);
       }
 
-      const { data: userData, error: userError } = await query.single();
-
-      if (!mountedRef.current) return;
-
-      if (userError || !userData) {
-        setError('Credenciales incorrectas o usuario inactivo');
-        setLoading(false);
-        return;
-      }
-
-      // Handle "Remember Me" for the identifier
       if (rememberMe) {
         localStorage.setItem('remembered_user', emailOrDni);
       } else {
         localStorage.removeItem('remembered_user');
       }
-
-      login(userData, rememberMe);
-    } catch (err) {
+    } catch (err: any) {
       if (mountedRef.current) {
-        setError('Error de conexión con el servidor.');
+        const msg = err.response?.data?.message || 'Error de conexión con el servidor.';
+        setError(msg);
       }
     } finally {
       if (mountedRef.current) {

@@ -62,6 +62,9 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
     useEffect(() => {
         if (!selectedConversation) return;
 
+        const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
+        if (DB_MODE !== 'supabase') return;
+
         const messageSubscription = supabase
             .channel(`messages-${selectedConversation}`)
             .on('postgres_changes', {
@@ -69,7 +72,7 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
                 schema: 'public',
                 table: 'messages',
                 filter: `conversation_id=eq.${selectedConversation}`
-            }, (payload) => {
+            }, (payload: any) => {
                 if (mountedRef.current) {
                     setMessages(prev => [...prev, payload.new as Message]);
                     markAsRead(selectedConversation);
@@ -93,7 +96,7 @@ export default function MessagesModal({ onClose }: MessagesModalProps) {
         if (!participants || !mountedRef.current) return;
 
         const conversationDetails = await Promise.all(
-            participants.map(async (p) => {
+            participants.map(async (p: any) => {
                 // Get other participant
                 const { data: otherParticipant } = await supabase
                     .from('conversation_participants')

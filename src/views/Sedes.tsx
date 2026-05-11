@@ -205,11 +205,8 @@ export default function Sedes() {
     : null;
 
   return (
-    <div className="flex flex-col h-full bg-white font-sans min-h-screen relative overflow-hidden">
-      <div className="flex-1 overflow-y-auto bg-[#f8fafc]">
-        <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-4">
-
-          {/* Action Bar */}
+    <div className="flex flex-col h-full bg-[#f8fafc] font-sans min-h-screen relative overflow-hidden">
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto">          {/* Action Bar */}
           <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
             <div className="absolute -top-3 -left-3">
               <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
@@ -542,7 +539,6 @@ export default function Sedes() {
               </div>
             </div>
           )}
-        </div>
       </div>
 
       {/* Bulk action bar */}

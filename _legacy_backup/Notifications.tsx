@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BellIcon, CheckCircle, Clock, Archive, Plus, User, MapPin, Calendar, Trash2, X } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../src/contexts/AuthContext';
+import { supabase } from '../src/lib/supabase';
 
 type Notification = {
   id: string;
@@ -120,7 +120,7 @@ export default function Notifications() {
         event: 'INSERT',
         schema: 'public',
         table: 'notifications'
-      }, (payload) => {
+      }, (payload: any) => {
         const newNotification = payload.new as Notification;
         setNotifications(prev => [newNotification, ...prev].slice(0, 50)); // Mantener solo las últimas 50
         setUnreadCount(prev => prev + 1);
@@ -134,7 +134,7 @@ export default function Notifications() {
           newNotification.message
         );
       })
-      .subscribe((status) => {
+      .subscribe((status: any) => {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Suscripción a notificaciones activada');
         } else if (status === 'CHANNEL_ERROR') {
@@ -163,7 +163,7 @@ export default function Notifications() {
 
       if (!error && data) {
         setNotifications(data as Notification[]);
-        setUnreadCount(data.filter(n => !n.read).length);
+        setUnreadCount(data.filter((n: any) => !n.read).length);
       } else if (error) {
         console.log('Error al cargar notificaciones:', error.message);
       }

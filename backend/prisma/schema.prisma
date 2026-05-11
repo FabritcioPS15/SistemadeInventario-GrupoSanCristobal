@@ -1,0 +1,347 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// --- CORE: USUARIOS Y SEDES ---
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  dni           String    @unique
+  full_name     String
+  password_hash String?   
+  role          String    @default("user")
+  status        String    @default("active")
+  avatar_url    String?
+  phone         String?
+  location_id   String?
+  location      Location? @relation(fields: [location_id], references: [id])
+  
+  tickets_requested Ticket[] @relation("Requester")
+  tickets_assigned  Ticket[] @relation("AssignedTo")
+  audit_logs        AuditLog[]
+  messages_sent     Message[]
+  conversations     ConversationParticipant[]
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Location {
+  id            String   @id @default(uuid())
+  name          String
+  type          String   
+  address       String?
+  region        String?  
+  notes         String?
+  checklist_url String?
+  history_url   String?
+  
+  users         User[]
+  assets        Asset[]
+  areas         Area[]
+  vehicles      Vehicle[]
+  tickets       Ticket[]
+  sutran_visits SutranVisit[]
+  audits        BranchAudit[]
+  cameras       Camera[]
+  maintenance   MaintenanceRecord[]
+  shipments_from Shipment[] @relation("FromLocation")
+  shipments_to   Shipment[] @relation("ToLocation")
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("locations")
+}
+
+model Area {
+  id          String   @id @default(uuid())
+  name        String
+  location_id String
+  location    Location @relation(fields: [location_id], references: [id])
+  assets      Asset[]
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("areas")
+}
+
+// --- INVENTARIO ---
+
+model Asset {
+  id             String    @id @default(uuid())
+  codigo_unico   String?   @unique
+  asset_type_id  String?
+  category_id    String?
+  subcategory_id String?
+  location_id    String?
+  area_id        String?
+  
+  brand          String?
+  model          String?
+  serial_number  String?   @unique
+  status         String    @default("active") 
+  
+  anydesk_id     String?
+  ip_address     String?
+  phone_number   String?
+  os             String?
+  processor      String?
+  ram            String?
+  storage        String?
+  
+  location    Location? @relation(fields: [location_id], references: [id])
+  area        Area?     @relation(fields: [area_id], references: [id])
+  category    Category? @relation(fields: [category_id], references: [id])
+  subcategory Subcategory? @relation(fields: [subcategory_id], references: [id])
+  maintenance MaintenanceRecord[]
+  shipments   Shipment[]
+  movements   InventoryMovement[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("assets")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  assets      Asset[]
+  subcategories Subcategory[]
+  
+  @@map("categories")
+}
+
+model Subcategory {
+  id          String   @id @default(uuid())
+  category_id String
+  category    Category @relation(fields: [category_id], references: [id])
+  name        String
+  assets      Asset[]
+  
+  @@map("subcategories")
+}
+
+// --- FLOTA VEHICULAR ---
+
+model Vehicle {
+  id                         String   @id @default(uuid())
+  placa                      String   @unique
+  marca                      String
+  modelo                     String
+  anio                       Int
+  estado                     String   @default("activa")
+  ubicacion_id               String
+  location                   Location @relation(fields: [ubicacion_id], references: [id])
+  
+  soat_vencimiento           DateTime?
+  citv_vencimiento           DateTime?
+  poliza_vencimiento         DateTime?
+  contrato_vencimiento       DateTime?
+  
+  ultimo_mantenimiento       DateTime?
+  notas                      String?
+  color                      String?
+  imagen_url                 String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("vehicles")
+}
+
+// --- TICKETS Y MANTENIMIENTO ---
+
+model Ticket {
+  id           String    @id @default(uuid())
+  title        String
+  status       String    @default("open") 
+  priority     String    @default("medium") 
+  
+  requester_id String
+  requester    User      @relation("Requester", fields: [requester_id], references: [id])
+  assigned_to  String?
+  attendant    User?     @relation("AssignedTo", fields: [assigned_to], references: [id])
+  location_id  String?
+  location     Location? @relation(fields: [location_id], references: [id])
+  
+  attended_at  DateTime?
+  resolved_at  DateTime?
+  closed_at    DateTime?
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("tickets")
+}
+
+model MaintenanceRecord {
+  id               String   @id @default(uuid())
+  asset_id         String
+  asset            Asset    @relation(fields: [asset_id], references: [id])
+  location_id      String?
+  location         Location? @relation(fields: [location_id], references: [id])
+  
+  maintenance_type String   
+  status           String   @default("pending") 
+  description      String
+  total_cost       Float? 
+  
+  completed_date   DateTime?
+  parts_used       String?    
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("maintenance_records")
+}
+
+// --- OTROS MÓDULOS ---
+
+model SutranVisit {
+  id             String   @id @default(uuid())
+  visit_date     DateTime
+  inspector_name String
+  location_id    String
+  location       Location @relation(fields: [location_id], references: [id])
+  
+  visit_type     String   
+  status         String   @default("pending")
+  findings       String?
+  observations   String?
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("sutran_visits")
+}
+
+model BranchAudit {
+  id            String   @id @default(uuid())
+  location_id   String
+  location      Location @relation(fields: [location_id], references: [id])
+  auditor_name  String
+  audit_date    DateTime
+  score         Int
+  status        String   
+  responses     String?    
+  
+  @@map("branch_audits")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  user_id     String?
+  user        User?    @relation(fields: [user_id], references: [id])
+  action      String   
+  entity_type String   
+  entity_id   String
+  details     String?
+  
+  created_at DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model Notification {
+  id            String   @id @default(uuid())
+  type          String   // 'ticket_created', 'ticket_attended', etc.
+  title         String
+  message       String
+  ticket_id     String?
+  user_name     String
+  target_role   String   @default("admin")
+  read          Boolean  @default(false)
+  created_at    DateTime @default(now())
+
+  @@map("notifications")
+}
+
+// --- MENSAJERÍA (CHAT) ---
+
+model Conversation {
+  id           String   @id @default(uuid())
+  participants ConversationParticipant[]
+  messages     Message[]
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id              String       @id @default(uuid())
+  conversation_id String
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+  user_id         String
+  user            User         @relation(fields: [user_id], references: [id])
+  last_read_at    DateTime?
+  
+  @@map("conversation_participants")
+}
+
+model Message {
+  id              String       @id @default(uuid())
+  conversation_id String
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+  sender_id       String
+  sender          User         @relation(fields: [sender_id], references: [id])
+  content         String
+  read_at         DateTime?
+  
+  created_at DateTime @default(now())
+
+  @@map("messages")
+}
+
+model Shipment {
+  id               String   @id @default(uuid())
+  asset_id         String
+  asset            Asset    @relation(fields: [asset_id], references: [id])
+  from_location_id String?
+  from_location    Location? @relation("FromLocation", fields: [from_location_id], references: [id])
+  to_location_id   String
+  to_location      Location @relation("ToLocation", fields: [to_location_id], references: [id])
+  status           String   @default("shipped") 
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("shipments")
+}
+
+model InventoryMovement {
+  id          String   @id @default(uuid())
+  asset_id    String
+  asset       Asset    @relation(fields: [asset_id], references: [id])
+  type        String   
+  quantity    Int
+  reason      String?
+  
+  created_at DateTime @default(now())
+
+  @@map("inventory_movements")
+}
+
+model Camera {
+  id          String   @id @default(uuid())
+  name        String
+  location_id String
+  location    Location @relation(fields: [location_id], references: [id])
+  url         String
+  status      String   @default("active")
+  
+  @@map("cameras")
+}

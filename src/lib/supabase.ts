@@ -26,16 +26,53 @@ export type Message = {
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
 
-// Debug: verificar variables de entorno
+// Mock que devuelve datos vacíos para cualquier consulta.
+// Esto evita que los 28+ componentes que aún usan supabase.from()
+// hagan llamadas REST reales al servidor bloqueado.
+const createMockChain = (): any => {
+  const result = { data: [], error: null, count: 0 };
+  const chain: any = {
+    select: () => chain, insert: () => chain, update: () => chain,
+    delete: () => chain, upsert: () => chain, eq: () => chain,
+    neq: () => chain, gt: () => chain, gte: () => chain,
+    lt: () => chain, lte: () => chain, like: () => chain,
+    ilike: () => chain, is: () => chain, in: () => chain,
+    or: () => chain, not: () => chain, filter: () => chain,
+    order: () => chain, limit: () => chain, range: () => chain,
+    single: () => chain, maybeSingle: () => chain,
+    // 'then' debe conformar el protocolo Promise para que 'await' funcione.
+    then: (onFulfilled?: any, onRejected?: any) => 
+      Promise.resolve(result).then(onFulfilled, onRejected),
+  };
+  return chain;
+};
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Variables de entorno de Supabase faltantes');
-  console.error('VITE_SUPABASE_URL:', supabaseUrl);
-  console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? 'Presente' : 'Faltante');
+const createMockSupabase = () => {
+  const real = createClient(supabaseUrl, supabaseAnonKey);
+  // Desactivar Realtime inmediatamente
+  try { real.realtime.disconnect(); } catch (_) {}
+  
+  return new Proxy(real, {
+    get(target, prop) {
+      if (prop === 'from') return () => createMockChain();
+      if (prop === 'storage') return { from: () => ({ upload: async () => ({ data: null, error: null }), getPublicUrl: () => ({ data: { publicUrl: '' } }) }) };
+      if (prop === 'channel') return () => ({ on: () => ({ subscribe: () => ({}) }), subscribe: () => ({}) });
+      if (prop === 'removeChannel') return () => {};
+      if (prop === 'realtime') return target.realtime;
+      return (target as any)[prop];
+    },
+  });
+};
+
+export const supabase = DB_MODE === 'nestjs' 
+  ? createMockSupabase() as any
+  : createClient(supabaseUrl, supabaseAnonKey);
+
+if (DB_MODE === 'nestjs') {
+  console.log('🔌 Supabase COMPLETAMENTE desvinculado (modo NestJS activo)');
 }
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type Location = {
   id: string;

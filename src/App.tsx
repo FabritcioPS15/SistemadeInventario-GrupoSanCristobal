@@ -32,6 +32,7 @@ import Tickets from './views/Tickets';
 import TicketHistory from './views/TicketHistory';
 import Painpoints from './views/Painpoints';
 import TicketDetail from './views/TicketDetail';
+import NotFound from './views/NotFound';
 
 // Componente para proteger rutas basadas en permisos
 function ProtectedRoute({ children, permission }: { children: React.ReactNode, permission?: string }) {
@@ -220,7 +221,7 @@ function AppContent() {
             <Route path="/painpoint" element={<ProtectedRoute permission="painpoint"><Painpoints /></ProtectedRoute>} />
 
             {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
       </div>

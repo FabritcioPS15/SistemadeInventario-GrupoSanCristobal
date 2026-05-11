@@ -74,8 +74,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (!user?.id) return;
 
+    const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
+    if (DB_MODE !== 'supabase') return;
+
     const userSubscription = supabase
-      .channel(`user-${user.id}`)
+      .channel(`user-updates-${user.id}`)
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
@@ -100,38 +103,47 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, [user?.id]);
 
+const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
+
   const checkSession = async () => {
     try {
-      // 1. Verificar si hay usuario en localStorage
       const savedUser = localStorage.getItem('auth_user');
       if (savedUser) {
         const parsedUser = JSON.parse(savedUser);
 
-        // Refrescar datos desde la DB para asegurar que tenemos location_id y permisos actualizados
-        const { data: freshUser } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', parsedUser.id)
-          .single();
+        if (DB_MODE === 'supabase') {
+          const { data: freshUser } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', parsedUser.id)
+            .single();
 
-        if (freshUser && mountedRef.current) {
-          setUser(freshUser as User);
-          localStorage.setItem('auth_user', JSON.stringify(freshUser));
-        } else if (mountedRef.current) {
-          setUser(parsedUser);
+          if (freshUser && mountedRef.current) {
+            setUser(freshUser as User);
+            localStorage.setItem('auth_user', JSON.stringify(freshUser));
+          } else if (mountedRef.current) {
+            setUser(parsedUser);
+          }
+        } else {
+          // MODO NESTJS: No necesitamos refrescar aquí si el token es válido, 
+          // pero podríamos pedir /auth/me en el futuro
+          if (mountedRef.current) {
+            setUser(parsedUser);
+          }
         }
       }
 
-      // 2. Verificar si hay usuarios sin contraseñas configuradas (lógica original)
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('id, password')
-        .eq('status', 'active');
+      if (DB_MODE === 'supabase') {
+        const { data: usersData } = await supabase
+          .from('users')
+          .select('id, password')
+          .eq('status', 'active');
 
-      if (usersData && usersData.length > 0 && mountedRef.current) {
-        const hasPasswordUsers = usersData.some(user => user.password && user.password.trim() !== '');
-        if (!hasPasswordUsers) {
-          setNeedsPasswordSetup(true);
+        if (usersData && usersData.length > 0 && mountedRef.current) {
+          const hasPasswordUsers = usersData.some(user => user.password && user.password.trim() !== '');
+          if (!hasPasswordUsers) {
+            setNeedsPasswordSetup(true);
+          }
         }
       }
     } catch (error) {
@@ -158,6 +170,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (mountedRef.current) {
       setUser(null);
       localStorage.removeItem('auth_user');
+      localStorage.removeItem('auth_token'); // Limpiar token de NestJS
     }
   };
 

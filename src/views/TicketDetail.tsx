@@ -37,6 +37,9 @@ export default function TicketDetail() {
     useEffect(() => {
         if (!ticketId) return;
 
+        const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
+        if (DB_MODE !== 'supabase') return;
+
         const ticketSubscription = supabase
             .channel(`ticket-status-${ticketId}`)
             .on('postgres_changes', {
@@ -79,6 +82,9 @@ export default function TicketDetail() {
 
     useEffect(() => {
         if (!ticketId || !user) return;
+
+        const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
+        if (DB_MODE !== 'supabase') return;
 
         // Configurar presencia en tiempo real
         const presenceChannel = supabase.channel(`presence-ticket-${ticketId}`, {

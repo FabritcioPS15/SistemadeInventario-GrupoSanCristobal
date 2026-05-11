@@ -26,16 +26,21 @@ export default function MyChats() {
         
         void initializeData();
         
-        const subscription = supabase
-            .channel('my-tickets-updates')
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
-                table: 'tickets' 
-            }, () => { fetchMyTickets(); })
-            .subscribe();
+        const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
+        if (DB_MODE === 'supabase') {
+            const subscription = supabase
+                .channel('my-tickets-updates')
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'tickets' 
+                }, () => { fetchMyTickets(); })
+                .subscribe();
 
-        return () => supabase.removeChannel(subscription);
+            return () => supabase.removeChannel(subscription);
+        }
+        
+        return () => {};
     }, []);
 
     const fetchMyTickets = async () => {

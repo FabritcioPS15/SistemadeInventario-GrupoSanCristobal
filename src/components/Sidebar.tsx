@@ -43,6 +43,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
   const { hasPermission, logout } = useAuth();
   const location = useLocation();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [expandedMobileItem, setExpandedMobileItem] = useState<string | null>(null);
   const [menuTop, setMenuTop] = useState<number>(0);
   const [adjustedTop, setAdjustedTop] = useState(0);
   const subMenuRef = useRef<HTMLDivElement>(null);
@@ -52,7 +53,8 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
     if (window.innerWidth >= 1024) {
       if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      setMenuTop(rect.top);
+      setMenuTop(rect.top + rect.height / 2);
+      setAdjustedTop(0);
       setHoveredItem(itemId);
     }
   };
@@ -71,12 +73,17 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
     if (hoveredItem && subMenuRef.current) {
       const rect = subMenuRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
-      let top = menuTop;
-      if (top + rect.height > viewportHeight) {
-        top = viewportHeight - rect.height - 10;
+      
+      let topEdge = menuTop - rect.height / 2;
+      
+      if (topEdge + rect.height > viewportHeight - 10) {
+        topEdge = viewportHeight - rect.height - 10;
       }
-      if (top < 10) top = 10;
-      setAdjustedTop(top);
+      if (topEdge < 10) {
+        topEdge = 10;
+      }
+      
+      setAdjustedTop(topEdge);
     }
   }, [hoveredItem, menuTop]);
 
@@ -352,8 +359,15 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                         >
                           <NavLink
                             to={item.path}
-                            onClick={() => {
-                              if (window.innerWidth < 1024) onCloseMobile?.();
+                            onClick={(e) => {
+                              if (window.innerWidth < 1024) {
+                                if (item.hasSubmenu) {
+                                  e.preventDefault();
+                                  setExpandedMobileItem(prev => prev === item.id ? null : item.id);
+                                } else {
+                                  onCloseMobile?.();
+                                }
+                              }
                               setHoveredItem(null);
                             }}
                             className={`
@@ -369,12 +383,51 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                                 {item.hasSubmenu && (
                                   <ChevronRight
                                     size={14}
-                                    className="transition-transform duration-200 opacity-50 group-hover:opacity-100"
+                                    className={`transition-transform duration-200 opacity-50 group-hover:opacity-100 lg:group-hover:translate-x-1 ${expandedMobileItem === item.id ? 'rotate-90' : ''}`}
                                   />
                                 )}
                               </>
                             )}
                           </NavLink>
+
+                          {/* Mobile Accordion */}
+                          {item.hasSubmenu && (
+                            <div className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${expandedMobileItem === item.id ? 'max-h-[1500px] opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+                              <div className="ml-4 space-y-1 border-l-2 border-white/10 pl-3 pb-1">
+                                {item.submenu?.filter(sub => hasPermission(sub.id)).map(sub => (
+                                  <div key={sub.id}>
+                                    <NavLink
+                                      to={sub.path}
+                                      onClick={() => onCloseMobile?.()}
+                                      className={({ isActive }) => `
+                                        block px-3 py-2 text-[12px] font-bold uppercase tracking-tight rounded-lg transition-all
+                                        ${isActive ? 'text-white bg-blue-500 shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}
+                                      `}
+                                    >
+                                      {sub.label}
+                                    </NavLink>
+                                    {sub.hasSubmenu && (
+                                      <div className="ml-4 mt-1 space-y-1 border-l-2 border-white/10 pl-2">
+                                        {sub.submenu?.map(deepSub => (
+                                          <NavLink
+                                            key={deepSub.id}
+                                            to={deepSub.path}
+                                            onClick={() => onCloseMobile?.()}
+                                            className={({ isActive }) => `
+                                              block px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all
+                                              ${isActive ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}
+                                            `}
+                                          >
+                                            {deepSub.label}
+                                          </NavLink>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -409,45 +462,46 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
       {hoveredItem && window.innerWidth >= 1024 && (
         <div
           ref={subMenuRef}
-          className={`fixed z-[120] bg-[#1e293b] border border-blue-500/20 shadow-2xl rounded-2xl transition-all duration-300 animate-in fade-in slide-in-from-left-2 duration-200 ${activeSubmenuItems && activeSubmenuItems.length > 0 ? 'py-2 min-w-[200px]' : 'py-1.5 px-3'
+          className={`fixed z-[120] bg-[#1e293b] border border-blue-500/20 shadow-2xl rounded-2xl transition-all duration-300 animate-in fade-in slide-in-from-left-2 duration-200 ${activeSubmenuItems && activeSubmenuItems.length > 0 ? 'py-3 min-w-[260px]' : 'py-2 px-4'
             }`}
           style={{
-            top: adjustedTop || menuTop,
+            top: adjustedTop || (menuTop - 50),
             left: collapsed ? '5.5rem' : '18.5rem',
-            opacity: 1,
-            transform: 'translateX(0) translateY(-50%)'
+            opacity: adjustedTop ? 1 : 0,
+            transform: 'translateX(0)',
+            maxWidth: collapsed ? 'calc(100vw - 6rem)' : 'calc(100vw - 19rem)'
           }}
           onMouseEnter={() => { if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current); }}
           onMouseLeave={handleMouseLeave}
         >
           {activeSubmenuItems && activeSubmenuItems.length > 0 ? (
             <>
-              <div className="px-4 py-1.5 border-b border-white/10 mb-1">
-                <h4 className="text-[10px] font-black text-blue-400 uppercase tracking-[2px] flex items-center gap-2">
-                  <div className="w-1 h-1 rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.8)]" />
+              <div className="px-5 py-2 border-b border-white/10 mb-2">
+                <h4 className="text-[12px] font-black text-blue-400 uppercase tracking-[2px] flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
                   {activeItem?.label}
                 </h4>
               </div>
-              <div className="max-h-[calc(100vh-60px)] overflow-y-auto sidebar-scroll px-1 space-y-0.5">
+              <div className="max-h-[calc(100vh-80px)] overflow-y-auto sidebar-scroll px-2 space-y-1">
                 {activeSubmenuItems?.filter((sub) => hasPermission(sub.id)).map((sub) => (
                   <div key={sub.id}>
                     <NavLink
                       to={sub.path}
                       className={({ isActive }) => `
-                        flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold uppercase tracking-tight rounded-lg transition-all
+                        flex items-center gap-3 px-4 py-2.5 text-[12px] font-bold uppercase tracking-tight rounded-xl transition-all
                         ${isActive ? 'text-white bg-blue-500 shadow-lg shadow-blue-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}
                       `}
                     >
                       {sub.label}
                     </NavLink>
                     {sub.hasSubmenu && (
-                      <div className="ml-4 mt-1 border-l border-white/10 pl-2 space-y-0.5">
+                      <div className="ml-5 mt-1 border-l-2 border-white/10 pl-3 space-y-1 py-1">
                         {sub.submenu?.map(deepSub => (
                           <NavLink
                             key={deepSub.id}
                             to={deepSub.path}
                             className={({ isActive }) => `
-                          block px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all
+                          block px-3 py-2 text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all
                           ${isActive ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}
                         `}
                           >

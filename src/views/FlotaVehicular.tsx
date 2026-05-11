@@ -10,6 +10,7 @@ import FlotaVehicularForm from '../components/forms/FlotaVehicularForm';
 import Pagination from '../components/Pagination';
 import { supabase, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { vehicleService } from '../services/vehicleService';
 
 type Vehiculo = {
   id: string;
@@ -84,8 +85,7 @@ export default function FlotaVehicular() {
   const fetchVehiculos = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.from('vehiculos').select('*').order('placa');
-      if (error) throw error;
+      const data = await vehicleService.getAll();
       setVehiculos(data || []);
     } catch (error) {
       console.error('Error al cargar vehículos:', error);
@@ -331,8 +331,7 @@ export default function FlotaVehicular() {
   const handleDelete = async (id: string) => {
     if (!confirm('¿Está seguro de eliminar esta unidad de la flota?')) return;
     try {
-      const { error } = await supabase.from('vehiculos').delete().eq('id', id);
-      if (error) throw error;
+      await vehicleService.delete(id);
       await fetchVehiculos();
       alert('Unidad eliminada correctamente');
     } catch (e) {

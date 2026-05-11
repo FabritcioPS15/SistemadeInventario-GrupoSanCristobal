@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { dashboardService } from '../services/dashboardService';
 
 interface QuickStats {
   totalAssets: number;
@@ -112,35 +113,17 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
 
-      // Fetch all stats in parallel
-      const [
-        { count: totalAssets },
-        { count: activeAssets },
-        { count: totalCameras },
-        { count: activeCameras },
-        { count: totalTickets },
-        { data: tickets },
-        { data: vehicles },
-        { data: schoolsData },
-        { data: recentTicketsData }
-      ] = await Promise.all([
-        supabase.from('assets').select('*', { count: 'exact', head: true }),
-        supabase.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('cameras').select('*', { count: 'exact', head: true }),
-        supabase.from('cameras').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('tickets').select('*', { count: 'exact', head: true }),
-        supabase.from('tickets').select('status'),
-        supabase.from('vehiculos').select('estado, soat_vencimiento, citv_vencimiento, poliza_vencimiento, contrato_alquiler_vencimiento, placa, ubicacion_actual'),
-        supabase.from('locations').select('id, name'),
-        supabase.from('tickets')
-          .select(`
-            id,
-            requester:requester_id(id, full_name, avatar_url),
-            attendant:assigned_to(id, full_name, avatar_url)
-          `)
-          .order('created_at', { ascending: false })
-          .limit(10)
-      ]);
+      const {
+        totalAssets,
+        activeAssets,
+        totalCameras,
+        activeCameras,
+        totalTickets,
+        tickets,
+        vehicles,
+        schoolsData,
+        recentTicketsData
+      } = await dashboardService.getQuickStats();
 
       // Process tickets
       const openTickets = tickets?.filter(t => t.status === 'open').length || 0;

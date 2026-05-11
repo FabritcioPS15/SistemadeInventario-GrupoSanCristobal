@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Base de Datos PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: gsc-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin123}
+      POSTGRES_DB: ${DB_NAME:-gsc_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Cache Redis (para notificaciones en tiempo real)
+  redis:
+    image: redis:7-alpine
+    container_name: gsc-redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  # Backend NestJS
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gsc-api
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-admin123}@db:5432/${DB_NAME:-gsc_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-super-secret-key-123}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - redis
+
+  # Frontend React (Nginx)
+  frontend:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-/api}
+        - VITE_DATABASE_MODE=${VITE_DATABASE_MODE:-nestjs}
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+    container_name: gsc-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:

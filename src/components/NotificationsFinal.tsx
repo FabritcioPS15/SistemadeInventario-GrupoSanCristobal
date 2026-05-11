@@ -2,6 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Bell, Clock, Plus, CheckCircle, Archive, User, MapPin, Calendar, CalendarDays, CheckSquare, Trash2, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import api from '../services/api';
+import { io } from 'socket.io-client';
+
+const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 // ─── Audio global compartido ───────────────────────────────────────────────
 // Mantenemos un único AudioContext reutilizable para evitar que el navegador
@@ -60,7 +65,7 @@ const playNotificationSound = () => {
         const t = ctx.currentTime + offset;
 
         // Mezcla sine + square para un tono más rico y escandaloso
-        ['sine', 'square'].forEach((type, i) => {
+        ['sine', 'square'].forEach((type) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
 
@@ -114,6 +119,7 @@ export default function NotificationsFinal() {
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('unread');
   // true una vez que el AudioContext fue desbloqueado por gesto del usuario
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const audioEnabledRef = useRef(false);
   // IDs de notificaciones ya conocidas — no disparan sonido al iniciar
   const knownIdsRef = useRef<Set<string> | null>(null);
 
@@ -133,9 +139,15 @@ export default function NotificationsFinal() {
    */
   const handleUnlockAndPlay = () => {
     try {
-      unlockAudioContext();
-      setAudioUnlocked(true);
-      playNotificationSound();
+      if (audioUnlocked) {
+        setAudioUnlocked(false);
+        audioEnabledRef.current = false;
+      } else {
+        unlockAudioContext();
+        setAudioUnlocked(true);
+        audioEnabledRef.current = true;
+        playNotificationSound();
+      }
     } catch (_) {/* ignorar */ }
   };
 
@@ -144,122 +156,119 @@ export default function NotificationsFinal() {
       return;
     }
 
-    // Suscribirse a notificaciones en tiempo real
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `target_role=eq.${user.role}`
-        },
-        (payload) => {
-          console.log('🔔 RECIBIDO EVENTO DE SUPABASE:', payload);
-          const newNotification = payload.new as Notification;
-
-          console.log('🔔 NUEVA NOTIFICACIÓN RECIBIDA:', newNotification);
-          console.log('🔊 Intentando reproducir sonido...');
-
-          // Agregar la notificación inmediatamente
-          setNotifications(prev => [newNotification, ...prev].slice(0, 50));
-          setUnreadCount(prev => prev + 1);
-
-          // Reproducir sonido de notificación con volumen máximo
-          try {
-            playNotificationSound();
-            console.log('✅ Sonido de notificación ejecutado');
-          } catch (error) {
-            console.error('❌ Error ejecutando sonido:', error);
+    if (DB_MODE === 'supabase') {
+      const channel = supabase
+        .channel('notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `target_role=eq.${user.role}`
+          },
+          (payload: any) => {
+            handleNewNotification(payload.new as Notification);
           }
+        )
+        .subscribe((status: any) => {
+          if (status === 'SUBSCRIBED') fetchNotifications();
+        });
 
-          // Mostrar notificación del navegador
-          try {
-            if ('Notification' in window && Notification.permission === 'granted') {
-              new Notification(newNotification.title, {
-                body: newNotification.message,
-                icon: '/favicon.ico'
-              });
-            }
-            console.log('✅ Notificación del navegador mostrada');
-          } catch (error) {
-            console.error('❌ Error mostrando notificación del navegador:', error);
-          }
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          // Recargar una vez al suscribirse para asegurar datos frescos
-          fetchNotifications();
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          // Configurar recarga automática más frecuente
-          const autoRefreshInterval = setInterval(() => {
-            fetchNotifications();
-          }, 5000); // Cada 5 segundos
-
-          (window as any).notificationRefreshInterval = autoRefreshInterval;
-        }
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } else {
+      // MODO NESTJS: Usar WebSockets propios
+      const socket = io(API_URL.replace('/api', ''), {
+        path: '/socket.io',
+        transports: ['websocket'],
       });
 
-    // Polling cada 3 segundos — fuente principal de detección de tickets nuevos.
-    // Es el mecanismo más confiable porque no depende del Realtime de Supabase.
-    const pollInterval = setInterval(() => {
+      socket.on(`notification_${user.role}`, (notification: Notification) => {
+        console.log('🔔 NOTIFICACIÓN RECIBIDA POR SOCKET:', notification);
+        handleNewNotification(notification);
+      });
+
       fetchNotifications();
-    }, 3000);
 
-    // Cargar notificaciones existentes (primera carga — no sonido)
-    fetchNotifications();
-
-    return () => {
-      supabase.removeChannel(channel);
-
-      if ((window as any).notificationRefreshInterval) {
-        clearInterval((window as any).notificationRefreshInterval);
-        delete (window as any).notificationRefreshInterval;
-      }
-
-      clearInterval(pollInterval);
-    };
+      return () => {
+        socket.disconnect();
+      };
+    }
   }, [user?.id, user?.role]);
+
+  const handleNewNotification = (newNotification: Notification) => {
+    setNotifications(prev => [newNotification, ...prev].slice(0, 50));
+    setUnreadCount(prev => prev + 1);
+
+    try {
+      if (audioEnabledRef.current) {
+        playNotificationSound();
+      }
+    } catch (error) {
+      console.error('❌ Error sonando:', error);
+    }
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(newNotification.title, {
+        body: newNotification.message,
+        icon: '/favicon.ico'
+      });
+    }
+  };
 
   const fetchNotifications = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('target_role', user.role)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      let incoming: Notification[] = [];
 
-      if (!error && data) {
-        const incoming = data as Notification[];
+      if (DB_MODE === 'supabase') {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('id, type, title, message, ticket_id, user_name, target_role, read, created_at')
+          .eq('target_role', user.role)
+          .order('created_at', { ascending: false })
+          .limit(30);
 
-        if (knownIdsRef.current === null) {
-          // Primera carga: registrar IDs existentes sin sonar
-          knownIdsRef.current = new Set(incoming.map(n => n.id));
-          setLoading(false);
-        } else {
-          // Cargas siguientes: detectar IDs nuevos
-          const newOnes = incoming.filter(n => !knownIdsRef.current!.has(n.id));
-          if (newOnes.length > 0) {
-            // Registrar nuevos IDs para no volver a sonar
-            newOnes.forEach(n => knownIdsRef.current!.add(n.id));
-            // ¡Disparar sonido! El AudioContext ya fue desbloqueado por el usuario.
+        if (error) {
+          if ((error as any).status === 402 || error.message?.includes('exceed_egress_quota')) {
+            (window as any).supabaseQuotaExceeded = true;
+            setError('⚠️ Límite de transferencia de datos excedido en Supabase.');
+            setLoading(false);
+            return;
+          }
+          throw error;
+        }
+        incoming = (data || []) as Notification[];
+      } else {
+        const response = await api.get('/notifications', { params: { role: user.role } });
+        incoming = response.data;
+      }
+
+      if (knownIdsRef.current === null) {
+        knownIdsRef.current = new Set(incoming.map(n => n.id));
+        setLoading(false);
+      } else {
+        const newOnes = incoming.filter(n => !knownIdsRef.current!.has(n.id));
+        if (newOnes.length > 0) {
+          newOnes.forEach(n => knownIdsRef.current!.add(n.id));
+          if (audioEnabledRef.current) {
             playNotificationSound();
           }
         }
-
-        setNotifications(incoming);
-        setUnreadCount(incoming.filter(n => !n.read).length);
-      } else if (error) {
-        setError(`Error: ${error.message}`);
-        setLoading(false);
       }
-    } catch (error) {
-      setError('Error al cargar notificaciones');
+
+      setNotifications(incoming);
+      setUnreadCount(incoming.filter(n => !n.read).length);
+    } catch (error: any) {
+      if (error?.status === 402) {
+        (window as any).supabaseQuotaExceeded = true;
+        setError('⚠️ Límite de transferencia de datos excedido en Supabase.');
+      } else {
+        setError('Error al cargar notificaciones');
+      }
       setLoading(false);
     }
   };
@@ -490,7 +499,6 @@ export default function NotificationsFinal() {
                     title={audioUnlocked ? 'Probar sonido de alerta' : 'Activar y probar sonido'}
                   >
                     <span>{audioUnlocked ? '🔊' : '🔇'}</span>
-                    <span>{audioUnlocked ? 'Test' : 'Activar'}</span>
                   </button>
                   {notifications.length > 0 && (
                     <button

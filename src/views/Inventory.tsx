@@ -11,6 +11,7 @@ import AssetDetails from '../components/AssetDetails';
 import ExcelImportModal from '../components/ExcelImportModal';
 import Pagination from '../components/Pagination';
 import { useAuth } from '../contexts/AuthContext';
+import { inventoryService } from '../services/inventoryService';
 
 type InventoryProps = {
   categoryFilter?: string; // e.g., 'inventory-computo-ti'
@@ -114,13 +115,12 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   };
 
   const fetchAssets = async () => {
-    const { data, error } = await supabase
-      .from('assets')
-      .select('*, categories(*), subcategories(*), locations(*), areas(*)')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    if (data) setAssets(data as AssetWithDetails[]);
+    try {
+      const data = await inventoryService.getAllAssets();
+      setAssets(data as AssetWithDetails[]);
+    } catch (error) {
+      console.error('Error fetching assets:', error);
+    }
   };
 
   // Listen to TopHeader action events
@@ -162,8 +162,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     if (window.confirm(`¿Estás seguro de eliminar "${asset.codigo_unico} - ${asset.brand} ${asset.model}"?`)) {
       setLoading(true);
       try {
-        const { error } = await supabase.from('assets').delete().eq('id', asset.id);
-        if (error) throw error;
+        await inventoryService.deleteAsset(asset.id);
         await fetchAssets();
       } catch (err: any) {
         alert('Error: ' + err.message);

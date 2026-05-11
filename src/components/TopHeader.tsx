@@ -505,81 +505,45 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
 
     // Fetch user's location name with Realtime updates
-
     useEffect(() => {
-
         const fetchUserLocation = async () => {
-
             if (user?.location_id) {
-
                 const { data } = await supabase
-
                     .from('locations')
-
                     .select('name')
-
                     .eq('id', user.location_id)
-
                     .single();
-
-
-
                 if (data) {
-
                     setUserLocation(data.name);
-
                 }
-
             } else {
-
                 setUserLocation('');
-
             }
-
         };
-
-
 
         fetchUserLocation();
 
-
-
-        // Subscribe to location changes
+        // Subscribe to location changes (solo en modo Supabase)
+        const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
+        if (DB_MODE !== 'supabase') return;
 
         const locationSubscription = supabase
-
-            .channel('location-changes')
-
+            .channel('location-updates')
             .on('postgres_changes', {
-
                 event: 'UPDATE',
-
                 schema: 'public',
-
                 table: 'locations',
-
                 filter: `id=eq.${user?.location_id}`
-
-            }, (payload) => {
-
+            }, (payload: any) => {
                 if (payload.new && 'name' in payload.new) {
-
                     setUserLocation(payload.new.name as string);
-
                 }
-
             })
-
             .subscribe();
 
-
-
         return () => {
-
             supabase.removeChannel(locationSubscription);
-
         };
-
     }, [user?.location_id]);
 
 
@@ -604,7 +568,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                     .from('sutran_visits')
 
-                    .select('*')
+                    .select('id, location_name, inspector_name, status, visit_date')
 
                     .eq('status', 'pending')
 
@@ -634,7 +598,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
         fetchNotifications();
 
-        const interval = setInterval(fetchNotifications, 60000);
+        const interval = setInterval(fetchNotifications, 300000);
 
         return () => clearInterval(interval);
 
@@ -1017,20 +981,10 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                     <div className="relative" ref={actionsRef}>
 
-                        <button
-
-                            onClick={() => setShowActions(v => !v)}
-
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'}`}
-
-                        >
-
-                            <Plus size={13} />
-
-                            Acciones
-
-                            <ChevronDown size={13} className={`transition-transform duration-200 ${showActions ? 'rotate-180' : ''}`} />
-
+                        <button onClick={() => setShowActions(v => !v)} className={`flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'}`}>
+                            <Plus size={18} />
+                            <span className="hidden sm:inline">Acciones</span>
+                            <ChevronDown size={18} className={`transition-transform duration-200 ${showActions ? 'rotate-180' : ''}`} />
                         </button>
 
 
@@ -1118,19 +1072,10 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                 <div className="flex items-center gap-1">
 
                     {/* Sistema de Notificaciones - FUNCIONANDO */}
-
-
-
                     <NotificationsFinal />
-
-
-
                     {/* SUTRAN Indicator */}
-
                     <div className="relative" ref={sutranPopupRef}>
-
                         <button
-
                             onClick={() => setShowSutranPopup(!showSutranPopup)}
 
                             className={`relative p-2 rounded-lg transition-colors ${showSutranPopup ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-700'}`}
