@@ -18,8 +18,8 @@ async function bootstrap() {
 
   // Validaciones globales para los datos que entran
   app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
+    whitelist: false, // Desactivado temporalmente para permitir objetos genéricos (any/Record)
+    forbidNonWhitelisted: false,
     transform: true,
   }));
 
