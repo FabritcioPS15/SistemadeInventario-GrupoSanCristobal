@@ -69,4 +69,20 @@ export class InventoryService {
     
     return { total, active };
   }
+
+  async getCategories() {
+    return this.prisma.category.findMany({
+      include: {
+        subcategories: true
+      },
+      orderBy: { name: 'asc' }
+    });
+  }
+
+  async getSubcategories(categoryId?: string) {
+    return this.prisma.subcategory.findMany({
+      where: categoryId ? { category_id: categoryId } : {},
+      orderBy: { name: 'asc' }
+    });
+  }
 }

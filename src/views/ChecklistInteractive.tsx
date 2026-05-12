@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Clock, User, MapPin, FileText, Save, Eye, CheckSquare, Settings } from 'lucide-react';
+import { CheckCircle2, Clock, User, MapPin, FileText, Save, Eye, CheckSquare, Settings, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import TemplateManager from '../components/TemplateManager';
+import { storageService } from '../services/storageService';
+import { Camera as CameraIcon, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
 
 type ChecklistItem = {
   id: string;
@@ -24,6 +26,7 @@ type ChecklistResponse = {
   started_at: string;
   completed_at?: string;
   created_at: string;
+  image_url?: string;
   locations?: { name: string };
   users?: { full_name: string };
 };
@@ -228,6 +231,7 @@ export default function ChecklistInteractive() {
   const [selectedType, setSelectedType] = useState<'escon' | 'ecsal' | 'citv'>('escon');
   const [currentChecklist, setCurrentChecklist] = useState<ChecklistResponse | null>(null);
   const [responses, setResponses] = useState<Record<string, any>>({});
+  const [checklistImage, setChecklistImage] = useState<string>('');
   const [history, setHistory] = useState<ChecklistResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -262,8 +266,10 @@ export default function ChecklistInteractive() {
       responses: initialResponses,
       status: 'in_progress',
       started_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      image_url: ''
     });
+    setChecklistImage('');
   };
 
   const fetchHistory = async () => {
@@ -313,6 +319,7 @@ export default function ChecklistInteractive() {
         location_id: user?.location_id,
         responses,
         status,
+        image_url: checklistImage,
         started_at: currentChecklist.started_at,
         completed_at: isComplete ? new Date().toISOString() : null
       };
@@ -426,6 +433,38 @@ export default function ChecklistInteractive() {
     }));
   };
 
+  const handleItemImageUpload = async (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const { url } = await storageService.uploadFile(file);
+      const currentImages = responses[itemId]?.images || [];
+      updateResponse(itemId, 'images', [...currentImages, url]);
+    } catch (error) {
+      console.error('Error uploading item image:', error);
+      alert('Error al subir la imagen');
+    }
+  };
+
+  const removeItemImage = (itemId: string, imageUrl: string) => {
+    const currentImages = responses[itemId]?.images || [];
+    updateResponse(itemId, 'images', currentImages.filter((img: string) => img !== imageUrl));
+  };
+
+  const handleChecklistImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const { url } = await storageService.uploadFile(file);
+      setChecklistImage(url);
+    } catch (error) {
+      console.error('Error uploading checklist image:', error);
+      alert('Error al subir la imagen de evidencia');
+    }
+  };
+
   const loadChecklist = async (checklist: ChecklistResponse) => {
     setCurrentChecklist(checklist);
     setResponses(checklist.responses);
@@ -474,7 +513,7 @@ export default function ChecklistInteractive() {
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Formularios digitales y gestión de cumplimiento</p>
               </div>
             </div>
-            
+
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={() => navigate('/checklist')}
@@ -563,15 +602,41 @@ export default function ChecklistInteractive() {
                     <button
                       onClick={saveChecklist}
                       disabled={saving}
-                      className={`w-full py-3 rounded-none font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group ${
-                        getProgress() === 100 
-                          ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md' 
+                      className={`w-full py-3 rounded-none font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group ${getProgress() === 100
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md'
                           : 'bg-[#002855] text-white hover:bg-blue-800 shadow-md'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       <Save className="w-14 h-14 group-hover:scale-110 transition-transform" size={14} />
                       {saving ? 'PROCESANDO...' : 'GUARDAR CAMBIOS'}
                     </button>
+
+                    <div className="mt-6 pt-6 border-t border-slate-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <ImageIcon size={14} className="text-slate-400" />
+                        <h4 className="text-[10px] font-black text-[#002855] uppercase tracking-widest">Evidencia Final</h4>
+                      </div>
+
+                      {checklistImage ? (
+                        <div className="relative aspect-video rounded-none overflow-hidden border border-slate-200 group">
+                          <img src={checklistImage} alt="Evidencia checklist" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button
+                              onClick={() => setChecklistImage('')}
+                              className="p-2 bg-rose-600 text-white rounded-none hover:bg-rose-700 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center aspect-video rounded-none border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-blue-300 transition-all cursor-pointer">
+                          <Upload className="text-slate-400 mb-2" size={20} />
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center px-4">Subir foto de conformidad</span>
+                          <input type="file" className="hidden" accept="image/*" onChange={handleChecklistImageUpload} />
+                        </label>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -639,6 +704,25 @@ export default function ChecklistInteractive() {
                                     <div className="absolute top-2 right-2">
                                       <FileText size={14} className="text-slate-200" />
                                     </div>
+                                  </div>
+
+                                  {/* Item Images */}
+                                  <div className="mt-4 flex flex-wrap gap-3">
+                                    {(response.images || []).map((img: string, idx: number) => (
+                                      <div key={idx} className="relative w-20 h-20 border border-slate-200 group">
+                                        <img src={img} alt="item" className="w-full h-full object-cover" />
+                                        <button
+                                          onClick={() => removeItemImage(item.id, img)}
+                                          className="absolute -top-2 -right-2 bg-rose-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                          <X size={10} />
+                                        </button>
+                                      </div>
+                                    ))}
+                                    <label className="w-20 h-20 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 hover:border-blue-300 cursor-pointer transition-all">
+                                      <CameraIcon size={16} className="text-slate-400" />
+                                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleItemImageUpload(item.id, e)} />
+                                    </label>
                                   </div>
                                 </div>
                               </div>
@@ -733,19 +817,18 @@ export default function ChecklistInteractive() {
                                 <span className="text-[10px] font-black text-[#002855]">{percentage}%</span>
                               </div>
                               <div className="w-full bg-slate-100 rounded-none h-1.5 overflow-hidden">
-                                <div 
-                                  className={`h-full bg-${colorClass}-500 transition-all duration-500`} 
+                                <div
+                                  className={`h-full bg-${colorClass}-500 transition-all duration-500`}
                                   style={{ width: `${percentage}%` }}
                                 />
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-5 font-bold">
-                            <span className={`px-2.5 py-1 border text-[9px] font-black uppercase tracking-[0.2em] ${
-                              checklist.status === 'completed'
+                            <span className={`px-2.5 py-1 border text-[9px] font-black uppercase tracking-[0.2em] ${checklist.status === 'completed'
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                                 : 'bg-blue-50 border-blue-200 text-blue-700'
-                            }`}>
+                              }`}>
                               {checklist.status === 'completed' ? 'FINALIZADO' : 'EN CURSO'}
                             </span>
                           </td>

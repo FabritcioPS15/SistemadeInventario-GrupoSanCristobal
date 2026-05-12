@@ -49,7 +49,7 @@ export default function Sutran() {
     try {
       setLoading(true);
       const data = await sutranService.getAll();
-      setVisits(data || []);
+      setVisits(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error('Error al cargar visitas:', err);
       alert(`Error al cargar visitas: ${err.message || err}`);
@@ -78,10 +78,10 @@ export default function Sutran() {
     }
   };
 
-  const filteredVisits = visits.filter(visit => {
+  const filteredVisits = (Array.isArray(visits) ? visits : []).filter(visit => {
     const matchesSearch =
-      visit.inspector_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      visit.location_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (visit.inspector_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (visit.location_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (visit.observations && visit.observations.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (visit.findings && visit.findings.toLowerCase().includes(searchTerm.toLowerCase()));
 

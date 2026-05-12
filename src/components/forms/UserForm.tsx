@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { User, Eye, EyeOff, HelpCircle, Crown, TrendingUp, Lock, Shield, Users as UsersIcon, Settings, User as UserIcon, X, ChevronRight } from 'lucide-react';
-import { supabase, Location } from '../../lib/supabase';
+import { Location } from '../../lib/supabase';
+import { userService } from '../../services/userService';
+import { locationService } from '../../services/locationService';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 type UserType = {
@@ -226,17 +228,6 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
       ]
     },
     {
-      id: 'painpoint',
-      label: 'Painpoints',
-      category: 'Administrativo',
-      hasSubmenu: false,
-      permissions: [
-        { id: 'painpoint-view', label: 'Ver Painpoints', type: 'view' },
-        { id: 'painpoint-create', label: 'Crear Painpoints', type: 'edit' },
-        { id: 'painpoint-edit', label: 'Editar Painpoints', type: 'edit' }
-      ]
-    },
-    {
       id: 'sent',
       label: 'Enviados',
       category: 'Administrativo',
@@ -271,23 +262,24 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
   }, []);
 
   const checkSuperAdminExists = async () => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('id')
-      .eq('role', 'super_admin')
-      .limit(1);
-
-    if (!error && data && data.length > 0) {
-      setHasSuperAdmin(true);
+    try {
+      const users = await userService.getAll();
+      if (Array.isArray(users)) {
+        const superAdmin = users.find((u: any) => u.role === 'super_admin');
+        if (superAdmin) setHasSuperAdmin(true);
+      }
+    } catch (err) {
+      console.error('Error al verificar Super Admin:', err);
     }
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase
-      .from('locations')
-      .select('*')
-      .order('name');
-    if (data) setLocations(data);
+    try {
+      const data = await locationService.getAll();
+      if (Array.isArray(data)) setLocations(data);
+    } catch (err) {
+      console.error('Error al cargar sedes:', err);
+    }
   };
 
   const validateEmail = (email: string): boolean => {
@@ -303,36 +295,30 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
   const checkDuplicateEmail = async (email: string, currentUserId?: string): Promise<boolean> => {
     if (!email) return false;
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email);
-
-    if (error) return false;
-
-    if (currentUserId && data) {
-      return !data.some(user => user.id !== currentUserId);
+    try {
+      const users = await userService.getAll();
+      if (Array.isArray(users)) {
+        const duplicate = users.find((u: any) => u.email === email && u.id !== currentUserId);
+        return !duplicate;
+      }
+    } catch (err) {
+      console.error('Error al verificar duplicado:', err);
     }
-
-    return data?.length === 0;
+    return true;
   };
 
   const checkSuperAdminAvailability = async (currentUserId?: string): Promise<boolean> => {
     if (formData.role !== 'super_admin') return true;
-
-    const { data, error } = await supabase
-      .from('users')
-      .select('id')
-      .eq('role', 'super_admin');
-
-    if (error) return false;
-
-    if (currentUserId && data) {
-      return !data.some(user => user.id !== currentUserId);
+    try {
+      const users = await userService.getAll();
+      if (Array.isArray(users)) {
+        const superAdmin = users.find((u: any) => u.role === 'super_admin' && u.id !== currentUserId);
+        return !superAdmin;
+      }
+    } catch (err) {
+      console.error('Error al verificar disponibilidad Super Admin:', err);
     }
-
-    return data?.length === 0;
+    return true;
   };
 
   // Funciones para roles
@@ -548,26 +534,9 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
     try {
       if (editUser) {
-        const { error } = await supabase
-          .from('users')
-          .update(dataToSave)
-          .eq('id', editUser.id);
-
-        if (error) {
-          setErrors({ submit: 'Error al actualizar el usuario: ' + error.message });
-          setLoading(false);
-          return;
-        }
+        await userService.update(editUser.id, dataToSave);
       } else {
-        const { error } = await supabase
-          .from('users')
-          .insert([dataToSave]);
-
-        if (error) {
-          setErrors({ submit: 'Error al crear el usuario: ' + error.message });
-          setLoading(false);
-          return;
-        }
+        await userService.create(dataToSave);
       }
 
       setLoading(false);

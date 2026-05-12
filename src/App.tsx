@@ -30,7 +30,6 @@ import ChecklistDetail from './views/ChecklistDetail';
 import Vacations from './views/Vacations';
 import Tickets from './views/Tickets';
 import TicketHistory from './views/TicketHistory';
-import Painpoints from './views/Painpoints';
 import TicketDetail from './views/TicketDetail';
 import NotFound from './views/NotFound';
 
@@ -218,7 +217,6 @@ function AppContent() {
             <Route path="/tickets/:view" element={<ProtectedRoute permission="tickets"><Tickets /></ProtectedRoute>} />
             <Route path="/tickets/history" element={<ProtectedRoute permission="tickets"><TicketHistory /></ProtectedRoute>} />
             <Route path="/ticket/:ticketId" element={<ProtectedRoute permission="tickets"><TicketDetail /></ProtectedRoute>} />
-            <Route path="/painpoint" element={<ProtectedRoute permission="painpoint"><Painpoints /></ProtectedRoute>} />
 
             {/* Fallback */}
             <Route path="*" element={<NotFound />} />

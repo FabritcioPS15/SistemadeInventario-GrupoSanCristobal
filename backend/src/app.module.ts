@@ -12,6 +12,10 @@ import { AuditModule } from './audit/audit.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SutranModule } from './sutran/sutran.module';
+import { StorageModule } from './storage/storage.module';
+import { CamerasModule } from './cameras/cameras.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -28,6 +32,12 @@ import { SutranModule } from './sutran/sutran.module';
     DashboardModule,
     NotificationsModule,
     SutranModule,
+    StorageModule,
+    CamerasModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
   ],
   controllers: [],
   providers: [],

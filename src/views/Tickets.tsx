@@ -46,14 +46,14 @@ export default function Tickets() {
     useEffect(() => {
         fetchTickets();
         const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
-        
+
         if (DB_MODE === 'supabase') {
             const sub = supabase.channel('tickets_board_final').on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, fetchTickets).subscribe();
             return () => { supabase.removeChannel(sub); };
         } else {
             // En NestJS podríamos usar WebSockets aquí también si quisiéramos tiempo real en el tablero
             // Por ahora, solo evitamos que Supabase lance error
-            return () => {};
+            return () => { };
         }
     }, []);
 
@@ -80,7 +80,7 @@ export default function Tickets() {
     const fetchTickets = async () => {
         try {
             const data = await ticketService.getAll();
-            setTickets(data || []);
+            setTickets(Array.isArray(data) ? data : []);
         } catch (e) {
             console.error(e);
         } finally {
@@ -173,6 +173,10 @@ export default function Tickets() {
 
 
     const filteredTickets = useMemo(() => {
+        if (!Array.isArray(tickets)) return {
+            pending: [], inProgress: [], resolved: [], closed: [],
+            recent: [], myCreated: [], myAttended: [], archivedList: []
+        };
         let active = tickets.filter(t => t.status !== 'archived');
 
         // Filter by date range if provided
@@ -225,7 +229,8 @@ export default function Tickets() {
     }, [tickets, searchTerm, activeTab, user?.id, startDate, endDate]);
 
     const metricsData = useMemo(() => {
-        let filteredForMetrics = [...tickets];
+        const ticketList = Array.isArray(tickets) ? tickets : [];
+        let filteredForMetrics = [...ticketList];
         if (startDate) {
             const start = new Date(startDate);
             filteredForMetrics = filteredForMetrics.filter(t => new Date(t.created_at) >= start);
@@ -460,7 +465,7 @@ export default function Tickets() {
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
-                                                    {filteredTickets.myCreated.map(t => {
+                                                    {filteredTickets.myCreated.map((t: any) => {
                                                         const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                                         return (
                                                             <tr key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group border-b border-slate-50 last:border-0 relative">

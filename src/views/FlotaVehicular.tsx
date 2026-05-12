@@ -8,9 +8,10 @@ import autoTable from 'jspdf-autotable';
 import VehicleImportModal from '../components/VehicleImportModal';
 import FlotaVehicularForm from '../components/forms/FlotaVehicularForm';
 import Pagination from '../components/Pagination';
-import { supabase, Location } from '../lib/supabase';
+import { Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { vehicleService } from '../services/vehicleService';
+import { locationService } from '../services/locationService';
 
 type Vehiculo = {
   id: string;
@@ -75,8 +76,8 @@ export default function FlotaVehicular() {
 
   const fetchSchools = async () => {
     try {
-      const { data, error } = await supabase.from('locations').select('*').order('name');
-      if (!error && data) setSchools(data as Location[]);
+      const data = await locationService.getAll();
+      if (Array.isArray(data)) setSchools(data as any);
     } catch (error) {
       console.error('Error al cargar ubicaciones:', error);
     }
@@ -86,7 +87,7 @@ export default function FlotaVehicular() {
     try {
       setLoading(true);
       const data = await vehicleService.getAll();
-      setVehiculos(data || []);
+      setVehiculos(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error al cargar vehículos:', error);
     } finally {
@@ -128,7 +129,8 @@ export default function FlotaVehicular() {
   // Vehículos con algún documento vencido o por vencer en <= 30 días
   const getVencimientoReport = () => {
     const DIAS_ALERTA = 30;
-    return vehiculos
+    const vehicleList = Array.isArray(vehiculos) ? vehiculos : [];
+    return vehicleList
       .filter(v => {
         const dias = [
           getDaysUntil(v.citv_vencimiento),
@@ -299,7 +301,8 @@ export default function FlotaVehicular() {
   };
 
   const filteredVehiculos = useMemo(() => {
-    return vehiculos.filter(v => {
+    const vehicleList = Array.isArray(vehiculos) ? vehiculos : [];
+    return vehicleList.filter(v => {
       const q = search.toLowerCase();
       const searchMatch = !search || v.placa.toLowerCase().includes(q) || v.marca.toLowerCase().includes(q) || v.modelo.toLowerCase().includes(q);
       const sedeMatch = selectedLocations.length === 0 || selectedLocations.length === schools.length || selectedLocations.includes(v.ubicacion_actual);

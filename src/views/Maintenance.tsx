@@ -89,7 +89,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         type: typeFilter,
         machineType: machineTypeFilter
       });
-      setMaintenanceRecords(data as MaintenanceRecord[]);
+      setMaintenanceRecords(Array.isArray(data) ? data : []);
     } catch (err: any) {
       console.error('Error loading maintenance records:', err);
       alert(`Error al cargar registros: ${err.message}`);
@@ -178,7 +178,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
 
   const sortedRecords = useMemo(() => {
-    const filtered = maintenanceRecords.filter(record => {
+    const recordList = Array.isArray(maintenanceRecords) ? maintenanceRecords : [];
+    const filtered = recordList.filter(record => {
       const matchesSearch =
         record.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         record.technician?.toLowerCase().includes(searchTerm.toLowerCase()) ||

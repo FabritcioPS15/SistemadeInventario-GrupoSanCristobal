@@ -126,11 +126,12 @@ export default function Dashboard() {
       } = await dashboardService.getQuickStats();
 
       // Process tickets
-      const openTickets = tickets?.filter(t => t.status === 'open').length || 0;
-      const attendedTickets = tickets?.filter(t => t.status === 'attended').length || 0;
-      const resolvedTickets = tickets?.filter(t => t.status === 'resolved').length || 0;
-      const closedTickets = tickets?.filter(t => t.status === 'closed').length || 0;
-      const archivedTickets = tickets?.filter(t => t.status === 'archived').length || 0;
+      const ticketList = Array.isArray(tickets) ? tickets : [];
+      const openTickets = ticketList.filter((t: any) => t.status === 'open').length || 0;
+      const attendedTickets = ticketList.filter((t: any) => t.status === 'attended').length || 0;
+      const resolvedTickets = ticketList.filter((t: any) => t.status === 'resolved').length || 0;
+      const closedTickets = ticketList.filter((t: any) => t.status === 'closed').length || 0;
+      const archivedTickets = ticketList.filter((t: any) => t.status === 'archived').length || 0;
 
       // Extract recent participants
       const participantsMap = new Map();
@@ -157,9 +158,10 @@ export default function Dashboard() {
       const recentTicketParticipants = Array.from(participantsMap.values());
 
       // Process vehicles
-      const totalVehicles = vehicles?.length || 0;
-      const activeVehicles = vehicles?.filter(v => v.estado === 'activa').length || 0;
-      const maintenanceVehicles = vehicles?.filter(v => v.estado === 'en_proceso').length || 0;
+      const vehicleList = Array.isArray(vehicles) ? vehicles : [];
+      const totalVehicles = vehicleList.length || 0;
+      const activeVehicles = vehicleList.filter((v: any) => v.estado === 'activa').length || 0;
+      const maintenanceVehicles = vehicleList.filter((v: any) => v.estado === 'en_proceso').length || 0;
 
       // Process document expirations with detailed tracking
       const today = new Date();

@@ -40,50 +40,30 @@ const unlockAudioContext = () => {
   } catch (_) {/* ignorar */ }
 };
 
-/** Alerta de nuevo ticket — 3 dings ascendentes, fuerte y escandaloso. */
+/** Alerta de nuevo ticket — Sonido suave y agradable (tipo "pop" o "ding" moderno). */
 const playNotificationSound = () => {
   try {
     const ctx = getAudioContext();
 
     const fire = () => {
-      // Compresor para empujar el volumen al techo
-      const comp = ctx.createDynamicsCompressor();
-      comp.threshold.setValueAtTime(-10, ctx.currentTime);
-      comp.ratio.setValueAtTime(12, ctx.currentTime);
-      comp.attack.setValueAtTime(0.001, ctx.currentTime);
-      comp.release.setValueAtTime(0.15, ctx.currentTime);
-      comp.connect(ctx.destination);
+      // Un solo tono suave y rápido
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
-      // 3 dings con tono ascendente: Do5 → Mi5 → La5
-      const notes = [
-        { freq: 523, offset: 0.0 },  // Do5
-        { freq: 659, offset: 0.45 }, // Mi5
-        { freq: 880, offset: 0.9 }, // La5
-      ];
+      osc.type = 'sine'; // Onda senoidal suave, sin estridencias
+      osc.frequency.setValueAtTime(659.25, t); // Nota Mi5 (E5)
+      
+      // Volumen bajo y decaimiento rápido
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.3, t + 0.05); // Ataque suave
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5); // Desvanecimiento
 
-      notes.forEach(({ freq, offset }) => {
-        const t = ctx.currentTime + offset;
-
-        // Mezcla sine + square para un tono más rico y escandaloso
-        ['sine', 'square'].forEach((type) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-
-          osc.type = type as OscillatorType;
-          osc.frequency.setValueAtTime(freq, t);
-
-          // Square más bajo para no distorsionar
-          const vol = type === 'sine' ? 1.2 : 0.35;
-          gain.gain.setValueAtTime(0, t);
-          gain.gain.linearRampToValueAtTime(vol, t + 0.008);
-          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.38);
-
-          osc.connect(gain);
-          gain.connect(comp);
-          osc.start(t);
-          osc.stop(t + 0.40);
-        });
-      });
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(t);
+      osc.stop(t + 0.5);
     };
 
     if (ctx.state === 'suspended') {

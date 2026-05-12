@@ -253,7 +253,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
         },
         { id: 'mtc', label: 'MTC Accesos', icon: Key, path: '/mtc' },
         { id: 'servers', label: 'Servidores', icon: GrServerCluster, path: '/servers' },
-        { id: 'painpoint', label: 'Painpoints', icon: Zap, path: '/painpoint' },
         {
           id: 'sent',
           label: 'Enviados',

@@ -4,6 +4,8 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 import { notifyTicketCreated } from '../../lib/notifications';
+import { storageService } from '../../services/storageService';
+import { Paperclip, X as CloseIcon, File as FileIcon } from 'lucide-react';
 
 type TicketFormProps = {
   onClose: () => void;
@@ -25,6 +27,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
   const [locations, setLocations] = useState<any[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
 
   const [formData, setFormData] = useState({
@@ -33,7 +36,8 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     priority: 'medium',
     category: 'hardware',
     location_id: user?.location_id || '',
-    anydesk: ''
+    anydesk: '',
+    attachments: [] as string[]
   });
 
   const priorities = [
@@ -106,6 +110,33 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     setShowSuggestions(false);
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const newAttachments = [...formData.attachments];
+      for (let i = 0; i < files.length; i++) {
+        const { url } = await storageService.uploadFile(files[i]);
+        newAttachments.push(url);
+      }
+      setFormData(prev => ({ ...prev, attachments: newAttachments }));
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      alert('Error al subir archivos');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAttachment = (url: string) => {
+    setFormData(prev => ({
+      ...prev,
+      attachments: prev.attachments.filter(a => a !== url)
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -143,7 +174,8 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             category: formData.category,
             location_id: formData.location_id,
             requester_id: user?.id,
-            status: 'open'
+            status: 'open',
+            attachments: formData.attachments
           }
         ])
         .select()
@@ -348,6 +380,46 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             error={errors.description}
           />
         </FormField>
+      </FormSection>
+
+      {/* Section: Adjuntos */}
+      <FormSection title="Evidencia y Adjuntos" color="blue">
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-3">
+            {formData.attachments.map((url, idx) => (
+              <div key={idx} className="relative w-24 h-24 border border-slate-200 group">
+                {url.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                  <img src={url} alt="adjunto" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50">
+                    <FileIcon size={24} className="text-slate-400" />
+                    <span className="text-[8px] font-black uppercase text-slate-400 mt-1">Archivo</span>
+                  </div>
+                )}
+                <button 
+                  type="button"
+                  onClick={() => removeAttachment(url)}
+                  className="absolute -top-2 -right-2 bg-rose-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <CloseIcon size={10} />
+                </button>
+              </div>
+            ))}
+            
+            <label className={`w-24 h-24 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 hover:border-blue-300 cursor-pointer transition-all ${uploading ? 'opacity-50' : ''}`}>
+              {uploading ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-slate-200 border-t-blue-600" />
+              ) : (
+                <>
+                  <Paperclip size={20} className="text-slate-400" />
+                  <span className="text-[8px] font-black uppercase text-slate-400 mt-1">Adjuntar</span>
+                </>
+              )}
+              <input type="file" className="hidden" multiple onChange={handleFileUpload} disabled={uploading} />
+            </label>
+          </div>
+          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Puedes adjuntar capturas de pantalla, fotos del error o documentos PDF (máx. 10MB)</p>
+        </div>
       </FormSection>
     </BaseForm>
 

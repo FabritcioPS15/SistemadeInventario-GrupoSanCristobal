@@ -58,8 +58,6 @@ const ROUTE_LABELS: Record<string, string> = {
 
     'reports': 'Reportes',
 
-    'painpoint': 'Puntos Críticos',
-
     'checklist': 'Checklist',
 
     'vacations': 'Vacaciones',

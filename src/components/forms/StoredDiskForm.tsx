@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, HardDrive, Save } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { storageService } from '../../services/storageService';
+import { Camera as CameraIcon, Upload, Trash2 } from 'lucide-react';
 
 interface StoredDiskFormProps {
   onClose: () => void;
@@ -21,8 +23,10 @@ export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredD
     serial_number: '',
     stored_from: '',
     stored_to: '',
-    notes: ''
+    notes: '',
+    image_url: ''
   });
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetchCameras();
@@ -37,7 +41,8 @@ export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredD
         serial_number: editDisk.serial_number || '',
         stored_from: editDisk.stored_from || '',
         stored_to: editDisk.stored_to || '',
-        notes: editDisk.notes || ''
+        notes: editDisk.notes || '',
+        image_url: editDisk.image_url || ''
       });
     }
   }, [editDisk]);
@@ -46,6 +51,22 @@ export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredD
     const { data } = await supabase.from('cameras').select('id, name').order('name');
     if (data) setCameras(data);
   }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { url } = await storageService.uploadFile(file);
+      setFormData(prev => ({ ...prev, image_url: url }));
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      alert('Error al subir la imagen');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +86,7 @@ export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredD
         stored_from: formData.stored_from || null,
         stored_to: formData.stored_to || null,
         notes: formData.notes || null,
+        image_url: formData.image_url || null,
         total_capacity_gb: Number(formData.total_capacity_gb),
         used_space_gb: Number(formData.used_space_gb),
         remaining_capacity_gb: Number(formData.total_capacity_gb) - Number(formData.used_space_gb)
@@ -232,6 +254,39 @@ export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredD
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
                 placeholder="Detalles sobre el contenido del disco..."
               />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
+                Foto / Evidencia del Disco
+              </label>
+              
+              {formData.image_url ? (
+                <div className="relative aspect-video rounded-lg overflow-hidden border border-slate-200 group">
+                  <img src={formData.image_url} alt="Evidencia disco" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                    <button 
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
+                      className="p-2 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition-colors"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center aspect-video rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-blue-300 transition-all cursor-pointer">
+                  {uploading ? (
+                    <div className="animate-spin rounded-full h-8 w-8 border-4 border-slate-200 border-t-blue-600" />
+                  ) : (
+                    <>
+                      <Upload className="text-slate-400 mb-2" size={24} />
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Haga clic para subir foto</span>
+                    </>
+                  )}
+                  <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={uploading} />
+                </label>
+              )}
             </div>
           </div>
 

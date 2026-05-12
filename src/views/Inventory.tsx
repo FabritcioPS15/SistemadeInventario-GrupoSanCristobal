@@ -117,7 +117,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   const fetchAssets = async () => {
     try {
       const data = await inventoryService.getAllAssets();
-      setAssets(data as AssetWithDetails[]);
+      setAssets(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching assets:', error);
     }
@@ -211,11 +211,12 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   };
 
   const filteredAssets = useMemo(() => {
+    const assetList = Array.isArray(assets) ? assets : [];
     const cleanCategoryFilter = categoryFilter?.replace('inventory-', '');
     const activePathCategory = cleanCategoryFilter ? pathCategoryMap[cleanCategoryFilter] : null;
     const activeSubcatNames = subcategoryFilter ? subcategorySlugMap[subcategoryFilter] : null;
 
-    return assets.filter(asset => {
+    return assetList.filter(asset => {
       const matchesSearch =
         (asset.codigo_unico?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (asset.brand?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||

@@ -17,7 +17,6 @@ const routeConfig: Record<string, string> = {
     'connection-test': 'Prueba de Conexión',
     'quick-diagnostic': 'Diagnóstico Rápido',
     'tickets': 'Mesa de Ayuda',
-    'painpoint': 'Puntos Críticos',
     'checklist': 'Checklist',
     'vacations': 'Vacaciones',
     'servers': 'Servidores',

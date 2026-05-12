@@ -45,4 +45,17 @@ export class InventoryController {
   remove(@Param('id') id: string) {
     return this.inventoryService.remove(id);
   }
+
+  @Get('categories')
+  @ApiOperation({ summary: 'Obtener todas las categorías' })
+  getCategories() {
+    return this.inventoryService.getCategories();
+  }
+
+  @Get('subcategories')
+  @ApiOperation({ summary: 'Obtener subcategorías' })
+  @ApiQuery({ name: 'categoryId', required: false })
+  getSubcategories(@Query('categoryId') categoryId?: string) {
+    return this.inventoryService.getSubcategories(categoryId);
+  }
 }

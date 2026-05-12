@@ -11,17 +11,22 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-admin123}
       POSTGRES_DB: ${DB_NAME:-gsc_db}
     ports:
-      - "5432:5432"
+      - "5432:5432" # Puedes comentar esto si no necesitas acceso externo a la DB
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-gsc_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  # Cache Redis (para notificaciones en tiempo real)
+  # Cache Redis
   redis:
     image: redis:7-alpine
     container_name: gsc-redis
     restart: always
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379" # Redis interno, no necesita exposición externa
 
   # Backend NestJS
   api:
@@ -35,11 +40,13 @@ services:
       JWT_SECRET: ${JWT_SECRET:-super-secret-key-123}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-    ports:
-      - "3000:3000"
+    volumes:
+      - uploads_data:/app/uploads
+    # ports:
+    #   - "3000:3000" # Nginx lo servirá vía puerto 80, no hace falta exponerlo
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
 
   # Frontend React (Nginx)
   frontend:
@@ -55,8 +62,11 @@ services:
     restart: always
     ports:
       - "80:80"
+    volumes:
+      - uploads_data:/usr/share/nginx/html/uploads:ro
     depends_on:
       - api
 
 volumes:
   postgres_data:
+  uploads_data:

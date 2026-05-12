@@ -12,6 +12,8 @@ import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import Pagination from '../components/Pagination';
 import StoredDiskForm from '../components/forms/StoredDiskForm';
+import { cameraService } from '../services/cameraService';
+import { locationService } from '../services/locationService';
 
 type Camera = CameraType;
 
@@ -91,40 +93,47 @@ export default function Cameras({ subview }: CamerasProps) {
   }, [cameras, selectedLocations, filterStatus, filterStorage, viewMode, searchTerm, subview]);
 
   const fetchCameras = async () => {
-    let query = supabase
-      .from('cameras')
-      .select('*, locations(*), camera_disks(*)');
-
-    // Si el usuario es administrador, filtrar por su sede
-    if (user?.role === 'administradores' && user?.location_id) {
-      query = query.eq('location_id', user.location_id);
+    try {
+      const data = await cameraService.getAll();
+      if (Array.isArray(data)) {
+        let finalData = data;
+        // Si el usuario es administrador, filtrar por su sede (aunque el backend debería manejarlo, lo dejamos por seguridad)
+        if (user?.role === 'administradores' && user?.location_id) {
+          finalData = data.filter((c: any) => c.location_id === user.location_id);
+        }
+        setCameras(finalData);
+      }
+    } catch (err) {
+      console.error('Error al cargar cámaras:', err);
     }
-
-    const { data, error } = await query.order('created_at', { ascending: false });
-    if (!error && data) setCameras(data as Camera[]);
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
-    if (data) setLocations(data);
+    try {
+      const data = await locationService.getAll();
+      if (Array.isArray(data)) setLocations(data);
+    } catch (err) {
+      console.error('Error al cargar sedes:', err);
+    }
   };
 
   const fetchStoredDisks = async () => {
-    const { data, error } = await supabase
-      .from('stored_disks')
-      .select('*, cameras(name, location_id, locations(name))')
-      .order('created_at', { ascending: false });
-    
-    if (!error && data) {
-      setStoredDisks(data as any);
+    try {
+      const data = await cameraService.getStoredDisks();
+      if (Array.isArray(data)) setStoredDisks(data);
+    } catch (err) {
+      console.error('Error al cargar discos almacenados:', err);
     }
   };
 
   const handleDeleteDisk = async (id: string) => {
     if (!confirm('¿Eliminar registro de disco almacenado?')) return;
-    const { error } = await supabase.from('stored_disks').delete().eq('id', id);
-    if (error) return alert('Error al eliminar: ' + error.message);
-    await fetchStoredDisks();
+    try {
+      await cameraService.deleteStoredDisk(id);
+      await fetchStoredDisks();
+    } catch (error: any) {
+      alert('Error al eliminar: ' + (error.message || error));
+    }
   };
 
   const openCreate = () => {
@@ -139,9 +148,12 @@ export default function Cameras({ subview }: CamerasProps) {
 
   const del = async (cam: Camera) => {
     if (!confirm(`¿Eliminar cámara "${cam.name}"?`)) return;
-    const { error } = await supabase.from('cameras').delete().eq('id', cam.id);
-    if (error) return alert('Error al eliminar: ' + error.message);
-    await fetchCameras();
+    try {
+      await cameraService.delete(cam.id);
+      await fetchCameras();
+    } catch (error: any) {
+      alert('Error al eliminar: ' + (error.message || error));
+    }
   };
 
   const onSave = async () => {
@@ -210,7 +222,7 @@ export default function Cameras({ subview }: CamerasProps) {
     );
   };
 
-  const filteredCameras = cameras
+  const filteredCameras = (Array.isArray(cameras) ? cameras : [])
     .filter((c) => {
       // Filtro por subview (tipo de ubicación)
       const locationType = getLocationTypeFromSubview(subview);
@@ -262,7 +274,7 @@ export default function Cameras({ subview }: CamerasProps) {
     location_id: (disk as any).cameras?.location_id
   }));
 
-  const filteredDisks = processedStoredDisks.filter(disk => {
+  const filteredDisks = (Array.isArray(processedStoredDisks) ? processedStoredDisks : []).filter(disk => {
     const matchesSearch = !searchTerm || 
       disk.camera_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       disk.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -901,6 +913,7 @@ export default function Cameras({ subview }: CamerasProps) {
                       <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Capacidad</span></th>
                       <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
                       <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Notas</span></th>
+                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Evidencia</span></th>
                       <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
                     </tr>
                   </thead>
@@ -953,6 +966,15 @@ export default function Cameras({ subview }: CamerasProps) {
                         </td>
                         <td className="px-4 py-5 text-left">
                           <span className="text-[11px] font-medium text-slate-500 italic max-w-xs block truncate">{disk.notes || 'Sin observaciones'}</span>
+                        </td>
+                        <td className="px-4 py-5 text-left">
+                          {disk.image_url ? (
+                            <a href={disk.image_url} target="_blank" rel="noopener noreferrer" className="w-10 h-10 block border border-slate-200 overflow-hidden hover:border-blue-400 transition-colors">
+                              <img src={disk.image_url} alt="evidencia" className="w-full h-full object-cover" />
+                            </a>
+                          ) : (
+                            <span className="text-[9px] font-bold text-slate-300 uppercase italic">Sin foto</span>
+                          )}
                         </td>
                         <td className="px-6 py-5 text-center">
                           <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1047,7 +1069,7 @@ export default function Cameras({ subview }: CamerasProps) {
                           {cam.camera_disks && cam.camera_disks.length > 0 ? (
                             <div className="flex flex-col gap-1 min-w-[120px]">
                               {(() => {
-                                const activeDisks = cam.camera_disks!.filter(d => d.status !== 'extracted');
+                                const activeDisks = (Array.isArray(cam.camera_disks) ? cam.camera_disks : []).filter(d => d.status !== 'extracted');
                                 if (activeDisks.length === 0) return <span className="text-[10px] font-bold text-slate-400">SIN DISCOS ACTIVOS</span>;
                                 
                                 const totals = activeDisks.reduce(

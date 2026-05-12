@@ -9,6 +9,8 @@ import { supabase, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import LocationForm from '../components/forms/LocationForm';
 import Pagination from '../components/Pagination';
+import { locationService } from '../services/locationService';
+import { cameraService } from '../services/cameraService';
 
 const typeLabels: Record<string, string> = {
   revision: 'Revisión',
@@ -80,16 +82,24 @@ export default function Sedes() {
   }, [locations, cameraCounts]);
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
-    if (data) setLocations(data);
+    try {
+      const data = await locationService.getAll();
+      setLocations(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error al cargar sedes:', err);
+    }
   };
 
   const fetchCameraCounts = async () => {
-    const { data } = await supabase.from('cameras').select('location_id');
-    if (data) {
-      const counts: Record<string, number> = {};
-      data.forEach(c => { if (c.location_id) counts[c.location_id] = (counts[c.location_id] || 0) + 1; });
-      setCameraCounts(counts);
+    try {
+      const data = await cameraService.getAll();
+      if (Array.isArray(data)) {
+        const counts: Record<string, number> = {};
+        data.forEach(c => { if (c.location_id) counts[c.location_id] = (counts[c.location_id] || 0) + 1; });
+        setCameraCounts(counts);
+      }
+    } catch (err) {
+      console.error('Error al cargar conteo de cámaras:', err);
     }
   };
 
@@ -98,10 +108,13 @@ export default function Sedes() {
 
   const del = async (loc: Location) => {
     if (!confirm(`¿Eliminar sede "${loc.name}"?`)) return;
-    const { error } = await supabase.from('locations').delete().eq('id', loc.id);
-    if (error) return alert('Error al eliminar: ' + error.message);
-    setSelectedIds(prev => prev.filter(id => id !== loc.id));
-    await Promise.all([fetchLocations(), fetchCameraCounts()]);
+    try {
+      await locationService.delete(loc.id);
+      setSelectedIds(prev => prev.filter(id => id !== loc.id));
+      await Promise.all([fetchLocations(), fetchCameraCounts()]);
+    } catch (error: any) {
+      alert('Error al eliminar: ' + (error.message || error));
+    }
   };
 
   const toggleSelectAll = () => {
@@ -115,9 +128,13 @@ export default function Sedes() {
 
   const handleBulkDelete = async () => {
     if (!confirm(`¿Eliminar ${selectedIds.length} sedes seleccionadas?`)) return;
-    const { error } = await supabase.from('locations').delete().in('id', selectedIds);
-    if (!error) { setSelectedIds([]); await Promise.all([fetchLocations(), fetchCameraCounts()]); }
-    else alert('Error al eliminar: ' + error.message);
+    try {
+      await Promise.all(selectedIds.map(id => locationService.delete(id)));
+      setSelectedIds([]); 
+      await Promise.all([fetchLocations(), fetchCameraCounts()]);
+    } catch (error: any) {
+      alert('Error al eliminar lote: ' + (error.message || error));
+    }
   };
 
   const handleSort = (field: 'name' | 'type' | 'cameras') => {

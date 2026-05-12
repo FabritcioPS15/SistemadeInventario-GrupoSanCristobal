@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // --- CORE: USUARIOS Y SEDES ---
@@ -55,6 +55,7 @@ model Location {
   maintenance   MaintenanceRecord[]
   shipments_from Shipment[] @relation("FromLocation")
   shipments_to   Shipment[] @relation("ToLocation")
+  checklists     Checklist[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -166,8 +167,12 @@ model Vehicle {
 model Ticket {
   id           String    @id @default(uuid())
   title        String
+  description  String?
   status       String    @default("open") 
   priority     String    @default("medium") 
+  category     String?   @default("hardware")
+  anydesk      String?
+  attachments  Json?     @default("[]")
   
   requester_id String
   requester    User      @relation("Requester", fields: [requester_id], references: [id])
@@ -336,12 +341,87 @@ model InventoryMovement {
 }
 
 model Camera {
-  id          String   @id @default(uuid())
-  name        String
-  location_id String
-  location    Location @relation(fields: [location_id], references: [id])
-  url         String
-  status      String   @default("active")
+  id             String       @id @default(uuid())
+  name           String
+  location_id    String
+  location       Location     @relation(fields: [location_id], references: [id])
+  brand          String?
+  model          String?
+  ip_address     String?
+  port           String?
+  username       String?
+  password       String?
+  url            String?
+  auth_code      String?      // Código de verificación/autenticación
+  access_type    String?      // 'url', 'ivms', 'esviz', etc.
+  status         String       @default("active")
+  display_count  Int?         // Capacidad de canales/discos
+  notes          String?
   
+  camera_disks   CameraDisk[]
+  stored_disks   StoredDisk[]
+  
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+
   @@map("cameras")
+}
+
+model CameraDisk {
+  id                String   @id @default(uuid())
+  camera_id         String
+  camera            Camera   @relation(fields: [camera_id], references: [id])
+  disk_number       Int      @default(1)
+  total_capacity_gb Float
+  used_space_gb     Float
+  remaining_capacity_gb Float?
+  disk_type         String   @default("HDD") // HDD, SSD, etc.
+  status            String   @default("active")
+  
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  @@map("camera_disks")
+}
+
+model StoredDisk {
+  id                String   @id @default(uuid())
+  camera_id         String
+  camera            Camera   @relation(fields: [camera_id], references: [id])
+  disk_number       Int      @default(1)
+  total_capacity_gb Float
+  used_space_gb     Float
+  remaining_capacity_gb Float?
+  disk_type         String   @default("HDD")
+  brand             String?
+  serial_number     String?
+  stored_from       DateTime?
+  stored_to         DateTime?
+  notes             String?
+  image_url         String?  // Foto del disco físico
+  
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  @@map("stored_disks")
+}
+
+// --- CHECKLISTS ---
+
+model Checklist {
+  id              String   @id @default(uuid())
+  type            String   // 'escon', 'ecsal', 'citv'
+  location_id     String
+  location        Location @relation(fields: [location_id], references: [id])
+  user_id         String
+  user_name       String
+  date            DateTime @default(now())
+  status          String   @default("completed")
+  data            Json     // El contenido dinámico del checklist
+  image_url       String?  // Foto de evidencia del checklist firmado
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@map("checklists")
 }

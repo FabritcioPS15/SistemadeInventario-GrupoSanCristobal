@@ -10,6 +10,8 @@ import { supabase, Location } from '../lib/supabase';
 import UserForm from '../components/forms/UserForm';
 import { useAuth } from '../contexts/AuthContext';
 import Pagination from '../components/Pagination';
+import { userService } from '../services/userService';
+import { locationService } from '../services/locationService';
 
 type User = {
   id: string;
@@ -100,8 +102,12 @@ export default function Users() {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
-    if (data) setLocations(data);
+    try {
+      const data = await locationService.getAll();
+      if (Array.isArray(data)) setLocations(data);
+    } catch (err) {
+      console.error('Error al cargar sedes:', err);
+    }
   };
 
   const handleEditUser = (user: User) => {
@@ -122,12 +128,11 @@ export default function Users() {
     }
     if (window.confirm(`¿Eliminar al usuario "${user.full_name}"?`)) {
       try {
-        const { error } = await supabase.from('users').delete().eq('id', user.id);
-        if (error) throw error;
+        await userService.delete(user.id);
         await fetchUsers();
         alert('✅ Usuario eliminado correctamente');
       } catch (err: any) {
-        alert('❌ Error: ' + err.message);
+        alert('❌ Error: ' + (err.response?.data?.message || err.message));
       }
     }
   };
@@ -145,12 +150,8 @@ export default function Users() {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*, locations(*)')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      if (data) {
+      const data = await userService.getAll();
+      if (Array.isArray(data)) {
         setUsers(data as User[]);
         calculateStats(data as User[]);
       }

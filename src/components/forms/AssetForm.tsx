@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Package, RefreshCw } from 'lucide-react';
 import { supabase, Category, Subcategory, Location, Area, AssetWithDetails } from '../../lib/supabase';
+import { inventoryService } from '../../services/inventoryService';
+import { locationService } from '../../services/locationService';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 type AssetFormProps = {
@@ -136,41 +138,32 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
 
   const fetchInitialData = async () => {
     try {
-      const [catRes, locRes] = await Promise.all([
-        supabase.from('categories').select('*').order('name'),
-        supabase.from('locations').select('*').order('name')
+      setLoading(true);
+      const [cats, locs] = await Promise.all([
+        inventoryService.getCategories(),
+        locationService.getAll()
       ]);
 
-      if (catRes.error) {
-        console.error('Error fetching categories:', catRes.error);
-        setErrors(prev => ({ ...prev, submit: `Error cargando categorías: ${catRes.error.message}` }));
-      }
-      if (locRes.error) {
-        console.error('Error fetching locations:', locRes.error);
-      }
-
-      if (catRes.data) {
-        setCategories(catRes.data);
-        if (catRes.data.length === 0) {
+      if (Array.isArray(cats)) {
+        setCategories(cats);
+        if (cats.length === 0) {
           console.warn('No category data found in table "categories"');
         }
       }
-      if (locRes.data) setLocations(locRes.data);
+      if (Array.isArray(locs)) setLocations(locs);
     } catch (error: any) {
       console.error('Fetch error:', error);
-      setErrors(prev => ({ ...prev, submit: 'Error de conexión con la base de datos' }));
+      setErrors(prev => ({ ...prev, submit: `Error cargando datos iniciales: ${error.message}` }));
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchSubcategories = async (categoryId: string) => {
     try {
       setFetchingSubcategories(true);
-      const { data } = await supabase
-        .from('subcategories')
-        .select('*')
-        .eq('category_id', categoryId)
-        .order('name');
-      if (data) setSubcategories(data);
+      const data = await inventoryService.getSubcategories(categoryId);
+      if (Array.isArray(data)) setSubcategories(data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -181,12 +174,8 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
   const fetchAreas = async (locationId: string) => {
     try {
       setFetchingAreas(true);
-      const { data } = await supabase
-        .from('areas')
-        .select('*')
-        .eq('location_id', locationId)
-        .order('name');
-      if (data) setAreas(data);
+      const data = await locationService.getAreas(locationId);
+      if (Array.isArray(data)) setAreas(data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -351,11 +340,9 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
       };
 
       if (editAsset) {
-        const { error } = await supabase.from('assets').update(dataToSave).eq('id', editAsset.id);
-        if (error) throw error;
+        await inventoryService.updateAsset(editAsset.id, dataToSave);
       } else {
-        const { error } = await supabase.from('assets').insert([dataToSave]);
-        if (error) throw error;
+        await inventoryService.createAsset(dataToSave);
       }
       onSave();
     } catch (error: any) {

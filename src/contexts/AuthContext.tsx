@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import api from '../services/api';
 
 type User = {
   id: string;
@@ -60,90 +61,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkSession();
   }, []);
 
-  // Update localStorage when user changes (if they opted in)
-  useEffect(() => {
-    if (user) {
-      const saved = localStorage.getItem('auth_user');
-      if (saved) {
-        localStorage.setItem('auth_user', JSON.stringify(user));
-      }
-    }
-  }, [user]);
-
-  // Subscribe to realtime changes for the current user
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
-    if (DB_MODE !== 'supabase') return;
-
-    const userSubscription = supabase
-      .channel(`user-updates-${user.id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'users',
-        filter: `id=eq.${user.id}`
-      }, async () => {
-        // Fetch the complete updated user data
-        const { data: updatedUser } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (updatedUser && mountedRef.current) {
-          setUser(updatedUser as User);
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(userSubscription);
-    };
-  }, [user?.id]);
-
-const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
-
   const checkSession = async () => {
     try {
       const savedUser = localStorage.getItem('auth_user');
       if (savedUser) {
         const parsedUser = JSON.parse(savedUser);
-
-        if (DB_MODE === 'supabase') {
-          const { data: freshUser } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', parsedUser.id)
-            .single();
-
-          if (freshUser && mountedRef.current) {
-            setUser(freshUser as User);
-            localStorage.setItem('auth_user', JSON.stringify(freshUser));
-          } else if (mountedRef.current) {
-            setUser(parsedUser);
-          }
-        } else {
-          // MODO NESTJS: No necesitamos refrescar aquí si el token es válido, 
-          // pero podríamos pedir /auth/me en el futuro
-          if (mountedRef.current) {
-            setUser(parsedUser);
-          }
-        }
-      }
-
-      if (DB_MODE === 'supabase') {
-        const { data: usersData } = await supabase
-          .from('users')
-          .select('id, password')
-          .eq('status', 'active');
-
-        if (usersData && usersData.length > 0 && mountedRef.current) {
-          const hasPasswordUsers = usersData.some(user => user.password && user.password.trim() !== '');
-          if (!hasPasswordUsers) {
-            setNeedsPasswordSetup(true);
-          }
+        if (mountedRef.current) {
+          setUser(parsedUser);
         }
       }
     } catch (error) {
@@ -227,7 +151,6 @@ const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
         'sutran-view', 'sutran-edit',
         'mtc-view', 'mtc-edit',
         'servers-view', 'servers-edit',
-        'painpoint-view', 'painpoint-create', 'painpoint-edit',
         'sent-view', 'sent-create', 'sent-edit',
         'sent-lima-view', 'sent-provincias-view',
         'audit-view', 'audit-export'
@@ -255,7 +178,6 @@ const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
         'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
         'sutran-view', 'sutran-edit',
         'mtc-view', 'mtc-edit',
-        'painpoint-view', 'painpoint-create', 'painpoint-edit',
         'sent-view', 'sent-create', 'sent-edit',
         'sent-lima-view', 'sent-provincias-view',
         'audit-view', 'audit-export'
@@ -284,7 +206,6 @@ const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
         'sutran-view', 'sutran-edit',
         'mtc-view', 'mtc-edit',
         'servers-view', 'servers-edit',
-        'painpoint-view', 'painpoint-create', 'painpoint-edit',
         'sent-view', 'sent-create', 'sent-edit',
         'sent-lima-view', 'sent-provincias-view',
         'audit-view', 'audit-export'
@@ -313,7 +234,6 @@ const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
         'sutran-view', 'sutran-edit',
         'mtc-view', 'mtc-edit',
         'servers-view', 'servers-edit',
-        'painpoint-view', 'painpoint-create', 'painpoint-edit',
         'sent-view', 'sent-create', 'sent-edit',
         'sent-lima-view', 'sent-provincias-view',
         'audit-view', 'audit-export'
@@ -373,14 +293,12 @@ const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
   const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {
     if (!user) return;
 
-    const { error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', user.id);
-
-    if (error) throw error;
-
-    // El estado se actualizará automáticamente vía Realtime subscription
+    try {
+      await api.patch(`/users/${user.id}`, updates);
+      setUser(prev => prev ? { ...prev, ...updates } : null);
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || error.message);
+    }
   };
 
   const value = {

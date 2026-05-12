@@ -1,16 +1,27 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { LocationsService } from './locations.service';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { AreasService } from './areas.service';
+import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Locations')
 @Controller('locations')
 export class LocationsController {
-  constructor(private readonly locationsService: LocationsService) {}
+  constructor(
+    private readonly locationsService: LocationsService,
+    private readonly areasService: AreasService
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Obtener todas las sedes' })
   findAll() {
     return this.locationsService.findAll();
+  }
+
+  @Get('areas')
+  @ApiOperation({ summary: 'Obtener áreas' })
+  @ApiQuery({ name: 'locationId', required: false })
+  findAreas(@Query('locationId') locationId?: string) {
+    return this.areasService.findAll(locationId);
   }
 
   @Get(':id')
