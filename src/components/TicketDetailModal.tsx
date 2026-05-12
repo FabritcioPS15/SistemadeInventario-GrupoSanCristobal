@@ -197,7 +197,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
             const { data: files } = await supabase.storage.from('chat-attachments').list(`ticket_${currentTicket.id}`);
             if (files && files.length > 0) {
                 await supabase.storage.from('chat-attachments').remove(
-                    files.map(f => `ticket_${currentTicket.id}/${f.name}`)
+                    files.map((f: { name: string }) => `ticket_${currentTicket.id}/${f.name}`)
                 );
             }
 
@@ -529,7 +529,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                         </div>
 
                         <div className="p-3 sm:p-4 bg-white border-t border-slate-50">
-                            <form onSubmit={handleSendComment} className="flex items-center gap-2">
+                            <div className="flex items-center gap-2">
                                 <input
                                     type="file"
                                     ref={fileInputRef}
@@ -556,14 +556,14 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                         className="w-full h-10 sm:h-12 pl-4 sm:pl-6 pr-12 sm:pr-16 bg-[#F8FAFC] rounded-[1rem] sm:rounded-[1.5rem] border border-slate-200 outline-none focus:ring-3 sm:focus:ring-4 focus:ring-blue-100 text-[11px] sm:text-[13px] font-bold text-[#002855] placeholder:text-slate-400 transition-all"
                                     />
                                     <button
-                                        type="submit"
+                                        onClick={handleSendComment}
                                         disabled={!newComment.trim() || sending}
                                         className="absolute right-1 sm:right-1.5 top-1 sm:top-1.5 w-7 h-7 sm:w-9 sm:h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-200 hover:scale-110 active:scale-95 transition-all disabled:opacity-30"
                                     >
                                         <Send className="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5" />
                                     </button>
                                 </div>
-                            </form>
+                            </div>
                         </div>
                     </div>
                 </div>

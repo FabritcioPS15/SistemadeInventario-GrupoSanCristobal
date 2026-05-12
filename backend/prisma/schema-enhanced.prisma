@@ -1,0 +1,789 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- CORE: USUARIOS Y SEDES ---
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  dni           String    @unique
+  full_name     String
+  password_hash String?   
+  role          String    @default("user")
+  status        String    @default("active")
+  avatar_url    String?
+  phone         String?
+  location_id   String?
+  permissions   String[]  @default([]) // Array de permisos para rol personalizado
+  
+  // Relaciones
+  location      Location? @relation(fields: [location_id], references: [id])
+  tickets_requested Ticket[] @relation("Requester")
+  tickets_assigned  Ticket[] @relation("AssignedTo")
+  audit_logs        AuditLog[]
+  messages_sent     Message[]
+  conversations     ConversationParticipant[]
+  files_uploaded    File[]
+  notifications_sent Notification[] @relation("Sender")
+  notifications_received Notification[] @relation("Receiver")
+  
+  // Timestamps
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  last_login DateTime?
+
+  @@map("users")
+}
+
+model Location {
+  id            String   @id @default(uuid())
+  name          String
+  type          String   // 'sede', 'oficina', 'almacen', etc
+  address       String?
+  region        String?  
+  country       String?  @default("Perú")
+  city          String?
+  postal_code   String?
+  phone         String?
+  email         String?
+  manager_name  String?
+  manager_phone String?
+  notes         String?
+  checklist_url String?
+  history_url   String?
+  is_active     Boolean  @default(true)
+  
+  // Relaciones
+  users         User[]
+  assets        Asset[]
+  areas         Area[]
+  vehicles      Vehicle[]
+  tickets       Ticket[]
+  sutran_visits SutranVisit[]
+  audits        BranchAudit[]
+  cameras       Camera[]
+  maintenance   MaintenanceRecord[]
+  shipments_from Shipment[] @relation("FromLocation")
+  shipments_to   Shipment[] @relation("ToLocation")
+  checklists     Checklist[]
+  files          File[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("locations")
+}
+
+model Area {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  location_id String
+  floor       String?  // Piso
+  section     String?  // Sección
+  is_active   Boolean  @default(true)
+  
+  // Relaciones
+  location    Location @relation(fields: [location_id], references: [id])
+  assets      Asset[]
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("areas")
+}
+
+// --- INVENTARIO MEJORADO ---
+
+model Asset {
+  id             String    @id @default(uuid())
+  codigo_unico   String?   @unique
+  asset_type_id  String?
+  category_id    String?
+  subcategory_id String?
+  location_id    String?
+  area_id        String?
+  
+  // Información básica
+  brand          String?
+  model          String?
+  serial_number  String?   @unique
+  status         String    @default("active") // 'active', 'maintenance', 'retired', 'lost'
+  condition      String?   // 'excelente', 'bueno', 'regular', 'malo'
+  
+  // Acceso remoto
+  anydesk_id     String?
+  anydesk_password String?
+  teamviewer_id  String?
+  teamviewer_password String?
+  
+  // Conectividad
+  ip_address     String?
+  mac_address    String?
+  phone_number   String?
+  
+  // Especificaciones técnicas
+  os             String?
+  processor      String?
+  ram            String?
+  storage        String?
+  graphics_card  String?
+  motherboard    String?
+  power_supply   String?
+  
+  // Información de compra
+  purchase_date  DateTime?
+  purchase_price Float?
+  supplier       String?
+  invoice_number String?
+  warranty_expiry DateTime?
+  
+  // Ubicación física
+  rack_position  String?
+  rack_number    String?
+  floor          String?
+  building       String?
+  
+  // Responsables
+  assigned_to    String?   // ID de usuario asignado
+  department     String?
+  
+  // Mantenimiento
+  last_maintenance DateTime?
+  next_maintenance DateTime?
+  maintenance_interval Int? // Días entre mantenimientos
+  
+  // Relaciones
+  location    Location? @relation(fields: [location_id], references: [id])
+  area        Area?     @relation(fields: [area_id], references: [id])
+  category    Category? @relation(fields: [category_id], references: [id])
+  subcategory Subcategory? @relation(fields: [subcategory_id], references: [id])
+  maintenance MaintenanceRecord[]
+  shipments   Shipment[]
+  movements   InventoryMovement[]
+  files       File[]
+  assigned_user User? @relation("AssetAssignee", fields: [assigned_to], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("assets")
+}
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  icon        String?  // Icono para UI
+  color       String?  // Color para UI
+  is_active   Boolean  @default(true)
+  sort_order  Int      @default(0)
+  
+  // Relaciones
+  assets      Asset[]
+  subcategories Subcategory[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("categories")
+}
+
+model Subcategory {
+  id          String   @id @default(uuid())
+  category_id String
+  category    Category @relation(fields: [category_id], references: [id])
+  name        String
+  description String?
+  is_active   Boolean  @default(true)
+  sort_order  Int      @default(0)
+  
+  // Relaciones
+  assets      Asset[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("subcategories")
+}
+
+// --- ALMACENAMIENTO DE ARCHIVOS ---
+
+model File {
+  id            String   @id @default(uuid())
+  original_name String   // Nombre original del archivo
+  filename      String   // Nombre único en el sistema
+  file_path     String   // Ruta de almacenamiento
+  file_size     Int      // Tamaño en bytes
+  mime_type     String   // Tipo MIME
+  file_hash     String?  // Hash SHA-256 para integridad
+  
+  // Relaciones
+  uploaded_by   String
+  uploader      User @relation("FileUploader", fields: [uploaded_by], references: [id])
+  
+  // Asociaciones
+  asset_id      String?
+  asset         Asset? @relation(fields: [asset_id], references: [id])
+  ticket_id     String?
+  ticket        Ticket? @relation("TicketFiles", fields: [ticket_id], references: [id])
+  maintenance_id String?
+  maintenance   MaintenanceRecord? @relation("MaintenanceFiles", fields: [maintenance_id], references: [id])
+  location_id   String?
+  location      Location? @relation(fields: [location_id], references: [id])
+  
+  // Metadatos
+  description   String?
+  tags          String[] @default([])
+  is_public     Boolean  @default(false)
+  download_count Int      @default(0)
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  expires_at   DateTime?
+
+  @@map("files")
+}
+
+// --- TICKETS MEJORADOS ---
+
+model Ticket {
+  id           String    @id @default(uuid())
+  title        String
+  description  String?
+  status       String    @default("open") // 'open', 'in_progress', 'resolved', 'closed', 'archived'
+  priority     String    @default("medium") // 'low', 'medium', 'high', 'critical'
+  category     String?   @default("hardware")
+  
+  // Acceso remoto
+  anydesk      String?
+  anydesk_password String?
+  
+  // Adjuntos
+  attachments  Json?     @default("[]") // Array de IDs de archivos
+  
+  // Asignación
+  requester_id String
+  requester    User      @relation("Requester", fields: [requester_id], references: [id])
+  assigned_to  String?
+  attendant    User?     @relation("AssignedTo", fields: [assigned_to], references: [id])
+  location_id  String?
+  location     Location? @relation(fields: [location_id], references: [id])
+  
+  // Tiempos
+  attended_at  DateTime?
+  resolved_at  DateTime?
+  closed_at    DateTime?
+  due_date     DateTime? // Fecha límite
+  
+  // Escalado
+  escalated_to String?   // ID de usuario para escalado
+  escalated_at DateTime?
+  
+  // Satisfacción
+  satisfaction_rating Int? // 1-5
+  satisfaction_notes String?
+  
+  // Relaciones
+  comments     TicketComment[]
+  files        File[] @relation("TicketFiles")
+  history      TicketHistory[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("tickets")
+}
+
+model TicketComment {
+  id         String   @id @default(uuid())
+  ticket_id  String
+  ticket     Ticket   @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+  user_id    String
+  user       User     @relation("CommentAuthor", fields: [user_id], references: [id])
+  content    String
+  is_internal Boolean @default(false) // Comentarios internos vs visibles para cliente
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("ticket_comments")
+}
+
+model TicketHistory {
+  id          String   @id @default(uuid())
+  ticket_id   String
+  ticket      Ticket   @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+  user_id     String?
+  field_name  String   // Campo modificado
+  old_value   String?
+  new_value   String?
+  action      String   // 'created', 'updated', 'assigned', 'closed', etc.
+  description String?
+  
+  created_at DateTime @default(now())
+
+  @@map("ticket_history")
+}
+
+// --- MANTENIMIENTO MEJORADO ---
+
+model MaintenanceRecord {
+  id               String   @id @default(uuid())
+  asset_id         String
+  asset            Asset    @relation(fields: [asset_id], references: [id])
+  location_id      String?
+  location         Location? @relation(fields: [location_id], references: [id])
+  
+  maintenance_type String   // 'preventive', 'corrective', 'predictive'
+  status           String   @default("pending") // 'pending', 'in_progress', 'completed', 'cancelled'
+  priority         String   @default("medium")
+  
+  description      String
+  solution         String?
+  
+  // Costos
+  total_cost       Float? 
+  labor_cost       Float?
+  parts_cost       Float?
+  
+  // Tiempos
+  scheduled_date   DateTime?
+  started_at       DateTime?
+  completed_date   DateTime?
+  estimated_hours  Float?
+  actual_hours     Float?
+  
+  // Personal
+  technician_id    String?
+  technician_name  String?
+  approved_by      String?
+  approved_at      DateTime?
+  
+  // Partes y materiales
+  parts_used       String?    // JSON con detalles de partes
+  
+  // Resultados
+  success_rating   Int?       // 1-5
+  notes            String?
+  
+  // Relaciones
+  files            File[] @relation("MaintenanceFiles")
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("maintenance_records")
+}
+
+// --- FLOTA VEHICULAR MEJORADA ---
+
+model Vehicle {
+  id                         String   @id @default(uuid())
+  placa                      String   @unique
+  marca                      String
+  modelo                     String
+  anio                       Int
+  estado                     String   @default("activa") // 'activa', 'mantenimiento', 'baja', 'vendida'
+  ubicacion_id               String
+  location                   Location @relation(fields: [ubicacion_id], references: [id])
+  
+  // Documentación
+  soat_vencimiento           DateTime?
+  soat_url                   String?  // URL del documento
+  citv_vencimiento           DateTime?
+  citv_url                   String?
+  poliza_vencimiento         DateTime?
+  poliza_url                 String?
+  contrato_vencimiento       DateTime?
+  contrato_url               String?
+  tarjeta_propiedad_url      String?
+  
+  // Especificaciones
+  tipo_vehiculo              String?  // 'automovil', 'camioneta', 'motocicleta', 'camion'
+  color                      String?
+  combustible                String?  // 'gasolina', 'diesel', 'gnv', 'electrico'
+  transmision                String?  // 'manual', 'automatica'
+  motor                      String?
+  kilometraje                Int?
+  capacidad_carga            Float?
+  
+  // Mantenimiento
+  ultimo_mantenimiento       DateTime?
+  proximo_mantenimiento      DateTime?
+  intervalo_mantenimiento    Int?     // Km o días
+  
+  // Asignación
+  asignado_a                 String?  // ID de usuario
+  conductor                  String?
+  
+  // Seguro
+  aseguradora                String?
+  numero_poliza              String?
+  tipo_seguro                String?  // 'terceros', 'todo riesgo'
+  
+  // Notas
+  notas                      String?
+  observaciones              String?
+  color                      String?
+  imagen_url                 String?
+  
+  // GPS y tracking
+  gps_instalado              Boolean  @default(false)
+  gps_device_id              String?
+  gps_ultima_actualizacion   DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("vehicles")
+}
+
+// --- CÁMARAS Y SEGURIDAD ---
+
+model Camera {
+  id             String       @id @default(uuid())
+  name           String
+  location_id    String
+  location       Location     @relation(fields: [location_id], references: [id])
+  
+  // Especificaciones
+  brand          String?
+  model          String?
+  ip_address     String?
+  port           String?
+  username       String?
+  password       String?
+  url            String?
+  auth_code      String?      // Código de verificación/autenticación
+  access_type    String?      // 'url', 'ivms', 'esviz', 'rtsp', etc.
+  
+  // Configuración
+  resolution     String?      // '720p', '1080p', '4K'
+  fps            Int?         // Frames por segundo
+  night_vision   Boolean      @default(false)
+  audio          Boolean      @default(false)
+  motion_detection Boolean    @default(false)
+  
+  // Estado
+  status         String       @default("active") // 'active', 'inactive', 'maintenance'
+  last_online    DateTime?
+  is_recording   Boolean      @default(false)
+  
+  // Almacenamiento
+  display_count  Int?         // Capacidad de canales/discos
+  storage_days   Int?         // Días de retención
+  
+  // Ubicación física
+  installation_height Float?
+  installation_angle   Float?
+  coverage_area         String?
+  
+  // Mantenimiento
+  last_cleaning   DateTime?
+  next_cleaning   DateTime?
+  
+  notes          String?
+  
+  // Relaciones
+  camera_disks   CameraDisk[]
+  stored_disks   StoredDisk[]
+  files          File[]
+
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+
+  @@map("cameras")
+}
+
+model CameraDisk {
+  id                String   @id @default(uuid())
+  camera_id         String
+  camera            Camera   @relation(fields: [camera_id], references: [id])
+  disk_number       Int      @default(1)
+  disk_type         String   @default("HDD") // HDD, SSD, etc.
+  total_capacity_gb Float
+  used_space_gb     Float
+  remaining_capacity_gb Float?
+  manufacturer      String?
+  model             String?
+  serial_number     String?
+  status            String   @default("active") // 'active', 'failed', 'full', 'maintenance'
+  health_status     String?  // 'good', 'warning', 'critical'
+  
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  @@map("camera_disks")
+}
+
+model StoredDisk {
+  id                String   @id @default(uuid())
+  camera_id         String
+  camera            Camera   @relation(fields: [camera_id], references: [id])
+  disk_number       Int      @default(1)
+  total_capacity_gb Float
+  used_space_gb     Float
+  remaining_capacity_gb Float?
+  disk_type         String   @default("HDD")
+  brand             String?
+  serial_number     String?
+  stored_from       DateTime?
+  stored_to         DateTime?
+  notes             String?
+  image_url         String?  // Foto del disco físico
+  
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  @@map("stored_disks")
+}
+
+// --- NOTIFICACIONES ---
+
+model Notification {
+  id            String   @id @default(uuid())
+  type          String   // 'ticket_created', 'ticket_attended', 'ticket_resolved', 'maintenance_due', etc.
+  title         String
+  message       String
+  
+  // Relaciones
+  sender_id     String?
+  sender        User?    @relation("Sender", fields: [sender_id], references: [id])
+  receiver_id   String?
+  receiver      User?    @relation("Receiver", fields: [receiver_id], references: [id])
+  
+  // Contexto
+  ticket_id     String?
+  asset_id      String?
+  maintenance_id String?
+  
+  // Estado
+  read          Boolean  @default(false)
+  read_at       DateTime?
+  
+  // Prioridad
+  priority      String   @default("medium") // 'low', 'medium', 'high', 'urgent'
+  
+  // Acciones
+  action_url    String?
+  action_text   String?
+  
+  created_at    DateTime @default(now())
+  expires_at    DateTime?
+
+  @@map("notifications")
+}
+
+// --- AUDITORÍA ---
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  user_id     String?
+  user        User?    @relation(fields: [user_id], references: [id])
+  action      String   // 'create', 'update', 'delete', 'login', 'logout', etc.
+  entity_type String   // 'ticket', 'asset', 'user', etc.
+  entity_id   String
+  details     String?  // JSON con detalles del cambio
+  
+  // Contexto
+  ip_address  String?
+  user_agent  String?
+  
+  // Resultado
+  success     Boolean  @default(true)
+  error_message String?
+  
+  created_at DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// --- CHAT Y MENSAJERÍA ---
+
+model Conversation {
+  id           String   @id @default(uuid())
+  title        String?
+  type         String   @default("ticket") // 'ticket', 'support', 'general'
+  is_active    Boolean  @default(true)
+  last_message DateTime?
+  participants ConversationParticipant[]
+  messages     Message[]
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id              String       @id @default(uuid())
+  conversation_id String
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+  user_id         String
+  user            User         @relation(fields: [user_id], references: [id])
+  last_read_at    DateTime?
+  is_muted        Boolean      @default(false)
+  
+  joined_at       DateTime @default(now())
+
+  @@map("conversation_participants")
+}
+
+model Message {
+  id              String       @id @default(uuid())
+  conversation_id String
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+  sender_id       String
+  sender          User         @relation(fields: [sender_id], references: [id])
+  content         String
+  message_type    String       @default("text") // 'text', 'image', 'file', 'system'
+  file_url        String?
+  is_edited       Boolean      @default(false)
+  edited_at       DateTime?
+  read_at         DateTime?
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("messages")
+}
+
+// --- CHECKLISTS ---
+
+model Checklist {
+  id              String   @id @default(uuid())
+  type            String   // 'escon', 'ecsal', 'citv'
+  location_id     String
+  location        Location @relation(fields: [location_id], references: [id])
+  user_id         String
+  user_name       String
+  date            DateTime @default(now())
+  status          String   @default("completed") // 'pending', 'in_progress', 'completed', 'failed'
+  data            Json     // El contenido dinámico del checklist
+  image_url       String?  // Foto de evidencia del checklist firmado
+  score           Int?     // Puntuación obtenida
+  max_score       Int?     // Puntuación máxima
+  observations    String?  // Observaciones del auditor
+  
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@map("checklists")
+}
+
+// --- OTROS MÓDULOS ---
+
+model SutranVisit {
+  id             String   @id @default(uuid())
+  visit_date     DateTime
+  inspector_name String
+  location_id    String
+  location       Location @relation(fields: [location_id], references: [id])
+  
+  visit_type     String   // 'rutinaria', 'especial', 'seguimiento'
+  status         String   @default("pending") // 'pending', 'in_progress', 'completed', 'cancelled'
+  findings       String?
+  observations   String?
+  recommendations String?
+  actions_taken  String?
+  next_visit     DateTime?
+  
+  // Documentos
+  report_url     String?
+  evidence_urls  String[] @default([])
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("sutran_visits")
+}
+
+model BranchAudit {
+  id            String   @id @default(uuid())
+  location_id   String
+  location      Location @relation(fields: [location_id], references: [id])
+  auditor_name  String
+  audit_date    DateTime
+  score         Int
+  status        String   // 'passed', 'failed', 'pending'
+  responses     String?  // JSON con respuestas del cuestionario
+  findings      String?
+  recommendations String?
+  follow_up_required Boolean @default(false)
+  follow_up_date DateTime?
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("branch_audits")
+}
+
+model Shipment {
+  id               String   @id @default(uuid())
+  shipment_code    String   @unique
+  asset_id         String
+  asset            Asset    @relation(fields: [asset_id], references: [id])
+  from_location_id String?
+  from_location    Location? @relation("FromLocation", fields: [from_location_id], references: [id])
+  to_location_id   String
+  to_location      Location? @relation("ToLocation", fields: [to_location_id], references: [id])
+  
+  status           String   @default("shipped") // 'pending', 'shipped', 'in_transit', 'delivered', 'lost', 'returned'
+  shipped_at       DateTime?
+  delivered_at     DateTime?
+  expected_at      DateTime?
+  
+  // Transporte
+  transport_method String?  // 'interno', 'externo', 'courier'
+  transport_company String?
+  tracking_number  String?
+  driver_name      String?
+  driver_phone     String?
+  vehicle_plate    String?
+  
+  // Responsables
+  shipped_by       String?  // ID de usuario
+  received_by      String?  // ID de usuario
+  
+  // Costos
+  shipping_cost    Float?
+  insurance_cost   Float?
+  
+  notes            String?
+  conditions       String?  // Condiciones del transporte
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("shipments")
+}
+
+model InventoryMovement {
+  id          String   @id @default(uuid())
+  asset_id    String
+  asset       Asset    @relation(fields: [asset_id], references: [id])
+  type        String   // 'in', 'out', 'transfer', 'adjustment'
+  quantity    Int
+  reason      String?
+  
+  // Transferencia
+  from_location_id String?
+  to_location_id   String?
+  
+  // Responsable
+  moved_by    String?  // ID de usuario
+  
+  // Documentos
+  reference   String?  // Número de documento de referencia
+  
+  created_at DateTime @default(now())
+
+  @@map("inventory_movements")
+}

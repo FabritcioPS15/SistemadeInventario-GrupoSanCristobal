@@ -7,13 +7,13 @@ async function main() {
 
   // 1. Admin User
   const admin = await prisma.user.upsert({
-    where: { dni: '72562172' },
+    where: { email: 'admin@gsc.com' },
     update: {},
     create: {
       dni: '72562172',
       email: 'admin@gsc.com',
       full_name: 'Administrador GSC',
-      password_hash: '15042002', 
+      password: '15042002', 
       role: 'super_admin',
       status: 'active',
     },

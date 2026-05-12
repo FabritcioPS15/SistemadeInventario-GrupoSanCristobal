@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Server, HelpCircle } from 'lucide-react';
-import { supabase, Location, WindowsCredential } from '../../lib/supabase';
+import { Server as ServerIcon, HelpCircle } from 'lucide-react';
+import { supabase, Location, WindowsCredential, Server } from '../../lib/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
 interface ServerFormProps {
@@ -178,7 +178,7 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
       onSubmit={handleSubmit}
       loading={loading}
       error={errors.submit}
-      icon={<Server size={24} className="text-blue-600" />}
+      icon={<ServerIcon size={24} className="text-blue-600" />}
     >
       {/* Help Section */}
       <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -274,6 +274,7 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
               value={formData.password}
               onChange={handleChange}
               placeholder="Contraseña de acceso"
+              autoComplete="current-password"
               error={errors.password}
             />
           </FormField>
@@ -299,6 +300,7 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
                 value={newCredential.password}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCredential(prev => ({ ...prev, password: e.target.value }))}
                 placeholder="Contraseña"
+                autoComplete="new-password"
               />
             </FormField>
 

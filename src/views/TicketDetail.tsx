@@ -26,6 +26,12 @@ export default function TicketDetail() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
+    
+    // Estados para edición inline
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingField, setEditingField] = useState<string | null>(null);
+    const [editValues, setEditValues] = useState<any>({});
+    const [editLoading, setEditLoading] = useState(false);
 
     useEffect(() => {
         if (ticketId) {
@@ -97,7 +103,7 @@ export default function TicketDetail() {
                 const onlineIds = new Set(Object.keys(state));
                 setOnlineUsers(onlineIds);
             })
-            .subscribe(async (status) => {
+            .subscribe(async (status: 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED') => {
                 if (status === 'SUBSCRIBED') {
                     await presenceChannel.track({
                         online_at: new Date().toISOString(),
@@ -400,7 +406,7 @@ export default function TicketDetail() {
             const { data: files } = await supabase.storage.from('chat-attachments').list(`ticket_${ticketId}`);
             if (files && files.length > 0) {
                 await supabase.storage.from('chat-attachments').remove(
-                    files.map(f => `ticket_${ticketId}/${f.name}`)
+                    files.map((f: any) => `ticket_${ticketId}/${f.name}`)
                 );
             }
 
@@ -773,6 +779,127 @@ export default function TicketDetail() {
         }
     };
 
+    // Funciones para edición inline
+    const startEditing = (field: string, currentValue: any) => {
+        setEditingField(field);
+        setEditValues({ ...editValues, [field]: currentValue });
+        setIsEditing(true);
+    };
+
+    const cancelEditing = () => {
+        setEditingField(null);
+        setEditValues({});
+        setIsEditing(false);
+    };
+
+    const saveEdit = async (field: string) => {
+        if (!ticket) return;
+        
+        try {
+            setEditLoading(true);
+            
+            const updateData: any = { [field]: editValues[field] };
+            updateData.updated_at = new Date().toISOString();
+            
+            const { error } = await supabase
+                .from('tickets')
+                .update(updateData)
+                .eq('id', ticketId);
+            
+            if (error) throw error;
+            
+            // Agregar comentario de edición
+            await supabase.from('ticket_comments').insert([{
+                ticket_id: ticketId,
+                user_id: user?.id,
+                content: `**EDICIÓN**: Campo "${field}" actualizado por ${user?.full_name || 'un usuario'}`
+            }]);
+            
+            // Actualizar ticket localmente
+            setTicket({ ...ticket, ...updateData });
+            fetchComments();
+            cancelEditing();
+            
+        } catch (error) {
+            console.error('Error al guardar edición:', error);
+            alert('Error al guardar los cambios');
+        } finally {
+            setEditLoading(false);
+        }
+    };
+
+    const handleEditChange = (field: string, value: any) => {
+        setEditValues({ ...editValues, [field]: value });
+    };
+
+    // Componente de campo editable
+    const EditableField = ({ 
+        field, 
+        value, 
+        type = 'text', 
+        className = '', 
+        placeholder = '',
+        multiline = false 
+    }: {
+        field: string;
+        value: any;
+        type?: string;
+        className?: string;
+        placeholder?: string;
+        multiline?: boolean;
+    }) => {
+        const isCurrentlyEditing = editingField === field;
+        const canEdit = user?.role === 'super_admin' || user?.role === 'sistemas' || user?.role === 'gerencia' || user?.role === 'supervisores';
+        
+        if (!canEdit) {
+            return multiline ? (
+                <p className={className}>{value || placeholder}</p>
+            ) : (
+                <span className={className}>{value || placeholder}</span>
+            );
+        }
+        
+        if (isCurrentlyEditing) {
+            return multiline ? (
+                <textarea
+                    value={editValues[field] || ''}
+                    onChange={(e) => handleEditChange(field, e.target.value)}
+                    className={`w-full px-2 py-1 border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+                    placeholder={placeholder}
+                    rows={3}
+                    autoFocus
+                />
+            ) : (
+                <input
+                    type={type}
+                    value={editValues[field] || ''}
+                    onChange={(e) => handleEditChange(field, e.target.value)}
+                    className={`w-full px-2 py-1 border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${className}`}
+                    placeholder={placeholder}
+                    autoFocus
+                />
+            );
+        }
+        
+        return multiline ? (
+            <div 
+                className={`cursor-pointer hover:bg-blue-50 px-2 py-1 rounded transition-colors ${className}`}
+                onClick={() => startEditing(field, value)}
+                title="Click para editar"
+            >
+                <p className="m-0">{value || placeholder}</p>
+            </div>
+        ) : (
+            <span 
+                className={`cursor-pointer hover:bg-blue-50 px-2 py-1 rounded transition-colors ${className}`}
+                onClick={() => startEditing(field, value)}
+                title="Click para editar"
+            >
+                {value || placeholder}
+            </span>
+        );
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -832,15 +959,64 @@ export default function TicketDetail() {
                 {/* Left side: Ticket Details */}
                 <div className="w-full lg:w-[320px] xl:w-[350px] flex-none border-r border-slate-200 bg-slate-50 overflow-y-auto max-h-[40vh] lg:max-h-full">
                     <div className="p-6">
-                        <h2 className="text-sm font-black text-[#002855] leading-tight mb-6 uppercase">{ticket.title}</h2>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-sm font-black text-[#002855] leading-tight mb-6 uppercase">
+                                <EditableField 
+                                    field="title" 
+                                    value={ticket.title} 
+                                    className="cursor-pointer hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                                    placeholder="Título del ticket"
+                                />
+                            </h2>
+                            {editingField === 'title' && (
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => saveEdit('title')}
+                                        disabled={editLoading}
+                                        className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 disabled:opacity-50"
+                                    >
+                                        {editLoading ? '...' : '✓'}
+                                    </button>
+                                    <button
+                                        onClick={cancelEditing}
+                                        className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                                    >
+                                        ✗
+                                    </button>
+                                </div>
+                            )}
+                        </div>
 
                         <div className="space-y-6">
                             {/* Detalle Inicial */}
                             <div>
                                 <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">Detalle Inicial</span>
-                                <p className="text-[14px] text-slate-700 leading-relaxed font-medium">
-                                    {ticket.description}
-                                </p>
+                                <div className="space-y-2">
+                                    <EditableField 
+                                        field="description" 
+                                        value={ticket.description} 
+                                        multiline={true}
+                                        className="text-[14px] text-slate-700 leading-relaxed font-medium"
+                                        placeholder="Describe el problema..."
+                                    />
+                                    {editingField === 'description' && (
+                                        <div className="flex gap-2 mt-2">
+                                            <button
+                                                onClick={() => saveEdit('description')}
+                                                disabled={editLoading}
+                                                className="px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 disabled:opacity-50"
+                                            >
+                                                {editLoading ? 'Guardando...' : 'Guardar'}
+                                            </button>
+                                            <button
+                                                onClick={cancelEditing}
+                                                className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Anydesk */}
@@ -850,32 +1026,87 @@ export default function TicketDetail() {
                                     {/* AnyDesk ID */}
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
-                                            <p className="text-xs font-bold text-slate-900">AnyDesk: <span className="text-slate-600 font-normal">{ticket.anydesk_id || 'No proporcionado'}</span></p>
+                                            <p className="text-xs font-bold text-slate-900">
+                                                AnyDesk: 
+                                                <EditableField 
+                                                    field="anydesk_id" 
+                                                    value={ticket.anydesk_id} 
+                                                    className="text-slate-600 font-normal ml-1"
+                                                    placeholder="ID de AnyDesk"
+                                                />
+                                            </p>
                                         </div>
-                                        {ticket.anydesk_id && (
-                                            <button
-                                                onClick={() => handleCopy(ticket.anydesk_id, 'anydesk')}
-                                                className="w-6 h-6 rounded-none bg-white border border-slate-200 text-slate-600 hover:text-[#002855] hover:border-[#002855] transition-all flex items-center justify-center"
-                                            >
-                                                {copiedItem === 'anydesk' ? <div className="w-2 h-2 bg-green-500 rounded-none shrink-0" /> : <Copy size={12} />}
-                                            </button>
-                                        )}
+                                        <div className="flex gap-1">
+                                            {ticket.anydesk_id && (
+                                                <button
+                                                    onClick={() => handleCopy(ticket.anydesk_id, 'anydesk')}
+                                                    className="w-6 h-6 rounded-none bg-white border border-slate-200 text-slate-600 hover:text-[#002855] hover:border-[#002855] transition-all flex items-center justify-center"
+                                                >
+                                                    {copiedItem === 'anydesk' ? <div className="w-2 h-2 bg-green-500 rounded-none shrink-0" /> : <Copy size={12} />}
+                                                </button>
+                                            )}
+                                            {editingField === 'anydesk_id' && (
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => saveEdit('anydesk_id')}
+                                                        disabled={editLoading}
+                                                        className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 disabled:opacity-50"
+                                                    >
+                                                        ✓
+                                                    </button>
+                                                    <button
+                                                        onClick={cancelEditing}
+                                                        className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                                                    >
+                                                        ✗
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Contraseña */}
-                                    {ticket.anydesk_password && (
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1">
-                                                <p className="text-xs font-bold text-slate-900">Pass: <span className="text-slate-600 font-normal">{ticket.anydesk_password}</span></p>
-                                            </div>
-                                            <button
-                                                onClick={() => handleCopy(ticket.anydesk_password, 'password')}
-                                                className="w-6 h-6 rounded-none bg-white border border-slate-200 text-slate-600 hover:text-[#002855] hover:border-[#002855] transition-all flex items-center justify-center"
-                                            >
-                                                {copiedItem === 'password' ? <div className="w-2 h-2 bg-green-500 rounded-none shrink-0" /> : <Copy size={12} />}
-                                            </button>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex-1">
+                                            <p className="text-xs font-bold text-slate-900">
+                                                Pass: 
+                                                <EditableField 
+                                                    field="anydesk_password" 
+                                                    value={ticket.anydesk_password || ''} 
+                                                    type="password"
+                                                    className="text-slate-600 font-normal ml-1"
+                                                    placeholder="Contraseña"
+                                                />
+                                            </p>
                                         </div>
-                                    )}
+                                        <div className="flex gap-1">
+                                            {ticket.anydesk_password && (
+                                                <button
+                                                    onClick={() => handleCopy(ticket.anydesk_password, 'password')}
+                                                    className="w-6 h-6 rounded-none bg-white border border-slate-200 text-slate-600 hover:text-[#002855] hover:border-[#002855] transition-all flex items-center justify-center"
+                                                >
+                                                    {copiedItem === 'password' ? <div className="w-2 h-2 bg-green-500 rounded-none shrink-0" /> : <Copy size={12} />}
+                                                </button>
+                                            )}
+                                            {editingField === 'anydesk_password' && (
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => saveEdit('anydesk_password')}
+                                                        disabled={editLoading}
+                                                        className="px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 disabled:opacity-50"
+                                                    >
+                                                        ✓
+                                                    </button>
+                                                    <button
+                                                        onClick={cancelEditing}
+                                                        className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600"
+                                                    >
+                                                        ✗
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1165,7 +1396,7 @@ export default function TicketDetail() {
                                 </div>
 
                                 {/* Contenedor de Escritura */}
-                                <form onSubmit={handleCommentSubmit} className="relative flex items-end gap-3">
+                                <div className="relative flex items-end gap-3">
                                     <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
 
                                     <div className="flex-1 relative bg-white">
@@ -1234,14 +1465,14 @@ export default function TicketDetail() {
                                     </div>
 
                                     <button
-                                        type="submit"
+                                        onClick={handleCommentSubmit}
                                         disabled={sending || !newComment.trim()}
                                         className="w-14 h-14 bg-[#002855] text-white border-2 border-[#002855] flex items-center justify-center hover:bg-white hover:text-[#002855] transition-all active:scale-90 shadow-xl disabled:opacity-50 disabled:grayscale shrink-0"
                                         title="Enviar Mensaje"
                                     >
                                         {sending ? <Loader2 size={24} className="animate-spin" /> : <Send size={24} />}
                                     </button>
-                                </form>
+                                </div>
                             </div>
                         )}
                     </div>

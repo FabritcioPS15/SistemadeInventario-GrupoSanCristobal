@@ -24,7 +24,7 @@ export class UsersService {
   }
 
   async findByDni(dni: string) {
-    return this.prisma.user.findUnique({
+    return this.prisma.user.findFirst({
       where: { dni },
     });
   }

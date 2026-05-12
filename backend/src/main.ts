@@ -6,11 +6,18 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Configuración de CORS para permitir que el frontend se conecte
+  // Configuración de CORS optimizada para producción
+  const isProduction = process.env.NODE_ENV === 'production';
+  const allowedOrigins = isProduction 
+    ? ['http://localhost:80', 'http://your-domain.com'] // Reemplaza 'your-domain.com' con tu dominio real
+    : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:80'];
+
   app.enableCors({
-    origin: '*', // En producción cambiaremos esto por tu dominio real
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: allowedOrigins,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['X-Total-Count'],
   });
 
   // Prefijo global para todas las rutas

@@ -37,9 +37,13 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       console.warn('⚠️ Sesión expirada o no autorizada');
-      // Podríamos redirigir al login si fuera necesario
-      // localStorage.removeItem('auth_token');
-      // window.location.href = '/login';
+      // Limpiar tokens y redirigir al login
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      // Solo redirigir si no estamos ya en la página de login
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

@@ -14,7 +14,7 @@ export class AuthService {
     
     // Aquí deberíamos usar bcrypt para comparar contraseñas hasheadas.
     // Por ahora, para la migración inicial, compararemos directo o con el método que uses.
-    if (user?.password_hash !== pass) {
+    if (user?.password !== pass) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 

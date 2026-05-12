@@ -419,6 +419,7 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
               value={formData.password}
               onChange={handleChange}
               placeholder="Contraseña de acceso"
+              autoComplete="current-password"
               error={errors.password}
             />
           </FormField>

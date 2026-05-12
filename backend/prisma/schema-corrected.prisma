@@ -33,8 +33,6 @@ model User {
   conversations     ConversationParticipant[]
   checklists_created Checklist[] @relation("CreatedBy")
   sutran_visits_created SutranVisit[] @relation("CreatedBy")
-  ticket_assignments TicketAssignment[]
-  files_uploaded    File[] @relation("FileUploader")
   
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -66,8 +64,6 @@ model Location {
   checklists    Checklist[]
   servers       Server[]
   vehicles      Vehicle[]
-  checklist_configs ChecklistConfig[]
-  files         File[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -171,7 +167,7 @@ model Asset {
   ram            String?
   operating_system String?
   bios_mode      String?
-  area_nombre     String?
+  area           String?
   placa          String?
   name           String?
   url            String?
@@ -193,7 +189,7 @@ model Asset {
   tecnologia_impresion String?
   velocidad_impresion Int?
   resolucion     String?
-  tamano_pantalla String?
+  tamaño_pantalla String?
   resolucion_pantalla String?
   tipo_conexion  String?
   luminosidad    Int?
@@ -218,7 +214,6 @@ model Asset {
   maintenance  MaintenanceRecord[]
   shipments    Shipment[]
   movements    InventoryMovement[]
-  files        File[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -305,7 +300,6 @@ model Ticket {
   assignments  TicketAssignment[]
   comments     TicketComment[]
   canned_responses TicketCannedResponse[]
-  files        File[] @relation("TicketFiles")
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -377,7 +371,6 @@ model MaintenanceRecord {
   // Relaciones
   asset    Asset    @relation(fields: [asset_id], references: [id])
   location Location? @relation(fields: [location_id], references: [id])
-  files    File[] @relation("MaintenanceFiles")
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -469,8 +462,7 @@ model Vehicle {
   placa                    String   @unique
   marca                    String
   modelo                   String
-  anio                     Int
-  location_id              String?
+  año                      Int
   tipo_combustible          String   @default("gasolina")
   kilometraje              Float    @default(0)
   estado                   String   @default("disponible")
@@ -488,9 +480,6 @@ model Vehicle {
   contrato_alquiler_vencimiento DateTime?
   color                    String?
   image_position           String   @default("center")
-
-  // Relaciones
-  location Location? @relation(fields: [location_id], references: [id])
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -692,44 +681,6 @@ model ChecklistConfig {
   updated_at DateTime @updatedAt
 
   @@map("checklist_configs")
-}
-
-// --- ALMACENAMIENTO DE ARCHIVOS ---
-
-model File {
-  id            String   @id @default(uuid())
-  original_name String   // Nombre original del archivo
-  filename      String   // Nombre único en el sistema
-  file_path     String   // Ruta de almacenamiento
-  file_size     Int      // Tamaño en bytes
-  mime_type     String   // Tipo MIME
-  file_hash     String?  // Hash SHA-256 para integridad
-  
-  // Relaciones
-  uploaded_by   String
-  uploader      User @relation("FileUploader", fields: [uploaded_by], references: [id])
-  
-  // Asociaciones
-  asset_id      String?
-  asset         Asset? @relation(fields: [asset_id], references: [id])
-  ticket_id     String?
-  ticket        Ticket? @relation("TicketFiles", fields: [ticket_id], references: [id])
-  maintenance_id String?
-  maintenance   MaintenanceRecord? @relation("MaintenanceFiles", fields: [maintenance_id], references: [id])
-  location_id   String?
-  location      Location? @relation(fields: [location_id], references: [id])
-  
-  // Metadatos
-  description   String?
-  tags          String[] @default([])
-  is_public     Boolean  @default(false)
-  download_count Int      @default(0)
-  
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  expires_at   DateTime?
-
-  @@map("files")
 }
 
 // --- NOTIFICACIONES ---

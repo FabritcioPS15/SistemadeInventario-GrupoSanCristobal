@@ -60,7 +60,7 @@ export class VehiclesService {
           { soat_vencimiento: { lte: nextMonth } },
           { citv_vencimiento: { lte: nextMonth } },
           { poliza_vencimiento: { lte: nextMonth } },
-          { contrato_vencimiento: { lte: nextMonth } },
+          { contrato_alquiler_vencimiento: { lte: nextMonth } },
         ],
         estado: 'activa',
       },
@@ -69,7 +69,7 @@ export class VehiclesService {
         soat_vencimiento: true,
         citv_vencimiento: true,
         poliza_vencimiento: true,
-        contrato_vencimiento: true,
+        contrato_alquiler_vencimiento: true,
       }
     });
   }
