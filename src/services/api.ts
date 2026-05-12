@@ -4,9 +4,10 @@ import axios from 'axios';
 const getBaseURL = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   
-  // Si estamos en producción (VPS), podemos intentar deducir la IP/Dominio
+  // En producción (VPS), si no hay URL definida, usamos la ruta relativa
+  // Esto permite que Nginx maneje el proxy en el puerto 80
   if (window.location.hostname !== 'localhost') {
-    return `${window.location.protocol}//${window.location.hostname}:3000/api`;
+    return '/api';
   }
   
   return 'http://localhost:3000/api';
