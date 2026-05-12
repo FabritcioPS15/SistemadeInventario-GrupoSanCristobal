@@ -7,7 +7,20 @@ export class UsersService {
 
   async findAll() {
     return this.prisma.user.findMany({
-      include: {
+      select: {
+        id: true,
+        full_name: true,
+        email: true,
+        role: true,
+        location_id: true,
+        phone: true,
+        status: true,
+        notes: true,
+        dni: true,
+        permissions: true,
+        avatar_url: true,
+        created_at: true,
+        updated_at: true,
         location: true,
       },
       orderBy: { created_at: 'desc' },
@@ -17,7 +30,20 @@ export class UsersService {
   async findOne(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        full_name: true,
+        email: true,
+        role: true,
+        location_id: true,
+        phone: true,
+        status: true,
+        notes: true,
+        dni: true,
+        permissions: true,
+        avatar_url: true,
+        created_at: true,
+        updated_at: true,
         location: true,
       },
     });
@@ -32,6 +58,21 @@ export class UsersService {
   async findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
+      select: {
+        id: true,
+        full_name: true,
+        email: true,
+        role: true,
+        location_id: true,
+        phone: true,
+        status: true,
+        notes: true,
+        dni: true,
+        permissions: true,
+        avatar_url: true,
+        created_at: true,
+        updated_at: true,
+      },
     });
   }
 
