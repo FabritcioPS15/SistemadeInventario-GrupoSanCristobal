@@ -77,14 +77,28 @@ export default function Login() {
         const VITE_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
         const loginUrl = `${VITE_API_URL}/auth/login`;
         
-        const response = await api.post(loginUrl, { 
-          identifier,
-          password
+        const response = await fetch(loginUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            identifier,
+            password
+          })
         });
 
         if (!mountedRef.current) return;
 
-        const { access_token, user: userData } = response.data;
+        if (!response.ok) {
+          const errorData = await response.json();
+          const error = new Error(errorData.message || 'Error en el login');
+          (error as any).response = { data: errorData };
+          throw error;
+        }
+
+        const data = await response.json();
+        const { access_token, user: userData } = data;
         
         // Guardar Token para futuras peticiones con la clave "token"
         localStorage.setItem('token', access_token);
