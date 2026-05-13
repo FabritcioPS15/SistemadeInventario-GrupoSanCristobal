@@ -8,11 +8,10 @@ const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
 
 export default function Login() {
   const mountedRef = useRef(true);
-  const [email, setEmail] = useState(() => localStorage.getItem('remembered_email') || '');
-  const [dni, setDni] = useState(() => localStorage.getItem('remembered_dni') || '');
+  const [identifier, setIdentifier] = useState(() => localStorage.getItem('remembered_identifier') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('remembered_email'));
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('remembered_identifier'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -39,8 +38,8 @@ export default function Login() {
     e.preventDefault();
     
     // Validación básica
-    if (!email.trim() || !password.trim() || !dni.trim()) {
-      setError('Por favor, complete todos los campos (Email, DNI y Contraseña)');
+    if (!identifier.trim() || !password.trim()) {
+      setError('Por favor, ingrese su identificación (Email o DNI) y contraseña');
       return;
     }
 
@@ -49,13 +48,18 @@ export default function Login() {
 
     try {
       if (DB_MODE === 'supabase') {
+        const isEmail = identifier.includes('@');
         let query = supabase
           .from('users')
           .select('*')
           .eq('password', password)
-          .eq('dni', dni)
-          .eq('email', email)
           .eq('status', 'active');
+
+        if (isEmail) {
+          query = query.eq('email', identifier);
+        } else {
+          query = query.eq('dni', identifier);
+        }
 
         const { data: userData, error: userError } = await query.single();
 
@@ -74,9 +78,8 @@ export default function Login() {
         const loginUrl = `${VITE_API_URL}/auth/login`;
         
         const response = await api.post(loginUrl, { 
-          email,
-          password,
-          dni
+          identifier,
+          password
         });
 
         if (!mountedRef.current) return;
@@ -90,11 +93,9 @@ export default function Login() {
       }
 
       if (rememberMe) {
-        localStorage.setItem('remembered_email', email);
-        localStorage.setItem('remembered_dni', dni);
+        localStorage.setItem('remembered_identifier', identifier);
       } else {
-        localStorage.removeItem('remembered_email');
-        localStorage.removeItem('remembered_dni');
+        localStorage.removeItem('remembered_identifier');
       }
     } catch (err: any) {
       if (mountedRef.current) {
@@ -227,26 +228,7 @@ export default function Login() {
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="group">
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                  Correo Electrónico
-                </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
-                    <User size={18} />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
-                    placeholder="email@ejemplo.com"
-                  />
-                </div>
-              </div>
-
-              <div className="group">
-                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                  DNI
+                  Identificación (Email o DNI)
                 </label>
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
@@ -255,10 +237,10 @@ export default function Login() {
                   <input
                     type="text"
                     required
-                    value={dni}
-                    onChange={(e) => setDni(e.target.value)}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
-                    placeholder="Número de DNI"
+                    placeholder="email@ejemplo.com o DNI"
                   />
                 </div>
               </div>

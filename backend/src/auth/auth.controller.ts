@@ -12,6 +12,6 @@ export class AuthController {
   @Post('login')
   @ApiOperation({ summary: 'Iniciar sesión y obtener token JWT' })
   signIn(@Body() loginDto: LoginDto) {
-    return this.authService.signIn(loginDto.dni, loginDto.password);
+    return this.authService.signIn(loginDto.identifier, loginDto.password);
   }
 }

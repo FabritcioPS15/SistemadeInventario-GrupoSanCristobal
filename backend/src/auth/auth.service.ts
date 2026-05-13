@@ -1,21 +1,34 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private prisma: PrismaService,
   ) {}
 
-  async signIn(dni: string, pass: string): Promise<any> {
-    const user = await this.usersService.findByDni(dni);
+  async signIn(identifier: string, pass: string): Promise<any> {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: identifier },
+          { dni: identifier }
+        ]
+      }
+    });
     
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
     // Aquí deberíamos usar bcrypt para comparar contraseñas hasheadas.
     // Por ahora, para la migración inicial, compararemos directo o con el método que uses.
-    if (user?.password !== pass) {
-      throw new UnauthorizedException('Credenciales inválidas');
+    if (user.password !== pass) {
+      throw new UnauthorizedException('Contraseña incorrecta');
     }
 
     const payload = { 
