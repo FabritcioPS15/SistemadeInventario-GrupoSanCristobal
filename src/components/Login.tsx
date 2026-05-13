@@ -36,6 +36,8 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("LOGIN CLICK");
+    console.log("API URL:", import.meta.env.VITE_API_URL);
     
     // Validación básica
     if (!identifier.trim() || !password.trim()) {
@@ -47,64 +49,37 @@ export default function Login() {
     setError('');
 
     try {
-      if (DB_MODE === 'supabase') {
-        const isEmail = identifier.includes('@');
-        let query = supabase
-          .from('users')
-          .select('*')
-          .eq('password', password)
-          .eq('status', 'active');
+      // Usar directamente la API de NestJS como se solicitó
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          identifier,
+          password
+        })
+      });
 
-        if (isEmail) {
-          query = query.eq('email', identifier);
-        } else {
-          query = query.eq('dni', identifier);
-        }
+      console.log("Response Status:", response.status);
 
-        const { data: userData, error: userError } = await query.single();
+      if (!mountedRef.current) return;
 
-        if (!mountedRef.current) return;
-
-        if (userError || !userData) {
-          setError('Credenciales incorrectas o usuario inactivo');
-          setLoading(false);
-          return;
-        }
-
-        login(userData, rememberMe);
-      } else {
-        // MODO NESTJS
-        const VITE_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        const loginUrl = `${VITE_API_URL}/auth/login`;
-        
-        const response = await fetch(loginUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            identifier,
-            password
-          })
-        });
-
-        if (!mountedRef.current) return;
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          const error = new Error(errorData.message || 'Error en el login');
-          (error as any).response = { data: errorData };
-          throw error;
-        }
-
-        const data = await response.json();
-        const { access_token, user: userData } = data;
-        
-        // Guardar Token para futuras peticiones con la clave "token"
-        localStorage.setItem('token', access_token);
-        
-        login(userData, rememberMe);
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Login Error Data:", errorData);
+        const error = new Error(errorData.message || 'Error en el login');
+        (error as any).response = { data: errorData };
+        throw error;
       }
+
+      const data = await response.json();
+      const { access_token, user: userData } = data;
+      
+      // Guardar Token para futuras peticiones
+      localStorage.setItem('token', access_token);
+      
+      login(userData, rememberMe);
 
       if (rememberMe) {
         localStorage.setItem('remembered_identifier', identifier);
@@ -112,8 +87,8 @@ export default function Login() {
         localStorage.removeItem('remembered_identifier');
       }
     } catch (err: any) {
+      console.error("CATCH Error:", err);
       if (mountedRef.current) {
-        // Mejor manejo de errores: leer respuesta JSON del backend
         const msg = err.response?.data?.message || err.message || 'Error de conexión con el servidor.';
         setError(Array.isArray(msg) ? msg[0] : msg);
       }
