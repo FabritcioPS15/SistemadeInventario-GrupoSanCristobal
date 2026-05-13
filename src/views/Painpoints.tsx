@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Zap, Plus, Star, X, LayoutGrid, List, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Zap, Plus, LayoutGrid, List, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import HeaderSearch from '../components/layout/HeaderSearch';
 

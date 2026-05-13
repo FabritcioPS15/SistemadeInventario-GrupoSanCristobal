@@ -143,14 +143,24 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             category: formData.category,
             location_id: formData.location_id,
             requester_id: user?.id,
-            status: 'open',
-            anydesk_id: formData.anydesk.trim() || null
+            status: 'open'
           }
         ])
         .select()
         .single();
 
       if (submitError) throw submitError;
+
+      // Si se proporcionó AnyDesk, agregarlo como comentario para que sea detectado por el modal
+      if (ticketData && formData.anydesk.trim()) {
+        await supabase
+          .from('ticket_comments')
+          .insert([{
+            ticket_id: ticketData.id,
+            user_id: user?.id,
+            content: `Anydesk de mi PC: ${formData.anydesk.trim()}`
+          }]);
+      }
 
       // Auto-asignar el creador al ticket
       if (ticketData) {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BellIcon, CheckCircle, Clock, Archive, Plus, User, MapPin, Calendar, Trash2, X } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../src/contexts/AuthContext';
+import { supabase } from '../src/lib/supabase';
 
 type Notification = {
   id: string;

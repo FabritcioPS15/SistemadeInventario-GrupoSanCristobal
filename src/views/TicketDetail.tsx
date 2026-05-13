@@ -143,7 +143,7 @@ export default function TicketDetail() {
                     // Extraer ID de AnyDesk del comentario con el formato exacto
                     const anydeskMatch = comment.content.match(/anydesk de mi pc:\s*([a-zA-Z0-9]+)/i);
                     if (anydeskMatch) {
-                        data.anydesk_id = anydeskMatch[1];
+                        data.anydesk = anydeskMatch[1];
                         data.anydesk_password = null; // En este formato no hay contraseña
                         break; // Tomar el primero que encuentre
                     }
@@ -844,11 +844,11 @@ export default function TicketDetail() {
                                     {/* AnyDesk ID */}
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
-                                            <p className="text-xs font-bold text-slate-900">AnyDesk: <span className="text-slate-600 font-normal">{ticket.anydesk_id || 'No proporcionado'}</span></p>
+                                            <p className="text-xs font-bold text-slate-900">AnyDesk: <span className="text-slate-600 font-normal">{ticket.anydesk || 'No proporcionado'}</span></p>
                                         </div>
-                                        {ticket.anydesk_id && (
+                                        {ticket.anydesk && (
                                             <button
-                                                onClick={() => handleCopy(ticket.anydesk_id, 'anydesk')}
+                                                onClick={() => handleCopy(ticket.anydesk, 'anydesk')}
                                                 className="w-6 h-6 rounded-none bg-white border border-slate-200 text-slate-600 hover:text-[#002855] hover:border-[#002855] transition-all flex items-center justify-center"
                                             >
                                                 {copiedItem === 'anydesk' ? <div className="w-2 h-2 bg-green-500 rounded-none shrink-0" /> : <Copy size={12} />}
