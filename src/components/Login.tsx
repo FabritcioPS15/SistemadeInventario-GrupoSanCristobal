@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, AlertCircle, User, Lock, ArrowRight, UserPlus, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../services/api';
 
 const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
 
