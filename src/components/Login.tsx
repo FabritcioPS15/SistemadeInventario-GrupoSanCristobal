@@ -8,10 +8,11 @@ const DB_MODE = import.meta.env.VITE_DATABASE_MODE || 'supabase';
 
 export default function Login() {
   const mountedRef = useRef(true);
-  const [emailOrDni, setEmailOrDni] = useState(() => localStorage.getItem('remembered_user') || '');
+  const [email, setEmail] = useState(() => localStorage.getItem('remembered_email') || '');
+  const [dni, setDni] = useState(() => localStorage.getItem('remembered_dni') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('remembered_user'));
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('remembered_email'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
@@ -36,23 +37,25 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validación básica
+    if (!email.trim() || !password.trim() || !dni.trim()) {
+      setError('Por favor, complete todos los campos (Email, DNI y Contraseña)');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
       if (DB_MODE === 'supabase') {
-        const isEmail = emailOrDni.includes('@');
         let query = supabase
           .from('users')
           .select('*')
           .eq('password', password)
+          .eq('dni', dni)
+          .eq('email', email)
           .eq('status', 'active');
-
-        if (isEmail) {
-          query = query.eq('email', emailOrDni);
-        } else {
-          query = query.eq('dni', emailOrDni);
-        }
 
         const { data: userData, error: userError } = await query.single();
 
@@ -67,30 +70,37 @@ export default function Login() {
         login(userData, rememberMe);
       } else {
         // MODO NESTJS
-        const response = await api.post('/auth/login', { 
-          dni: emailOrDni, // El backend de NestJS usa DNI principalmente
-          password 
+        const VITE_API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+        const loginUrl = `${VITE_API_URL}/auth/login`;
+        
+        const response = await api.post(loginUrl, { 
+          email,
+          password,
+          dni
         });
 
         if (!mountedRef.current) return;
 
         const { access_token, user: userData } = response.data;
         
-        // Guardar Token para futuras peticiones
-        localStorage.setItem('auth_token', access_token);
+        // Guardar Token para futuras peticiones con la clave "token"
+        localStorage.setItem('token', access_token);
         
         login(userData, rememberMe);
       }
 
       if (rememberMe) {
-        localStorage.setItem('remembered_user', emailOrDni);
+        localStorage.setItem('remembered_email', email);
+        localStorage.setItem('remembered_dni', dni);
       } else {
-        localStorage.removeItem('remembered_user');
+        localStorage.removeItem('remembered_email');
+        localStorage.removeItem('remembered_dni');
       }
     } catch (err: any) {
       if (mountedRef.current) {
-        const msg = err.response?.data?.message || 'Error de conexión con el servidor.';
-        setError(msg);
+        // Mejor manejo de errores: leer respuesta JSON del backend
+        const msg = err.response?.data?.message || err.message || 'Error de conexión con el servidor.';
+        setError(Array.isArray(msg) ? msg[0] : msg);
       }
     } finally {
       if (mountedRef.current) {
@@ -217,7 +227,26 @@ export default function Login() {
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="group">
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                  Identificación (Email o DNI)
+                  Correo Electrónico
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
+                    <User size={18} />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
+                    placeholder="email@ejemplo.com"
+                  />
+                </div>
+              </div>
+
+              <div className="group">
+                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
+                  DNI
                 </label>
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
@@ -226,10 +255,10 @@ export default function Login() {
                   <input
                     type="text"
                     required
-                    value={emailOrDni}
-                    onChange={(e) => setEmailOrDni(e.target.value)}
+                    value={dni}
+                    onChange={(e) => setDni(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
-                    placeholder="email@ejemplo.com"
+                    placeholder="Número de DNI"
                   />
                 </div>
               </div>

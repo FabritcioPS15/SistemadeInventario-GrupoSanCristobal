@@ -8,12 +8,21 @@ async function bootstrap() {
 
   // Configuración de CORS optimizada para producción
   const isProduction = process.env.NODE_ENV === 'production';
+  const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || '';
+  
   const allowedOrigins = isProduction 
-    ? ['http://localhost:80', 'http://your-domain.com'] // Reemplaza 'your-domain.com' con tu dominio real
+    ? rawAllowedOrigins.split(',').map(origin => origin.trim()).filter(Boolean)
     : ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:80'];
 
+  // Si no hay orígenes definidos en producción, permitir todos (no recomendado pero útil para debug inicial)
+  // o al menos incluir localhost para pruebas
+  if (isProduction && allowedOrigins.length === 0) {
+    allowedOrigins.push('http://localhost:80'); 
+    console.warn('⚠️ No ALLOWED_ORIGINS defined in .env. CORS may block Vercel requests.');
+  }
+
   app.enableCors({
-    origin: allowedOrigins,
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],

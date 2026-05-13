@@ -94,7 +94,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (mountedRef.current) {
       setUser(null);
       localStorage.removeItem('auth_user');
-      localStorage.removeItem('auth_token'); // Limpiar token de NestJS
+      localStorage.removeItem('token'); // Limpiar token de NestJS
     }
   };
 

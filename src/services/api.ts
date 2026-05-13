@@ -24,7 +24,7 @@ const api = axios.create({
 
 // Interceptor de petición: Inyectar Token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
+  const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -38,7 +38,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn('⚠️ Sesión expirada o no autorizada');
       // Limpiar tokens y redirigir al login
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('token');
       localStorage.removeItem('auth_user');
       // Solo redirigir si no estamos ya en la página de login
       if (window.location.pathname !== '/login') {
