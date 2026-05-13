@@ -39,7 +39,15 @@ export default function Login() {
     console.log("LOGIN CLICK");
     
     const API_URL = import.meta.env.VITE_API_URL;
-    console.log("VITE_API_URL:", API_URL);
+    
+    // Normalizar la URL para que funcione siempre
+    let cleanBaseURL = API_URL ? API_URL.trim().replace(/\/+$/, '') : '';
+    if (cleanBaseURL && !cleanBaseURL.endsWith('/api')) {
+      cleanBaseURL = `${cleanBaseURL}/api`;
+    }
+    
+    const finalLoginURL = `${cleanBaseURL}/auth/login`;
+    console.log("LOGIN URL FINAL:", finalLoginURL);
 
     // Validación básica
     if (!identifier.trim() || !password.trim()) {
@@ -55,10 +63,8 @@ export default function Login() {
         throw new Error("VITE_API_URL no está definido en el archivo .env");
       }
 
-      console.log("LOGIN URL:", `${API_URL}/api/auth/login`);
-
-      // Usar directamente la API de NestJS como se solicitó
-      const response = await fetch(`${API_URL}/api/auth/login`, {
+      // Usar la URL normalizada
+      const response = await fetch(finalLoginURL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
