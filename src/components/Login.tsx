@@ -37,8 +37,10 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("LOGIN CLICK");
-    console.log("API URL:", import.meta.env.VITE_API_URL);
     
+    const API_URL = import.meta.env.VITE_API_URL;
+    console.log("VITE_API_URL:", API_URL);
+
     // Validación básica
     if (!identifier.trim() || !password.trim()) {
       setError('Por favor, ingrese su identificación (Email o DNI) y contraseña');
@@ -49,8 +51,14 @@ export default function Login() {
     setError('');
 
     try {
+      if (!API_URL) {
+        throw new Error("VITE_API_URL no está definido en el archivo .env");
+      }
+
+      console.log("LOGIN URL:", `${API_URL}/api/auth/login`);
+
       // Usar directamente la API de NestJS como se solicitó
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -87,10 +95,9 @@ export default function Login() {
         localStorage.removeItem('remembered_identifier');
       }
     } catch (err: any) {
-      console.error("CATCH Error:", err);
+      console.error("FETCH ERROR COMPLETO:", err);
       if (mountedRef.current) {
-        const msg = err.response?.data?.message || err.message || 'Error de conexión con el servidor.';
-        setError(Array.isArray(msg) ? msg[0] : msg);
+        setError(err.message || 'Error de conexión con el servidor');
       }
     } finally {
       if (mountedRef.current) {
