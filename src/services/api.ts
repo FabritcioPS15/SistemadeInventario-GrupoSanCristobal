@@ -20,6 +20,7 @@ const getBaseURL = () => {
 };
 
 const API_URL = getBaseURL();
+console.log("DEBUG: API_URL configurada en el servicio:", API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
