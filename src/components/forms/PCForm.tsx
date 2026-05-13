@@ -20,7 +20,7 @@ type PCFormData = {
   ram: string;
   processor: string;
   ip_address: string;
-  anydesk: string;
+  anydesk_id: string;
   brand: string;
   model: string;
   serial_number: string;
@@ -50,7 +50,7 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
     ram: '',
     processor: '',
     ip_address: '',
-    anydesk: '',
+    anydesk_id: '',
     brand: '',
     model: '',
     serial_number: '',
@@ -279,11 +279,11 @@ export default function PCForm({ editPC, onClose, onSave }: PCFormProps) {
           <FormField label="AnyDesk ID">
             <FormInput 
               type="text" 
-              name="anydesk" 
-              value={formData.anydesk} 
+              name="anydesk_id" 
+              value={formData.anydesk_id} 
               onChange={handleChange} 
               placeholder="123 456 789"
-              error={errors.anydesk}
+              error={errors.anydesk_id}
             />
           </FormField>
           

@@ -3,8 +3,25 @@
 @tailwind utilities;
 
 @layer base {
-  * {
+  :root {
+    font-family: 'Sansation', system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    margin: 0;
     font-family: 'Sansation', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #f8f9fc;
+  }
+
+  .page-fade-in {
+    animation: simpleFadeIn 0.3s ease-out forwards;
+  }
+
+  @keyframes simpleFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 }
 

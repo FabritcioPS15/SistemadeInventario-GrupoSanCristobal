@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase';
 import type { SutranVisit } from '../lib/supabase';
 import SutranVisitForm from '../components/forms/SutranVisitForm';
 import { useAuth } from '../contexts/AuthContext';
-import Pagination from '../components/Pagination';
+import Pagination from '../components/ui/Pagination';
 
 export default function Sutran() {
   const { canEdit } = useAuth();

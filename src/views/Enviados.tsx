@@ -4,7 +4,7 @@ import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase, AssetWithDetails, Location } from '../lib/supabase';
 import ShipmentForm from '../components/forms/ShipmentForm';
 import { useAuth } from '../contexts/AuthContext';
-import Pagination from '../components/Pagination';
+import Pagination from '../components/ui/Pagination';
 
 type Shipment = {
   id: string;

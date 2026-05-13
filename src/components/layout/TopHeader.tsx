@@ -4,13 +4,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 // Forzar importación para evitar caché
 
-import { Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle } from 'lucide-react';
+import { Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle, MapPin } from 'lucide-react';
 
-import { supabase, SutranVisit } from '../lib/supabase';
+import { supabase, SutranVisit } from '../../lib/supabase';
 
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 
-import NotificationsFinal from './NotificationsFinal';
+import NotificationsFinal from '../NotificationsFinal';
 
 import { RiFileExcel2Fill } from 'react-icons/ri';
 
@@ -1128,29 +1128,22 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                     {/* SUTRAN Indicator */}
 
                     <div className="relative" ref={sutranPopupRef}>
-
                         <button
-
                             onClick={() => setShowSutranPopup(!showSutranPopup)}
-
-                            className={`relative p-2 rounded-lg transition-colors ${showSutranPopup ? 'bg-orange-100 text-orange-600' : 'hover:bg-gray-100 text-gray-700'}`}
-
+                            className={`
+                              relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300
+                              ${showSutranPopup
+                                    ? 'bg-orange-500 text-white shadow-lg shadow-orange-200'
+                                    : 'bg-slate-100/80 text-slate-600 hover:bg-orange-50 hover:text-orange-600 border border-transparent hover:border-orange-200'}
+                            `}
                             title="Visitas SUTRAN"
-
                         >
-
-                            <AlertTriangle size={18} />
-
+                            <AlertTriangle size={18} className={showSutranPopup ? 'animate-pulse' : ''} />
                             {sutranNotifications.length > 0 && (
-
-                                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-
+                                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-lg border-2 border-white">
                                     {sutranNotifications.length}
-
                                 </span>
-
                             )}
-
                         </button>
 
 
@@ -1355,56 +1348,41 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
 
 
-                    {/* User Info - Nombre y Sede - Oculto en móvil */}
-
-                    <div className="flex items-center gap-2 mr-3">
-
+                    {/* User Info - Estilo Moderno */}
+                    <div className="hidden lg:flex flex-col items-end gap-0.5 mr-4 leading-tight">
+                        <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight">
+                            {user?.full_name}
+                        </span>
                         {userLocation && (
-
-                            <>
-
-                                <span className="text-gray-600 text-xs hidden lg:block">{userLocation}</span>
-
-                                <div className="w-1 h-1 bg-gray-400 rounded-full hidden lg:block" />
-
-                            </>
-
+                            <span className="text-[9px] font-bold text-blue-600/70 uppercase tracking-widest flex items-center gap-1">
+                                <MapPin size={8} /> {userLocation}
+                            </span>
                         )}
-
-                        <span className="text-gray-700 text-xs font-medium hidden lg:block">{user?.full_name}</span>
-
                     </div>
 
 
 
-                    {/* User Profile Settings */}
-
+                    {/* User Profile Settings - Premium Trigger */}
                     <div className="relative" ref={settingsRef}>
-
                         <button
-
                             onClick={() => setShowUserSettings(!showUserSettings)}
-
-                            className={`flex items-center gap-2 p-1.5 hover:bg-gray-100 rounded-lg transition-colors ${showUserSettings ? 'bg-gray-100' : ''}`}
-
+                            className={`
+                              flex items-center gap-2 p-1 rounded-xl transition-all duration-300
+                              ${showUserSettings ? 'bg-blue-50 border-blue-200 shadow-sm' : 'hover:bg-slate-50 border-transparent'}
+                              border
+                            `}
                         >
-
-                            <div className="w-7 h-7 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold uppercase overflow-hidden border border-gray-200 text-gray-700">
-
-                                {user?.avatar_url ? (
-
-                                    <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-
-                                ) : (
-
-                                    user?.full_name?.charAt(0)
-
-                                )}
-
+                            <div className="relative">
+                                <div className="w-8 h-8 bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg flex items-center justify-center text-[11px] font-black text-white shadow-md border border-white/10 uppercase overflow-hidden">
+                                    {user?.avatar_url ? (
+                                        <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        user?.full_name?.charAt(0)
+                                    )}
+                                </div>
+                                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
                             </div>
-
-                            <Settings size={18} className={`transition-transform duration-300 ${showUserSettings ? 'rotate-90' : ''}`} />
-
+                            <Settings size={18} className={`text-slate-400 transition-transform duration-500 ${showUserSettings ? 'rotate-180 text-blue-600' : ''}`} />
                         </button>
 
 

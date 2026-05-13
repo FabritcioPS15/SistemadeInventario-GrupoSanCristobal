@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, HardDrive, AlertCircle, CheckCircle } from 'lucide-react';
-import { supabase, CameraDisk } from '../lib/supabase';
+import { useState } from 'react';
+import {
+  Plus, Trash2, HardDrive,
+  Edit2
+} from 'lucide-react';
+import type { CameraDisk } from '../lib/supabase';
 
 type CameraDiskManagerProps = {
-  cameraId: string;
-  onDisksChange?: (disks: CameraDisk[]) => void;
+  disks: Partial<CameraDisk>[];
+  onChange: (disks: Partial<CameraDisk>[]) => void;
 };
 
-export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDiskManagerProps) {
-  const [disks, setDisks] = useState<CameraDisk[]>([]);
-  const [loading, setLoading] = useState(false);
+export default function CameraDiskManager({ disks, onChange }: CameraDiskManagerProps) {
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingDisk, setEditingDisk] = useState<CameraDisk | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     disk_number: 1,
@@ -26,120 +27,51 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
     notes: ''
   });
 
-  useEffect(() => {
-    if (cameraId) {
-      fetchDisks();
-    }
-  }, [cameraId]);
-
-  const fetchDisks = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('camera_disks')
-        .select('*')
-        .eq('camera_id', cameraId)
-        .order('disk_number');
-
-      if (error) {
-        console.error('Error fetching disks:', error);
-        return;
-      }
-
-      setDisks(data || []);
-      onDisksChange?.(data || []);
-    } catch (err) {
-      console.error('Error fetching disks:', err);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleAddOrUpdate = () => {
     if (!formData.total_capacity_gb || !formData.remaining_capacity_gb) {
-      alert('Capacidad total y capacidad restante son requeridos');
+      alert('Capacidad total y restante son requeridas');
       return;
     }
 
-    const totalCapacity = parseFloat(formData.total_capacity_gb);
-    const remainingCapacity = parseFloat(formData.remaining_capacity_gb);
+    const total = parseFloat(formData.total_capacity_gb);
+    const remaining = parseFloat(formData.remaining_capacity_gb);
 
-    if (remainingCapacity > totalCapacity) {
-      alert('La capacidad restante no puede ser mayor que la capacidad total');
+    if (remaining > total) {
+      alert('La capacidad restante no puede ser mayor a la total');
       return;
     }
 
-    // Verificar que el número de disco no esté en uso (solo para nuevos discos)
-    if (!editingDisk) {
-      const existingDisk = disks.find(d => d.disk_number === formData.disk_number);
-      if (existingDisk) {
-        alert(`El disco número ${formData.disk_number} ya existe para esta cámara`);
+    const newDisk = {
+      ...formData,
+      total_capacity_gb: total,
+      remaining_capacity_gb: remaining,
+      used_space_gb: total - remaining
+    };
+
+    let updatedDisks = [...disks];
+    if (editingIndex !== null) {
+      updatedDisks[editingIndex] = { ...updatedDisks[editingIndex], ...newDisk };
+    } else {
+      // Verificar duplicados de número de disco
+      if (disks.some(d => d.disk_number === formData.disk_number)) {
+        alert(`El disco #${formData.disk_number} ya está en la lista`);
         return;
       }
+      updatedDisks.push(newDisk);
     }
 
-    setLoading(true);
-
-    try {
-      const diskData = {
-        camera_id: cameraId,
-        disk_number: formData.disk_number,
-        total_capacity_gb: totalCapacity,
-        remaining_capacity_gb: remainingCapacity,
-        disk_type: formData.disk_type,
-        status: formData.status,
-        brand: formData.brand || null,
-        serial_number: formData.serial_number || null,
-        stored_from: formData.stored_from || null,
-        stored_to: formData.stored_to || null,
-        notes: formData.notes || null
-      };
-
-      if (editingDisk) {
-        const { error } = await supabase
-          .from('camera_disks')
-          .update(diskData)
-          .eq('id', editingDisk.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('camera_disks')
-          .insert([diskData]);
-
-        if (error) throw error;
-      }
-
-      await fetchDisks();
-      resetForm();
-    } catch (error) {
-      console.error('Error saving disk:', error);
-      alert('Error al guardar el disco: ' + (error as Error).message);
-    } finally {
-      setLoading(false);
-    }
+    onChange(updatedDisks);
+    resetForm();
   };
 
-  const handleDelete = async (diskId: string) => {
-    if (!window.confirm('¿Estás seguro de eliminar este disco?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('camera_disks')
-        .delete()
-        .eq('id', diskId);
-
-      if (error) throw error;
-
-      await fetchDisks();
-    } catch (error) {
-      console.error('Error deleting disk:', error);
-      alert('Error al eliminar el disco: ' + (error as Error).message);
-    }
+  const removeDisk = (index: number) => {
+    const updated = disks.filter((_, i) => i !== index);
+    onChange(updated);
   };
 
   const resetForm = () => {
     setFormData({
-      disk_number: 1,
+      disk_number: disks.length + 1,
       total_capacity_gb: '',
       remaining_capacity_gb: '',
       disk_type: 'HDD',
@@ -151,382 +83,172 @@ export default function CameraDiskManager({ cameraId, onDisksChange }: CameraDis
       notes: ''
     });
     setShowAddForm(false);
-    setEditingDisk(null);
+    setEditingIndex(null);
   };
 
-  const handleEdit = (disk: CameraDisk) => {
+  const startEdit = (index: number) => {
+    const disk = disks[index];
     setFormData({
-      disk_number: disk.disk_number,
-      total_capacity_gb: disk.total_capacity_gb.toString(),
-      remaining_capacity_gb: disk.remaining_capacity_gb.toString(),
-      disk_type: disk.disk_type,
-      status: disk.status,
+      disk_number: disk.disk_number || 1,
+      total_capacity_gb: disk.total_capacity_gb?.toString() || '',
+      remaining_capacity_gb: disk.remaining_capacity_gb?.toString() || '',
+      disk_type: (disk.disk_type as any) || 'HDD',
+      status: (disk.status as any) || 'active',
       brand: disk.brand || '',
       serial_number: disk.serial_number || '',
       stored_from: disk.stored_from || '',
       stored_to: disk.stored_to || '',
       notes: disk.notes || ''
     });
-    setEditingDisk(disk);
+    setEditingIndex(index);
     setShowAddForm(true);
   };
 
   const getAvailableDiskNumbers = () => {
-    const usedNumbers = disks.map(d => d.disk_number);
-    return [1, 2, 3, 4, 5, 6, 7, 8].filter(num => {
-      // Si estamos editando, permitir el número actual del disco
-      if (editingDisk && editingDisk.disk_number === num) {
-        return true;
-      }
-      // Si no estamos editando, solo permitir números no usados
-      return !usedNumbers.includes(num);
-    });
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'full':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
-      case 'maintenance':
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-      case 'extracted':
-        return <HardDrive className="h-4 w-4 text-rose-500" />;
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'full':
-        return 'bg-red-100 text-red-800';
-      case 'error':
-        return 'bg-red-100 text-red-800';
-      case 'maintenance':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'extracted':
-        return 'bg-rose-100 text-rose-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getUsagePercentage = (remaining: number, total: number) => {
-    const used = total - remaining;
-    return Math.round((used / total) * 100);
-  };
-
-  const getUsageColor = (percentage: number) => {
-    if (percentage >= 90) return 'bg-red-500';
-    if (percentage >= 75) return 'bg-yellow-500';
-    return 'bg-green-500';
+    const used = disks.map((d, i) => i === editingIndex ? -1 : d.disk_number);
+    return [1, 2, 3, 4, 5, 6, 7, 8].filter(n => !used.includes(n));
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <HardDrive className="h-5 w-5" />
-          Discos de Almacenamiento
-        </h3>
-        {disks.length < 8 && (
+        <div className="flex items-center gap-2">
+          <HardDrive className="h-5 w-5 text-indigo-600" />
+          <span className="text-sm font-black text-[#002855] uppercase tracking-wider">Discos Configurados ({disks.length})</span>
+        </div>
+        {!showAddForm && disks.length < 8 && (
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              // Establecer el siguiente número de disco disponible
-              const availableNumbers = getAvailableDiskNumbers();
-              if (availableNumbers.length > 0) {
-                setFormData(prev => ({
-                  ...prev,
-                  disk_number: availableNumbers[0]
-                }));
-              }
+            onClick={() => {
+              const available = getAvailableDiskNumbers();
+              setFormData(prev => ({ ...prev, disk_number: available[0] || 1 }));
               setShowAddForm(true);
             }}
-            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-sm"
           >
-            <Plus className="h-4 w-4" />
-            Agregar Disco
+            <Plus size={14} /> Añadir Disco
           </button>
         )}
       </div>
 
-      {/* Lista de discos */}
-      <div className="grid gap-4">
-        {disks.map((disk) => (
-          <div key={disk.id} className="bg-white border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <HardDrive className="h-5 w-5 text-gray-600" />
-                <div>
-                  <h4 className="font-medium text-gray-900">
-                    Disco {disk.disk_number} - {disk.disk_type} {disk.brand ? `(${disk.brand})` : ''}
-                  </h4>
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(disk.status)}
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(disk.status)}`}>
-                      {disk.status}
-                    </span>
-                  </div>
+      {/* Lista de Discos - Más compacta */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {disks.map((disk, idx) => (
+          <div key={idx} className="bg-slate-50 border border-slate-200 p-3 flex items-center justify-between group">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-white border border-slate-200 flex items-center justify-center text-[#002855] font-black text-xs">
+                {disk.disk_number}
+              </div>
+              <div>
+                <p className="text-[11px] font-black text-[#002855] uppercase leading-tight">
+                  {disk.disk_type} - {disk.total_capacity_gb}GB {disk.brand ? `(${disk.brand})` : ''}
+                </p>
+                <div className="flex flex-col mt-0.5">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                    {disk.status === 'active' ? '✓ Activo' : '⚠ ' + disk.status}
+                    {disk.serial_number && <span className="ml-2 text-slate-300">S/N: {disk.serial_number}</span>}
+                  </p>
+                  {disk.stored_from || disk.stored_to ? (
+                    <p className="text-[9px] font-black text-blue-600 uppercase mt-1">
+                      Grabación: {disk.stored_from ? new Date(disk.stored_from + 'T00:00:00').toLocaleDateString() : '—'} al {disk.stored_to ? new Date(disk.stored_to + 'T00:00:00').toLocaleDateString() : '—'}
+                    </p>
+                  ) : (
+                    <p className="text-[9px] font-bold text-slate-300 uppercase mt-1 italic">Sin fechas de grabación</p>
+                  )}
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleEdit(disk);
-                  }}
-                  className="text-blue-600 hover:text-blue-800 text-sm"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleDelete(disk.id);
-                  }}
-                  className="text-red-600 hover:text-red-800 text-sm"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
             </div>
-
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-gray-600">
-                <span>Capacidad Total: {disk.total_capacity_gb} GB</span>
-                <span>Espacio Usado: {disk.used_space_gb} GB</span>
-                <span>Capacidad Restante: {disk.remaining_capacity_gb} GB</span>
-              </div>
-              
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full ${getUsageColor(getUsagePercentage(disk.remaining_capacity_gb, disk.total_capacity_gb))}`}
-                  style={{
-                    width: `${getUsagePercentage(disk.remaining_capacity_gb, disk.total_capacity_gb)}%`
-                  }}
-                ></div>
-              </div>
-              
-              <div className="text-xs text-gray-500 text-center">
-                {getUsagePercentage(disk.remaining_capacity_gb, disk.total_capacity_gb)}% usado
-              </div>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button type="button" onClick={() => startEdit(idx)} className="p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"><Edit2 size={14} /></button>
+              <button type="button" onClick={() => removeDisk(idx)} className="p-1.5 text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={14} /></button>
             </div>
-
-            {disk.serial_number && (
-              <div className="mt-1 text-sm text-slate-500 font-mono">
-                <strong>S/N:</strong> {disk.serial_number}
-              </div>
-            )}
-
-            {(disk.stored_from || disk.stored_to) && (
-              <div className="mt-1 text-xs text-blue-600 font-bold uppercase tracking-tight">
-                Grabación: {disk.stored_from ? new Date(disk.stored_from).toLocaleDateString() : '—'} al {disk.stored_to ? new Date(disk.stored_to).toLocaleDateString() : '—'}
-              </div>
-            )}
-
-            {disk.notes && (
-              <div className="mt-2 text-sm text-gray-600">
-                <strong>Notas:</strong> {disk.notes}
-              </div>
-            )}
           </div>
         ))}
       </div>
 
-      {/* Formulario para agregar/editar disco */}
+      {/* Formulario Inline - Sin pasos extras */}
       {showAddForm && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h4 className="font-medium text-gray-900 mb-4">
-            {editingDisk ? 'Editar Disco' : 'Agregar Nuevo Disco'}
-          </h4>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Número de Disco
-                </label>
-                <select
-                  value={formData.disk_number}
-                  onChange={(e) => setFormData(prev => ({ ...prev, disk_number: parseInt(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  {getAvailableDiskNumbers().map(num => (
-                    <option key={num} value={num}>
-                      Disco {num} {disks.find(d => d.disk_number === num) ? '(En uso)' : '(Disponible)'}
-                    </option>
-                  ))}
-                </select>
-                {getAvailableDiskNumbers().length === 0 && (
-                  <p className="text-red-500 text-sm mt-1">
-                    No hay números de disco disponibles (máximo 8 discos)
-                  </p>
-                )}
-              </div>
+        <div className="bg-white border-2 border-indigo-100 p-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between border-b border-indigo-50 pb-2 mb-2">
+            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">
+              {editingIndex !== null ? 'Editando Disco' : 'Nuevo Disco de Almacenamiento'}
+            </span>
+            <button type="button" onClick={resetForm} className="text-slate-400 hover:text-slate-600 font-bold text-[10px] uppercase">Cancelar</button>
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipo de Disco
-                </label>
-                <select
-                  value={formData.disk_type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, disk_type: e.target.value as any }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="HDD">HDD</option>
-                  <option value="SSD">SSD</option>
-                  <option value="NVMe">NVMe</option>
-                  <option value="Other">Otro</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Capacidad Total (GB)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.total_capacity_gb}
-                  onChange={(e) => setFormData(prev => ({ ...prev, total_capacity_gb: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Capacidad Restante (GB)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={formData.remaining_capacity_gb}
-                  onChange={(e) => setFormData(prev => ({ ...prev, remaining_capacity_gb: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estado
-              </label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">N° Disco</label>
               <select
-                value={formData.status}
-                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as any }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={formData.disk_number}
+                onChange={e => setFormData(p => ({ ...p, disk_number: parseInt(e.target.value) }))}
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold text-[#002855]"
               >
-                <option value="active">Activo</option>
-                <option value="full">Lleno</option>
-                <option value="error">Error</option>
-                <option value="maintenance">Mantenimiento</option>
-                <option value="extracted">Extraído/Almacenado</option>
+                {getAvailableDiskNumbers().map(n => <option key={n} value={n}>Disco {n}</option>)}
               </select>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Marca
-                </label>
-                <input
-                  type="text"
-                  value={formData.brand}
-                  onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: WD, Seagate..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Número de Serie
-                </label>
-                <input
-                  type="text"
-                  value={formData.serial_number}
-                  onChange={(e) => setFormData(prev => ({ ...prev, serial_number: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: WD-WCC7K1..."
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
+              <select
+                value={formData.disk_type}
+                onChange={e => setFormData(p => ({ ...p, disk_type: e.target.value as any }))}
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold text-[#002855]"
+              >
+                <option value="HDD">HDD</option>
+                <option value="SSD">SSD</option>
+                <option value="NVMe">NVMe</option>
+              </select>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Grabación Desde
-                </label>
-                <input
-                  type="date"
-                  value={formData.stored_from}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stored_from: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Grabación Hasta
-                </label>
-                <input
-                  type="date"
-                  value={formData.stored_to}
-                  onChange={(e) => setFormData(prev => ({ ...prev, stored_to: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Notas
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Capacidad (GB)</label>
+              <input
+                type="number"
+                value={formData.total_capacity_gb}
+                onChange={e => setFormData(p => ({ ...p, total_capacity_gb: e.target.value }))}
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold"
+                placeholder="Ej: 1000"
               />
             </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {loading ? 'Guardando...' : (editingDisk ? 'Actualizar' : 'Agregar')}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-              >
-                Cancelar
-              </button>
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Libre (GB)</label>
+              <input
+                type="number"
+                value={formData.remaining_capacity_gb}
+                onChange={e => setFormData(p => ({ ...p, remaining_capacity_gb: e.target.value }))}
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold"
+                placeholder="Ej: 200"
+              />
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grabación Desde (Opcional)</label>
+              <input
+                type="date"
+                value={formData.stored_from}
+                onChange={e => setFormData(p => ({ ...p, stored_from: e.target.value }))}
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grabación Hasta (Opcional)</label>
+              <input
+                type="date"
+                value={formData.stored_to}
+                onChange={e => setFormData(p => ({ ...p, stored_to: e.target.value }))}
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold"
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleAddOrUpdate}
+            className="w-full py-2 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 hover:text-white transition-all border border-indigo-200"
+          >
+            {editingIndex !== null ? 'Actualizar en Lista' : 'Confirmar Disco y Añadir'}
+          </button>
         </div>
       )}
     </div>

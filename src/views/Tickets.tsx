@@ -44,8 +44,42 @@ export default function Tickets() {
 
     useEffect(() => {
         fetchTickets();
-        const sub = supabase.channel('tickets_board_final').on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, fetchTickets).subscribe();
-        return () => { supabase.removeChannel(sub); };
+
+        const channel = supabase
+            .channel('tickets_realtime')
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'tickets' 
+            }, async (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    // For inserts, we fetch the single new ticket with its relations
+                    const { data } = await supabase
+                        .from('tickets')
+                        .select(`*, requester:requester_id(full_name, avatar_url), attendant:assigned_to(full_name, avatar_url), locations(name)`)
+                        .eq('id', (payload.new as any).id)
+                        .single();
+                    
+                    if (data) {
+                        setTickets(prev => [data, ...prev]);
+                    }
+                } else if (payload.eventType === 'UPDATE') {
+                    // For updates, we can update the local state if it's just a status/field change
+                    // But some changes might need new relation data (e.g. assigned_to changed)
+                    // For now, let's update the ticket in state
+                    setTickets(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
+                    
+                    // If assigned_to or requester_id changed, we might want to refresh relations
+                    // but most updates are status changes.
+                } else if (payload.eventType === 'DELETE') {
+                    setTickets(prev => prev.filter(t => t.id !== payload.old.id));
+                }
+            })
+            .subscribe();
+
+        return () => { 
+            supabase.removeChannel(channel); 
+        };
     }, []);
 
     // Listen to TopHeader action events
@@ -72,7 +106,24 @@ export default function Tickets() {
         try {
             const { data, error } = await supabase
                 .from('tickets')
-                .select(`*, requester:requester_id(full_name, avatar_url), attendant:assigned_to(full_name, avatar_url), locations(name)`)
+                .select(`
+                    id, 
+                    title, 
+                    description, 
+                    status, 
+                    priority, 
+                    created_at, 
+                    updated_at, 
+                    attended_at, 
+                    resolved_at, 
+                    closed_at,
+                    requester_id,
+                    assigned_to,
+                    location_id,
+                    requester:requester_id(full_name, avatar_url), 
+                    attendant:assigned_to(full_name, avatar_url), 
+                    locations(name)
+                `)
                 .order('created_at', { ascending: false });
             if (error) throw error;
             setTickets(data || []);
@@ -371,12 +422,12 @@ export default function Tickets() {
     if (loading) return null;
 
     return (
-        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans animate-in fade-in duration-500" >
+        <div className="flex h-screen bg-[#F8FAFC] overflow-hidden" >
             <div className="flex-1 flex flex-col overflow-hidden">
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {activeTab === 'reports' ? (
-                        <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-4 animate-in slide-in-from-bottom-4 duration-500">
+                        <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-4">
                             <div className="bg-white border border-slate-200 rounded-none shadow-sm p-6 lg:p-8 relative">
                                 <div className="absolute -top-3 -left-3">
                                     <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
@@ -447,7 +498,7 @@ export default function Tickets() {
                         </div>
                     ) : activeTab === 'my_tickets' ? (
                         // ===================== MIS TICKETS =====================
-                        <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                        <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-8">
 
                             {/* Tabla: Mis solicitudes creadas */}
                             <div className="bg-white border border-slate-200 rounded-none shadow-sm flex flex-col p-4 relative pt-10">

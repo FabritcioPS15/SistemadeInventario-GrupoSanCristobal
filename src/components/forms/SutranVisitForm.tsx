@@ -22,7 +22,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
     inspector_name: visit?.inspector_name || '',
     inspector_email: visit?.inspector_email || '',
     inspector_phone: visit?.inspector_phone || '',
-    status: visit?.status || 'scheduled',
+    status: visit?.status || 'pending',
     location_id: visit?.location_id || '',
     observations: visit?.observations || '',
     findings: visit?.findings || '',
@@ -41,7 +41,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
   ];
 
   const statuses = [
-    { value: 'scheduled', label: 'Programada' },
+    { value: 'pending', label: 'Programada' },
     { value: 'in_progress', label: 'En Progreso' },
     { value: 'completed', label: 'Completada' },
     { value: 'cancelled', label: 'Cancelada' }
@@ -59,7 +59,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
         inspector_name: visit.inspector_name || '',
         inspector_email: visit.inspector_email || '',
         inspector_phone: visit.inspector_phone || '',
-        status: visit.status || 'scheduled',
+        status: visit.status || 'pending',
         location_id: visit.location_id || '',
         observations: visit.observations || '',
         findings: visit.findings || '',
@@ -75,7 +75,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
         inspector_name: '',
         inspector_email: '',
         inspector_phone: '',
-        status: 'scheduled',
+        status: 'pending',
         location_id: '',
         observations: '',
         findings: '',

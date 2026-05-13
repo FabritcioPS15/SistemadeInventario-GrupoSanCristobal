@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Eye, EyeOff, AlertCircle, User, Lock, ArrowRight, UserPlus, X } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function Login() {
   const mountedRef = useRef(true);
@@ -105,7 +105,7 @@ export default function Login() {
         requested_role: '',
         notes: ''
       });
-      
+
       if (mountedRef.current) {
         alert('Solicitud de registro enviada exitosamente. Será revisada por el administrador.');
       }
@@ -161,7 +161,7 @@ export default function Login() {
           <div className="relative z-10 flex flex-col justify-center items-center h-full">
             <div className="absolute top-8 left-8 right-8 h-1 bg-white/20 animate-pulse" />
             <div className="absolute top-12 left-16 right-16 h-0.5 bg-white/15 animate-pulse delay-75" />
-            
+
             <div className="flex justify-center items-center mb-8">
               <img
                 src="/Enblanco.png"
@@ -180,7 +180,7 @@ export default function Login() {
             <h2 className="text-5xl font-bold text-white leading-tight text-center">
               Sistema Integrado <span className="text-blue-400"></span>
             </h2>
-            
+
             <p className="mt-4 text-blue-100/70 text-lg max-w-md font-medium mx-auto text-center">
               Solución tecnológica para la gestión integral de activos y operaciones. Eficiencia, control y excelencia operativa.
             </p>
@@ -302,12 +302,12 @@ export default function Login() {
             {/* Header */}
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
               <h3 className="text-xl font-bold text-slate-800">Solicitar Registro de Usuario</h3>
-              <button 
+              <button
                 onClick={() => {
                   if (mountedRef.current) {
                     setShowRegistrationModal(false);
                   }
-                }} 
+                }}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
               >
                 <X size={24} />

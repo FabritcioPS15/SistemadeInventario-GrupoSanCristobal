@@ -9,7 +9,7 @@ import { supabase, AssetWithDetails, Location, Category, Subcategory } from '../
 import AssetForm from '../components/forms/AssetForm';
 import AssetDetails from '../components/AssetDetails';
 import ExcelImportModal from '../components/ExcelImportModal';
-import Pagination from '../components/Pagination';
+import Pagination from '../components/ui/Pagination';
 import { useAuth } from '../contexts/AuthContext';
 
 type InventoryProps = {
@@ -24,7 +24,8 @@ const pathCategoryMap: Record<string, string> = {
   'equipos-medicos': 'Equipos Médicos',
   'mobiliario': 'Mobiliario',
   'seguridad': 'Seguridad',
-  'utiles-oficina': 'Útiles de Oficina'
+  'utiles-oficina': 'Útiles de Oficina',
+  'disco-extraido': 'EXTRAIDO'
 };
 
 // Subcategory prefix/slug mapping
@@ -75,17 +76,23 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [filterStatus, setFilterStatus] = useState('');
 
-  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [totalCount, setTotalCount] = useState(0);
   const [sortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'created_at', direction: 'desc' });
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
 
   // Mapping moved to top of file
 
   useEffect(() => {
-    fetchData();
+    fetchCategories();
+    fetchSubcategories();
+    fetchLocations();
   }, []);
+
+  useEffect(() => {
+    fetchAssets();
+  }, [currentPage, itemsPerPage, searchTerm, filterCategory, selectedLocations, filterStatus, categoryFilter, subcategoryFilter]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -97,30 +104,58 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchData = async () => {
+  const fetchAssets = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        fetchAssets(),
-        fetchCategories(),
-        fetchSubcategories(),
-        fetchLocations()
-      ]);
+      const from = (currentPage - 1) * itemsPerPage;
+      const to = from + itemsPerPage - 1;
+
+      let query = supabase
+        .from('assets')
+        .select('*, categories(name), subcategories(name), locations(name), areas(name)', { count: 'exact' });
+
+      // Apply Filters
+      if (searchTerm) {
+        query = query.or(`codigo_unico.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,serial_number.ilike.%${searchTerm}%`);
+      }
+
+      const cleanCategoryFilter = categoryFilter?.replace('inventory-', '');
+      const activePathCategory = cleanCategoryFilter ? pathCategoryMap[cleanCategoryFilter] : null;
+
+      if (cleanCategoryFilter === 'disco-extraido') {
+        query = query.eq('status', 'extracted');
+      } else if (activePathCategory) {
+        // Since we can't easily filter by joined column name in a simple .eq() on assets, 
+        // we first need to find the category ID if we don't have it.
+        const cat = categories.find(c => c.name === activePathCategory);
+        if (cat) query = query.eq('category_id', cat.id);
+      }
+
+      if (filterCategory) {
+        query = query.eq('category_id', filterCategory);
+      }
+
+      if (selectedLocations.length > 0) {
+        query = query.in('location_id', selectedLocations);
+      }
+
+      if (filterStatus) {
+        query = query.eq('status', filterStatus);
+      }
+
+      // Pagination and Sort
+      const { data, error, count } = await query
+        .order(sortConfig?.key || 'created_at', { ascending: sortConfig?.direction === 'asc' })
+        .range(from, to);
+
+      if (error) throw error;
+      setAssets(data as AssetWithDetails[]);
+      setTotalCount(count || 0);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching assets:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const fetchAssets = async () => {
-    const { data, error } = await supabase
-      .from('assets')
-      .select('*, categories(*), subcategories(*), locations(*), areas(*)')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    if (data) setAssets(data as AssetWithDetails[]);
   };
 
   // Listen to TopHeader action events
@@ -211,52 +246,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     }
   };
 
-  const filteredAssets = useMemo(() => {
-    const cleanCategoryFilter = categoryFilter?.replace('inventory-', '');
-    const activePathCategory = cleanCategoryFilter ? pathCategoryMap[cleanCategoryFilter] : null;
-    const activeSubcatNames = subcategoryFilter ? subcategorySlugMap[subcategoryFilter] : null;
-
-    return assets.filter(asset => {
-      const matchesSearch =
-        (asset.codigo_unico?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (asset.brand?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (asset.model?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (asset.serial_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (asset.categories?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-        (asset.subcategories?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
-
-      const matchesPathCategory = !activePathCategory || asset.categories?.name === activePathCategory;
-      const matchesPathSubcategory = !activeSubcatNames || activeSubcatNames.includes(asset.subcategories?.name || '');
-
-      const matchesCategory = !filterCategory || asset.category_id === filterCategory;
-      const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(asset.location_id || '');
-      const matchesStatus = !filterStatus || asset.status === filterStatus;
-
-      return matchesSearch && matchesPathCategory && matchesPathSubcategory && matchesCategory && matchesLocation && matchesStatus;
-    });
-  }, [assets, searchTerm, categoryFilter, subcategoryFilter, filterCategory, selectedLocations, filterStatus]);
-
-  const sortedAssets = useMemo(() => {
-    if (!sortConfig) return filteredAssets;
-    return [...filteredAssets].sort((a, b) => {
-      let aVal, bVal;
-      switch (sortConfig.key) {
-        case 'category': aVal = a.categories?.name || ''; bVal = b.categories?.name || ''; break;
-        case 'location': aVal = a.locations?.name || ''; bVal = b.locations?.name || ''; break;
-        case 'status': aVal = a.status || ''; bVal = b.status || ''; break;
-        default: aVal = (a as any)[sortConfig.key] || ''; bVal = (b as any)[sortConfig.key] || '';
-      }
-      const res = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-      return sortConfig.direction === 'asc' ? res : -res;
-    });
-  }, [filteredAssets, sortConfig]);
-
-  const paginatedAssets = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return sortedAssets.slice(start, start + itemsPerPage);
-  }, [sortedAssets, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(filteredAssets.length / itemsPerPage);
+  const paginatedAssets = assets;
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   const handleExportExcel = async () => {
     try {
@@ -277,7 +268,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         { header: 'NOTAS', key: 'notes', width: 40 }
       ];
 
-      filteredAssets.forEach(a => {
+      // Use current page assets for export
+      assets.forEach(a => {
         ws.addRow({
           code: a.codigo_unico,
           category: a.categories?.name,
@@ -307,7 +299,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
 
   const handleExportPdf = () => {
     const doc = new jsPDF();
-    const tableData = filteredAssets.map(a => [
+    // Use current page assets for export
+    const tableData = assets.map(a => [
       a.codigo_unico || '',
       a.categories?.name || '',
       `${a.brand || ''} ${a.model || ''}`.trim(),
@@ -340,7 +333,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
           <div className="absolute -top-3 -left-3">
             <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-              {filteredAssets.length} Activos
+              {totalCount} Activos
             </div>
           </div>
 
@@ -477,7 +470,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                totalItems={filteredAssets.length}
+                totalItems={totalCount}
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
                 onItemsPerPageChange={setItemsPerPage}
@@ -597,7 +590,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
-                totalItems={filteredAssets.length}
+                totalItems={totalCount}
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
                 onItemsPerPageChange={setItemsPerPage}

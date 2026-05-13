@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Key, AlertCircle, CheckCircle, Loader2, User, Database } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import Login from './Login';
 
 type User = {
@@ -92,7 +92,7 @@ export default function PasswordSetup() {
       // Actualizar contraseña y DNI en la tabla users
       const { error: updateError } = await supabase
         .from('users')
-        .update({ 
+        .update({
           password: password,
           dni: dni.trim(),
           updated_at: new Date().toISOString()
@@ -108,7 +108,7 @@ export default function PasswordSetup() {
       setPassword('');
       setConfirmPassword('');
       setDni('');
-      
+
       // Actualizar la lista de usuarios
       await fetchUsers();
     } catch (err) {
@@ -165,7 +165,7 @@ export default function PasswordSetup() {
               <li>Haz clic en <strong>"Add Column"</strong></li>
               <li>Configura la nueva columna:</li>
             </ol>
-            
+
             <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
               <h4 className="font-medium text-gray-800 mb-2">Configuración de la columna:</h4>
               <div className="space-y-1 text-sm text-gray-600">
@@ -234,20 +234,19 @@ export default function PasswordSetup() {
                     <div>
                       <h3 className="font-medium text-gray-800">{user.full_name}</h3>
                       <p className="text-sm text-gray-600">{user.email}</p>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs mt-1 ${
-                        user.role === 'super_admin' ? 'bg-red-100 text-red-800' :
-                        user.role === 'supervisores' ? 'bg-blue-100 text-blue-800' :
-                        user.role === 'sistemas' ? 'bg-green-100 text-green-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs mt-1 ${user.role === 'super_admin' ? 'bg-red-100 text-red-800' :
+                          user.role === 'supervisores' ? 'bg-blue-100 text-blue-800' :
+                            user.role === 'sistemas' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                        }`}>
                         {user.role === 'super_admin' ? 'Super Administrador' :
-                         user.role === 'supervisores' ? 'Supervisor' :
-                         user.role === 'sistemas' ? 'Sistemas' :
-                         'Usuario'}
+                          user.role === 'supervisores' ? 'Supervisor' :
+                            user.role === 'sistemas' ? 'Sistemas' :
+                              'Usuario'}
                       </span>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-3">
                     <div className="text-right space-y-2">
                       <div className="flex gap-2">
@@ -281,7 +280,7 @@ export default function PasswordSetup() {
                         </button>
                       </div>
                     </div>
-                    
+
                     <button
                       onClick={() => handleSetPassword(user)}
                       disabled={settingPassword === user.id || !password || !confirmPassword || !dni.trim()}

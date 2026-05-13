@@ -202,12 +202,6 @@ export default function NotificationsFinal() {
         }
       });
 
-    // Polling cada 3 segundos — fuente principal de detección de tickets nuevos.
-    // Es el mecanismo más confiable porque no depende del Realtime de Supabase.
-    const pollInterval = setInterval(() => {
-      fetchNotifications();
-    }, 3000);
-
     // Cargar notificaciones existentes (primera carga — no sonido)
     fetchNotifications();
 
@@ -218,8 +212,6 @@ export default function NotificationsFinal() {
         clearInterval((window as any).notificationRefreshInterval);
         delete (window as any).notificationRefreshInterval;
       }
-
-      clearInterval(pollInterval);
     };
   }, [user?.id, user?.role]);
 

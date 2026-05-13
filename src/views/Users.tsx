@@ -9,7 +9,7 @@ import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase, Location } from '../lib/supabase';
 import UserForm from '../components/forms/UserForm';
 import { useAuth } from '../contexts/AuthContext';
-import Pagination from '../components/Pagination';
+import Pagination from '../components/ui/Pagination';
 
 type User = {
   id: string;

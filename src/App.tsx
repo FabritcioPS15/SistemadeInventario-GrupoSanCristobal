@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
-import TopHeader from './components/TopHeader';
+import Sidebar from './components/layout/Sidebar';
+import TopHeader from './components/layout/TopHeader';
 
 import Dashboard from './views/Dashboard';
 import Inventory from './views/Inventory';
@@ -22,8 +22,8 @@ import Servers from './views/Servers';
 import FlotaVehicular from './views/FlotaVehicular';
 import SpareParts from './views/SpareParts';
 import { useAuth } from './contexts/AuthContext';
-import Login from './components/Login';
-import PasswordSetup from './components/PasswordSetup';
+import Login from './components/auth/Login';
+import PasswordSetup from './components/auth/PasswordSetup';
 import Checklist from './views/Checklist';
 import ChecklistInteractive from './views/ChecklistInteractive';
 import ChecklistDetail from './views/ChecklistDetail';
@@ -164,7 +164,7 @@ function AppContent() {
         <div className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'lg:left-20' : 'lg:left-72'}`}>
           <TopHeader onMobileMenuClick={() => setIsMobileSidebarOpen(true)} sidebarCollapsed={sidebarCollapsed} />
         </div>
-        <main className="flex-1 overflow-x-hidden overflow-y-auto mt-14">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto mt-14 page-fade-in">
           <Routes>
             <Route path="/" element={<ProtectedRoute permission="dashboard"><Dashboard /></ProtectedRoute>} />
 

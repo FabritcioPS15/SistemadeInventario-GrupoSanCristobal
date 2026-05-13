@@ -1,27 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Camera, Eye, EyeOff } from 'lucide-react';
-import { supabase, Location } from '../../lib/supabase';
+import { supabase, Location, Camera as CameraType } from '../../lib/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 import CameraDiskManager from '../CameraDiskManager';
-
-type CameraType = {
-  id: string;
-  name: string;
-  location_id?: string;
-  url?: string;
-  username?: string;
-  password?: string;
-  ip_address?: string;
-  port?: string;
-  brand?: string;
-  model?: string;
-  status: 'active' | 'inactive' | 'maintenance';
-  notes?: string;
-  access_type?: 'url' | 'ivms' | 'esviz';
-  auth_code?: string;
-  created_at: string;
-  updated_at: string;
-};
 
 type CameraFormProps = {
   onClose: () => void;
@@ -35,6 +16,8 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showAuthCode, setShowAuthCode] = useState(false);
+  const [disks, setDisks] = useState<any[]>([]); 
+  const [loadingDisks, setLoadingDisks] = useState(false); // Nuevo estado de carga
 
   const [formData, setFormData] = useState({
     name: editCamera?.name || '',
@@ -50,11 +33,37 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
     notes: editCamera?.notes || '',
     access_type: editCamera?.access_type || 'url',
     auth_code: editCamera?.auth_code || '',
+    recording_start_date: editCamera?.recording_start_date || '',
   });
 
   useEffect(() => {
     fetchLocations();
-  }, []);
+    if (editCamera) {
+      if ((editCamera as any).camera_disks?.length > 0) {
+        setDisks((editCamera as any).camera_disks);
+      } else {
+        fetchDisks();
+      }
+    }
+  }, [editCamera]);
+
+  const fetchDisks = async () => {
+    if (!editCamera) return;
+    setLoadingDisks(true);
+    try {
+      const { data } = await supabase
+        .from('camera_disks')
+        .select('*')
+        .eq('camera_id', editCamera.id)
+        .order('disk_number');
+      
+      if (data) {
+        setDisks(data);
+      }
+    } finally {
+      setLoadingDisks(false);
+    }
+  };
 
   const fetchLocations = async () => {
     const { data } = await supabase
@@ -119,10 +128,13 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
       notes: formData.notes.trim() || null,
       access_type: formData.access_type,
       auth_code: formData.auth_code.trim() || null,
+      recording_start_date: formData.recording_start_date || null,
       updated_at: new Date().toISOString(),
     };
 
     try {
+      let finalCameraId = editCamera?.id;
+
       if (editCamera) {
         const { error } = await supabase
           .from('cameras')
@@ -135,12 +147,49 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
           return;
         }
       } else {
-        const { error } = await supabase
+        const { data: newCam, error } = await supabase
           .from('cameras')
-          .insert([dataToSave]);
+          .insert([dataToSave])
+          .select()
+          .single();
 
         if (error) {
           setErrors({ submit: 'Error al crear la cámara: ' + error.message });
+          setLoading(false);
+          return;
+        }
+        if (newCam) finalCameraId = newCam.id;
+      }
+
+      // GUARDADO UNIFICADO DE DISCOS
+      if (finalCameraId) {
+        try {
+          // 1. Eliminar discos existentes (para sincronizar)
+          const { error: delError } = await supabase.from('camera_disks').delete().eq('camera_id', finalCameraId);
+          if (delError) throw delError;
+          
+          // 2. Insertar la nueva lista si hay discos
+          if (disks && disks.length > 0) {
+            const disksToSave = disks.map(d => ({
+              camera_id: finalCameraId,
+              disk_number: d.disk_number,
+              total_capacity_gb: parseFloat(d.total_capacity_gb.toString()),
+              remaining_capacity_gb: parseFloat(d.remaining_capacity_gb.toString()),
+              disk_type: d.disk_type,
+              status: d.status,
+              brand: d.brand?.trim() || null,
+              serial_number: d.serial_number?.trim() || null,
+              stored_from: d.stored_from ? d.stored_from : null,
+              stored_to: d.stored_to ? d.stored_to : null,
+              notes: d.notes?.trim() || null
+            }));
+            
+            const { error: diskError } = await supabase.from('camera_disks').insert(disksToSave);
+            if (diskError) throw diskError;
+          }
+        } catch (diskErr: any) {
+          console.error('Error crítico en discos:', diskErr);
+          setErrors({ submit: 'La cámara se guardó, pero hubo un error con los discos: ' + diskErr.message });
           setLoading(false);
           return;
         }
@@ -173,7 +222,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
       subtitle="Módulo de Gestión de Cámaras"
       onClose={onClose}
       onSubmit={handleSubmit}
-      loading={loading}
+      loading={loading || loadingDisks}
       error={errors.submit}
       icon={<Camera size={24} className="text-blue-600" />}
     >
@@ -256,6 +305,17 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
               <option value="ivms">IVMS 4200</option>
               <option value="esviz">ESVIZ</option>
             </FormSelect>
+          </FormField>
+
+          <FormField label="Inicio de Grabación" error={errors.recording_start_date}>
+            <FormInput
+              type="date"
+              name="recording_start_date"
+              value={formData.recording_start_date}
+              onChange={handleChange}
+              error={errors.recording_start_date}
+            />
+            <p className="text-[10px] text-blue-500 font-bold mt-1 uppercase">Fecha cuando empezó el registro</p>
           </FormField>
         </div>
       </FormSection>
@@ -373,14 +433,15 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
         </FormField>
       </FormSection>
 
-      {/* Section: Discos de Almacenamiento (Solo si ya existe en la DB) */}
-      {editCamera?.id && (
-        <FormSection title="Discos Duros (DVR/NVR)" color="indigo">
-          <div className="bg-white p-4 border border-slate-200 rounded-lg">
-            <CameraDiskManager cameraId={editCamera.id} />
-          </div>
-        </FormSection>
-      )}
+      {/* Section: Discos de Almacenamiento - INTEGRADO TOTALMENTE */}
+      <FormSection title="Discos Duros (DVR/NVR)" color="indigo">
+        <div className="bg-slate-50/50 p-4 border border-slate-200">
+          <CameraDiskManager 
+            disks={disks} 
+            onChange={setDisks} 
+          />
+        </div>
+      </FormSection>
     </BaseForm>
   );
 }

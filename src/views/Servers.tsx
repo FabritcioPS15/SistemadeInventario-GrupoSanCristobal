@@ -9,7 +9,7 @@ import autoTable from 'jspdf-autotable';
 import { supabase, Server, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import ServerForm from '../components/forms/ServerForm';
-import Pagination from '../components/Pagination';
+import Pagination from '../components/ui/Pagination';
 
 export default function Servers() {
   const { canEdit } = useAuth();

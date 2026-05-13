@@ -9,7 +9,7 @@ import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
 import MTCAccesoForm from '../components/forms/MTCAccesoForm';
 import { useAuth } from '../contexts/AuthContext';
-import Pagination from '../components/Pagination';
+import Pagination from '../components/ui/Pagination';
 
 type MTCAcceso = {
   id: string;

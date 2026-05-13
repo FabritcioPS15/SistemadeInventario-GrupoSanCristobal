@@ -7,7 +7,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import VehicleImportModal from '../components/VehicleImportModal';
 import FlotaVehicularForm from '../components/forms/FlotaVehicularForm';
-import Pagination from '../components/Pagination';
+import Pagination from '../components/ui/Pagination';
 import { supabase, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 

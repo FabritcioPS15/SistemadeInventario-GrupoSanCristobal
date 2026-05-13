@@ -4,7 +4,7 @@ import { useHeaderVisible } from '../hooks/useHeaderVisible';
 import { supabase, BranchAudit } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import AuditForm from '../components/forms/AuditForm';
-import HeaderSearch from '../components/HeaderSearch';
+import HeaderSearch from '../components/layout/HeaderSearch';
 
 type ViewType = 'history' | 'form';
 

@@ -60,8 +60,23 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                 schema: 'public',
                 table: 'ticket_comments',
                 filter: `ticket_id=eq.${currentTicket.id}`
-            }, () => {
-                fetchComments();
+            }, async (payload) => {
+                // Fetch only the new comment's author info to append to state
+                const { data } = await supabase
+                    .from('ticket_comments')
+                    .select(`
+                        id, content, created_at, user_id, ticket_id,
+                        author:user_id(full_name, avatar_url)
+                    `)
+                    .eq('id', (payload.new as any).id)
+                    .single();
+                
+                if (data) {
+                    setComments(prev => {
+                        if (prev.some(c => c.id === data.id)) return prev;
+                        return [...prev, data];
+                    });
+                }
             })
             .subscribe();
 
@@ -86,8 +101,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
             const { data, error } = await supabase
                 .from('ticket_comments')
                 .select(`
-                    *,
-                    author:user_id(full_name, email, avatar_url)
+                    id, content, created_at, user_id, ticket_id,
+                    author:user_id(full_name, avatar_url)
                 `)
                 .eq('ticket_id', currentTicket.id)
                 .order('created_at', { ascending: true });

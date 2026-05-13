@@ -243,6 +243,7 @@ export type Camera = {
   model?: string;
   status: 'active' | 'inactive' | 'maintenance';
   notes?: string;
+  recording_start_date?: string; // Nuevo campo
   access_type?: 'url' | 'ivms' | 'esviz'; // Tipo de acceso
   auth_code?: string; // Código de autenticación para IVMS y ESVIZ
   display_count?: number;

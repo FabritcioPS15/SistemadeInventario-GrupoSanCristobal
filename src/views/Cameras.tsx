@@ -10,7 +10,7 @@ import CameraForm from '../components/forms/CameraForm';
 import { useAuth } from '../contexts/AuthContext';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
-import Pagination from '../components/Pagination';
+import Pagination from '../components/ui/Pagination';
 import StoredDiskForm from '../components/forms/StoredDiskForm';
 
 type Camera = CameraType;
@@ -317,17 +317,16 @@ export default function Cameras({ subview }: CamerasProps) {
         const tableData = filteredCameras.map(c => [
           c.name,
           (c as any).locations?.name || '—',
+          c.recording_start_date ? new Date(c.recording_start_date + 'T00:00:00').toLocaleDateString() : '—',
           c.brand || '—',
-          c.model || '—',
-          c.ip_address || '—',
-          c.display_count || '0', // Capacidad
+          `${c.ip_address || '—'}:${c.port || '—'}`,
           c.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
           c.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join('\n') || '—'
         ]);
 
         autoTable(doc, {
           startY: 30,
-          head: [['Cámara', 'Ubicación', 'Marca', 'Modelo', 'IP', 'Cap.', 'Discos Duros', 'Espacio Libre']],
+          head: [['Cámara', 'Ubicación', 'Inicio Grabación', 'Marca', 'IP/Puerto', 'Discos Duros', 'Espacio Libre']],
           body: tableData,
           theme: 'striped',
           headStyles: { fillColor: [0, 40, 85], textColor: 255, fontSize: 10 },
@@ -390,9 +389,10 @@ export default function Cameras({ subview }: CamerasProps) {
     } else {
       worksheet.columns = [
         { header: 'Nombre', key: 'name', width: 25 },
+        { header: 'Sede', key: 'location', width: 25 },
+        { header: 'Inicio Grabación', key: 'recording_start', width: 20 },
         { header: 'Marca', key: 'brand', width: 15 },
         { header: 'Modelo', key: 'model', width: 20 },
-        { header: 'Sede', key: 'location', width: 25 },
         { header: 'IP', key: 'ip', width: 15 },
         { header: 'Puerto', key: 'port', width: 10 },
         { header: 'Usuario', key: 'username', width: 20 },
@@ -400,7 +400,6 @@ export default function Cameras({ subview }: CamerasProps) {
         { header: 'URL', key: 'url', width: 40 },
         { header: 'Tipo Acceso', key: 'access_type', width: 15 },
         { header: 'Estado', key: 'status', width: 15 },
-        { header: 'Capacidad', key: 'capacity', width: 15 },
         { header: 'Discos Duros', key: 'disks', width: 35 },
         { header: 'Espacio Libre', key: 'free_space', width: 25 },
         { header: 'Notas', key: 'notes', width: 30 }
@@ -409,9 +408,10 @@ export default function Cameras({ subview }: CamerasProps) {
       filteredCameras.forEach((camera) => {
         const row = worksheet.addRow({
           name: camera.name || '',
+          location: (camera as any).locations?.name || '',
+          recording_start: camera.recording_start_date || '—',
           brand: camera.brand || '',
           model: camera.model || '',
-          location: (camera as any).locations?.name || '',
           ip: camera.ip_address || '',
           port: camera.port || '',
           username: camera.username || '',
@@ -419,7 +419,6 @@ export default function Cameras({ subview }: CamerasProps) {
           url: camera.url || '',
           access_type: humanAccess(camera.access_type),
           status: camera.status === 'active' ? 'Activo' : camera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo',
-          capacity: camera.display_count || '0',
           disks: camera.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
           free_space: camera.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join('\n') || '—',
           notes: camera.notes || ''
@@ -1011,7 +1010,7 @@ export default function Cameras({ subview }: CamerasProps) {
                     <tr>
                       <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Cámara</span></th>
                       <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span></th>
-                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">IP / Puerto</span></th>
+                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Inicio Grabación</span></th>
                       <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
                       <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Almacenamiento</span></th>
                       <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tecnología</span></th>
@@ -1036,7 +1035,9 @@ export default function Cameras({ subview }: CamerasProps) {
                           <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block">{(cam as any).locations?.name || 'Sede N/A'}</span>
                         </td>
                         <td className="px-4 py-5 text-left">
-                          <span className="text-[12px] font-mono font-black text-blue-600">{cam.ip_address || '—'}:{cam.port || '—'}</span>
+                          <span className="text-[12px] font-black text-[#002855] uppercase">
+                            {cam.recording_start_date ? new Date(cam.recording_start_date + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                          </span>
                         </td>
                         <td className="px-4 py-5 text-left">
                           <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
@@ -1051,10 +1052,17 @@ export default function Cameras({ subview }: CamerasProps) {
                                 if (activeDisks.length === 0) return <span className="text-[10px] font-bold text-slate-400">SIN DISCOS ACTIVOS</span>;
                                 
                                 const totals = activeDisks.reduce(
-                                  (acc, d) => ({
-                                    total: acc.total + (Number(d.total_capacity_gb) || 0),
-                                    used: acc.used + (Number(d.used_space_gb) || 0)
-                                  }),
+                                  (acc, d) => {
+                                    const total = Number(d.total_capacity_gb) || 0;
+                                    const remaining = Number(d.remaining_capacity_gb) || 0;
+                                    const used = d.used_space_gb !== null && d.used_space_gb !== undefined 
+                                      ? Number(d.used_space_gb) 
+                                      : (total - remaining);
+                                    return {
+                                      total: acc.total + total,
+                                      used: acc.used + used
+                                    };
+                                  },
                                   { total: 0, used: 0 }
                                 );
                                 const percent = totals.total > 0 ? Math.min(100, Math.round((totals.used / totals.total) * 100)) : 0;
@@ -1273,10 +1281,15 @@ export default function Cameras({ subview }: CamerasProps) {
                             {/* Resumen Total */}
                             {(() => {
                               const totals = selectedCamera.camera_disks!.reduce(
-                                (acc, d) => ({
-                                  total: acc.total + (Number(d.total_capacity_gb) || 0),
-                                  used: acc.used + (Number(d.used_space_gb) || 0)
-                                }),
+                                (acc, d) => {
+                                  const total = Number(d.total_capacity_gb) || 0;
+                                  const remaining = Number(d.remaining_capacity_gb) || 0;
+                                  const used = d.used_space_gb !== null && d.used_space_gb !== undefined ? Number(d.used_space_gb) : (total - remaining);
+                                  return {
+                                    total: acc.total + total,
+                                    used: acc.used + used
+                                  };
+                                },
                                 { total: 0, used: 0 }
                               );
                               const percent = totals.total > 0 ? Math.min(100, Math.round((totals.used / totals.total) * 100)) : 0;
@@ -1307,12 +1320,15 @@ export default function Cameras({ subview }: CamerasProps) {
                             <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                               {selectedCamera.camera_disks.map((d) => {
                                 const total = Number(d.total_capacity_gb) || 0;
-                                const used = Number(d.used_space_gb) || 0;
+                                const used = d.used_space_gb !== null && d.used_space_gb !== undefined ? Number(d.used_space_gb) : (total - Number(d.remaining_capacity_gb) || 0);
                                 const percent = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
                                 return (
                                   <div key={d.id} className="p-3 bg-white border border-slate-200">
                                     <div className="flex justify-between items-center mb-2">
-                                      <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest">Disco #{d.disk_number}</span>
+                                      <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest">Disco #{d.disk_number}</span>
+                                        {d.serial_number && <span className="text-[8px] font-bold text-slate-300 uppercase">S/N: {d.serial_number}</span>}
+                                      </div>
                                       <span className={`text-[8px] font-black px-2 py-0.5 border ${d.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                                         d.status === 'full' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-200'
                                         }`}>
@@ -1322,10 +1338,15 @@ export default function Cameras({ subview }: CamerasProps) {
                                     <div className="w-full bg-slate-100 h-1 mb-2">
                                       <div className={`h-full ${percent > 75 ? 'bg-rose-500' : 'bg-blue-500'}`} style={{ width: `${percent}%` }} />
                                     </div>
-                                    <div className="flex justify-between text-[9px] font-bold text-slate-400">
-                                      <span>TIPO: {d.disk_type || 'GS-SATA'}</span>
+                                    <div className="flex justify-between text-[9px] font-bold text-slate-400 mb-1">
+                                      <span>TIPO: {d.disk_type || 'GS-SATA'} {d.brand ? `(${d.brand})` : ''}</span>
                                       <span>{used}/{total}GB</span>
                                     </div>
+                                    {(d.stored_from || d.stored_to) && (
+                                      <div className="text-[8px] font-black text-blue-600 uppercase border-t border-slate-50 pt-1">
+                                        Grabación: {d.stored_from ? new Date(d.stored_from + 'T00:00:00').toLocaleDateString() : '—'} al {d.stored_to ? new Date(d.stored_to + 'T00:00:00').toLocaleDateString() : '—'}
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })}

@@ -8,7 +8,7 @@ import autoTable from 'jspdf-autotable';
 import { supabase, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import LocationForm from '../components/forms/LocationForm';
-import Pagination from '../components/Pagination';
+import Pagination from '../components/ui/Pagination';
 
 const typeLabels: Record<string, string> = {
   revision: 'Revisión',

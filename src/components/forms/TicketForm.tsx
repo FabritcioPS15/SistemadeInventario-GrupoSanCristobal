@@ -143,7 +143,8 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             category: formData.category,
             location_id: formData.location_id,
             requester_id: user?.id,
-            status: 'open'
+            status: 'open',
+            anydesk_id: formData.anydesk.trim() || null
           }
         ])
         .select()

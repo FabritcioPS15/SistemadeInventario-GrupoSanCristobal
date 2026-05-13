@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { MessageSquare} from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import TicketDetailModal from '../components/TicketDetailModal';
 
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string }> = {
@@ -23,27 +23,38 @@ export default function MyChats() {
         const initializeData = async () => {
             await fetchMyTickets();
         };
-        
-        void initializeData();
-        
+
+        initializeData();
+
         const subscription = supabase
-            .channel('my-tickets-updates')
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
-                table: 'tickets' 
-            }, () => { fetchMyTickets(); })
+            .channel(`my-tickets-updates-${user?.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'tickets'
+            }, async (payload) => {
+                if (payload.eventType === 'UPDATE') {
+                    setTickets(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
+                } else if (payload.eventType === 'INSERT') {
+                    // Solo si nos pertenece
+                    if (payload.new.requester_id === user?.id || payload.new.assigned_to === user?.id) {
+                        fetchMyTickets();
+                    }
+                } else if (payload.eventType === 'DELETE') {
+                    setTickets(prev => prev.filter(t => t.id !== payload.old.id));
+                }
+            })
             .subscribe();
 
-        return () => supabase.removeChannel(subscription);
-    }, []);
+        return () => { void supabase.removeChannel(subscription); };
+    }, [user?.id]);
 
     const fetchMyTickets = async () => {
         try {
             const { data, error } = await supabase
                 .from('tickets')
                 .select(`
-                    *,
+                    id, title, status, priority, created_at, updated_at, requester_id, assigned_to,
                     requester:requester_id(full_name, avatar_url),
                     attendant:assigned_to(full_name, avatar_url),
                     locations(name)
@@ -72,10 +83,10 @@ export default function MyChats() {
 
     const filteredTickets = tickets.filter(ticket => {
         const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            ticket.requester?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
-        
+            ticket.requester?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+
         const matchesFilter = activeFilter === 'all' || ticket.status === activeFilter;
-        
+
         return matchesSearch && matchesFilter;
     });
 
@@ -119,11 +130,10 @@ export default function MyChats() {
                             <button
                                 key={filter.key}
                                 onClick={() => setActiveFilter(filter.key as any)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                    activeFilter === filter.key
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeFilter === filter.key
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
                             >
                                 {filter.label}
                             </button>

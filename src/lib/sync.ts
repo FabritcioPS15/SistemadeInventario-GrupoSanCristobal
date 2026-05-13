@@ -217,7 +217,7 @@ export async function syncAllAssetsIntegrity(): Promise<{
   let fixesApplied = 0;
 
   try {
-    // Obtener todos los activos
+    // 1. Obtener solo los IDs para saber cuántos hay
     const { data: assets, error } = await supabase
       .from('assets')
       .select('id');
@@ -227,14 +227,74 @@ export async function syncAllAssetsIntegrity(): Promise<{
       return { totalProcessed: 0, issuesFound: 0, fixesApplied: 0 };
     }
 
-    // Procesar cada activo
-    for (const asset of assets) {
-      const result = await validateAndSyncAssetIntegrity(asset.id);
-      totalProcessed++;
+    // 2. Procesar en lotes de 50 para evitar N+1 y reducir Egress
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < assets.length; i += BATCH_SIZE) {
+      const batchIds = assets.slice(i, i + BATCH_SIZE).map(a => a.id);
+      
+      // Consulta optimizada para el lote
+      const { data: fullAssets, error: batchError } = await supabase
+        .from('assets')
+        .select(`
+          id, 
+          status, 
+          location_id,
+          asset_types(id),
+          maintenance_records(status),
+          shipments(status)
+        `)
+        .in('id', batchIds);
 
-      if (!result.isValid) {
-        issuesFound += result.issues.length;
-        fixesApplied += result.fixes.filter(fix => fix.startsWith('✓')).length;
+      if (batchError || !fullAssets) {
+        console.error(`Error fetching batch ${i}:`, batchError);
+        continue;
+      }
+
+      // 3. Validar cada activo del lote en memoria
+      for (const asset of fullAssets) {
+        totalProcessed++;
+        
+        const issues: string[] = [];
+        const fixes: string[] = [];
+
+        // Validar tipo de activo
+        if (!asset.asset_types) {
+          issues.push('Asset type not found');
+        }
+
+        // Validar ubicación
+        if (!asset.location_id && asset.status !== 'extracted') {
+          issues.push('Asset has no location assigned');
+        }
+
+        // Validar estado vs mantenimiento
+        const hasActiveMaintenance = asset.maintenance_records?.some(
+          (record: any) => record.status === 'pending' || record.status === 'in_progress'
+        );
+
+        if (hasActiveMaintenance && asset.status !== 'maintenance') {
+          issues.push('Asset has active maintenance but status is not maintenance');
+          // Auto-fix
+          await supabase.from('assets').update({ status: 'maintenance' }).eq('id', asset.id);
+          fixes.push('✓ Auto-fixed');
+        }
+
+        // Validar envíos pendientes
+        const hasInTransitShipments = asset.shipments?.some(
+          (shipment: any) => shipment.status === 'in_transit'
+        );
+
+        if (hasInTransitShipments && asset.status !== 'maintenance') {
+          issues.push('Asset has in-transit shipments but status is not maintenance');
+          // Auto-fix
+          await supabase.from('assets').update({ status: 'maintenance' }).eq('id', asset.id);
+          fixes.push('✓ Auto-fixed');
+        }
+
+        if (issues.length > 0) {
+          issuesFound += issues.length;
+          fixesApplied += fixes.length;
+        }
       }
     }
 

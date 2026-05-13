@@ -3,7 +3,7 @@ import { Plus, Wrench, Edit, Trash2, Eye, X, MapPin, ShieldCheck, Package, Layou
 import { supabase, AssetWithDetails, Location } from '../lib/supabase';
 import MaintenanceForm from '../components/forms/MaintenanceForm';
 import { useAuth } from '../contexts/AuthContext';
-import Pagination from '../components/Pagination';
+import Pagination from '../components/ui/Pagination';
 
 type MaintenanceProps = {
   categoryFilter?: string;

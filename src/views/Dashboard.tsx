@@ -124,11 +124,11 @@ export default function Dashboard() {
         { data: schoolsData },
         { data: recentTicketsData }
       ] = await Promise.all([
-        supabase.from('assets').select('*', { count: 'exact', head: true }),
-        supabase.from('assets').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('cameras').select('*', { count: 'exact', head: true }),
-        supabase.from('cameras').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('tickets').select('*', { count: 'exact', head: true }),
+        supabase.from('assets').select('id', { count: 'exact', head: true }),
+        supabase.from('assets').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('cameras').select('id', { count: 'exact', head: true }),
+        supabase.from('cameras').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('tickets').select('id', { count: 'exact', head: true }),
         supabase.from('tickets').select('status'),
         supabase.from('vehiculos').select('estado, soat_vencimiento, citv_vencimiento, poliza_vencimiento, contrato_alquiler_vencimiento, placa, ubicacion_actual'),
         supabase.from('locations').select('id, name'),
