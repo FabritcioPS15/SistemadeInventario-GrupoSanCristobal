@@ -7,10 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: [
-      'https://sistema-de-inventario-grupo-san-cri.vercel.app'
-    ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: true,
     credentials: true,
   });
 
