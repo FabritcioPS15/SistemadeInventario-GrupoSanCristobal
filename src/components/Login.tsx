@@ -37,19 +37,8 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log("LOGIN CLICK");
-    
-    const API_URL = import.meta.env.VITE_API_URL;
-    
-    // Normalizar la URL para que funcione siempre
-    let cleanBaseURL = API_URL ? API_URL.trim().replace(/\/+$/, '') : '';
-    if (cleanBaseURL && !cleanBaseURL.endsWith('/api')) {
-      cleanBaseURL = `${cleanBaseURL}/api`;
-    }
-    
-    const finalLoginURL = `${cleanBaseURL}/auth/login`;
-    console.log("LOGIN URL FINAL:", finalLoginURL);
 
-    // Validación básica
+    // Validación básica antes de intentar nada
     if (!identifier.trim() || !password.trim()) {
       setError('Por favor, ingrese su identificación (Email o DNI) y contraseña');
       return;
@@ -59,12 +48,27 @@ export default function Login() {
     setError('');
 
     try {
+      const API_URL = import.meta.env.VITE_API_URL;
+
       if (!API_URL) {
-        throw new Error("VITE_API_URL no está definido en el archivo .env");
+        throw new Error("VITE_API_URL no está definido");
       }
 
-      // Usar la URL normalizada
-      const response = await fetch(finalLoginURL, {
+      // Construir la URL correctamente (SIN emojis, SIN espacios, SIN saltos de línea)
+      // Eliminamos cualquier carácter no deseado incluyendo emojis y espacios
+      const cleanBaseURL = API_URL.trim()
+        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E6}-\u{1F1FF}]/gu, '')
+        .replace(/\s+/g, '')
+        .replace(/\/+$/, '');
+
+      let url = `${cleanBaseURL}/api/auth/login`;
+      
+      // Corregir duplicación de /api/api si existe
+      url = url.replace(/\/api\/api\//g, '/api/');
+
+      console.log("LOGIN URL FINAL:", url);
+
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

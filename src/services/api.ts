@@ -2,7 +2,13 @@ import axios from 'axios';
 
 // Detectamos la URL del API. Priorizamos el .env, luego el host actual, luego localhost.
 const getBaseURL = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    return envUrl.trim()
+      .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E6}-\u{1F1FF}]/gu, '')
+      .replace(/\s+/g, '')
+      .replace(/\/+$/, '');
+  }
   
   // En producción (VPS), si no hay URL definida, usamos la ruta relativa
   // Esto permite que Nginx maneje el proxy en el puerto 80
