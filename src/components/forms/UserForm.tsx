@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Eye, EyeOff, HelpCircle, Crown, TrendingUp, Lock, Shield, Users as UsersIcon, Settings, User as UserIcon, X, ChevronRight } from 'lucide-react';
+import { User, Eye, EyeOff, HelpCircle, Crown, TrendingUp, Lock, Shield, Users as UsersIcon, Settings, User as UserIcon, X, ChevronRight, Scale } from 'lucide-react';
 import { supabase, Location } from '../../lib/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
 
@@ -344,6 +344,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
       case 'supervisores': return <Shield className="h-4 w-4" />;
       case 'administradores': return <UsersIcon className="h-4 w-4" />;
       case 'personalizado': return <Settings className="h-4 w-4" />;
+      case 'area_legal': return <Scale className="h-4 w-4" />;
       default: return <UserIcon className="h-4 w-4" />;
     }
   };
@@ -438,9 +439,8 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
             '✅ Gestión de tickets asignados',
             '✅ Supervisión de personal',
             '✅ Reportes operativos',
-            '✅ Control de inventario básico',
             '✅ Coordinación de tareas',
-            '❌ No puede acceder a configuraciones'
+            '❌ Sin acceso a: Usuarios, Sedes, Servidores, Painpoints, Enviados, Inventario y Mantenimiento'
           ]
         };
       case 'administradores':
@@ -454,6 +454,19 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
             '✅ Gestión de ubicaciones',
             '✅ Soporte a usuarios',
             '❌ No puede modificar roles de sistema'
+          ]
+        };
+      case 'area_legal':
+        return {
+          title: 'Área Legal',
+          description: 'Cumplimiento normativo y control de activos',
+          accesses: [
+            '✅ Acceso a Sutran y visitas futuras',
+            '✅ Gestión de accesos MTC',
+            '✅ Control e historial de Flota Vehicular',
+            '✅ Consulta de Sedes de la organización',
+            '✅ Mesa de ayuda y creación de tickets',
+            '❌ Sin acceso a: Inventarios, Mantenimiento TI, Cámaras, Servidores, Checklists ni Painpoints'
           ]
         };
       case 'personalizado':
@@ -636,7 +649,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
               </div>
               
               <div className="space-y-3 max-h-64 overflow-y-auto">
-                {['super_admin', 'gerencia', 'sistemas', 'supervisores', 'administradores', 'personalizado'].map((role) => {
+                {['super_admin', 'gerencia', 'sistemas', 'supervisores', 'area_legal', 'administradores', 'personalizado'].map((role) => {
                   const roleInfo = getRoleAccessInfo(role);
                   return (
                     <div key={role} className="border-b border-gray-100 pb-3 last:border-0">
@@ -737,6 +750,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
               <option value="gerencia">Gerencia (Gestión Total)</option>
               <option value="sistemas">Sistemas (Acceso Técnico)</option>
               <option value="supervisores">Supervisores (Operaciones)</option>
+              <option value="area_legal">Área Legal (Cumplimiento y Flotas)</option>
               <option value="administradores">Administradores (Gestión)</option>
               <option value="personalizado">Personalizado (Permisos Específicos)</option>
             </FormSelect>

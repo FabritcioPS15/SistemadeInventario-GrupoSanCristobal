@@ -277,7 +277,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'audit-view', 'audit-export'
       ],
       
-      // Supervisores: Acceso total igualado a Sistemas
+      // Supervisores: Acceso limitado (sin Usuarios, Sedes, Servidores, Painpoints, Enviados, Inventario y Mantenimiento)
       supervisores: [
         'dashboard-view', 'dashboard-edit',
         'tickets-view', 'tickets-create', 'tickets-edit', 'tickets-delete',
@@ -285,24 +285,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'checklist-view', 'checklist-edit', 'checklist-create',
         'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
         'checklist-interactive-view',
-        'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
-        'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
-        'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
-        'inventory-chip-view', 'inventory-tinte-view', 'inventory-fuente-view', 'inventory-ram-view', 'inventory-disco-view',
-        'inventory-disco-extraido-view', 'inventory-maquinaria-view',
         'cameras-view', 'cameras-edit',
         'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
-        'maintenance-view', 'maintenance-create', 'maintenance-edit',
-        'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
         'flota-vehicular-view', 'flota-vehicular-edit',
-        'users-view', 'users-create', 'users-edit', 'users-delete',
-        'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
         'sutran-view', 'sutran-edit',
         'mtc-view', 'mtc-edit',
-        'servers-view', 'servers-edit',
-        'painpoint-view', 'painpoint-create', 'painpoint-edit',
-        'sent-view', 'sent-create', 'sent-edit',
-        'sent-lima-view', 'sent-provincias-view',
         'audit-view', 'audit-export'
       ],
       
@@ -320,6 +307,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'locations-view', // Solo ver sedes, no editar
         'sutran-view', // Solo ver sutran
         'sent-lima-view', 'sent-provincias-view'
+      ],
+      
+      // Área Legal: Acceso a legal, flota, sutran, mtc, etc.
+      area_legal: [
+        'dashboard-view',
+        'tickets-view', 'tickets-create', 'tickets-edit',
+        'tickets-dashboard-view', 'tickets-mine-view',
+        'locations-view',
+        'sutran-view', 'sutran-edit',
+        'mtc-view', 'mtc-edit',
+        'flota-vehicular-view', 'flota-vehicular-edit',
+        'audit-view'
       ],
       
       // Personalizado: Permisos básicos de tickets por defecto
@@ -351,7 +350,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
     
     // Roles que pueden editar según la nueva jerarquía
-    const allowedRoles = ['super_admin', 'gerencia', 'sistemas', 'supervisores'];
+    const allowedRoles = ['super_admin', 'gerencia', 'sistemas', 'supervisores', 'area_legal'];
     const hasPermission = allowedRoles.includes(user.role);
     
     return hasPermission;

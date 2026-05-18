@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, Shield, Crown, LayoutGrid, List, Lock, Settings, TrendingUp, User as UserIcon, Search, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, Shield, Crown, LayoutGrid, List, Lock, Settings, TrendingUp, User as UserIcon, Search, ChevronDown, Scale } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -181,6 +181,7 @@ export default function Users() {
       case 'supervisores': return <Shield className="h-4 w-4" />;
       case 'administradores': return <UsersIcon className="h-4 w-4" />;
       case 'personalizado': return <Settings className="h-4 w-4" />;
+      case 'area_legal': return <Scale className="h-4 w-4" />;
       default: return <UserIcon className="h-4 w-4" />;
     }
   };
@@ -193,6 +194,7 @@ export default function Users() {
       case 'supervisores': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'administradores': return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'personalizado': return 'bg-gray-50 text-gray-700 border-gray-200';
+      case 'area_legal': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
       default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
@@ -205,6 +207,7 @@ export default function Users() {
       case 'supervisores': return 'Supervisores';
       case 'administradores': return 'Administradores';
       case 'personalizado': return 'Personalizado';
+      case 'area_legal': return 'Área Legal';
       default: return role;
     }
   };
@@ -212,8 +215,37 @@ export default function Users() {
   const statusColors = { active: 'bg-green-100 text-green-800', inactive: 'bg-gray-100 text-gray-800' };
   const statusLabels = { active: 'Activo', inactive: 'Inactivo' };
 
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const renderSortableHeader = (label: string, sortKey: string) => {
+    const isSorted = sortConfig?.key === sortKey;
+    return (
+      <button 
+        onClick={() => handleSort(sortKey)} 
+        className="flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors"
+      >
+        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">{label}</span>
+        {isSorted ? (
+          <span className="text-[#002855] text-[10px]">
+            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+          </span>
+        ) : (
+          <span className="text-slate-300 text-[10px] opacity-50">▲▼</span>
+        )}
+      </button>
+    );
+  };
+
   const filteredUsers = useMemo(() => {
-    return users.filter(user => {
+    const filtered = users.filter(user => {
       const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.role.toLowerCase().includes(searchTerm.toLowerCase());
@@ -222,7 +254,47 @@ export default function Users() {
       const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(user.location_id || '');
       return matchesSearch && matchesRole && matchesStatus && matchesLocation;
     });
-  }, [users, searchTerm, roleFilter, statusFilter, selectedLocations]);
+
+    if (!sortConfig) return filtered;
+
+    return [...filtered].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortConfig.key) {
+        case 'user':
+          aValue = a.full_name.toLowerCase();
+          bValue = b.full_name.toLowerCase();
+          break;
+        case 'email':
+          aValue = a.email.toLowerCase();
+          bValue = b.email.toLowerCase();
+          break;
+        case 'role':
+          aValue = getRoleLabel(a.role).toLowerCase();
+          bValue = getRoleLabel(b.role).toLowerCase();
+          break;
+        case 'status':
+          aValue = statusLabels[a.status as keyof typeof statusLabels].toLowerCase();
+          bValue = statusLabels[b.status as keyof typeof statusLabels].toLowerCase();
+          break;
+        case 'location':
+          aValue = (a.locations?.name || '').toLowerCase();
+          bValue = (b.locations?.name || '').toLowerCase();
+          break;
+        default:
+          aValue = (a as any)[sortConfig.key];
+          bValue = (b as any)[sortConfig.key];
+      }
+
+      if (aValue === bValue) return 0;
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      const result = aValue < bValue ? -1 : 1;
+      return sortConfig.direction === 'asc' ? result : -result;
+    });
+  }, [users, searchTerm, roleFilter, statusFilter, selectedLocations, sortConfig]);
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -359,6 +431,7 @@ export default function Users() {
                 <option value="gerencia">Gerencia</option>
                 <option value="sistemas">Sistemas</option>
                 <option value="supervisores">Supervisores</option>
+                <option value="area_legal">Área Legal</option>
                 <option value="administradores">Administradores</option>
                 <option value="personalizado">Personalizado</option>
               </select>
@@ -491,7 +564,7 @@ export default function Users() {
               </div>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
               {/* Pagination Header */}
               <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
                 <Pagination
@@ -505,22 +578,39 @@ export default function Users() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse border-spacing-0">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="px-6 py-5"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Usuario</span></th>
-                      <th className="px-4 py-5 hidden lg:table-cell"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Correo</span></th>
-                      <th className="px-4 py-5"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Rol</span></th>
-                      <th className="px-4 py-5"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
-                      <th className="px-4 py-5"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span></th>
-                      <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
+                  <thead className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
+                    <tr>
+                      <th className="px-6 py-4">
+                        {renderSortableHeader('Usuario', 'user')}
+                      </th>
+                      <th className="px-4 py-4 hidden lg:table-cell">
+                        {renderSortableHeader('Correo', 'email')}
+                      </th>
+                      <th className="px-4 py-4">
+                        {renderSortableHeader('Rol', 'role')}
+                      </th>
+                      <th className="px-4 py-4">
+                        {renderSortableHeader('Estado', 'status')}
+                      </th>
+                      <th className="px-4 py-4">
+                        {renderSortableHeader('Sede', 'location')}
+                      </th>
+                      <th className="px-6 py-4 text-center">
+                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {paginatedUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group border-b border-slate-50 last:border-0" onDoubleClick={() => handleViewUser(u)}>
-                        <td className="px-6 py-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 flex items-center justify-center shadow-sm transition-all duration-300 bg-[#002855] text-white group-hover:bg-blue-600 overflow-hidden text-xs font-black">
+                      <tr 
+                        key={u.id} 
+                        className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20" 
+                        onDoubleClick={() => handleViewUser(u)}
+                        onClick={() => handleViewUser(u)}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-all duration-300 bg-[#002855] text-white group-hover:bg-blue-600 overflow-hidden text-xs font-black shrink-0">
                               {u.avatar_url ? (
                                 <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover"
                                   onError={(e) => {
@@ -531,39 +621,57 @@ export default function Users() {
                               ) : (u.full_name?.charAt(0) || '?')}
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{u.full_name}</span>
-                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 lg:hidden">{u.email}</span>
+                              <span className="text-[13px] font-black text-[#002855] uppercase leading-none">{u.full_name}</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 lg:hidden">{u.email}</span>
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-5 hidden lg:table-cell">
-                          <span className="text-sm font-extrabold text-slate-600 font-mono">{u.email}</span>
+                        <td className="px-4 py-4 hidden lg:table-cell">
+                          <span className="text-sm font-extrabold text-slate-600 font-mono leading-none">{u.email}</span>
                         </td>
-                        <td className="px-4 py-5">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${getRoleColor(u.role)}`}>
                             {getRoleIcon(u.role)}{getRoleLabel(u.role)}
                           </span>
                         </td>
-                        <td className="px-4 py-5">
-                          <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest ${statusColors[u.status]}`}>{statusLabels[u.status]}</span>
+                        <td className="px-4 py-4">
+                          <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full ${u.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                            {statusLabels[u.status]}
+                          </span>
                         </td>
-                        <td className="px-4 py-5">
+                        <td className="px-4 py-4">
                           {u.locations ? (
-                            <div className="flex flex-col">
-                              <span className="text-[14px] font-black text-[#002855]">{u.locations.name}</span>
-                              <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">{u.locations.type}</span>
+                            <div className="flex items-center gap-1.5 text-slate-700">
+                              <MapPin size={13} className="text-rose-500 shrink-0" />
+                              <span className="text-[12px] font-bold uppercase truncate max-w-xs block leading-none">{u.locations.name}</span>
                             </div>
-                          ) : <span className="text-slate-300 italic text-xs">Sin asignar</span>}
+                          ) : <span className="text-slate-300 italic text-[11px]">Sin asignar</span>}
                         </td>
-                        <td className="px-6 py-5 text-center">
-                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); handleViewUser(u); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white border border-slate-100 transition-all shadow-sm" title="Ver Ficha">
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleViewUser(u); }} 
+                              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white border border-slate-200 transition-all shadow-sm rounded-lg" 
+                              title="Ver Ficha"
+                            >
                               <Eye size={14} />
                             </button>
-                            {canEdit() && (
+                            {canEdit() && u.role !== 'super_admin' && (
                               <>
-                                <button onClick={(e) => { e.stopPropagation(); handleEditUser(u); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white border border-slate-100 transition-all shadow-sm"><Edit size={14} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-100 transition-all shadow-sm"><Trash2 size={14} /></button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleEditUser(u); }} 
+                                  className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white border border-slate-200 transition-all shadow-sm rounded-lg"
+                                  title="Editar Usuario"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }} 
+                                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-200 transition-all shadow-sm rounded-lg"
+                                  title="Eliminar Usuario"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
                               </>
                             )}
                           </div>

@@ -79,10 +79,39 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
   const [totalCount, setTotalCount] = useState(0);
-  const [sortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'created_at', direction: 'desc' });
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'created_at', direction: 'desc' });
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
 
   // Mapping moved to top of file
+
+  const handleSort = (key: string) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'asc' };
+    });
+    setCurrentPage(1);
+  };
+
+  const renderSortableHeader = (label: string, sortKey: string) => {
+    const isSorted = sortConfig?.key === sortKey;
+    return (
+      <button 
+        onClick={() => handleSort(sortKey)} 
+        className="flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors focus:outline-none"
+      >
+        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">{label}</span>
+        {isSorted ? (
+          <span className="text-[#002855] text-[10px]">
+            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+          </span>
+        ) : (
+          <span className="text-slate-300 text-[10px] opacity-50">▲▼</span>
+        )}
+      </button>
+    );
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -92,7 +121,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
 
   useEffect(() => {
     fetchAssets();
-  }, [currentPage, itemsPerPage, searchTerm, filterCategory, selectedLocations, filterStatus, categoryFilter, subcategoryFilter]);
+  }, [currentPage, itemsPerPage, searchTerm, filterCategory, selectedLocations, filterStatus, categoryFilter, subcategoryFilter, sortConfig]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -465,7 +494,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800"></div>
           </div>
         ) : viewMode === 'table' ? (
-          <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-500">
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
             <div className="bg-slate-50/50 border-b border-slate-100 shrink-0">
               <Pagination
                 currentPage={currentPage}
@@ -481,8 +510,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse border-spacing-0">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-4 py-5 text-center w-10">
+                  <tr className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
+                    <th className="px-4 py-4 text-center w-12">
                       <input
                         type="checkbox"
                         className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
@@ -498,11 +527,12 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         }}
                       />
                     </th>
-                    <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Código / Activo</span></th>
-                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Categoría</span></th>
-                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Ubicación</span></th>
-                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
-                    <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
+                    <th className="px-6 py-4 text-left">{renderSortableHeader("Producto / Marca", "brand")}</th>
+                    <th className="px-4 py-4 text-left">{renderSortableHeader("Categoría / Subcat.", "category_id")}</th>
+                    <th className="px-4 py-4 text-left">{renderSortableHeader("Cantidad / Unidad", "cantidad")}</th>
+                    <th className="px-4 py-4 text-left">{renderSortableHeader("Ubicación / Área", "location_id")}</th>
+                    <th className="px-4 py-4 text-left">{renderSortableHeader("Estado", "status")}</th>
+                    <th className="px-6 py-4 text-center"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -511,7 +541,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                     return (
                       <tr
                         key={asset.id}
-                        className={`hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0 ${selectedIds.has(asset.id) ? 'bg-blue-50/50' : ''}`}
+                        className={`hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20 ${selectedIds.has(asset.id) ? '!bg-blue-50/50' : ''}`}
                         onClick={() => {
                           const newSelected = new Set(selectedIds);
                           if (newSelected.has(asset.id)) newSelected.delete(asset.id);
@@ -524,7 +554,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                           setShowAssetDetails(true);
                         }}
                       >
-                        <td className="px-4 py-5 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
@@ -537,42 +567,73 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                             }}
                           />
                         </td>
-                        <td className="px-6 py-5 font-bold text-left">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 border border-slate-100 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md uppercase font-black text-[10px]">
-                              {asset.codigo_unico ? asset.codigo_unico.slice(-3) : '??'}
+                        <td className="px-6 py-4 font-bold text-left">
+                          <div className="flex flex-col">
+                            <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{asset.brand} {asset.model}</span>
+                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.descripcion || 'Sin descripción'}</span>
+                            {asset.codigo_unico && (
+                              <span className="inline-flex items-center text-[9px] font-bold text-slate-400 font-mono mt-1.5 bg-slate-100 px-2 py-0.5 rounded w-max">
+                                CÓD: {asset.codigo_unico}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-left">
+                          <div className="flex flex-col">
+                            <span className="text-[12px] font-black text-slate-800 uppercase leading-none">{asset.categories?.name}</span>
+                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.subcategories?.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-left">
+                          <div className="flex flex-col">
+                            <span className="text-[13px] font-black text-[#002855] leading-none">{asset.cantidad || 1}</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">{asset.unidad_medida || 'UNIDAD(ES)'}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-left">
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-1 text-slate-700">
+                              <MapPin size={13} className="text-rose-500 shrink-0" />
+                              <span className="text-[12px] font-bold uppercase truncate max-w-xs block leading-none">{asset.locations?.name || 'No asignada'}</span>
                             </div>
-                            <div className="flex flex-col">
-                              <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{asset.codigo_unico || 'SIN CÓDIGO'}</span>
-                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{asset.brand} {asset.model}</span>
-                            </div>
+                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5 pl-4">{asset.areas?.name || 'Área general'}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-left">
-                          <div className="flex flex-col gap-1">
-                            <span className="text-[13px] font-black text-[#002855] uppercase">{asset.categories?.name}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{asset.subcategories?.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-5 text-left">
-                          <div className="flex items-center gap-2 mb-1">
-                            <MapPin size={12} className="text-rose-500" />
-                            <span className="text-[13px] font-black text-[#002855] uppercase">{asset.locations?.name}</span>
-                          </div>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-5">{asset.areas?.name || 'Área general'}</span>
-                        </td>
-                        <td className="px-4 py-5 text-left">
-                          <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-current bg-opacity-10 bg-${status.color}-500 text-${status.color}-700 border-${status.color}-200`}>
+                        <td className="px-4 py-4 text-left">
+                          <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${
+                            asset.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            asset.status === 'inactive' ? 'bg-slate-50 text-slate-700 border-slate-200' :
+                            asset.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}>
                             {status.label}
                           </span>
                         </td>
-                        <td className="px-6 py-5 text-center">
-                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={(e) => { e.stopPropagation(); setSelectedAsset(asset); setShowAssetDetails(true); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white border border-slate-100 shadow-sm transition-all"><Eye size={14} /></button>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setSelectedAsset(asset); setShowAssetDetails(true); }} 
+                              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                              title="Ver Detalle"
+                            >
+                              <Eye size={14} />
+                            </button>
                             {canEdit() && (
                               <>
-                                <button onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setShowAssetForm(true); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white border border-slate-100 shadow-sm transition-all"><Edit size={14} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-100 shadow-sm transition-all"><Trash2 size={14} /></button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setShowAssetForm(true); }} 
+                                  className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                                  title="Editar Activo"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset); }} 
+                                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                                  title="Eliminar Activo"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
                               </>
                             )}
                           </div>
@@ -586,7 +647,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
           </div>
         ) : (
           <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -604,15 +665,15 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                 return (
                   <div
                     key={asset.id}
-                    className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group overflow-hidden"
+                    className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-xl transition-all duration-200 flex flex-col group overflow-hidden hover:-translate-y-0.5"
                     onDoubleClick={() => { setSelectedAsset(asset); setShowAssetDetails(true); }}
                   >
                     <div className="p-6 flex-1">
-                      <div className="flex justify-between items-start mb-6">
+                      <div className="flex justify-between items-center mb-5">
                         <div className="flex items-center gap-3">
                           <input
                             type="checkbox"
-                            className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
+                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
                             checked={selectedIds.has(asset.id)}
                             onChange={() => {
                               const newSelected = new Set(selectedIds);
@@ -621,38 +682,45 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                               setSelectedIds(newSelected);
                             }}
                           />
-                          <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-[#002855]/20 group-hover:bg-[#002855] group-hover:text-white transition-all duration-300">
-                            <Package size={24} />
-                          </div>
+                          <span className="text-[10px] font-black text-[#002855] bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full font-mono">
+                            CÓD: {asset.codigo_unico || 'N/A'}
+                          </span>
                         </div>
-                        <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-current bg-opacity-10 bg-${status.color}-500 text-${status.color}-700 border-${status.color}-200`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                          asset.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          asset.status === 'inactive' ? 'bg-slate-50 text-slate-700 border-slate-200' :
+                          asset.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          'bg-rose-50 text-rose-700 border-rose-200'
+                        }`}>
                           {status.label}
                         </span>
                       </div>
 
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-[15px] font-black text-[#002855] uppercase leading-tight truncate">{asset.brand} {asset.model}</h3>
-                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{asset.codigo_unico || 'SIN CÓDIGO'}</p>
-                        </div>
+                      <div>
+                        <h3 className="text-[14px] font-black text-slate-800 uppercase leading-none truncate">{asset.brand}</h3>
+                        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{asset.model}</p>
+                      </div>
 
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-[11px] font-medium text-slate-600 uppercase">
-                            <Layers size={14} className="text-blue-500" />
-                            <span className="truncate">{asset.categories?.name}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] font-medium text-slate-600 uppercase">
-                            <MapPin size={14} className="text-rose-500" />
-                            <span className="truncate">{asset.locations?.name}</span>
-                          </div>
+                      <div className="space-y-3 mt-5">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
+                          <Layers size={14} className="text-blue-500 shrink-0" />
+                          <span className="truncate">{asset.categories?.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
+                          <MapPin size={14} className="text-rose-500 shrink-0" />
+                          <span className="truncate">{asset.locations?.name || 'No asignada'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
+                          <Package size={14} className="text-emerald-500 shrink-0" />
+                          <span>{asset.cantidad || 1} {asset.unidad_medida || 'UNIDADES'}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex gap-2">
+                    <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex gap-2">
                       <button
                         onClick={() => { setSelectedAsset(asset); setShowAssetDetails(true); }}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-sm"
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm"
                       >
                         <Eye size={14} /> Detalle
                       </button>
@@ -660,13 +728,13 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         <>
                           <button
                             onClick={() => { setEditingAsset(asset); setShowAssetForm(true); }}
-                            className="p-2 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-sm"
+                            className="p-2 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm"
                           >
                             <Edit size={16} />
                           </button>
                           <button
                             onClick={() => handleDeleteAsset(asset)}
-                            className="p-2 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 shadow-sm"
+                            className="p-2 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm"
                           >
                             <Trash2 size={16} />
                           </button>

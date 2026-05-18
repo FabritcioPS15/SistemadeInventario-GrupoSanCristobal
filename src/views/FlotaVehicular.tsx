@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, Car, LayoutGrid, List, MapPin, Search, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Plus, Edit, Trash2, LayoutGrid, List, MapPin, Search, ChevronDown, AlertTriangle, ArrowUpDown, Calendar, CheckCircle2 } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -107,15 +107,7 @@ export default function FlotaVehicular() {
     return school ? school.name : (ubicacionActual || 'Sin asignar');
   };
 
-  const getDateColor = (vencimiento: string | undefined) => {
-    if (!vencimiento) return 'text-slate-400';
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const vencDate = new Date(vencimiento); vencDate.setHours(0, 0, 0, 0);
-    const daysUntil = Math.ceil((vencDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysUntil <= 0) return 'text-rose-600 font-black';
-    if (daysUntil <= 15) return 'text-amber-600 font-black';
-    return 'text-slate-600 font-bold';
-  };
+
 
   // Días restantes hasta vencimiento (negativo = ya venció)
   const getDaysUntil = (fecha?: string): number => {
@@ -323,6 +315,85 @@ export default function FlotaVehicular() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedVehiculos = sortedVehiculos.slice(startIndex, startIndex + itemsPerPage);
 
+  const renderDocumentStatus = (fecha?: string) => {
+    if (!fecha) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-400 border border-slate-200">
+          <Calendar size={11} className="shrink-0" />
+          Sin fecha
+        </span>
+      );
+    }
+
+    const daysLeft = getDaysUntil(fecha);
+    const dateStr = new Date(fecha).toLocaleDateString('es-PE');
+
+    if (daysLeft <= 0) {
+      return (
+        <div className="flex flex-col items-start gap-1">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-sm">
+            <AlertTriangle size={11} className="text-rose-500 shrink-0" />
+            Vencido ({Math.abs(daysLeft)}d)
+          </span>
+          <span className="text-[10px] font-black text-rose-600/80 ml-1">{dateStr}</span>
+        </div>
+      );
+    }
+
+    if (daysLeft <= 30) {
+      return (
+        <div className="flex flex-col items-start gap-1">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
+            <AlertTriangle size={11} className="text-amber-500 shrink-0" />
+            Vence {daysLeft}d
+          </span>
+          <span className="text-[10px] font-black text-amber-600/80 ml-1">{dateStr}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col items-start gap-1">
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm">
+          <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
+          Vigente ({daysLeft}d)
+        </span>
+        <span className="text-[10px] font-bold text-slate-500 ml-1">{dateStr}</span>
+      </div>
+    );
+  };
+
+  const renderPlacaBadge = (placa: string) => {
+    return (
+      <div className="inline-flex flex-col items-center bg-white border-2 border-slate-800 rounded-md shadow-sm overflow-hidden min-w-[90px]">
+        <div className="w-full h-1.5 bg-[#002855]" />
+        <span className="px-2 py-0.5 font-mono text-[14px] font-black text-slate-800 tracking-wider uppercase leading-none my-1">
+          {placa}
+        </span>
+      </div>
+    );
+  };
+
+  const renderSortableHeader = (label: string, sortKey: string) => {
+    const isSorted = sortConfig?.key === sortKey;
+    const isAsc = sortConfig?.direction === 'asc';
+    
+    return (
+      <div 
+        onClick={() => handleSort(sortKey)}
+        className="group/header inline-flex items-center gap-2 cursor-pointer select-none text-[11px] font-black text-[#002855] uppercase tracking-[0.15em] hover:text-blue-700 transition-colors"
+      >
+        <span>{label}</span>
+        <ArrowUpDown 
+          size={13} 
+          className={`text-slate-300 group-hover/header:text-blue-500 transition-all ${
+            isSorted ? (isAsc ? 'rotate-180 text-blue-600' : 'text-blue-600') : ''
+          }`} 
+        />
+      </div>
+    );
+  };
+
   const handleEdit = (v: Vehiculo) => {
     setEditing(v);
     setView('form');
@@ -343,50 +414,329 @@ export default function FlotaVehicular() {
   const handleExportExcel = async () => {
     try {
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Flota');
-      ws.columns = [
-        { header: 'PLACA', key: 'placa', width: 15 },
-        { header: 'MARCA', key: 'marca', width: 20 },
-        { header: 'MODELO', key: 'modelo', width: 20 },
-        { header: 'AÑO', key: 'año', width: 10 },
-        { header: 'ESTADO', key: 'estado', width: 15 },
-        { header: 'UBICACIÓN', key: 'ubicacion_actual', width: 30 }
+      const ws = wb.addWorksheet('Flota Completa');
+
+      // Ordenar por Sede/Ubicación
+      const sortedData = [...filteredVehiculos].sort((a, b) => {
+        const sedeA = getEscuelaNombre(a.ubicacion_actual).toLowerCase();
+        const sedeB = getEscuelaNombre(b.ubicacion_actual).toLowerCase();
+        return sedeA.localeCompare(sedeB);
+      });
+
+      // 1. Título y Cabecera del Reporte
+      ws.mergeCells('A1:M1');
+      const titleCell = ws.getCell('A1');
+      titleCell.value = 'REPORTE GENERAL DE FLOTA VEHICULAR — GRUPO SAN CRISTÓBAL';
+      titleCell.font = { name: 'Arial', family: 2, size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+      titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002855' } };
+      titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getRow(1).height = 40;
+
+      // 2. Información General
+      ws.mergeCells('A2:M2');
+      const subtitleCell = ws.getCell('A2');
+      subtitleCell.value = `Generado el: ${new Date().toLocaleDateString('es-PE')} ${new Date().toLocaleTimeString('es-PE')} | Total de unidades: ${sortedData.length} | Ordenado por Sede`;
+      subtitleCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF475569' } };
+      subtitleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+      subtitleCell.alignment = { horizontal: 'left', vertical: 'middle' };
+      ws.getRow(2).height = 24;
+
+      // Espacio vacío
+      ws.addRow([]);
+
+      // 3. Configuración de Columnas
+      const columns = [
+        { header: 'PLACA', key: 'placa', width: 14 },
+        { header: 'MARCA', key: 'marca', width: 15 },
+        { header: 'MODELO', key: 'modelo', width: 15 },
+        { header: 'COLOR', key: 'color', width: 12 },
+        { header: 'AÑO', key: 'año', width: 9 },
+        { header: 'ESTADO', key: 'estado', width: 14 },
+        { header: 'SEDE / UBICACIÓN', key: 'sede', width: 28 },
+        { header: 'CITV VENCE', key: 'citv', width: 15 },
+        { header: 'SOAT VENCE', key: 'soat', width: 15 },
+        { header: 'PÓLIZA VENCE', key: 'poliza', width: 15 },
+        { header: 'ALQUILER VENCE', key: 'alquiler', width: 15 },
+        { header: 'ÚLT. MANT.', key: 'mantenimiento', width: 15 },
+        { header: 'NOTAS / OBSERVACIONES', key: 'notas', width: 35 }
       ];
-      filteredVehiculos.forEach(v => ws.addRow({
-        placa: v.placa,
-        marca: v.marca,
-        modelo: v.modelo,
-        año: v.año,
-        estado: v.estado,
-        ubicacion_actual: getEscuelaNombre(v.ubicacion_actual)
-      }));
+
+      const headerRowIndex = 4;
+      ws.getRow(headerRowIndex).values = columns.map(c => c.header);
+      ws.getRow(headerRowIndex).font = { name: 'Arial', bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+      ws.getRow(headerRowIndex).height = 28;
+
+      columns.forEach((_, i) => {
+        const cell = ws.getRow(headerRowIndex).getCell(i + 1);
+        
+        // Colores de encabezados por grupo para hacerlo hiper-visual
+        let headerColor = 'FF0F172A'; // Default dark slate
+        if (i < 5) {
+          headerColor = 'FF002855'; // Azul marino para Datos Básicos
+        } else if (i >= 5 && i < 7) {
+          headerColor = 'FF334155'; // Gris pizarra para Estado y Sede
+        } else if (i >= 7 && i < 11) {
+          headerColor = 'FF9A3412'; // Óxido / Naranja quemado para Fechas de Vencimiento de documentos
+        } else {
+          headerColor = 'FF1E293B'; // Slate oscuro para Mant y Notas
+        }
+
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerColor } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        cell.border = {
+          top: { style: 'medium', color: { argb: 'FF000000' } },
+          bottom: { style: 'medium', color: { argb: 'FF000000' } }
+        };
+      });
+
+      // Formato fecha
+      const fmtDate = (f?: string) => f ? new Date(f).toLocaleDateString('es-PE') : '—';
+
+      // 4. Agregar Datos
+      sortedData.forEach((v, index) => {
+        const row = ws.addRow([
+          v.placa,
+          v.marca,
+          v.modelo,
+          v.color || '—',
+          v.año,
+          v.estado === 'activa' ? 'ACTIVA' : v.estado === 'inactiva' ? 'INACTIVA' : 'EN PROCESO',
+          getEscuelaNombre(v.ubicacion_actual),
+          fmtDate(v.citv_vencimiento),
+          fmtDate(v.soat_vencimiento),
+          fmtDate(v.poliza_vencimiento),
+          fmtDate(v.contrato_alquiler_vencimiento),
+          fmtDate(v.fecha_ultimo_mantenimiento),
+          v.notas || '—'
+        ]);
+
+        row.height = 24;
+
+        // Cebrado (Zebra striping)
+        const isEven = index % 2 === 0;
+        const bgRowColor = isEven ? 'FFF8FAFC' : 'FFFFFFFF';
+
+        row.eachCell((cell, colIndex) => {
+          // Borde delgado general
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+          };
+          cell.font = { name: 'Arial', size: 9 };
+          cell.alignment = { vertical: 'middle' };
+          
+          // Por defecto, fondo cebrado
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgRowColor } };
+
+          // Alinear placa, año, fechas y estado al centro
+          if ([1, 5, 6, 8, 9, 10, 11, 12].includes(colIndex)) {
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+          }
+        });
+
+        // Estilos específicos para Estado (Celda 6)
+        const statusCell = row.getCell(6);
+        if (v.estado === 'activa') {
+          statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } }; // Verde
+          statusCell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF065F46' } };
+        } else if (v.estado === 'inactiva') {
+          statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } }; // Rojo
+          statusCell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF991B1B' } };
+        } else {
+          statusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }; // Amarillo
+          statusCell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF92400E' } };
+        }
+
+        // Resaltar vencimientos de documentos importantes (CITV: 8, SOAT: 9, Póliza: 10, Contrato: 11)
+        const dateColumns = [
+          { colIdx: 8, val: v.citv_vencimiento },
+          { colIdx: 9, val: v.soat_vencimiento },
+          { colIdx: 10, val: v.poliza_vencimiento },
+          { colIdx: 11, val: v.contrato_alquiler_vencimiento }
+        ];
+
+        dateColumns.forEach(dCol => {
+          if (dCol.val) {
+            const daysLeft = getDaysUntil(dCol.val);
+            const cell = row.getCell(dCol.colIdx);
+            if (daysLeft <= 0) {
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFECACA' } }; // Rojo intenso para vencidos
+              cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF990000' } };
+            } else if (daysLeft <= 30) {
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE047' } }; // Amarillo para vencer pronto
+              cell.font = { name: 'Arial', size: 9, bold: true, color: { argb: 'FF854D0E' } };
+            }
+          }
+        });
+      });
+
+      // Ancho automático de columnas (con un límite mínimo)
+      columns.forEach((col, i) => {
+        const column = ws.getColumn(i + 1);
+        column.width = col.width;
+      });
+
       const buffer = await wb.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats' });
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `Flota_${new Date().toISOString().split('T')[0]}.xlsx`; a.click();
-    } catch (e) { console.error(e) }
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Reporte_General_Flota_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleExportPdf = () => {
-    const doc = new jsPDF();
-    const tableData = filteredVehiculos.map(v => [
-      v.placa,
-      v.marca,
-      v.modelo,
-      v.año.toString(),
-      v.estado,
-      getEscuelaNombre(v.ubicacion_actual)
-    ]);
+    try {
+      const doc = new jsPDF('l', 'mm', 'a4');
 
-    autoTable(doc, {
-      head: [['PLACA', 'MARCA', 'MODELO', 'AÑO', 'ESTADO', 'UBICACIÓN']],
-      body: tableData,
-      theme: 'grid',
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [0, 40, 85] }
-    });
+      // Ordenar por Sede/Ubicación
+      const sortedData = [...filteredVehiculos].sort((a, b) => {
+        const sedeA = getEscuelaNombre(a.ubicacion_actual).toLowerCase();
+        const sedeB = getEscuelaNombre(b.ubicacion_actual).toLowerCase();
+        return sedeA.localeCompare(sedeB);
+      });
 
-    doc.save(`Flota_${new Date().toISOString().split('T')[0]}.pdf`);
+      // 1. Encabezado Premium con branding
+      doc.setFillColor(0, 40, 85); // Azul Marino Principal
+      doc.rect(0, 0, 297, 24, 'F');
+
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text('REPORTE GENERAL DE FLOTA VEHICULAR', 14, 15);
+
+      // Línea de acento rojo (Branding)
+      doc.setFillColor(220, 38, 38);
+      doc.rect(0, 24, 297, 2, 'F');
+
+      // Fecha y conteo de unidades
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139); // Slate-500
+      doc.text(`Generado por: Sistema de Inventario GSC | Fecha: ${new Date().toLocaleString('es-PE')} | Ordenado por Sede`, 14, 32);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Total de Unidades: ${sortedData.length}`, 245, 32);
+
+      // 2. Preparar Datos de la Tabla
+      const tableData = sortedData.map(v => {
+        const fmtDate = (f?: string) => f ? new Date(f).toLocaleDateString('es-PE') : '—';
+        return [
+          v.placa,
+          `${v.marca} ${v.modelo} ${v.año ? `(${v.año})` : ''} ${v.color ? `[${v.color}]` : ''}`,
+          v.estado === 'activa' ? 'ACTIVA' : v.estado === 'inactiva' ? 'INACTIVA' : 'EN PROCESO',
+          getEscuelaNombre(v.ubicacion_actual),
+          fmtDate(v.citv_vencimiento),
+          fmtDate(v.soat_vencimiento),
+          fmtDate(v.poliza_vencimiento),
+          fmtDate(v.contrato_alquiler_vencimiento),
+          fmtDate(v.fecha_ultimo_mantenimiento)
+        ];
+      });
+
+      // 3. Renderizar la tabla con estilos avanzados
+      autoTable(doc, {
+        startY: 36,
+        head: [['Placa', 'Vehículo (Datos Generales)', 'Estado', 'Sede / Ubicación', 'CITV Vence', 'SOAT Vence', 'Póliza Vence', 'Contrato Vence', 'Últ. Mant.']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { 
+          fillColor: [15, 23, 42], // Pizarra oscuro por defecto
+          textColor: 255, 
+          fontSize: 8, 
+          fontStyle: 'bold', 
+          halign: 'center', 
+          valign: 'middle',
+          cellPadding: 3
+        },
+        styles: { 
+          fontSize: 7.5, 
+          cellPadding: 2.5, 
+          valign: 'middle' 
+        },
+        columnStyles: {
+          0: { halign: 'center', fontStyle: 'bold', cellWidth: 22 }, // Placa
+          1: { halign: 'left', cellWidth: 55 }, // Vehículo
+          2: { halign: 'center', fontStyle: 'bold', cellWidth: 24 }, // Estado
+          3: { halign: 'left', cellWidth: 42 }, // Ubicación
+          4: { halign: 'center', cellWidth: 26 }, // CITV
+          5: { halign: 'center', cellWidth: 26 }, // SOAT
+          6: { halign: 'center', cellWidth: 26 }, // Póliza
+          7: { halign: 'center', cellWidth: 26 }, // Contrato
+          8: { halign: 'center', cellWidth: 26 }  // Últ. Mant.
+        },
+        didParseCell: (data) => {
+          // Fila de encabezado: colorear según grupo
+          if (data.section === 'head') {
+            const colIdx = data.column.index;
+            if (colIdx < 2) {
+              data.cell.styles.fillColor = [0, 40, 85]; // Azul Marino para placa y vehículo
+            } else if (colIdx >= 2 && colIdx < 4) {
+              data.cell.styles.fillColor = [51, 65, 85]; // Gris pizarra para Estado y Ubicación
+            } else if (colIdx >= 4 && colIdx < 8) {
+              data.cell.styles.fillColor = [154, 52, 18]; // Naranja óxido para documentos de vencimiento
+            } else {
+              data.cell.styles.fillColor = [30, 41, 59]; // Slate oscuro para último mant.
+            }
+          }
+
+          if (data.section === 'body') {
+            const v = sortedData[data.row.index];
+            const colIndex = data.column.index;
+
+            // 1. Colorear la columna "Estado" (Índice 2)
+            if (colIndex === 2) {
+              if (v.estado === 'activa') {
+                data.cell.styles.fillColor = [209, 250, 229]; // Verde claro
+                data.cell.styles.textColor = [6, 95, 70]; // Verde oscuro
+              } else if (v.estado === 'inactiva') {
+                data.cell.styles.fillColor = [254, 226, 226]; // Rojo claro
+                data.cell.styles.textColor = [153, 27, 27]; // Rojo oscuro
+              } else {
+                data.cell.styles.fillColor = [254, 243, 199]; // Amarillo claro
+                data.cell.styles.textColor = [146, 64, 14]; // Amarillo oscuro
+              }
+            }
+
+            // 2. Colorear alertas de vencimientos de documentos importantes
+            // CITV (4), SOAT (5), Póliza (6), Contrato (7)
+            const dateFieldsMap: Record<number, string | undefined> = {
+              4: v.citv_vencimiento,
+              5: v.soat_vencimiento,
+              6: v.poliza_vencimiento,
+              7: v.contrato_alquiler_vencimiento
+            };
+
+            if (colIndex in dateFieldsMap) {
+              const val = dateFieldsMap[colIndex];
+              if (val) {
+                const daysLeft = getDaysUntil(val);
+                if (daysLeft <= 0) {
+                  data.cell.styles.fillColor = [254, 202, 202]; // Rojo intenso
+                  data.cell.styles.textColor = [153, 0, 0];
+                  data.cell.styles.fontStyle = 'bold';
+                } else if (daysLeft <= 30) {
+                  data.cell.styles.fillColor = [253, 224, 71]; // Amarillo intenso
+                  data.cell.styles.textColor = [133, 77, 14];
+                  data.cell.styles.fontStyle = 'bold';
+                }
+              }
+            }
+          }
+        }
+      });
+
+      doc.save(`Reporte_General_Flota_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const statusColors: Record<string, string> = {
@@ -571,7 +921,7 @@ export default function FlotaVehicular() {
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800"></div>
               </div>
             ) : viewMode === 'table' ? (
-              <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+              <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
                 <div className="bg-slate-50/50 border-b border-slate-100 shrink-0">
                   <Pagination
                     currentPage={currentPage}
@@ -585,53 +935,70 @@ export default function FlotaVehicular() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse border-spacing-0">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200">
-                        <th className="px-6 py-5 text-left cursor-pointer" onClick={() => handleSort('placa')}><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Unidad</span></th>
-                        <th className="px-4 py-5 text-left cursor-pointer" onClick={() => handleSort('estado')}><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
-                        <th className="px-4 py-5 text-left cursor-pointer" onClick={() => handleSort('ubicacion_actual')}><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span></th>
-                        <th className="px-4 py-5 text-left cursor-pointer" onClick={() => handleSort('citv_vencimiento')}><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">CITV (Vence)</span></th>
-                        <th className="px-4 py-5 text-left cursor-pointer" onClick={() => handleSort('soat_vencimiento')}><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">SOAT (Vence)</span></th>
-                        <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
+                      <tr className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
+                        <th className="px-6 py-4 text-left">{renderSortableHeader('Unidad / Placa', 'placa')}</th>
+                        <th className="px-4 py-4 text-left">{renderSortableHeader('Estado', 'estado')}</th>
+                        <th className="px-4 py-4 text-left">{renderSortableHeader('Sede de Asignación', 'ubicacion_actual')}</th>
+                        <th className="px-4 py-4 text-left">{renderSortableHeader('CITV (Vence)', 'citv_vencimiento')}</th>
+                        <th className="px-4 py-4 text-left">{renderSortableHeader('SOAT (Vence)', 'soat_vencimiento')}</th>
+                        <th className="px-4 py-4 text-left">{renderSortableHeader('Póliza (Vence)', 'poliza_vencimiento')}</th>
+                        <th className="px-6 py-4 text-center"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {paginatedVehiculos.map(v => (
-                        <tr key={v.id} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0" onDoubleClick={() => handleEdit(v)}>
-                          <td className="px-6 py-5 font-bold text-left">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
-                                <Car size={14} />
-                              </div>
+                      {paginatedVehiculos.map((v) => (
+                        <tr 
+                          key={v.id} 
+                          className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20"
+                          onDoubleClick={() => handleEdit(v)}
+                        >
+                          <td className="px-6 py-4 font-bold text-left">
+                            <div className="flex items-center gap-4">
+                              {renderPlacaBadge(v.placa)}
                               <div className="flex flex-col">
-                                <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{v.placa}</span>
-                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{v.marca} {v.modelo}</span>
+                                <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{v.marca}</span>
+                                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{v.modelo} {v.año ? `(${v.año})` : ''}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-5 text-left">
-                            <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${statusColors[v.estado]}`}>
-                              {v.estado === 'en_proceso' ? 'En Proceso' : v.estado}
+                          <td className="px-4 py-4 text-left">
+                            <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${statusColors[v.estado]}`}>
+                              {v.estado === 'en_proceso' ? 'En Proceso' : v.estado === 'activa' ? 'Activa' : 'Inactiva'}
                             </span>
                           </td>
-                          <td className="px-4 py-5 text-left">
-                            <span className="text-sm font-extrabold text-[#002855] uppercase truncate max-w-xs block">{getEscuelaNombre(v.ubicacion_actual)}</span>
+                          <td className="px-4 py-4 text-left">
+                            <div className="flex items-center gap-1.5 text-slate-700">
+                              <MapPin size={14} className="text-rose-500 shrink-0" />
+                              <span className="text-[12px] font-bold uppercase truncate max-w-xs block">{getEscuelaNombre(v.ubicacion_actual)}</span>
+                            </div>
                           </td>
-                          <td className="px-4 py-5 text-left">
-                            <span className={getDateColor(v.citv_vencimiento)}>
-                              {v.citv_vencimiento ? new Date(v.citv_vencimiento).toLocaleDateString() : '—'}
-                            </span>
+                          <td className="px-4 py-4 text-left">
+                            {renderDocumentStatus(v.citv_vencimiento)}
                           </td>
-                          <td className="px-4 py-5 text-left">
-                            <span className={getDateColor(v.soat_vencimiento)}>
-                              {v.soat_vencimiento ? new Date(v.soat_vencimiento).toLocaleDateString() : '—'}
-                            </span>
+                          <td className="px-4 py-4 text-left">
+                            {renderDocumentStatus(v.soat_vencimiento)}
                           </td>
-                          <td className="px-6 py-5 text-center">
-                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <td className="px-4 py-4 text-left">
+                            {renderDocumentStatus(v.poliza_vencimiento)}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150">
                               {canEdit() && (
                                 <>
-                                  <button onClick={(e) => { e.stopPropagation(); handleEdit(v); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Edit size={14} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDelete(v.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Trash2 size={14} /></button>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); handleEdit(v); }} 
+                                    className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                                    title="Editar Unidad"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); handleDelete(v.id); }} 
+                                    className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                                    title="Eliminar Unidad"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
                                 </>
                               )}
                             </div>
@@ -644,7 +1011,7 @@ export default function FlotaVehicular() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -656,34 +1023,36 @@ export default function FlotaVehicular() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {paginatedVehiculos.map(v => (
-                    <div key={v.id} className="bg-white rounded-2xl shadow-sm border hover:shadow-xl transition-all p-6 flex flex-col group overflow-hidden">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="text-lg font-black text-[#002855] uppercase leading-none mb-1">{v.placa}</h3>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{v.marca} {v.modelo}</p>
-                        </div>
-                        <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${statusColors[v.estado]}`}>
-                          {v.estado === 'en_proceso' ? 'En Proceso' : v.estado}
+                    <div key={v.id} className="bg-white rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-xl transition-all p-6 flex flex-col group overflow-hidden hover:-translate-y-0.5 duration-200">
+                      <div className="flex justify-between items-center mb-5">
+                        {renderPlacaBadge(v.placa)}
+                        <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${statusColors[v.estado]}`}>
+                          {v.estado === 'en_proceso' ? 'En Proceso' : v.estado === 'activa' ? 'Activa' : 'Inactiva'}
                         </span>
                       </div>
 
-                      <div className="space-y-3 mb-6">
-                        <div className="flex items-center gap-2 text-[11px] font-bold text-slate-600 uppercase">
-                          <MapPin size={14} className="text-rose-500" />
+                      <div className="mb-4">
+                        <h4 className="text-[14px] font-black text-slate-800 uppercase leading-none">{v.marca}</h4>
+                        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{v.modelo} {v.año ? `(${v.año})` : ''}</p>
+                      </div>
+
+                      <div className="space-y-4 mb-6">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
+                          <MapPin size={14} className="text-rose-500 shrink-0" />
                           <span className="truncate">{getEscuelaNombre(v.ubicacion_actual)}</span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">CITV</label>
-                            <span className={`text-[11px] ${getDateColor(v.citv_vencimiento)}`}>
-                              {v.citv_vencimiento ? new Date(v.citv_vencimiento).toLocaleDateString() : '—'}
-                            </span>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-1">
+                            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">CITV</label>
+                            {renderDocumentStatus(v.citv_vencimiento)}
                           </div>
-                          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">SOAT</label>
-                            <span className={`text-[11px] ${getDateColor(v.soat_vencimiento)}`}>
-                              {v.soat_vencimiento ? new Date(v.soat_vencimiento).toLocaleDateString() : '—'}
-                            </span>
+                          <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-1">
+                            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">SOAT</label>
+                            {renderDocumentStatus(v.soat_vencimiento)}
+                          </div>
+                          <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-1">
+                            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">PÓLIZA</label>
+                            {renderDocumentStatus(v.poliza_vencimiento)}
                           </div>
                         </div>
                       </div>

@@ -200,6 +200,25 @@ export default function Sedes() {
     } catch (e) { console.error('Error exportando PDF:', e); }
   };
 
+  const renderSortableHeader = (label: string, sortKey: 'name' | 'type' | 'cameras') => {
+    const isSorted = sortField === sortKey;
+    return (
+      <button 
+        onClick={() => handleSort(sortKey)} 
+        className="flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors"
+      >
+        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">{label}</span>
+        {isSorted ? (
+          <span className="text-[#002855] text-[10px]">
+            {sortDirection === 'asc' ? '▲' : '▼'}
+          </span>
+        ) : (
+          <span className="text-slate-300 text-[10px] opacity-50">▲▼</span>
+        )}
+      </button>
+    );
+  };
+
   const SortIcon = ({ field }: { field: string }) => sortField === field
     ? (sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)
     : null;
@@ -365,7 +384,7 @@ export default function Sedes() {
               })}
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
               {/* Pagination Header */}
               <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
                 <Pagination
@@ -399,10 +418,10 @@ export default function Sedes() {
                         <div className={`p-5 flex items-center justify-between transition-colors ${isExpanded ? 'bg-slate-50/50' : ''}`}>
                           <div className="flex items-center gap-4">
                             {canEdit() && (
-                              <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded-md border-slate-200 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                              <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
                             )}
                             <div className="flex items-center gap-3 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : loc.id)}>
-                              <div className="w-10 h-10 rounded-none flex items-center justify-center shadow-sm bg-slate-50 text-slate-400">
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm bg-slate-50 text-slate-400">
                                 <MapPin size={18} />
                               </div>
                               <div className="flex flex-col">
@@ -417,23 +436,23 @@ export default function Sedes() {
                         {isExpanded && (
                           <div className="px-5 pb-5 space-y-5 border-t border-slate-50/50 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                             <div className="grid grid-cols-2 gap-3">
-                              <div className="p-4 rounded-none border bg-slate-50 border-slate-100">
+                              <div className="p-4 rounded-xl border bg-slate-50 border-slate-100">
                                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Dirección</label>
                                 <span className="text-[11px] font-mono font-black text-[#002855]">{loc.address || '—'}</span>
                               </div>
-                              <div className={`p-4 rounded-none border ${camCount > 0 ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-slate-50 border-slate-100'}`}>
+                              <div className={`p-4 rounded-xl border ${camCount > 0 ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-slate-50 border-slate-100'}`}>
                                 <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Cámaras</label>
                                 <span className={`text-[11px] font-mono font-black ${camCount > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{camCount}</span>
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              <button onClick={() => setViewingLocation(loc)} className="flex-1 py-3 bg-[#002855] text-[10px] font-black uppercase tracking-wider text-white rounded-none shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
+                              <button onClick={() => setViewingLocation(loc)} className="flex-1 py-3 bg-[#002855] text-[10px] font-black uppercase tracking-wider text-white rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2">
                                 <Eye size={14} /> Ficha Técnica
                               </button>
                               {canEdit() && (
                                 <div className="flex gap-2">
-                                  <button onClick={() => openEdit(loc)} className="w-12 h-12 bg-white text-amber-600 rounded-none flex items-center justify-center border border-slate-100 shadow-sm active:scale-95 transition-all"><Edit size={14} /></button>
-                                  <button onClick={() => del(loc)} className="w-12 h-12 bg-white text-rose-500 rounded-none flex items-center justify-center border border-slate-100 shadow-sm active:scale-95 transition-all"><Trash2 size={14} /></button>
+                                  <button onClick={() => openEdit(loc)} className="w-12 h-12 bg-white text-amber-600 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm active:scale-95 transition-all"><Edit size={14} /></button>
+                                  <button onClick={() => del(loc)} className="w-12 h-12 bg-white text-rose-500 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm active:scale-95 transition-all"><Trash2 size={14} /></button>
                                 </div>
                               )}
                             </div>
@@ -448,36 +467,27 @@ export default function Sedes() {
                 <div className="hidden md:block overflow-hidden relative group/table">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse border-spacing-0">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="px-6 py-5 text-left w-12">
+                      <thead className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
+                        <tr>
+                          <th className="px-6 py-4 text-left w-12">
                             {canEdit() && (
-                              <input type="checkbox" checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length} onChange={toggleSelectAll} className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                              <input type="checkbox" checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length} onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
                             )}
                           </th>
-                          <th className="px-6 py-5 text-left">
-                            <button onClick={() => handleSort('name')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                              <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span>
-                              <SortIcon field="name" />
-                            </button>
+                          <th className="px-6 py-4 text-left">
+                            {renderSortableHeader('Sede', 'name')}
                           </th>
-                          <th className="px-4 py-5 text-left">
-                            <button onClick={() => handleSort('type')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                              <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tipo</span>
-                              <SortIcon field="type" />
-                            </button>
+                          <th className="px-4 py-4 text-left">
+                            {renderSortableHeader('Tipo', 'type')}
                           </th>
-                          <th className="px-4 py-5 text-left">
-                            <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Dirección</span>
+                          <th className="px-4 py-4 text-left">
+                            <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Dirección</span>
                           </th>
-                          <th className="px-4 py-5 text-left">
-                            <button onClick={() => handleSort('cameras')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                              <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Cámaras</span>
-                              <SortIcon field="cameras" />
-                            </button>
+                          <th className="px-4 py-4 text-left">
+                            {renderSortableHeader('Cámaras', 'cameras')}
                           </th>
-                          <th className="px-6 py-5 text-center">
-                            <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span>
+                          <th className="px-6 py-4 text-center">
+                            <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span>
                           </th>
                         </tr>
                       </thead>
@@ -487,47 +497,62 @@ export default function Sedes() {
                           return (
                             <tr
                               key={loc.id}
-                              className={`hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0 ${selectedIds.includes(loc.id) ? 'bg-blue-50/50' : ''}`}
+                              className={`hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20 ${selectedIds.includes(loc.id) ? 'bg-blue-50/40' : ''}`}
                               onDoubleClick={() => setViewingLocation(loc)}
                               onClick={() => canEdit() && toggleSelect(loc.id)}
                             >
-                              <td className="px-6 py-5 text-left w-12">
-                                <input type="checkbox" checked={selectedIds.includes(loc.id)} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" />
+                              <td className="px-6 py-4 text-left w-12">
+                                <input type="checkbox" checked={selectedIds.includes(loc.id)} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
                               </td>
-                              <td className="px-6 py-5 font-bold text-left">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
-                                    <MapPin size={14} />
+                              <td className="px-6 py-4 font-bold text-left">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100 text-slate-400 group-hover:bg-[#002855] group-hover:text-white transition-all shadow-sm shrink-0">
+                                    <MapPin size={16} />
                                   </div>
                                   <div className="flex flex-col">
-                                    <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{loc.name}</span>
-                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 md:hidden">{typeLabels[loc.type] || loc.type}</span>
+                                    <span className="text-[13px] font-black text-[#002855] uppercase leading-none">{loc.name}</span>
+                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 md:hidden">{typeLabels[loc.type] || loc.type}</span>
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-4 py-5 text-left">
-                                <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${typeColors[loc.type] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                              <td className="px-4 py-4 text-left">
+                                <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${typeColors[loc.type] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
                                   {typeLabels[loc.type] || loc.type}
                                 </span>
                               </td>
-                              <td className="px-4 py-5 text-left">
-                                <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block">{loc.address || '—'}</span>
+                              <td className="px-4 py-4 text-left">
+                                <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block leading-none">{loc.address || '—'}</span>
                               </td>
-                              <td className="px-4 py-5 text-left">
-                                <div className="flex flex-col">
-                                  <span className={`text-[14px] font-mono font-black ${camCount > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{camCount}</span>
-                                  <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Instaladas</span>
-                                </div>
+                              <td className="px-4 py-4 text-left">
+                                <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full ${camCount > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                                  {camCount} Instaladas
+                                </span>
                               </td>
-                              <td className="px-6 py-5 text-center">
-                                <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button onClick={e => { e.stopPropagation(); setViewingLocation(loc); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm" title="Ver Ficha">
+                              <td className="px-6 py-4 text-center">
+                                <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
+                                  <button 
+                                    onClick={e => { e.stopPropagation(); setViewingLocation(loc); }} 
+                                    className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" 
+                                    title="Ver Ficha"
+                                  >
                                     <Eye size={14} />
                                   </button>
                                   {canEdit() && (
                                     <>
-                                      <button onClick={e => { e.stopPropagation(); openEdit(loc); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Edit size={14} /></button>
-                                      <button onClick={e => { e.stopPropagation(); del(loc); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Trash2 size={14} /></button>
+                                      <button 
+                                        onClick={e => { e.stopPropagation(); openEdit(loc); }} 
+                                        className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                                        title="Editar Sede"
+                                      >
+                                        <Edit size={14} />
+                                      </button>
+                                      <button 
+                                        onClick={e => { e.stopPropagation(); del(loc); }} 
+                                        className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                                        title="Eliminar Sede"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
                                     </>
                                   )}
                                 </div>

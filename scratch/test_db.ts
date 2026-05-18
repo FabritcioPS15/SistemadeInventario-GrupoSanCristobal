@@ -1,26 +1,50 @@
 import { supabase } from '../src/lib/supabase';
 
-async function testInsert() {
-  const { data, error } = await supabase
-    .from('camera_disks')
-    .insert([{
-      disk_number: 99,
-      total_capacity_gb: 1000,
-      used_space_gb: 500,
-      remaining_capacity_gb: 500,
-      disk_type: 'HDD',
-      status: 'extracted',
-      serial_number: 'TEST-123'
-    }])
-    .select();
-  
-  if (error) {
-    console.error('Insert failed:', error);
-  } else {
-    console.log('Insert successful:', data);
-    // Cleanup
-    await supabase.from('camera_disks').delete().eq('id', data[0].id);
+async function checkDatabaseRoles() {
+  console.log('--- CONSULTANDO BASE DE DATOS SUPABASE ---');
+  console.log('Obteniendo los roles asignados actualmente en la tabla "users"...\n');
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('role, full_name, email');
+
+    if (error) {
+      console.error('Error al realizar la consulta a Supabase:', error.message);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      console.log('No se encontraron usuarios en la tabla.');
+      return;
+    }
+
+    // 1. Encontrar roles únicos
+    const roles = Array.from(new Set(data.map(u => u.role).filter(Boolean)));
+    console.log('📋 Roles únicos que existen actualmente en la tabla "users":');
+    console.log(roles);
+
+    // 2. Conteo de usuarios por cada rol
+    const counts: Record<string, number> = {};
+    data.forEach(u => {
+      const r = u.role || 'sin_rol';
+      counts[r] = (counts[r] || 0) + 1;
+    });
+
+    console.log('\n📊 Cantidad de usuarios por rol:');
+    Object.entries(counts).forEach(([role, count]) => {
+      console.log(`  • ${role}: ${count} usuario(s)`);
+    });
+
+    // 3. Muestra de los primeros usuarios para referencia rápida
+    console.log('\n🔍 Muestra de usuarios y sus roles asignados (primeros 5):');
+    data.slice(0, 5).forEach(u => {
+      console.log(`  • [${u.role || 'SIN ROL'}] ${u.full_name} (${u.email})`);
+    });
+
+  } catch (err: any) {
+    console.error('Ocurrió un error inesperado:', err.message);
   }
 }
 
-testInsert();
+checkDatabaseRoles();

@@ -267,6 +267,24 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   };
 
   const hasActiveFilters = searchTerm || statusFilter || typeFilter || locationFilter || machineTypeFilter || categoryFilter;
+  const renderSortableHeader = (label: string, sortKey: string) => {
+    const isSorted = sortConfig?.key === sortKey;
+    return (
+      <button 
+        onClick={() => handleSort(sortKey)} 
+        className="flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors"
+      >
+        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">{label}</span>
+        {isSorted ? (
+          <span className="text-[#002855] text-[10px]">
+            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+          </span>
+        ) : (
+          <span className="text-slate-300 text-[10px] opacity-50">▲▼</span>
+        )}
+      </button>
+    );
+  };
 
   type StatusKey = MaintenanceRecord['status'];
 
@@ -436,7 +454,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               ))}
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
               <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
                 <Pagination
                   currentPage={currentPage}
@@ -450,75 +468,90 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse border-spacing-0">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
                     <tr>
-                      <th className="px-6 py-5 text-left">
-                        <button onClick={() => handleSort('asset')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                          <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Activo</span>
-                        </button>
+                      <th className="px-6 py-4 text-left">
+                        {renderSortableHeader('Activo / Código', 'asset')}
                       </th>
-                      <th className="px-4 py-5 text-left">
-                        <button onClick={() => handleSort('type')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                          <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tipo</span>
-                        </button>
+                      <th className="px-4 py-4 text-left">
+                        {renderSortableHeader('Tipo', 'type')}
                       </th>
-                      <th className="px-4 py-5 text-left">
-                        <button onClick={() => handleSort('location')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                          <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span>
-                        </button>
+                      <th className="px-4 py-4 text-left">
+                        {renderSortableHeader('Sede', 'location')}
                       </th>
-                      <th className="px-4 py-5 text-left">
-                        <button onClick={() => handleSort('status')} className="flex items-center gap-2 hover:text-blue-600 transition-colors">
-                          <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span>
-                        </button>
+                      <th className="px-4 py-4 text-left">
+                        {renderSortableHeader('Estado', 'status')}
                       </th>
-                      <th className="px-4 py-5 text-left">
-                        <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Responsable</span>
+                      <th className="px-4 py-4 text-left">
+                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Responsable</span>
                       </th>
-                      <th className="px-6 py-5 text-center">
-                        <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span>
+                      <th className="px-6 py-4 text-center">
+                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span>
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {paginatedData.map(record => (
-                      <tr key={record.id} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0" onClick={() => handleViewRecord(record)}>
-                        <td className="px-6 py-5 font-bold text-left">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white">
-                              <Wrench size={14} />
+                      <tr 
+                        key={record.id} 
+                        className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20" 
+                        onClick={() => handleViewRecord(record)}
+                      >
+                        <td className="px-6 py-4 font-bold text-left">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100 text-slate-400 group-hover:bg-[#002855] group-hover:text-white transition-all shadow-sm">
+                              <Wrench size={16} />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{record.assets?.brand} {record.assets?.model}</span>
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">#{record.id.slice(0, 8)}</span>
+                              <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{record.assets?.brand}</span>
+                              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{record.assets?.model} <span className="text-[9px] text-slate-400 font-mono">#{record.id.slice(0, 8)}</span></span>
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-left">
-                          <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${typeColors[record.maintenance_type] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                        <td className="px-4 py-4 text-left">
+                          <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${typeColors[record.maintenance_type] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
                             {typeLabels[record.maintenance_type]}
                           </span>
                         </td>
-                        <td className="px-4 py-5 text-left">
-                          <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block">{record.locations?.name || record.assets?.locations?.name || 'Sede N/A'}</span>
+                        <td className="px-4 py-4 text-left">
+                          <div className="flex items-center gap-1.5 text-slate-700">
+                            <MapPin size={13} className="text-rose-500 shrink-0" />
+                            <span className="text-[12px] font-bold uppercase truncate max-w-xs block leading-none">{record.locations?.name || record.assets?.locations?.name || 'Sede N/A'}</span>
+                          </div>
                         </td>
-                        <td className="px-4 py-5 text-left">
-                          <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${statusColors[record.status] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                        <td className="px-4 py-4 text-left">
+                          <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${statusColors[record.status] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
                             {statusLabels[record.status]}
                           </span>
                         </td>
-                        <td className="px-4 py-5 text-left">
-                          <div className="flex flex-col">
-                            <span className="text-[14px] font-black text-slate-900 uppercase leading-tight">{record.technician || 'S.A.'}</span>
-                          </div>
+                        <td className="px-4 py-4 text-left">
+                          <span className="text-[12px] font-black text-slate-800 uppercase leading-none">{record.technician || 'S.A.'}</span>
                         </td>
-                        <td className="px-6 py-5 text-center">
-                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={e => { e.stopPropagation(); handleViewRecord(record); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm" title="Ver Informe"><Eye size={14} /></button>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
+                            <button 
+                              onClick={e => { e.stopPropagation(); handleViewRecord(record); }} 
+                              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" 
+                              title="Ver Informe"
+                            >
+                              <Eye size={14} />
+                            </button>
                             {canEdit() && (
                               <>
-                                <button onClick={e => { e.stopPropagation(); handleEditRecord(record); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Edit size={14} /></button>
-                                <button onClick={e => { e.stopPropagation(); handleDeleteRecord(record); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Trash2 size={14} /></button>
+                                <button 
+                                  onClick={e => { e.stopPropagation(); handleEditRecord(record); }} 
+                                  className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                                  title="Editar Registro"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  onClick={e => { e.stopPropagation(); handleDeleteRecord(record); }} 
+                                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                                  title="Eliminar Registro"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
                               </>
                             )}
                           </div>

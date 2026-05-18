@@ -405,6 +405,7 @@ export default function Login() {
                     <option value="">Seleccionar rol</option>
                     <option value="administradores">Administrador</option>
                     <option value="supervisores">Supervisor</option>
+                    <option value="area_legal">Área Legal</option>
                     <option value="sistemas">Sistemas</option>
                     <option value="gerencia">Gerencia</option>
                     <option value="personalizado">Personalizado</option>
