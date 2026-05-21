@@ -425,11 +425,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 min-w-0">
         {/* Date and Time Display */}
-        <div className="bg-[#002855] rounded-none shadow-sm p-8 text-white border border-[#002855]">
+        <div className="bg-[#002855] rounded-none shadow-sm p-5 sm:p-8 text-white border border-[#002855]">
           <div className="text-center">
-            <div className="text-5xl font-black mb-2 tracking-wider">
+            <div className="text-3xl sm:text-4xl lg:text-5xl font-black mb-2 tracking-wider">
               {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </div>
             <div className="text-[12px] font-bold opacity-90 uppercase tracking-[0.2em]">
@@ -444,9 +444,9 @@ export default function Dashboard() {
         </div>
 
         {/* Mixed Size Cards Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* Large Card - Inventario */}
-          <div className="lg:col-span-2 bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group"
+          <div className="sm:col-span-2 xl:col-span-2 bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group min-w-0"
                onClick={() => navigate('/inventory')}>
             {/* Dark Header */}
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
@@ -469,7 +469,7 @@ export default function Dashboard() {
           </div>
 
           {/* Medium Card - Tickets */}
-          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group"
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group min-w-0"
                onClick={() => navigate('/tickets')}>
             {/* Header */}
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
@@ -501,7 +501,7 @@ export default function Dashboard() {
           </div>
 
           {/* Small Card - Cámaras */}
-          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group"
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group min-w-0"
                onClick={() => navigate('/cameras')}>
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
@@ -524,9 +524,9 @@ export default function Dashboard() {
         </div>
 
         {/* Vehicle Document Cards */}
-<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
           {/* SOAT Card */}
-          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group h-full flex flex-col"
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group h-full flex flex-col min-w-0"
                onClick={() => setShowDocumentPopup('soat')}>
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
@@ -563,7 +563,7 @@ export default function Dashboard() {
           </div>
 
           {/* CITV Card */}
-          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group h-full flex flex-col"
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group h-full flex flex-col min-w-0"
                onClick={() => setShowDocumentPopup('citv')}>
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
@@ -600,7 +600,7 @@ export default function Dashboard() {
           </div>
 
           {/* Póliza Card */}
-          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group h-full flex flex-col"
+          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden hover:border-[#002855] transition-all cursor-pointer group h-full flex flex-col min-w-0"
                onClick={() => setShowDocumentPopup('poliza')}>
             <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
               <div className="flex items-center justify-between">
@@ -635,27 +635,28 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+        </div>
 
-          {/* Fleet Overview Card */}
-          <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Truck className="text-[#002855]" size={18} />
-                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Estado General Flota</span>
+        {/* Fleet Overview Card - ancho completo */}
+        <div className="bg-white rounded-none shadow-sm border border-slate-200 overflow-hidden min-w-0">
+            <div className="bg-slate-50 border-b border-slate-200 px-4 sm:px-6 py-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Truck className="text-[#002855] shrink-0" size={18} />
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px] truncate">Estado General Flota</span>
                 </div>
                 <button
                   onClick={() => navigate('/flota-vehicular')}
-                  className="text-[9px] bg-white border border-slate-200 text-[#002855] hover:bg-slate-100 px-3 py-1.5 rounded-none font-black uppercase tracking-[0.2em] transition-colors"
+                  className="text-[9px] bg-white border border-slate-200 text-[#002855] hover:bg-slate-100 px-3 py-1.5 rounded-none font-black uppercase tracking-[0.2em] transition-colors shrink-0 self-start sm:self-auto"
                 >
                   Ver Detalles
                 </button>
               </div>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-4 sm:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Simple Bar Chart */}
-                <div className="md:col-span-2">
+                <div className="lg:col-span-2 min-w-0">
                   <h4 className="text-sm font-medium text-gray-700 mb-4">Distribución de Vehículos</h4>
                   <div className="space-y-3">
                     <div>
@@ -713,12 +714,10 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-      </div>
 
         {/* Simplified SUTRAN Alert */}
-        {/* Simplified SUTRAN Alert */}
         <div className="bg-white shadow-sm border border-slate-200 rounded-none p-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-50 border border-orange-100 rounded-none">
                 <AlertTriangle className="text-orange-600" size={20} />
@@ -736,7 +735,7 @@ export default function Dashboard() {
         </div>
 
         {/* Alerts Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {alertCards.map((alert) => {
             const Icon = alert.icon;
             return (
@@ -764,7 +763,7 @@ export default function Dashboard() {
         {/* Quick Actions */}
         <div className="bg-white rounded-none shadow-sm border border-slate-200 p-6">
           <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#002855] mb-4">Acciones Rápidas</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <button
               onClick={() => navigate('/inventory')}
               className="flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 hover:border-[#002855] hover:text-[#002855] text-slate-700 rounded-none transition-colors"

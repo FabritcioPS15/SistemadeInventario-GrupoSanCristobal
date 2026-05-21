@@ -22,6 +22,7 @@ import Servers from './views/Servers';
 import FlotaVehicular from './views/FlotaVehicular';
 import SpareParts from './views/SpareParts';
 import { useAuth } from './contexts/AuthContext';
+import { LayoutProvider } from './contexts/LayoutContext';
 import Login from './components/auth/Login';
 import PasswordSetup from './components/auth/PasswordSetup';
 import Checklist from './views/Checklist';
@@ -144,6 +145,7 @@ function AppContent() {
   }
 
   return (
+    <LayoutProvider sidebarCollapsed={sidebarCollapsed}>
     <div className="min-h-screen bg-[#f8f9fc] flex overflow-x-hidden">
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -225,6 +227,7 @@ function AppContent() {
         </main>
       </div>
     </div>
+    </LayoutProvider>
   );
 }
 

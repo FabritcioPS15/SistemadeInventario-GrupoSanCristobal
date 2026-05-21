@@ -12,6 +12,16 @@ import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import Pagination from '../components/ui/Pagination';
 import StoredDiskForm from '../components/forms/StoredDiskForm';
+import DetailModal, {
+  DetailModalHeader,
+  DetailModalBody,
+  DetailModalFooter,
+  DetailModalGrid,
+  DetailModalSection,
+  DetailModalCard,
+  DetailModalRow,
+} from '../components/ui/DetailModal';
+import ModalOverlay from '../components/ui/ModalOverlay';
 
 type Camera = CameraType;
 
@@ -1111,128 +1121,108 @@ export default function Cameras({ subview }: CamerasProps) {
 
         {
           showDetails && selectedCamera && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-              <div className="bg-white border border-slate-200 shadow-2xl w-full max-w-5xl relative overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
-                {/* Header Enterprise */}
-                <div className="bg-[#002855] px-8 py-6 flex items-center justify-between relative">
+            <DetailModal maxWidth="5xl" onClose={() => setShowDetails(false)} closeOnBackdrop>
+                <DetailModalHeader>
                   <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
-                  <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                      <GiCctvCamera size={24} />
+                  <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
+                    <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                      <GiCctvCamera size={20} />
                     </div>
-                    <div>
-                      <h2 className="text-[18px] font-black text-white uppercase tracking-tight leading-none">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
                         {selectedCamera.name}
                       </h2>
-                      <p className="text-[10px] font-bold text-blue-200 uppercase tracking-[0.2em] mt-2 flex items-center gap-2">
-                        <MapPin size={10} />
-                        {(selectedCamera as any).locations?.name || 'SEDE INTEGRAL'}
+                      <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                        <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
+                        <span className="line-clamp-2 sm:truncate">{(selectedCamera as any).locations?.name || 'SEDE INTEGRAL'}</span>
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setShowDetails(false)}
-                    className="p-2 text-white/50 hover:text-white hover:bg-white/10 transition-all"
+                    className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
+                    aria-label="Cerrar detalle"
                   >
-                    <X size={24} />
+                    <X size={22} />
                   </button>
-                </div>
+                </DetailModalHeader>
 
-                <div className="flex-1 overflow-y-auto p-8">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <DetailModalBody>
+                  <DetailModalGrid layout="stack-until-xl">
 
-                    {/* Columna 1: Especificaciones */}
-                    <div className="space-y-6">
-                      <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
-                        <div className="w-1 h-4 bg-blue-600" />
-                        <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-widest">Especificaciones</h3>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="p-4 bg-slate-50 border border-slate-100 space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estado Operativo</span>
-                            <span className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest border ${selectedCamera.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                    <DetailModalSection title="Especificaciones">
+                      <div className="space-y-2.5 sm:space-y-3">
+                        <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                          <DetailModalRow label="Estado Operativo">
+                            <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border ${selectedCamera.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                               selectedCamera.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-500 border-slate-200'
                               }`}>
                               {selectedCamera.status === 'active' ? 'Activo' : selectedCamera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
                             </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Marca / Modelo</span>
-                            <span className="text-[11px] font-black text-[#002855] uppercase">
+                          </DetailModalRow>
+                          <DetailModalRow label="Marca / Modelo">
+                            <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase break-words">
                               {selectedCamera.brand || 'GENÉRICA'} {selectedCamera.model || ''}
                             </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Flujos de Video</span>
-                            <span className="text-[11px] font-black text-[#002855]">{selectedCamera.display_count || '0'} CÁMARAS</span>
-                          </div>
-                        </div>
+                          </DetailModalRow>
+                          <DetailModalRow label="Flujos de Video">
+                            <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">{selectedCamera.display_count || '0'} CÁMARAS</span>
+                          </DetailModalRow>
+                        </DetailModalCard>
 
-                        <div className="p-4 bg-slate-50 border border-slate-100 space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registro de Alta</span>
-                            <span className="text-[11px] font-black text-slate-600 italic">
+                        <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                          <DetailModalRow label="Registro de Alta">
+                            <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
                               {new Date(selectedCamera.created_at).toLocaleDateString()}
                             </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Último Cambio</span>
-                            <span className="text-[11px] font-black text-slate-600 italic">
+                          </DetailModalRow>
+                          <DetailModalRow label="Último Cambio">
+                            <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
                               {new Date(selectedCamera.updated_at).toLocaleDateString()}
                             </span>
-                          </div>
-                        </div>
+                          </DetailModalRow>
+                        </DetailModalCard>
                       </div>
-                    </div>
+                    </DetailModalSection>
 
-                    {/* Columna 2: Seguridad y Red */}
-                    <div className="space-y-6">
-                      <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
-                        <div className="w-1 h-4 bg-blue-600" />
-                        <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-widest">Accesos y Red</h3>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="p-4 bg-slate-50 border border-slate-100">
-                          <div className="flex items-center justify-between mb-4">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tipo de Conexión</span>
-                            <span className="px-3 py-1 bg-white border border-slate-200 text-[10px] font-black text-blue-600 uppercase tracking-tighter shadow-sm">
+                    <DetailModalSection title="Accesos y Red">
+                      <DetailModalCard>
+                          <DetailModalRow label="Tipo de Conexión">
+                            <span className="inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white border border-slate-200 text-[9px] sm:text-[10px] font-black text-blue-600 uppercase tracking-tighter shadow-sm">
                               {humanAccess(selectedCamera.access_type)}
                             </span>
-                          </div>
+                          </DetailModalRow>
 
-                          <div className="space-y-3">
-                            <div className="bg-white border border-slate-200 p-2 group relative">
-                              <span className="text-[9px] font-black text-slate-400 uppercase absolute -top-2 left-2 bg-white px-1">Dirección IPv4</span>
-                              <div className="flex items-center justify-between mt-1">
-                                <span className="font-mono text-xs font-black text-blue-600">{selectedCamera.ip_address || '0.0.0.0'}</span>
-                                <span className="font-mono text-[10px] font-bold text-slate-400">PORT: {selectedCamera.port || '—'}</span>
+                          <div className="space-y-2.5 sm:space-y-3 mt-3 sm:mt-4 pt-3 border-t border-slate-200/80">
+                            <div className="bg-white border border-slate-200 p-2.5 sm:p-3 rounded-sm">
+                              <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase block mb-1.5">Dirección IPv4</span>
+                              <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
+                                <span className="font-mono text-[11px] sm:text-xs font-black text-blue-600 break-all">{selectedCamera.ip_address || '0.0.0.0'}</span>
+                                <span className="font-mono text-[9px] sm:text-[10px] font-bold text-slate-400 shrink-0">PORT: {selectedCamera.port || '—'}</span>
                               </div>
                             </div>
 
-                            <div className="bg-white border border-slate-200 p-2 group relative">
-                              <span className="text-[9px] font-black text-slate-400 uppercase absolute -top-2 left-2 bg-white px-1">Usuario GS</span>
-                              <div className="flex items-center justify-between mt-1">
-                                <span className="text-[11px] font-black text-[#002855]">{selectedCamera.username || '—'}</span>
-                                <button onClick={() => copyToClipboard(selectedCamera.username)} className="p-1 hover:text-blue-600 transition-colors">
+                            <div className="bg-white border border-slate-200 p-2.5 sm:p-3 rounded-sm">
+                              <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase block mb-1.5">Usuario GS</span>
+                              <div className="flex items-center justify-between gap-2 min-w-0">
+                                <span className="text-[10px] sm:text-[11px] font-black text-[#002855] truncate">{selectedCamera.username || '—'}</span>
+                                <button type="button" onClick={() => copyToClipboard(selectedCamera.username)} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors shrink-0" aria-label="Copiar usuario">
                                   <Copy size={14} />
                                 </button>
                               </div>
                             </div>
 
-                            <div className="bg-white border border-slate-200 p-2 group relative">
-                              <span className="text-[9px] font-black text-slate-400 uppercase absolute -top-2 left-2 bg-white px-1">Credenciales</span>
-                              <div className="flex items-center justify-between mt-1">
-                                <span className="font-mono text-xs font-bold text-slate-600 tracking-widest">
+                            <div className="bg-white border border-slate-200 p-2.5 sm:p-3 rounded-sm">
+                              <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase block mb-1.5">Credenciales</span>
+                              <div className="flex items-center justify-between gap-2 min-w-0">
+                                <span className="font-mono text-[10px] sm:text-xs font-bold text-slate-600 tracking-wide break-all">
                                   {visiblePasswords.has(selectedCamera.id) ? (selectedCamera.password || '—') : (selectedCamera.password ? '••••••••' : '—')}
                                 </span>
-                                <div className="flex gap-1">
-                                  <button onClick={() => togglePasswordVisible(selectedCamera.id)} className="p-1 hover:text-blue-600 transition-colors">
+                                <div className="flex gap-0.5 shrink-0">
+                                  <button type="button" onClick={() => togglePasswordVisible(selectedCamera.id)} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors" aria-label="Mostrar u ocultar contraseña">
                                     {visiblePasswords.has(selectedCamera.id) ? <EyeOff size={14} /> : <Eye size={14} />}
                                   </button>
-                                  <button onClick={() => copyToClipboard(selectedCamera.password)} className="p-1 hover:text-blue-600 transition-colors">
+                                  <button type="button" onClick={() => copyToClipboard(selectedCamera.password)} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors" aria-label="Copiar contraseña">
                                     <Copy size={14} />
                                   </button>
                                 </div>
@@ -1240,42 +1230,36 @@ export default function Cameras({ subview }: CamerasProps) {
                             </div>
 
                             {selectedCamera.auth_code && (
-                              <div className="bg-blue-50 border border-blue-100 p-3 flex items-center justify-between">
-                                <div>
-                                  <span className="block text-[8px] font-black text-blue-400 uppercase tracking-widest">CÓDIGO DE VERIFICACIÓN</span>
-                                  <span className="font-mono text-sm font-black text-blue-700 uppercase tracking-widest">{selectedCamera.auth_code}</span>
+                              <div className="bg-blue-50 border border-blue-100 p-2.5 sm:p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="min-w-0">
+                                  <span className="block text-[8px] font-black text-blue-400 uppercase tracking-widest">Código de verificación</span>
+                                  <span className="font-mono text-xs sm:text-sm font-black text-blue-700 uppercase break-all">{selectedCamera.auth_code}</span>
                                 </div>
-                                <button onClick={() => copyToClipboard(selectedCamera.auth_code)} className="p-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm">
-                                  <Copy size={14} />
+                                <button type="button" onClick={() => copyToClipboard(selectedCamera.auth_code)} className="w-full sm:w-auto p-2.5 min-h-[44px] flex items-center justify-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest">
+                                  <Copy size={14} /> Copiar
                                 </button>
                               </div>
                             )}
 
                             {selectedCamera.url && (
-                              <div className="pt-2">
+                              <div className="pt-1">
                                 <button
+                                  type="button"
                                   onClick={() => window.open(selectedCamera.url, '_blank', 'noopener')}
-                                  className="w-full py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg hover:bg-blue-800 transition-all flex items-center justify-center gap-2 group"
+                                  className="w-full py-2.5 sm:py-3 bg-[#002855] text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wide sm:tracking-[0.2em] shadow-lg hover:bg-blue-800 transition-all flex items-center justify-center gap-2 min-h-[44px]"
                                 >
                                   Visualizar Cámaras
-                                  <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                  <ArrowRight size={14} />
                                 </button>
-                                <span className="block text-[9px] text-slate-400 font-bold mt-2 truncate italic">{selectedCamera.url}</span>
+                                <span className="block text-[8px] sm:text-[9px] text-slate-400 font-bold mt-1.5 break-all">{selectedCamera.url}</span>
                               </div>
                             )}
                           </div>
-                        </div>
-                      </div>
-                    </div>
+                      </DetailModalCard>
+                    </DetailModalSection>
 
-                    {/* Columna 3: Almacenamiento */}
-                    <div className="space-y-6">
-                      <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
-                        <div className="w-1 h-4 bg-blue-600" />
-                        <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-widest">Almacenamiento</h3>
-                      </div>
-
-                      <div className="space-y-4">
+                    <DetailModalSection title="Almacenamiento">
+                      <div className="space-y-2.5 sm:space-y-4">
                         {selectedCamera.camera_disks && selectedCamera.camera_disks.length > 0 ? (
                           <div className="space-y-4">
                             {/* Resumen Total */}
@@ -1294,42 +1278,41 @@ export default function Cameras({ subview }: CamerasProps) {
                               );
                               const percent = totals.total > 0 ? Math.min(100, Math.round((totals.used / totals.total) * 100)) : 0;
                               return (
-                                <div className="p-4 bg-slate-900 text-white relative overflow-hidden">
-                                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/10 rounded-full blur-3xl" />
+                                <div className="p-3 sm:p-4 bg-slate-900 text-white relative overflow-hidden">
+                                  <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-blue-600/10 rounded-full blur-3xl" />
                                   <div className="relative z-10">
-                                    <div className="flex justify-between items-end mb-4">
-                                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-blue-400">Capacidad Global</span>
-                                      <span className="text-[20px] font-black tracking-tighter">{percent}%</span>
+                                    <div className="flex justify-between items-end mb-3 sm:mb-4 gap-2">
+                                      <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wide sm:tracking-[0.2em] text-blue-400">Capacidad Global</span>
+                                      <span className="text-lg sm:text-[20px] font-black tracking-tighter">{percent}%</span>
                                     </div>
-                                    <div className="w-full bg-white/10 h-2 rounded-none mb-3">
+                                    <div className="w-full bg-white/10 h-1.5 sm:h-2 rounded-none mb-2 sm:mb-3">
                                       <div
                                         className={`h-full transition-all duration-1000 ${percent > 75 ? 'bg-rose-500' : percent > 50 ? 'bg-amber-500' : 'bg-blue-500'}`}
                                         style={{ width: `${percent}%` }}
                                       />
                                     </div>
-                                    <div className="flex justify-between text-[11px] font-black uppercase tracking-tighter">
-                                      <span>Ocupado: {totals.used}GB</span>
-                                      <span className="text-blue-400">Total: {totals.total}GB</span>
+                                    <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 text-[10px] sm:text-[11px] font-black uppercase tracking-tighter">
+                                      <span>Ocupado: {totals.used} GB</span>
+                                      <span className="text-blue-400">Total: {totals.total} GB</span>
                                     </div>
                                   </div>
                                 </div>
                               );
                             })()}
 
-                            {/* Desglose de Discos */}
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-[40vh] sm:max-h-[280px] overflow-y-auto overscroll-contain pr-0.5">
                               {selectedCamera.camera_disks.map((d) => {
                                 const total = Number(d.total_capacity_gb) || 0;
                                 const used = d.used_space_gb !== null && d.used_space_gb !== undefined ? Number(d.used_space_gb) : (total - Number(d.remaining_capacity_gb) || 0);
                                 const percent = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
                                 return (
-                                  <div key={d.id} className="p-3 bg-white border border-slate-200">
-                                    <div className="flex justify-between items-center mb-2">
-                                      <div className="flex flex-col">
-                                        <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest">Disco #{d.disk_number}</span>
-                                        {d.serial_number && <span className="text-[8px] font-bold text-slate-300 uppercase">S/N: {d.serial_number}</span>}
+                                  <div key={d.id} className="p-2.5 sm:p-3 bg-white border border-slate-200">
+                                    <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                      <div className="min-w-0">
+                                        <span className="text-[9px] sm:text-[10px] font-black text-[#002855] uppercase tracking-wide">Disco #{d.disk_number}</span>
+                                        {d.serial_number && <span className="block text-[8px] font-bold text-slate-400 uppercase truncate">S/N: {d.serial_number}</span>}
                                       </div>
-                                      <span className={`text-[8px] font-black px-2 py-0.5 border ${d.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                      <span className={`text-[7px] sm:text-[8px] font-black px-1.5 sm:px-2 py-0.5 border shrink-0 ${d.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                                         d.status === 'full' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-200'
                                         }`}>
                                         {d.status?.toUpperCase() || 'OFFLINE'}
@@ -1338,13 +1321,13 @@ export default function Cameras({ subview }: CamerasProps) {
                                     <div className="w-full bg-slate-100 h-1 mb-2">
                                       <div className={`h-full ${percent > 75 ? 'bg-rose-500' : 'bg-blue-500'}`} style={{ width: `${percent}%` }} />
                                     </div>
-                                    <div className="flex justify-between text-[9px] font-bold text-slate-400 mb-1">
-                                      <span>TIPO: {d.disk_type || 'GS-SATA'} {d.brand ? `(${d.brand})` : ''}</span>
-                                      <span>{used}/{total}GB</span>
+                                    <div className="flex flex-wrap justify-between gap-x-2 gap-y-0.5 text-[8px] sm:text-[9px] font-bold text-slate-400">
+                                      <span className="break-words">TIPO: {d.disk_type || 'GS-SATA'} {d.brand ? `(${d.brand})` : ''}</span>
+                                      <span className="shrink-0">{used}/{total} GB</span>
                                     </div>
                                     {(d.stored_from || d.stored_to) && (
-                                      <div className="text-[8px] font-black text-blue-600 uppercase border-t border-slate-50 pt-1">
-                                        Grabación: {d.stored_from ? new Date(d.stored_from + 'T00:00:00').toLocaleDateString() : '—'} al {d.stored_to ? new Date(d.stored_to + 'T00:00:00').toLocaleDateString() : '—'}
+                                      <div className="text-[7px] sm:text-[8px] font-black text-blue-600 uppercase border-t border-slate-50 pt-1.5 mt-1.5 leading-relaxed">
+                                        Grabación: {d.stored_from ? new Date(d.stored_from + 'T00:00:00').toLocaleDateString() : '—'} — {d.stored_to ? new Date(d.stored_to + 'T00:00:00').toLocaleDateString() : '—'}
                                       </div>
                                     )}
                                   </div>
@@ -1353,42 +1336,40 @@ export default function Cameras({ subview }: CamerasProps) {
                             </div>
                           </div>
                         ) : (
-                          <div className="p-8 border-2 border-dashed border-slate-200 text-center">
-                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Sin registro de almacenamiento</span>
+                          <div className="p-6 sm:p-8 border-2 border-dashed border-slate-200 text-center">
+                            <span className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest">Sin registro de almacenamiento</span>
                           </div>
                         )}
 
                         {selectedCamera.notes && (
-                          <div className="p-4 bg-amber-50 border border-amber-100 mt-4">
-                            <span className="block text-[9px] font-black text-amber-600 uppercase tracking-widest mb-2 flex items-center gap-1">
+                          <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100">
+                            <span className="text-[8px] sm:text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1.5 flex items-center gap-1">
                               <Star size={10} /> Notas Técnicas
                             </span>
-                            <p className="text-[11px] font-medium text-amber-900 leading-relaxed italic">
-                              "{selectedCamera.notes}"
+                            <p className="text-[10px] sm:text-[11px] font-medium text-amber-900 leading-relaxed">
+                              {selectedCamera.notes}
                             </p>
                           </div>
                         )}
                       </div>
-                    </div>
+                    </DetailModalSection>
 
-                  </div>
-                </div>
+                  </DetailModalGrid>
+                </DetailModalBody>
 
-                {/* Footer Enterprise */}
-                <div className="bg-slate-50 border-t border-slate-200 px-8 py-5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sistema GS Autenticado</span>
-                  </div>
+                <DetailModalFooter>
                   <button
                     onClick={() => setShowDetails(false)}
-                    className="px-6 py-2 bg-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-widest hover:bg-slate-300 transition-all"
+                    className="w-full sm:w-auto order-1 sm:order-2 px-6 py-3 sm:py-2.5 min-h-[44px] bg-[#002855] sm:bg-slate-200 text-white sm:text-slate-700 text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 sm:hover:bg-slate-300 transition-all"
                   >
-                    Cerrar Detalle
+                    Cerrar
                   </button>
-                </div>
-              </div>
-            </div>
+                  <div className="hidden sm:flex items-center gap-2 order-2 sm:order-1">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sistema GS</span>
+                  </div>
+                </DetailModalFooter>
+            </DetailModal>
           )
         }
 
@@ -1401,8 +1382,11 @@ export default function Cameras({ subview }: CamerasProps) {
         )}
       </div >
       {showWelcomePopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#001529]/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white border border-slate-200 shadow-2xl w-full max-w-lg relative overflow-hidden animate-in zoom-in-95 duration-300">
+        <ModalOverlay className="bg-[#001529]/60 backdrop-blur-sm">
+          <div
+            className="bg-white border border-slate-200 shadow-2xl w-full max-w-lg relative overflow-hidden animate-in zoom-in-95 duration-300 mx-2 sm:mx-0"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="absolute top-0 left-0 w-2 h-full bg-blue-600" />
             <div className="p-8">
               <div className="flex flex-col items-center text-center mb-8">
@@ -1447,7 +1431,7 @@ export default function Cameras({ subview }: CamerasProps) {
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
         {showStoredDiskForm && (
           <StoredDiskForm

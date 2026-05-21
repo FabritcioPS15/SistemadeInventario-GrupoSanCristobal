@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { X, AlertCircle, Loader2 } from 'lucide-react';
+import ModalOverlay from '../ui/ModalOverlay';
 
 type BaseFormProps = {
   title: string;
@@ -40,8 +41,11 @@ export default function BaseForm({
   }[maxWidth];
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-0 md:p-8 z-[100] animate-in fade-in duration-300">
-      <div className={`bg-white w-full h-full md:h-[90vh] ${maxWidthClass} rounded-none shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200`}>
+    <ModalOverlay className="bg-slate-900/40 backdrop-blur-sm">
+      <div
+        className={`bg-white w-full h-full md:h-[90vh] ${maxWidthClass} rounded-none shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200`}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header Corporativo (Cuadrado) */}
         <div className="bg-[#001529] px-6 py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
@@ -98,7 +102,7 @@ export default function BaseForm({
           </div>
         </form>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }
 

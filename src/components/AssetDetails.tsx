@@ -1,5 +1,6 @@
 import { X, Monitor, MapPin, Package, Calendar, Tag, Info, ShoppingCart, Edit } from 'lucide-react';
 import { AssetWithDetails } from '../lib/supabase';
+import DetailModal, { DetailModalBody, DetailModalFooter } from './ui/DetailModal';
 
 type AssetDetailsProps = {
   asset: AssetWithDetails;
@@ -18,10 +19,9 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
   const status = statusMap[asset.status] || { label: asset.status, color: 'slate' };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-0 md:p-8 z-[100] animate-in fade-in duration-300">
-      <div className="bg-white w-full h-full md:h-[90vh] max-w-4xl rounded-none shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200">
+    <DetailModal maxWidth="4xl">
         {/* Header Corporativo (Basado en BaseForm) */}
-        <div className="bg-[#001529] px-6 py-4 flex items-center justify-between shrink-0">
+        <div className="bg-[#001529] px-4 py-4 sm:px-6 flex items-center justify-between shrink-0 gap-3">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-blue-500/10 rounded-none flex items-center justify-center border border-blue-500/20">
               <Package size={20} className="text-blue-400" />
@@ -41,11 +41,10 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
           </button>
         </div>
 
-        {/* Content Section */}
-        <div className="flex-1 overflow-y-auto bg-gray-50/50">
-          <div className="p-4 sm:p-8 space-y-8">
+        <DetailModalBody className="bg-gray-50/50">
+          <div className="space-y-6 sm:space-y-8">
             {/* Banner/Resumen */}
-            <div className="bg-white border border-slate-200 p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+            <div className="bg-white border border-slate-200 p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 shadow-sm min-w-0">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 bg-slate-50 flex items-center justify-center border border-slate-100">
                   <Package size={32} className="text-slate-300" strokeWidth={1} />
@@ -65,9 +64,9 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 md:gap-8 min-w-0">
               {/* Main Info */}
-              <div className="lg:col-span-2 space-y-8">
+              <div className="md:col-span-2 xl:col-span-2 space-y-6 sm:space-y-8 min-w-0">
                 <section>
                   <div className="flex items-center gap-2 mb-4 text-blue-600 border-b border-blue-100 pb-2">
                     <Tag size={16} strokeWidth={3} />
@@ -221,24 +220,27 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
               </div>
             </div>
           </div>
-        </div>
+        </DetailModalBody>
 
-        {/* Footer Corporativo (Botones Cuadrados) */}
-        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex items-center justify-end gap-3 z-10 shrink-0">
+        <DetailModalFooter>
+          <div className="hidden sm:block" />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 w-full sm:w-auto">
           <button
             onClick={onClose}
             className="px-8 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all shadow-sm"
           >
             Cerrar
           </button>
+          {onEdit && (
           <button
             onClick={onEdit}
-            className="px-10 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg"
+            className="px-10 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg"
           >
             <Edit size={14} /> Editar Activo
           </button>
-        </div>
-      </div>
-    </div>
+          )}
+          </div>
+        </DetailModalFooter>
+    </DetailModal>
   );
 }

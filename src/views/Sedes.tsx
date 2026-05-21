@@ -9,6 +9,7 @@ import { supabase, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import LocationForm from '../components/forms/LocationForm';
 import Pagination from '../components/ui/Pagination';
+import ModalOverlay from '../components/ui/ModalOverlay';
 
 const typeLabels: Record<string, string> = {
   revision: 'Revisión',
@@ -603,8 +604,11 @@ export default function Sedes() {
 
       {/* Location Detail Modal */}
       {viewingLocation && (
-        <div className="fixed inset-0 bg-[#001529]/95 backdrop-blur-sm flex items-center justify-center p-0 md:p-8 lg:p-12 z-[100] animate-in fade-in duration-200">
-          <div className="bg-white w-full h-full md:h-auto md:max-h-[95vh] max-w-3xl rounded-none md:rounded-[3.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 border border-white/20">
+        <ModalOverlay className="bg-[#001529]/95 backdrop-blur-sm">
+          <div
+            className="bg-white w-full h-full md:h-auto md:max-h-[95vh] max-w-3xl rounded-none md:rounded-[3.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 border border-white/20"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="bg-[#001529] px-6 py-4 md:px-8 md:py-6 flex items-center justify-between shrink-0 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full -mr-32 -mt-32 blur-2xl" />
@@ -676,7 +680,7 @@ export default function Sedes() {
               </button>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

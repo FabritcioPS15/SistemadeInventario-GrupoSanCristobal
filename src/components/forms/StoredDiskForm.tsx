@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, HardDrive, Save } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import ModalOverlay from '../ui/ModalOverlay';
 
 interface StoredDiskFormProps {
   onClose: () => void;
@@ -94,8 +95,11 @@ export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredD
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+    <ModalOverlay className="bg-slate-900/60 backdrop-blur-sm">
+      <div
+        className="bg-white shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] sm:max-h-[min(90vh,calc(100dvh-3.5rem-2rem))]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="bg-[#002855] px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3 text-white">
             <HardDrive size={20} />
@@ -254,6 +258,6 @@ export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredD
           </div>
         </form>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }
