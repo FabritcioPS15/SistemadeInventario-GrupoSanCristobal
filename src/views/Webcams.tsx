@@ -28,6 +28,11 @@ export default function Webcams() {
       <div className="flex items-center gap-2 mb-6">
         <BsWebcam size={22} className="text-slate-700" />
         <h2 className="text-2xl font-bold text-gray-900">Cámaras web</h2>
+        {/* Botón para descargar archivo BAT de automatización */}
+        <a href="/camera_automation.bat" download className="mt-2 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+          Descargar script de automatización
+        </a>
       </div>
 
       {loading ? (

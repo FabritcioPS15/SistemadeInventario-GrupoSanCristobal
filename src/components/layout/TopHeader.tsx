@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Forzar importación para evitar caché
 
-import { Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle, MapPin } from 'lucide-react';
+import { Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle, MapPin, File } from 'lucide-react';
+import { FaTerminal } from "react-icons/fa";
 
 import { supabase, SutranVisit } from '../../lib/supabase';
 
@@ -336,7 +337,9 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                     { icon: <FaFilePdf size={16} />, label: 'Descargar en PDF', action: () => window.dispatchEvent(new CustomEvent('cameras:export-pdf')) },
 
-                    { icon: <LayoutGrid size={16} />, label: 'Cambiar de vista', action: () => window.dispatchEvent(new CustomEvent('cameras:toggle-view')) }
+                    { icon: <LayoutGrid size={16} />, label: 'Cambiar de vista', action: () => window.dispatchEvent(new CustomEvent('cameras:toggle-view')) },
+
+                    { icon: <FaTerminal size={16} />, label: 'Descargar Automatización', action: () => { const a = document.createElement('a'); a.href = '/camera_automation.bat'; a.download = 'camera_automation.bat'; document.body.appendChild(a); a.click(); document.body.removeChild(a); } },
 
                 ]
 
