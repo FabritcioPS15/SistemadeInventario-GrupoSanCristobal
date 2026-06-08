@@ -11,12 +11,12 @@ type TicketFormProps = {
 };
 
 const FREQUENT_ISSUES = [
-  { title: 'Impresora no enciende / no imprime', category: 'hardware', priority: 'critical', description: 'La impresora de la sede no responde a los comandos de impresión o está apagada.' },
-  { title: 'Olvidé mi contraseña de acceso del MTC / Correo', category: 'access', priority: 'high', description: 'Requiero un reset de contraseña para ingresar al sistema.' },
-  { title: 'Sistema ERP está lento o se cierra', category: 'software', priority: 'high', description: 'El sistema principal presenta lentitud extrema o cierres inesperados.' },
-  { title: 'Sin conexión a Internet en recepción', category: 'network', priority: 'critical', description: 'Toda el área de recepción está sin conexión a red.' },
-  { title: 'Falla en cámara de seguridad', category: 'hardware', priority: 'medium', description: 'Una de las cámaras no muestra imagen en el monitor.' },
-  { title: 'Configuración de correo corporativo', category: 'software', priority: 'low', description: 'Solicito apoyo para configurar mi firma o bandeja de entrada.' },
+  { title: 'Impresora no enciende / no imprime', category: 'sistemas', priority: 'critical', description: 'La impresora de la sede no responde a los comandos de impresión o está apagada.' },
+  { title: 'Olvidé mi contraseña de acceso del MTC / Correo', category: 'sistemas', priority: 'high', description: 'Requiero un reset de contraseña para ingresar al sistema.' },
+  { title: 'Sistema ERP está lento o se cierra', category: 'sistemas', priority: 'high', description: 'El sistema principal presenta lentitud extrema o cierres inesperados.' },
+  { title: 'Sin conexión a Internet en recepción', category: 'sistemas', priority: 'critical', description: 'Toda el área de recepción está sin conexión a red.' },
+  { title: 'Falla en cámara de seguridad', category: 'sistemas', priority: 'medium', description: 'Una de las cámaras no muestra imagen en el monitor.' },
+  { title: 'Configuración de correo corporativo', category: 'sistemas', priority: 'low', description: 'Solicito apoyo para configurar mi firma o bandeja de entrada.' },
 ];
 
 export default function TicketForm({ onClose, onSave }: TicketFormProps) {
@@ -31,7 +31,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     title: '',
     description: '',
     priority: 'medium',
-    category: 'hardware',
+    category: 'sistemas',
     location_id: user?.location_id || '',
     anydesk: ''
   });
@@ -44,11 +44,10 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
   ];
 
   const categories = [
-    { value: 'hardware', label: 'Hardware' },
-    { value: 'software', label: 'Software' },
-    { value: 'network', label: 'Red' },
-    { value: 'access', label: 'Acceso' },
-    { value: 'other', label: 'Otro' },
+    { value: 'sistemas', label: 'Área de Sistemas' },
+    { value: 'contable', label: 'Área contable' },
+    { value: 'legal', label: 'Área legal' },
+    { value: 'operaciones', label: 'Área de operaciones' },
   ];
 
   useEffect(() => {
@@ -292,7 +291,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             </div>
           </FormField>
 
-          <FormField label="Tipo de Categoría" required error={errors.category}>
+          <FormField label="Área dirigida:" required error={errors.category}>
             <FormSelect
               name="category"
               value={formData.category}

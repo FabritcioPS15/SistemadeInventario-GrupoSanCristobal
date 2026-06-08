@@ -182,6 +182,7 @@ export default function Users() {
       case 'administradores': return <UsersIcon className="h-4 w-4" />;
       case 'personalizado': return <Settings className="h-4 w-4" />;
       case 'area_legal': return <Scale className="h-4 w-4" />;
+      case 'area_contable': return <UsersIcon className="h-4 w-4" />;
       default: return <UserIcon className="h-4 w-4" />;
     }
   };
@@ -195,6 +196,7 @@ export default function Users() {
       case 'administradores': return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'personalizado': return 'bg-gray-50 text-gray-700 border-gray-200';
       case 'area_legal': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'area_contable': return 'bg-teal-50 text-teal-700 border-teal-200';
       default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
@@ -208,6 +210,7 @@ export default function Users() {
       case 'administradores': return 'Administradores';
       case 'personalizado': return 'Personalizado';
       case 'area_legal': return 'Área Legal';
+      case 'area_contable': return 'Área Contable';
       default: return role;
     }
   };
@@ -432,6 +435,7 @@ export default function Users() {
                 <option value="sistemas">Sistemas</option>
                 <option value="supervisores">Supervisores</option>
                 <option value="area_legal">Área Legal</option>
+                <option value="area_contable">Área Contable</option>
                 <option value="administradores">Administradores</option>
                 <option value="personalizado">Personalizado</option>
               </select>

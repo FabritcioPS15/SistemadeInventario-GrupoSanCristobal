@@ -17,7 +17,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
   const [showPassword, setShowPassword] = useState(false);
   const [showAuthCode, setShowAuthCode] = useState(false);
   const [disks, setDisks] = useState<any[]>([]); 
-  const [loadingDisks, setLoadingDisks] = useState(false); // Nuevo estado de carga
+  const [loadingDisks, setLoadingDisks] = useState(false);
 
   const [formData, setFormData] = useState({
     name: editCamera?.name || '',
@@ -228,7 +228,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
     >
       {/* Section: Información Principal */}
       <FormSection title="Información de la Cámara" color="blue">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Nombre de la Cámara" required error={errors.name}>
             <FormInput
               type="text"
@@ -322,7 +322,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
 
       {/* Section: Configuración de Red */}
       <FormSection title="Configuración de Red" color="emerald">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Dirección IP" error={errors.ip_address}>
             <FormInput
               type="text"
@@ -360,7 +360,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
 
       {/* Section: Credenciales */}
       <FormSection title="Credenciales de Acceso" color="amber">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Usuario" error={errors.username}>
             <FormInput
               type="text"

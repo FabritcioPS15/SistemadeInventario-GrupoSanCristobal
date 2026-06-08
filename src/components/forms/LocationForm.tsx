@@ -164,7 +164,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
     >
       {/* Section: Información Principal */}
       <FormSection title="Información de la Sede" color="blue">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Nombre de la Ubicación" required error={errors.name}>
             <FormInput
               type="text"
@@ -220,7 +220,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
 
       {/* Section: Configuración */}
       <FormSection title="Configuración de Sistema" color="emerald">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="URL de Checklist" error={errors.checklist_url}>
             <FormInput
               type="url"

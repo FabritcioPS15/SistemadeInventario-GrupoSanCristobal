@@ -16,7 +16,9 @@ import {
   Car, 
   Send, 
   FileText,
-  Zap
+  Zap,
+  Award,
+  Map
 } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { GrServerCluster } from 'react-icons/gr';
@@ -182,6 +184,8 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
         { id: 'mtc', label: 'MTC Accesos', icon: Key, path: '/mtc' },
         { id: 'servers', label: 'Servidores', icon: GrServerCluster, path: '/servers' },
         { id: 'painpoint', label: 'Painpoints', icon: Zap, path: '/painpoint' },
+        { id: 'titulos-habilitantes', label: 'Títulos Habilitantes', icon: Award, path: '/titulos-habilitantes' },
+        { id: 'planos-defensa-civil', label: 'Planos Defensa Civil', icon: Map, path: '/planos-defensa-civil' },
         {
           id: 'sent',
           label: 'Enviados',

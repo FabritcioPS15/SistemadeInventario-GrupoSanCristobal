@@ -22,6 +22,7 @@ export default function TicketDetail() {
     const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
     const [activeFormats, setActiveFormats] = useState<string[]>([]);
     const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+    const [mobileTab, setMobileTab] = useState<'details' | 'chat' | 'people'>('chat');
     const commentsEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
@@ -792,7 +793,7 @@ export default function TicketDetail() {
     }
 
     return (
-        <div className="h-screen bg-white flex flex-col overflow-hidden font-sans">
+        <div className="h-[100dvh] bg-white flex flex-col overflow-hidden font-sans">
             <style>{`
                 .inline-code { background-color: rgba(0, 0, 0, 0.1); padding: 2px 6px; font-family: 'Courier New', monospace; font-size: 0.9em; }
                 .code-block { background-color: rgba(0, 0, 0, 0.05); padding: 12px; border-left: 4px solid #002855; font-family: 'Courier New', monospace; font-size: 0.9em; overflow-x: auto; margin: 8px 0; }
@@ -823,8 +824,15 @@ export default function TicketDetail() {
             </div>
 
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+                {/* Mobile Tab Bar */}
+                <div className="lg:hidden flex border-b border-slate-200 bg-white flex-none shrink-0 z-10">
+                    <button onClick={() => setMobileTab('details')} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest border-b-2 transition-colors ${mobileTab === 'details' ? 'border-[#002855] text-[#002855]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Detalles</button>
+                    <button onClick={() => setMobileTab('chat')} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest border-b-2 transition-colors ${mobileTab === 'chat' ? 'border-[#002855] text-[#002855]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Chat</button>
+                    <button onClick={() => setMobileTab('people')} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest border-b-2 transition-colors ${mobileTab === 'people' ? 'border-[#002855] text-[#002855]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Personas</button>
+                </div>
+
                 {/* Left side: Ticket Details */}
-                <div className="w-full lg:w-[320px] xl:w-[350px] flex-none border-r border-slate-200 bg-slate-50 overflow-y-auto max-h-[40vh] lg:max-h-full">
+                <div className={`w-full lg:w-[320px] xl:w-[350px] lg:flex-none border-r border-slate-200 bg-slate-50 overflow-y-auto ${mobileTab === 'details' ? 'block flex-1 min-h-0' : 'hidden lg:block'}`}>
                     <div className="p-6">
                         <h2 className="text-sm font-black text-[#002855] leading-tight mb-6 uppercase">{ticket.title}</h2>
 
@@ -949,7 +957,7 @@ export default function TicketDetail() {
                 </div>
 
                 {/* Center: Chat */}
-                <div className="flex-1 flex flex-col bg-white border-r border-slate-200 min-w-0 min-h-0">
+                <div className={`flex-1 flex-col bg-white lg:border-r border-slate-200 min-w-0 min-h-0 ${mobileTab === 'chat' ? 'flex' : 'hidden lg:flex'}`}>
                     <div className="flex-none px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-none bg-[#002855] text-white flex items-center justify-center">
@@ -1242,7 +1250,7 @@ export default function TicketDetail() {
                 </div>
 
                 {/* Right side: People Info */}
-                <div className="w-full lg:w-[280px] xl:w-[300px] flex-none bg-slate-50 overflow-y-auto max-h-[40vh] lg:max-h-full border-t lg:border-t-0 border-slate-200">
+                <div className={`w-full lg:w-[280px] xl:w-[300px] lg:flex-none bg-slate-50 overflow-y-auto lg:border-t-0 border-slate-200 ${mobileTab === 'people' ? 'block flex-1 min-h-0' : 'hidden lg:block'}`}>
                     <div className="p-6 space-y-8">
                         {/* Participantes */}
                         <div>

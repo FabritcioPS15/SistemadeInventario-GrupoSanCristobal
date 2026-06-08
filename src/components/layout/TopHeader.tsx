@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 
 // Forzar importación para evitar caché
 
-import { Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle, MapPin, File } from 'lucide-react';
+import { Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle, MapPin } from 'lucide-react';
 import { FaTerminal } from "react-icons/fa";
 
 import { supabase, SutranVisit } from '../../lib/supabase';
@@ -22,45 +22,25 @@ import { FaFilePdf } from 'react-icons/fa6';
 
 
 const ROUTE_LABELS: Record<string, string> = {
-
     'inventory': 'Inventario',
-
     'camara': 'Cámaras',
-
     'cameras': 'Cámaras',
-
     'maintenance': 'Mantenimiento',
-
     'sent': 'Enviados',
-
     'sutran': 'Sutran',
-
     'locations': 'Sedes',
-
     'mtc': 'MTC Accesos',
-
     'users': 'Usuarios',
-
     'audit': 'Auditoría',
-
     'integrity': 'Integridad',
-
     'diagnostic': 'Diagnóstico',
-
     'connection-test': 'Prueba de Conexión',
-
     'quick-diagnostic': 'Diagnóstico Rápido',
-
     'tickets': 'Mesa de Ayuda',
-
     'dashboard': 'Dashboard General',
-
     'mine': 'Mis Tickets',
-
     'reports': 'Reportes',
-
     'painpoint': 'Puntos Críticos',
-
     'checklist': 'Checklist',
 
     'vacations': 'Vacaciones',

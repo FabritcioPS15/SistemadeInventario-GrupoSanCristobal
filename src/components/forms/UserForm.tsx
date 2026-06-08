@@ -7,6 +7,7 @@ type UserType = {
   id: string;
   full_name: string;
   email: string;
+  username?: string;
   dni?: string;
   password?: string;
   role: string;
@@ -37,6 +38,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
   const [formData, setFormData] = useState({
     full_name: editUser?.full_name || '',
+    username: (editUser as any)?.username || '',
     email: editUser?.email || '',
     dni: editUser?.dni || '',
     password: '',
@@ -345,6 +347,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
       case 'administradores': return <UsersIcon className="h-4 w-4" />;
       case 'personalizado': return <Settings className="h-4 w-4" />;
       case 'area_legal': return <Scale className="h-4 w-4" />;
+      case 'area_contable': return <UsersIcon className="h-4 w-4" />;
       default: return <UserIcon className="h-4 w-4" />;
     }
   };
@@ -469,6 +472,19 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
             '❌ Sin acceso a: Inventarios, Mantenimiento TI, Cámaras, Servidores, Checklists ni Painpoints'
           ]
         };
+      case 'area_contable':
+        return {
+          title: 'Área Contable',
+          description: 'Gestión contable y operativa',
+          accesses: [
+            '✅ Dashboard principal',
+            '✅ Mesa de ayuda (tickets)',
+            '✅ Visualización de cámaras',
+            '✅ Flota vehicular (solo lectura)',
+            '✅ Consulta de sedes',
+            '❌ Sin acceso a: Inventario TI, Servidores, Usuarios, Painpoints, Sutran, MTC'
+          ]
+        };
       case 'personalizado':
         return {
           title: 'Personalizado',
@@ -544,6 +560,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
     const dataToSave: any = {
       full_name: formData.full_name,
+      username: formData.username || null,
       email: formData.email,
       dni: formData.dni || null,
       role: formData.role,
@@ -649,7 +666,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
               </div>
               
               <div className="space-y-3 max-h-64 overflow-y-auto">
-                {['super_admin', 'gerencia', 'sistemas', 'supervisores', 'area_legal', 'administradores', 'personalizado'].map((role) => {
+                {['super_admin', 'gerencia', 'sistemas', 'supervisores', 'area_legal', 'area_contable', 'administradores', 'personalizado'].map((role) => {
                   const roleInfo = getRoleAccessInfo(role);
                   return (
                     <div key={role} className="border-b border-gray-100 pb-3 last:border-0">
@@ -686,6 +703,21 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
             {editUser?.role === 'super_admin' && (
               <p className="text-xs text-amber-600 mt-1">🔒 Campo protegido - Super Admin</p>
             )}
+          </FormField>
+
+          <FormField label="Nombre de Usuario" error={errors.username}>
+            <FormInput 
+              type="text" 
+              name="username" 
+              value={formData.username} 
+              onChange={(e) => {
+                const val = e.target.value.toLowerCase().replace(/\s/g, '_');
+                setFormData(prev => ({ ...prev, username: val }));
+              }}
+              placeholder="ej: juan_perez"
+              error={errors.username}
+              disabled={editUser?.role === 'super_admin'}
+            />
           </FormField>
 
           <FormField label="Email Corporativo" required error={errors.email}>
@@ -751,6 +783,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
               <option value="sistemas">Sistemas (Acceso Técnico)</option>
               <option value="supervisores">Supervisores (Operaciones)</option>
               <option value="area_legal">Área Legal (Cumplimiento y Flotas)</option>
+              <option value="area_contable">Área Contable (Gestión Contable)</option>
               <option value="administradores">Administradores (Gestión)</option>
               <option value="personalizado">Personalizado (Permisos Específicos)</option>
             </FormSelect>

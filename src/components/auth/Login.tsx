@@ -16,6 +16,7 @@ export default function Login() {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [registrationForm, setRegistrationForm] = useState({
     full_name: '',
+    username: '',
     email: '',
     dni: '',
     phone: '',
@@ -38,6 +39,8 @@ export default function Login() {
 
     try {
       const isEmail = emailOrDni.includes('@');
+      const isNumeric = /^\d+$/.test(emailOrDni);
+
       let query = supabase
         .from('users')
         .select('*')
@@ -46,8 +49,10 @@ export default function Login() {
 
       if (isEmail) {
         query = query.eq('email', emailOrDni);
-      } else {
+      } else if (isNumeric) {
         query = query.eq('dni', emailOrDni);
+      } else {
+        query = query.eq('username', emailOrDni);
       }
 
       const { data: userData, error: userError } = await query.single();
@@ -99,6 +104,7 @@ export default function Login() {
       setShowRegistrationModal(false);
       setRegistrationForm({
         full_name: '',
+        username: '',
         email: '',
         dni: '',
         phone: '',
@@ -197,7 +203,7 @@ export default function Login() {
             <form onSubmit={handleLogin} className="space-y-5">
               <div className="group">
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                  Identificación (Email o DNI)
+                  Email, DNI o Nombre de usuario
                 </label>
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors">
@@ -209,7 +215,7 @@ export default function Login() {
                     value={emailOrDni}
                     onChange={(e) => setEmailOrDni(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
-                    placeholder="email@ejemplo.com"
+                    placeholder="email@ejemplo.com / 12345678 / mi_usuario"
                   />
                 </div>
               </div>
@@ -337,6 +343,23 @@ export default function Login() {
 
                 <div className="group">
                   <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
+                    Nombre de Usuario
+                  </label>
+                  <input
+                    type="text"
+                    value={registrationForm.username}
+                    onChange={(e) => {
+                      if (mountedRef.current) {
+                        setRegistrationForm({ ...registrationForm, username: e.target.value.toLowerCase().replace(/\s/g, '_') });
+                      }
+                    }}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
+                    placeholder="ej: juan_perez"
+                  />
+                </div>
+
+                <div className="group">
+                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
                     Email
                   </label>
                   <input
@@ -406,6 +429,7 @@ export default function Login() {
                     <option value="administradores">Administrador</option>
                     <option value="supervisores">Supervisor</option>
                     <option value="area_legal">Área Legal</option>
+                    <option value="area_contable">Área Contable</option>
                     <option value="sistemas">Sistemas</option>
                     <option value="gerencia">Gerencia</option>
                     <option value="personalizado">Personalizado</option>
