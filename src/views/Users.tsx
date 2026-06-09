@@ -57,13 +57,7 @@ export default function Users() {
     setShowForm(true);
   };
 
-  const [stats, setStats] = useState({
-    total: 0,
-    active: 0,
-    inactive: 0,
-    byRole: {} as Record<string, number>,
-    recentlyAdded: 0
-  });
+
 
   useEffect(() => {
     fetchData();
@@ -152,26 +146,13 @@ export default function Users() {
       if (error) throw error;
       if (data) {
         setUsers(data as User[]);
-        calculateStats(data as User[]);
       }
     } catch (err: any) {
       console.error('Error al cargar usuarios:', err);
     }
   };
 
-  const calculateStats = (usersData: User[]) => {
-    const byRole: Record<string, number> = {};
-    let active = 0, inactive = 0, recentlyAdded = 0;
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    usersData.forEach(user => {
-      byRole[user.role] = (byRole[user.role] || 0) + 1;
-      if (user.status === 'active') active++;
-      else inactive++;
-      if (new Date(user.created_at) > oneWeekAgo) recentlyAdded++;
-    });
-    setStats({ total: usersData.length, active, inactive, byRole, recentlyAdded });
-  };
+
 
   const getRoleIcon = (role: string) => {
     switch (role) {

@@ -1413,7 +1413,15 @@ export default function Cameras({ subview }: CamerasProps) {
                 >
                   Cerrar
                 </button>
-                <div className="hidden sm:flex items-center gap-2 order-2 sm:order-1">
+                {canEdit() && (
+                  <button
+                    onClick={() => { setShowDetails(false); openEdit(selectedCamera); }}
+                    className="w-full sm:w-auto order-3 sm:order-3 px-6 py-3 sm:py-2.5 min-h-[44px] bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Edit size={14} /> Editar
+                  </button>
+                )}
+                <div className="hidden sm:flex items-center gap-2 order-2 sm:order-1 mr-auto">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sistema GS</span>
                 </div>

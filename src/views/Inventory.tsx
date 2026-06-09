@@ -254,26 +254,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     }
   };
 
-  const handleBulkStatusUpdate = async (newStatus: string) => {
-    if (selectedIds.size === 0 || !newStatus) return;
-    if (window.confirm(`¿Cambiar el estado de ${selectedIds.size} activos a "${statusMap[newStatus]?.label || newStatus}"?`)) {
-      setLoading(true);
-      try {
-        const { error } = await supabase
-          .from('assets')
-          .update({ status: newStatus, updated_at: new Date().toISOString() })
-          .in('id', Array.from(selectedIds));
 
-        if (error) throw error;
-        setSelectedIds(new Set());
-        await fetchAssets();
-      } catch (err: any) {
-        alert('Error: ' + err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
 
   const paginatedAssets = assets;
   const totalPages = Math.ceil(totalCount / itemsPerPage);
@@ -351,8 +332,6 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
 
   // Map moved to top of file
 
-  const currentCategoryName = categoryFilter ? pathCategoryMap[categoryFilter.replace('inventory-', '')] : 'General';
-  const currentSubcatLabel = subcategoryFilter ? (Object.keys(subcategorySlugMap).find(k => k === subcategoryFilter) ? subcategoryFilter.charAt(0).toUpperCase() + subcategoryFilter.slice(1) : '') : '';
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">

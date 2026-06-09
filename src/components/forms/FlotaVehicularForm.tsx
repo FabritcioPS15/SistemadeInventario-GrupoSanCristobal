@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Car } from 'lucide-react';
 import { supabase, Location, VehicleType } from '../../lib/supabase';
-import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from './BaseForm';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect } from './BaseForm';
 
 type FlotaVehicularFormProps = {
   onClose: () => void;
@@ -341,23 +341,6 @@ export default function FlotaVehicularForm({ onClose, onSave, editVehicle }: Flo
             />
           </FormField>
         </div>
-      </FormSection>
-
-      {/* Section: Mantenimiento */}
-      <FormSection title="Mantenimiento y Notas" color="amber">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <FormField label="Último Mantenimiento" error={errors.fecha_ultimo_mantenimiento}>
-            <FormInput
-              type="date"
-              name="fecha_ultimo_mantenimiento"
-              value={formData.fecha_ultimo_mantenimiento}
-              onChange={handleChange}
-              error={errors.fecha_ultimo_mantenimiento}
-            />
-          </FormField>
-        </div>
-
-
       </FormSection>
     </BaseForm>
   );

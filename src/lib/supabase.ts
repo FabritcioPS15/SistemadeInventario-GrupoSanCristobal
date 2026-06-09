@@ -532,9 +532,13 @@ export type Server = {
 
   anydesk_id?: string;
 
+  anydesk_password?: string;
+
   username?: string; // Mantener por compatibilidad o como usuario principal
 
   password?: string; // Mantener por compatibilidad o como contraseña principal
+
+  backup_scanner_password?: string;
 
   windows_credentials?: WindowsCredential[];
 

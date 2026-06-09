@@ -581,6 +581,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'mtc-view', 'mtc-edit',
         'audit-view', 'audit-export'
       ],
+      
       // Administradores: Acceso limitado - solo visualización y gestión básica
       administradores: [
         'dashboard-view',

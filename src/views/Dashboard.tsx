@@ -15,6 +15,9 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { format, formatDistanceToNow, addMonths, differenceInDays } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface QuickStats {
   totalAssets: number;
@@ -45,6 +48,8 @@ interface QuickStats {
     avatar?: string;
     role: string;
   }>;
+  nextSutranVisit: { days: number; date: string; location: string } | null;
+  recentNotifications: Array<any>;
 }
 
 export default function Dashboard() {
@@ -70,8 +75,12 @@ export default function Dashboard() {
       citv: { expired: 0, warning: 0, nextExpiring: [] },
       poliza: { expired: 0, warning: 0, nextExpiring: [] }
     },
-    recentTicketParticipants: []
+    recentTicketParticipants: [],
+    nextSutranVisit: null,
+    recentNotifications: []
   });
+
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,17 +122,7 @@ export default function Dashboard() {
       setError(null);
 
       // Fetch all stats in parallel
-      const [
-        { count: totalAssets },
-        { count: activeAssets },
-        { count: totalCameras },
-        { count: activeCameras },
-        { count: totalTickets },
-        { data: tickets },
-        { data: vehicles },
-        { data: schoolsData },
-        { data: recentTicketsData }
-      ] = await Promise.all([
+      const promiseResults = await Promise.all([
         supabase.from('assets').select('id', { count: 'exact', head: true }),
         supabase.from('assets').select('id', { count: 'exact', head: true }).eq('status', 'active'),
         supabase.from('cameras').select('id', { count: 'exact', head: true }),
@@ -139,8 +138,68 @@ export default function Dashboard() {
             attendant:assigned_to(id, full_name, avatar_url)
           `)
           .order('created_at', { ascending: false })
-          .limit(10)
+          .limit(10),
+        supabase.from('sutran_visits')
+          .select('visit_date, location_name')
+          .order('visit_date', { ascending: false }),
+        user ? supabase.from('notifications')
+          .select('*')
+          .eq('target_role', user.role)
+          .eq('read', false)
+          .order('created_at', { ascending: false })
+          .limit(3) : Promise.resolve({ data: [] })
       ]);
+
+      const totalAssets = promiseResults[0].count;
+      const activeAssets = promiseResults[1].count;
+      const totalCameras = promiseResults[2].count;
+      const activeCameras = promiseResults[3].count;
+      const totalTickets = promiseResults[4].count;
+      const tickets = promiseResults[5].data;
+      const vehicles = promiseResults[6].data;
+      const schoolsData = promiseResults[7].data;
+      const recentTicketsData = promiseResults[8].data;
+
+      // Extract Sutran visit info
+      const allVisits = promiseResults[9]?.data || [];
+      let nextSutranVisit = null;
+      
+      if (allVisits.length > 0) {
+        const latestVisits = new Map<string, string>();
+        allVisits.forEach((visit: any) => {
+          if (visit.location_name && !latestVisits.has(visit.location_name)) {
+            latestVisits.set(visit.location_name, visit.visit_date);
+          }
+        });
+
+        const today = new Date();
+        let closestLocation = '';
+        let minDaysLeft = Infinity;
+        let expectedDate = '';
+
+        latestVisits.forEach((lastVisitDateStr, location_name) => {
+          const lastVisitDate = new Date(lastVisitDateStr);
+          const expectedNextVisit = addMonths(lastVisitDate, 3);
+          const daysDiff = differenceInDays(expectedNextVisit, today);
+
+          if (daysDiff < minDaysLeft) {
+            minDaysLeft = daysDiff;
+            closestLocation = location_name;
+            expectedDate = expectedNextVisit.toISOString();
+          }
+        });
+
+        if (closestLocation) {
+          nextSutranVisit = {
+            days: minDaysLeft,
+            date: expectedDate,
+            location: closestLocation
+          };
+        }
+      }
+
+      // Extract notifications
+      const notificationsData = promiseResults[10]?.data || [];
 
       // Process tickets
       const openTickets = tickets?.filter(t => t.status === 'open').length || 0;
@@ -258,7 +317,9 @@ export default function Dashboard() {
         expiredDocuments,
         warningDocuments,
         vehiclesByDocument,
-        recentTicketParticipants
+        recentTicketParticipants,
+        nextSutranVisit,
+        recentNotifications: notificationsData
       });
 
     } catch (err) {
@@ -716,23 +777,54 @@ export default function Dashboard() {
           </div>
 
         {/* Simplified SUTRAN Alert */}
-        <div className="bg-white shadow-sm border border-slate-200 rounded-none p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-50 border border-orange-100 rounded-none">
-                <AlertTriangle className="text-orange-600" size={20} />
+        {stats.nextSutranVisit && (
+          <div className="bg-white shadow-sm border border-slate-200 rounded-none p-4 cursor-pointer hover:border-[#002855] transition-all" onClick={() => navigate('/sutran')}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-none border ${stats.nextSutranVisit.days <= 5 ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
+                  <AlertTriangle className={stats.nextSutranVisit.days <= 5 ? 'text-red-600' : 'text-orange-600'} size={20} />
+                </div>
+                <div>
+                  <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#002855]">Próxima Visita SUTRAN</h3>
+                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Sede: {stats.nextSutranVisit.location}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#002855]">Próxima Visita SUTRAN</h3>
-                <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Estimación global</p>
+              <div className="text-right">
+                <div className={`text-lg font-black ${stats.nextSutranVisit.days <= 5 ? 'text-red-600 animate-pulse' : 'text-orange-600'}`}>
+                  {stats.nextSutranVisit.days < 0 
+                    ? `VENCIDO (hace ${Math.abs(stats.nextSutranVisit.days)} días)` 
+                    : `${stats.nextSutranVisit.days} ${stats.nextSutranVisit.days === 1 ? 'DÍA' : 'DÍAS'}`}
+                </div>
+                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                  ESTIMADO: {format(new Date(stats.nextSutranVisit.date), "dd MMM yyyy", { locale: es })}
+                </div>
               </div>
-            </div>
-            <div className="text-right">
-              <div className="text-lg font-black text-orange-600">15 DÍAS</div>
-              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Promedio restante</div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Notificaciones Importantes */}
+        {stats.recentNotifications && stats.recentNotifications.length > 0 && (
+          <div className="bg-white shadow-sm border border-slate-200 rounded-none p-4">
+            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#002855] mb-3">Notificaciones Importantes</h3>
+            <div className="space-y-3">
+              {stats.recentNotifications.map((notif: any) => (
+                <div key={notif.id} className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-100">
+                  <div className="p-1.5 bg-blue-100 text-blue-600 rounded mt-0.5">
+                    <AlertCircle size={14} />
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">{notif.title}</h4>
+                    <p className="text-[10px] text-slate-600">{notif.message}</p>
+                    <span className="text-[9px] font-bold text-slate-400 mt-1 block">
+                      {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: es })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Alerts Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

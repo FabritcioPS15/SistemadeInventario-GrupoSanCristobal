@@ -274,7 +274,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                   {filteredItems.map(item => {
                     const Icon = item.icon;
                     const isActive = isPathActive(item.path);
-                    const isHovered = hoveredItem === item.id;
                     const isSubmenuOpen = openSubmenus.has(item.id);
 
                     return (

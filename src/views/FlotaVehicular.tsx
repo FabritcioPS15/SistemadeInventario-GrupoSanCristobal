@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, LayoutGrid, List, MapPin, Search, ChevronDown, AlertTriangle, ArrowUpDown, Calendar, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit, Trash2, LayoutGrid, List, MapPin, Search, ChevronDown, AlertTriangle, ArrowUpDown, Calendar, CheckCircle2, Eye, X, Car } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -10,6 +10,15 @@ import FlotaVehicularForm from '../components/forms/FlotaVehicularForm';
 import Pagination from '../components/ui/Pagination';
 import { supabase, Location } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import DetailModal, {
+  DetailModalHeader,
+  DetailModalBody,
+  DetailModalFooter,
+  DetailModalGrid,
+  DetailModalSection,
+  DetailModalCard,
+  DetailModalRow,
+} from '../components/ui/DetailModal';
 
 type Vehiculo = {
   id: string;
@@ -51,6 +60,8 @@ export default function FlotaVehicular() {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [showVencimientoMenu, setShowVencimientoMenu] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedVehiculo, setSelectedVehiculo] = useState<Vehiculo | undefined>();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const vencimientoMenuRef = useRef<HTMLDivElement>(null);
 
@@ -113,7 +124,7 @@ export default function FlotaVehicular() {
   const getDaysUntil = (fecha?: string): number => {
     if (!fecha) return Infinity;
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const d = new Date(fecha); d.setHours(0, 0, 0, 0);
+    const d = new Date(fecha + 'T00:00:00'); d.setHours(0, 0, 0, 0);
     return Math.ceil((d.getTime() - today.getTime()) / 86400000);
   };
 
@@ -192,11 +203,11 @@ export default function FlotaVehicular() {
           placa: v.placa,
           vehiculo: `${v.marca} ${v.modelo}`,
           sede: getEscuelaNombre(v.ubicacion_actual),
-          citv: v.citv_vencimiento ? new Date(v.citv_vencimiento).toLocaleDateString('es-PE') : '—',
+          citv: v.citv_vencimiento ? new Date(v.citv_vencimiento + 'T00:00:00').toLocaleDateString('es-PE') : '—',
           citv_estado: estadoDoc(v.citv_vencimiento),
-          soat: v.soat_vencimiento ? new Date(v.soat_vencimiento).toLocaleDateString('es-PE') : '—',
+          soat: v.soat_vencimiento ? new Date(v.soat_vencimiento + 'T00:00:00').toLocaleDateString('es-PE') : '—',
           soat_estado: estadoDoc(v.soat_vencimiento),
-          poliza: v.poliza_vencimiento ? new Date(v.poliza_vencimiento).toLocaleDateString('es-PE') : '—',
+          poliza: v.poliza_vencimiento ? new Date(v.poliza_vencimiento + 'T00:00:00').toLocaleDateString('es-PE') : '—',
           poliza_estado: estadoDoc(v.poliza_vencimiento),
         });
 
@@ -242,7 +253,7 @@ export default function FlotaVehicular() {
       doc.text(`Generado: ${new Date().toLocaleDateString('es-PE')} | Vehículos con documentos vencidos o por vencer en 30 días`, 14, 25);
 
       const tableData = reporte.map(v => {
-        const fmtDate = (f?: string) => f ? new Date(f).toLocaleDateString('es-PE') : '—';
+        const fmtDate = (f?: string) => f ? new Date(f + 'T00:00:00').toLocaleDateString('es-PE') : '—';
         const fmtDias = (f?: string) => {
           if (!f) return '—';
           const d = getDaysUntil(f);
@@ -326,7 +337,7 @@ export default function FlotaVehicular() {
     }
 
     const daysLeft = getDaysUntil(fecha);
-    const dateStr = new Date(fecha).toLocaleDateString('es-PE');
+    const dateStr = new Date(fecha + 'T00:00:00').toLocaleDateString('es-PE');
 
     if (daysLeft <= 0) {
       return (
@@ -392,6 +403,11 @@ export default function FlotaVehicular() {
         />
       </div>
     );
+  };
+
+  const handleView = (v: Vehiculo) => {
+    setSelectedVehiculo(v);
+    setShowDetails(true);
   };
 
   const handleEdit = (v: Vehiculo) => {
@@ -490,7 +506,7 @@ export default function FlotaVehicular() {
       });
 
       // Formato fecha
-      const fmtDate = (f?: string) => f ? new Date(f).toLocaleDateString('es-PE') : '—';
+      const fmtDate = (f?: string) => f ? new Date(f + 'T00:00:00').toLocaleDateString('es-PE') : '—';
 
       // 4. Agregar Datos
       sortedData.forEach((v, index) => {
@@ -627,7 +643,7 @@ export default function FlotaVehicular() {
 
       // 2. Preparar Datos de la Tabla
       const tableData = sortedData.map(v => {
-        const fmtDate = (f?: string) => f ? new Date(f).toLocaleDateString('es-PE') : '—';
+        const fmtDate = (f?: string) => f ? new Date(f + 'T00:00:00').toLocaleDateString('es-PE') : '—';
         return [
           v.placa,
           `${v.marca} ${v.modelo} ${v.año ? `(${v.año})` : ''} ${v.color ? `[${v.color}]` : ''}`,
@@ -950,7 +966,7 @@ export default function FlotaVehicular() {
                         <tr 
                           key={v.id} 
                           className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20"
-                          onDoubleClick={() => handleEdit(v)}
+                          onClick={() => handleView(v)}
                         >
                           <td className="px-6 py-4 font-bold text-left">
                             <div className="flex items-center gap-4">
@@ -982,18 +998,25 @@ export default function FlotaVehicular() {
                             {renderDocumentStatus(v.poliza_vencimiento)}
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150">
+                            <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
+                              <button 
+                                onClick={() => handleView(v)} 
+                                className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                                title="Ver Detalle"
+                              >
+                                <Eye size={14} />
+                              </button>
                               {canEdit() && (
                                 <>
                                   <button 
-                                    onClick={(e) => { e.stopPropagation(); handleEdit(v); }} 
+                                    onClick={() => handleEdit(v)} 
                                     className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
                                     title="Editar Unidad"
                                   >
                                     <Edit size={14} />
                                   </button>
                                   <button 
-                                    onClick={(e) => { e.stopPropagation(); handleDelete(v.id); }} 
+                                    onClick={() => handleDelete(v.id)} 
                                     className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
                                     title="Eliminar Unidad"
                                   >
@@ -1058,9 +1081,12 @@ export default function FlotaVehicular() {
                       </div>
 
                       <div className="mt-auto flex gap-2 pt-4 border-t border-slate-50">
+                        <button onClick={() => handleView(v)} className="flex-1 flex items-center justify-center gap-2 py-2 text-[10px] font-black uppercase tracking-widest bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm">
+                          <Eye size={14} /> Detalle
+                        </button>
                         {canEdit() && (
                           <>
-                            <button onClick={() => handleEdit(v)} className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm">Editar</button>
+                            <button onClick={() => handleEdit(v)} className="p-2 text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm"><Edit size={16} /></button>
                             <button onClick={() => handleDelete(v.id)} className="p-2 text-rose-500 border border-rose-100 rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-sm"><Trash2 size={16} /></button>
                           </>
                         )}
@@ -1079,6 +1105,127 @@ export default function FlotaVehicular() {
           </div>
         )}
       </div>
+      {showDetails && selectedVehiculo && (() => {
+        const fmtLocal = (f?: string) => f ? new Date(f + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
+        const docCard = (title: string, vencimiento?: string) => {
+          const daysLeft = vencimiento ? getDaysUntil(vencimiento) : null;
+          const borderColor = daysLeft === null ? 'border-slate-200' : daysLeft <= 0 ? 'border-rose-300' : daysLeft <= 30 ? 'border-amber-300' : 'border-emerald-200';
+          const headerBg = daysLeft === null ? 'bg-slate-100' : daysLeft <= 0 ? 'bg-rose-50' : daysLeft <= 30 ? 'bg-amber-50' : 'bg-emerald-50';
+          return (
+            <div className={`border ${borderColor} bg-white overflow-hidden`}>
+              <div className={`${headerBg} px-3 py-2 flex items-center justify-between border-b ${borderColor}`}>
+                <span className="text-[9px] sm:text-[10px] font-black text-[#002855] uppercase tracking-widest">{title}</span>
+                {daysLeft !== null && renderDocumentStatus(vencimiento)}
+              </div>
+              <div className="px-3 py-2.5">
+                <div>
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Vencimiento</span>
+                  <span className="text-[10px] sm:text-[11px] font-black text-slate-700">{fmtLocal(vencimiento) || '—'}</span>
+                </div>
+              </div>
+            </div>
+          );
+        };
+        return (
+        <DetailModal maxWidth="5xl" onClose={() => setShowDetails(false)} closeOnBackdrop>
+          <DetailModalHeader>
+            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+            <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                <Car size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                  {selectedVehiculo.marca} {selectedVehiculo.modelo} {selectedVehiculo.año ? `(${selectedVehiculo.año})` : ''}
+                </h2>
+                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                  <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
+                  <span className="line-clamp-2 sm:truncate">{getEscuelaNombre(selectedVehiculo.ubicacion_actual)}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {renderPlacaBadge(selectedVehiculo.placa)}
+            </div>
+            <button
+              onClick={() => setShowDetails(false)}
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
+              aria-label="Cerrar detalle"
+            >
+              <X size={22} />
+            </button>
+          </DetailModalHeader>
+
+          <DetailModalBody>
+            {/* Quick info strip */}
+            <div className="grid grid-cols-3 gap-px bg-slate-200 border-b border-slate-200">
+              <div className="bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado</span>
+                <span className={`inline-block px-2.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border rounded-full ${statusColors[selectedVehiculo.estado]}`}>
+                  {selectedVehiculo.estado === 'en_proceso' ? 'En Proceso' : selectedVehiculo.estado === 'activa' ? 'Activa' : 'Inactiva'}
+                </span>
+              </div>
+              <div className="bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Marca / Modelo</span>
+                <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase leading-tight">{selectedVehiculo.marca} {selectedVehiculo.modelo}</span>
+              </div>
+              <div className="bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center">
+                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Color / Año</span>
+                <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">{selectedVehiculo.color || '—'} / {selectedVehiculo.año || '—'}</span>
+              </div>
+            </div>
+
+            {/* Documents section */}
+            <div className="p-4 sm:p-6 space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <Calendar size={14} className="text-[#002855]" />
+                <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Documentación Vehicular</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {docCard('CITV', selectedVehiculo.citv_vencimiento)}
+                {docCard('SOAT', selectedVehiculo.soat_vencimiento)}
+                {docCard('Póliza de Seguros', selectedVehiculo.poliza_vencimiento)}
+                {docCard('Contrato de Alquiler', selectedVehiculo.contrato_alquiler_vencimiento)}
+              </div>
+
+              {selectedVehiculo.notas && (
+                <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100 mt-2">
+                  <span className="text-[8px] sm:text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                    📝 Notas / Observaciones
+                  </span>
+                  <p className="text-[10px] sm:text-[11px] font-medium text-amber-900 leading-relaxed">
+                    {selectedVehiculo.notas}
+                  </p>
+                </div>
+              )}
+            </div>
+          </DetailModalBody>
+
+          <DetailModalFooter>
+            <button
+              onClick={() => setShowDetails(false)}
+              className="w-full sm:w-auto order-1 sm:order-2 px-6 py-3 sm:py-2.5 min-h-[44px] bg-[#002855] sm:bg-slate-200 text-white sm:text-slate-700 text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 sm:hover:bg-slate-300 transition-all"
+            >
+              Cerrar
+            </button>
+            {canEdit() && (
+              <button
+                onClick={() => { setShowDetails(false); handleEdit(selectedVehiculo); }}
+                className="w-full sm:w-auto order-3 sm:order-3 px-6 py-3 sm:py-2.5 min-h-[44px] bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+              >
+                <Edit size={14} /> Editar
+              </button>
+            )}
+            <div className="hidden sm:flex items-center gap-2 order-2 sm:order-1 mr-auto">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sistema GS</span>
+            </div>
+          </DetailModalFooter>
+        </DetailModal>
+        );
+      })()}
+
       <VehicleImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onSuccess={fetchVehiculos} locations={schools} />
     </div>
   );
