@@ -1,76 +1,75 @@
 import { useState, useEffect } from 'react';
-
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 
-import Sidebar from './components/layout/Sidebar';
+import Sidebar from './app/layouts/Sidebar';
 
-import TopHeader from './components/layout/TopHeader';
+import TopHeader from './app/layouts/TopHeader';
 
 
 
-import Dashboard from './views/Dashboard';
+import Dashboard from './modules/dashboard/pages/DashboardPage';
 
-import Inventory from './views/Inventory';
+import Inventory from './modules/inventory/pages/InventoryPage';
 
-import Maintenance from './views/Maintenance';
+import Maintenance from './modules/maintenance/pages/MaintenancePage';
 
-import Enviados from './views/Enviados';
+import Enviados from './modules/assets/pages/EnviadosPage';
 
-import Sutran from './views/Sutran';
+import Sutran from './modules/sutran/pages/SutranPage';
 
-import SutranFutureVisits from './views/SutranFutureVisits';
+import SutranFutureVisits from './modules/sutran/pages/SutranFutureVisitsPage';
 
-import Sedes from './views/Sedes';
+import Sedes from './modules/assets/pages/SedesPage';
 
-import MTCAccesos from './views/MTCAccesos';
+import MTCAccesos from './modules/assets/pages/MTCAccesosPage';
 
-import Users from './views/Users';
+import Users from './modules/users/pages/UsersPage';
 
-import Audit from './views/Audit';
+import Audit from './modules/audits/pages/AuditPage';
 
-import SystemIntegrity from './components/SystemIntegrity';
+import SystemIntegrity from './shared/components/SystemIntegrity';
 
-import DiagnosticPanel from './components/DiagnosticPanel';
+import DiagnosticPanel from './shared/components/DiagnosticPanel';
 
-import ConnectionTest from './components/ConnectionTest';
+import ConnectionTest from './shared/components/ConnectionTest';
 
-import QuickDiagnostic from './components/QuickDiagnostic';
+import QuickDiagnostic from './shared/components/QuickDiagnostic';
 
-import Cameras from './views/Cameras';
+import Cameras from './modules/cameras/pages/CamerasPage';
 
-import Servers from './views/Servers';
+import Servers from './modules/servers/pages/ServersPage';
 
-import FlotaVehicular from './views/FlotaVehicular';
+import FlotaVehicular from './modules/vehicles/pages/FlotaVehicularPage';
 
-import SpareParts from './views/SpareParts';
+import SpareParts from './modules/assets/pages/SparePartsPage';
 
-import TitulosHabilitantes from './views/TitulosHabilitantes';
+import TitulosHabilitantes from './modules/titulos-habilitantes/pages/TitulosHabilitantesPage';
 
-import PlanosDefensaCivil from './views/PlanosDefensaCivil';
+import PlanosDefensaCivil from './modules/planos-defensa-civil/pages/PlanosDefensaCivilPage';
 
-import { useAuth } from './contexts/AuthContext';
+import { useAuth } from './app/providers/AuthContext';
 
-import { LayoutProvider } from './contexts/LayoutContext';
+import { LayoutProvider } from './app/providers/LayoutContext';
 
-import Login from './components/auth/Login';
+import Login from './modules/auth/components/Login';
 
-import PasswordSetup from './components/auth/PasswordSetup';
+import PasswordSetup from './modules/auth/components/PasswordSetup';
 
-import Checklist from './views/Checklist';
+import Checklist from './modules/checklist/pages/ChecklistPage';
 
-import ChecklistInteractive from './views/ChecklistInteractive';
+import ChecklistInteractive from './modules/checklist/pages/ChecklistInteractivePage';
 
-import ChecklistDetail from './views/ChecklistDetail';
+import ChecklistDetail from './modules/checklist/pages/ChecklistDetailPage';
 
-import Vacations from './views/Vacations';
+import Vacations from './modules/users/pages/VacationsPage';
 
-import Tickets from './views/Tickets';
+import Tickets from './modules/tickets/pages/TicketsPage';
 
-import TicketHistory from './views/TicketHistory';
+import TicketHistory from './modules/tickets/pages/TicketHistoryPage';
 
-import Painpoints from './views/Painpoints';
+import Painpoints from './modules/tickets/pages/PainpointsPage';
 
-import TicketDetail from './views/TicketDetail';
+import TicketDetail from './modules/tickets/pages/TicketDetailPage';
 
 
 
@@ -298,7 +297,7 @@ function AppContent() {
 
     <LayoutProvider sidebarCollapsed={sidebarCollapsed}>
 
-    <div className="min-h-screen bg-[#f8f9fc] flex overflow-x-hidden">
+      <div className="min-h-screen bg-[#f8f9fc] flex overflow-x-hidden">
 
       <Sidebar
 
@@ -381,67 +380,36 @@ function AppContent() {
 
 
             {/* Enviados */}
-
             <Route path="/sent" element={<ProtectedRoute permission="sent"><Enviados /></ProtectedRoute>} />
-
             <Route path="/sent/all" element={<ProtectedRoute permission="sent-all"><Enviados /></ProtectedRoute>} />
-
             <Route path="/sent/:location" element={<ProtectedRoute><EnviadosWrapper /></ProtectedRoute>} />
 
-
-
             {/* Checklist */}
-
             <Route path="/checklist" element={<ProtectedRoute permission="checklist"><Checklist /></ProtectedRoute>} />
-
             <Route path="/checklist/:type" element={<ProtectedRoute><ChecklistWrapper /></ProtectedRoute>} />
-
             <Route path="/checklist/:type/:id" element={<ProtectedRoute><ChecklistDetail /></ProtectedRoute>} />
-
             <Route path="/checklist-interactive" element={<ProtectedRoute permission="checklist-interactive"><ChecklistInteractive /></ProtectedRoute>} />
 
-
-
             {/* Vacaciones */}
-
             <Route path="/vacations" element={<ProtectedRoute permission="vacations"><Vacations /></ProtectedRoute>} />
 
-
-
             {/* Otras Rutas */}
-
             <Route path="/sutran" element={<ProtectedRoute permission="sutran"><Sutran /></ProtectedRoute>} />
-
             <Route path="/sutran/future-visits" element={<ProtectedRoute permission="sutran"><SutranFutureVisits /></ProtectedRoute>} />
-
             <Route path="/locations" element={<ProtectedRoute permission="locations"><Sedes /></ProtectedRoute>} />
-
             <Route path="/mtc" element={<ProtectedRoute permission="mtc"><MTCAccesos /></ProtectedRoute>} />
-
             <Route path="/users" element={<ProtectedRoute permission="users"><Users /></ProtectedRoute>} />
-
             <Route path="/servers" element={<ProtectedRoute permission="servers"><Servers /></ProtectedRoute>} />
-
             <Route path="/flota-vehicular" element={<ProtectedRoute permission="flota-vehicular"><FlotaVehicular /></ProtectedRoute>} />
-
             <Route path="/spare-parts" element={<ProtectedRoute permission="spare-parts"><SpareParts /></ProtectedRoute>} />
-
             <Route path="/titulos-habilitantes" element={<ProtectedRoute permission="titulos-habilitantes"><TitulosHabilitantes /></ProtectedRoute>} />
-
             <Route path="/planos-defensa-civil" element={<ProtectedRoute permission="planos-defensa-civil"><PlanosDefensaCivil /></ProtectedRoute>} />
-
             <Route path="/audit" element={<ProtectedRoute permission="audit"><Audit /></ProtectedRoute>} />
-
             <Route path="/integrity" element={<ProtectedRoute permission="integrity"><SystemIntegrity /></ProtectedRoute>} />
-
             <Route path="/diagnostic" element={<ProtectedRoute permission="diagnostic"><DiagnosticPanel /></ProtectedRoute>} />
-
             <Route path="/connection-test" element={<ProtectedRoute permission="connection-test"><ConnectionTest /></ProtectedRoute>} />
-
             <Route path="/quick-diagnostic" element={<ProtectedRoute permission="quick-diagnostic"><QuickDiagnostic /></ProtectedRoute>} />
-
             <Route path="/tickets" element={<ProtectedRoute permission="tickets"><Tickets /></ProtectedRoute>} />
-
             <Route path="/tickets/:view" element={<ProtectedRoute permission="tickets"><Tickets /></ProtectedRoute>} />
 
             <Route path="/tickets/history" element={<ProtectedRoute permission="tickets"><TicketHistory /></ProtectedRoute>} />
@@ -472,13 +440,5 @@ function AppContent() {
 
 
 
-function App() {
-
-  return <AppContent />;
-
-}
-
-
-
-export default App;
+export default AppContent;
 
