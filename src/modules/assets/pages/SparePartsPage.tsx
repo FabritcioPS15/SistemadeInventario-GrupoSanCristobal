@@ -9,6 +9,16 @@ import { useHeaderVisible } from '../../../shared/hooks/useHeaderVisible';
 import { supabase } from '../../../shared/services/supabase';
 import SparePartForm from '../forms/SparePartForm';
 import { useAuth } from '../../../app/providers/AuthContext';
+import DetailModal, {
+  DetailModalHeader,
+  DetailModalBody,
+  StandardModalFooter,
+  DetailModalGrid,
+  DetailModalSection,
+  DetailModalCard,
+  DetailModalRow,
+} from '../../../shared/components/ui/DetailModal';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type SparePart = {
   id: string;
@@ -29,11 +39,14 @@ type SparePart = {
 
 export default function SpareParts() {
   const { canEdit } = useAuth();
+  const { confirm, error: notifyError } = useNotify();
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingPart, setEditingPart] = useState<SparePart | undefined>(undefined);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedPart, setSelectedPart] = useState<SparePart | undefined>(undefined);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -147,14 +160,15 @@ export default function SpareParts() {
   const categories = ['all', ...new Set(spareParts.map(part => part.category).filter(Boolean))];
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('¿Está seguro de que desea eliminar este repuesto?')) return;
+    const confirmed = await confirm('¿Está seguro de que desea eliminar este repuesto?', 'Eliminar Repuesto');
+    if (!confirmed) return;
     try {
       const { error } = await supabase.from('spare_parts').delete().eq('id', id);
       if (error) throw error;
       fetchData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting:', error);
-      alert('Error al eliminar');
+      notifyError('Error al eliminar: ' + error.message);
     }
   };
 
@@ -419,7 +433,7 @@ export default function SpareParts() {
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredParts.map((part) => (
-              <div key={part.id} className={`bg-white rounded-3xl border ${part.quantity <= part.min_quantity ? 'border-amber-200 bg-amber-50/10' : 'border-slate-100'} hover:shadow-xl transition-all group p-6`}>
+              <div key={part.id} className={`bg-white rounded-3xl border ${part.quantity <= part.min_quantity ? 'border-amber-200 bg-amber-50/10' : 'border-slate-100'} hover:shadow-xl transition-all group p-6 cursor-pointer`} onClick={() => { setSelectedPart(part); setShowDetails(true); }}>
                 <div className="flex items-start justify-between mb-4">
                   <div className="bg-slate-50 p-3 rounded-2xl text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
                     <Package size={24} />
@@ -492,7 +506,7 @@ export default function SpareParts() {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredParts.map((part) => (
-                    <tr key={part.id} className={`hover:bg-blue-50/30 transition-colors group ${part.quantity <= part.min_quantity ? 'bg-amber-50/20' : ''}`}>
+                    <tr key={part.id} className={`hover:bg-blue-50/30 transition-colors group cursor-pointer ${part.quantity <= part.min_quantity ? 'bg-amber-50/20' : ''}`} onClick={() => { setSelectedPart(part); setShowDetails(true); }}>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="bg-slate-50 p-2 rounded-lg text-slate-400">
@@ -551,6 +565,115 @@ export default function SpareParts() {
           }}
           editRecord={editingPart}
         />
+      )}
+
+      {showDetails && selectedPart && (
+        <DetailModal maxWidth="5xl" onClose={() => setShowDetails(false)} closeOnBackdrop>
+          <DetailModalHeader>
+            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+            <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                <Package size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                  {selectedPart.name}
+                </h2>
+                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                  <span className="line-clamp-2 sm:truncate">{selectedPart.part_number}</span>
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowDetails(false)}
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
+              aria-label="Cerrar detalle"
+            >
+              <X size={22} />
+            </button>
+          </DetailModalHeader>
+
+          <DetailModalBody>
+            <DetailModalGrid layout="stack-until-xl">
+              <DetailModalSection title="Información del Producto">
+                <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                  <DetailModalRow label="Categoría">
+                    <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
+                      {selectedPart.category}
+                    </span>
+                  </DetailModalRow>
+                  <DetailModalRow label="Fabricante">
+                    <span className="text-[10px] sm:text-[11px] font-black text-slate-700 uppercase">
+                      {selectedPart.manufacturer || '—'}
+                    </span>
+                  </DetailModalRow>
+                  <DetailModalRow label="Proveedor">
+                    <span className="text-[10px] sm:text-[11px] font-black text-slate-700 uppercase">
+                      {selectedPart.supplier || '—'}
+                    </span>
+                  </DetailModalRow>
+                </DetailModalCard>
+
+                <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                  <DetailModalRow label="Stock Actual">
+                    <span className={`text-[10px] sm:text-[11px] font-black ${selectedPart.quantity <= selectedPart.min_quantity ? 'text-amber-600' : 'text-slate-700'}`}>
+                      {selectedPart.quantity} {selectedPart.unit}
+                    </span>
+                  </DetailModalRow>
+                  <DetailModalRow label="Stock Mínimo">
+                    <span className="text-[10px] sm:text-[11px] font-black text-slate-700">
+                      {selectedPart.min_quantity} {selectedPart.unit}
+                    </span>
+                  </DetailModalRow>
+                  <DetailModalRow label="Precio Unitario">
+                    <span className="text-[10px] sm:text-[11px] font-mono font-black text-slate-700">
+                      ${selectedPart.unit_price.toFixed(2)}
+                    </span>
+                  </DetailModalRow>
+                </DetailModalCard>
+              </DetailModalSection>
+
+              <DetailModalSection title="Ubicación">
+                <DetailModalCard>
+                  <DetailModalRow label="Ubicación">
+                    <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
+                      {selectedPart.location || '—'}
+                    </span>
+                  </DetailModalRow>
+                </DetailModalCard>
+              </DetailModalSection>
+
+              {selectedPart.description && (
+                <DetailModalSection title="Descripción">
+                  <DetailModalCard>
+                    <p className="text-[10px] sm:text-[11px] font-medium text-slate-700 leading-relaxed">
+                      {selectedPart.description}
+                    </p>
+                  </DetailModalCard>
+                </DetailModalSection>
+              )}
+
+              {selectedPart.quantity <= selectedPart.min_quantity && (
+                <DetailModalSection title="Alerta de Stock">
+                  <DetailModalCard className="bg-amber-50 border-amber-100">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle size={14} className="text-amber-600 shrink-0" />
+                      <p className="text-[10px] sm:text-[11px] font-black text-amber-900 uppercase tracking-tight">
+                        Abastecimiento Requerido
+                      </p>
+                    </div>
+                  </DetailModalCard>
+                </DetailModalSection>
+              )}
+            </DetailModalGrid>
+          </DetailModalBody>
+
+          <StandardModalFooter
+            onClose={() => setShowDetails(false)}
+            onEdit={canEdit() ? () => { setShowDetails(false); setEditingPart(selectedPart); setShowForm(true); } : undefined}
+            editLabel="Editar"
+          />
+        </DetailModal>
       )}
     </div>
   );

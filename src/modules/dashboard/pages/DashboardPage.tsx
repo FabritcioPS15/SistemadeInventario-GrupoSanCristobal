@@ -255,7 +255,6 @@ export default function Dashboard() {
       vehicles?.forEach((vehicle: any) => {
         // Solo procesar vehículos que tengan placa válida
         if (!vehicle.placa || vehicle.placa.trim() === '') {
-          console.log('Vehículo sin placa omitido:', vehicle);
           return;
         }
         

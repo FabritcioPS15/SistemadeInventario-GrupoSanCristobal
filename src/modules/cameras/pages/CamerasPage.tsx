@@ -15,7 +15,7 @@ import StoredDiskForm from '../forms/StoredDiskForm';
 import DetailModal, {
   DetailModalHeader,
   DetailModalBody,
-  DetailModalFooter,
+  StandardModalFooter,
   DetailModalGrid,
   DetailModalSection,
   DetailModalCard,
@@ -31,7 +31,7 @@ type CamerasProps = {
 
 export default function Cameras({ subview }: CamerasProps) {
   const { canEdit, user } = useAuth();
-  const { error: notifyError } = useNotify();
+  const { error: notifyError, confirm } = useNotify();
   const [loading, setLoading] = useState(true);
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -152,7 +152,8 @@ export default function Cameras({ subview }: CamerasProps) {
   };
 
   const handleDeleteDisk = async (id: string) => {
-    if (!confirm('¿Eliminar registro de disco almacenado?')) return;
+    const confirmed = await confirm('¿Eliminar registro de disco almacenado?', 'Eliminar Disco');
+    if (!confirmed) return;
     const { error } = await supabase.from('stored_disks').delete().eq('id', id);
     if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchStoredDisks();
@@ -169,9 +170,10 @@ export default function Cameras({ subview }: CamerasProps) {
   };
 
   const del = async (cam: Camera) => {
-    if (!confirm(`¿Eliminar cámara "${cam.name}"?`)) return;
+    const confirmed = await confirm(`¿Eliminar cámara "${cam.name}"?`, 'Eliminar Cámara');
+    if (!confirmed) return;
     const { error } = await supabase.from('cameras').delete().eq('id', cam.id);
-    if (error) return alert('Error al eliminar: ' + error.message);
+    if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchCameras();
   };
 
@@ -896,13 +898,6 @@ export default function Cameras({ subview }: CamerasProps) {
 
                     {/* Acciones mejoradas */}
                     <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
-                      <button
-                        onClick={() => handleView(cam)}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                        title="Ver detalles"
-                      >
-                        <Eye size={16} /> Ver
-                      </button>
                       {canEdit() && (
                         <>
                           <button
@@ -965,16 +960,16 @@ export default function Cameras({ subview }: CamerasProps) {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           <span className="text-[11px] font-black text-slate-500 uppercase tracking-tighter">{disk.brand || '—'}</span>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           <div className="flex flex-col">
                             <span className="text-sm font-black text-slate-600 uppercase">{disk.camera_name || '—'}</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{disk.location_name || 'SEDE N/A'}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           <div className="flex items-center gap-2">
                             <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded text-[10px] font-black text-blue-600 uppercase">
                               {disk.stored_from ? new Date(disk.stored_from).toLocaleDateString() : 'INICIO N/A'}
@@ -985,7 +980,7 @@ export default function Cameras({ subview }: CamerasProps) {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           <div className="flex flex-col gap-1">
                             <span className="text-[12px] font-black text-[#002855]">{disk.used_space_gb}/{disk.total_capacity_gb} GB</span>
                             <div className="w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
@@ -993,12 +988,12 @@ export default function Cameras({ subview }: CamerasProps) {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border bg-rose-50 text-rose-700 border-rose-100">
                             ALMACENADO
                           </span>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           <span className="text-[11px] font-medium text-slate-500 italic max-w-xs block truncate">{disk.notes || 'Sin observaciones'}</span>
                         </td>
                         <td className="px-6 py-4 text-center">
@@ -1079,20 +1074,20 @@ export default function Cameras({ subview }: CamerasProps) {
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block">{(cam as any).locations?.name || 'Sede N/A'}</span>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           <span className="text-[12px] font-black text-[#002855] uppercase">
                             {cam.recording_start_date ? new Date(cam.recording_start_date + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                           </span>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                             {cam.status === 'active' ? 'ACTIVO' : cam.status === 'maintenance' ? 'MANTENIMIENTO' : 'INACTIVO'}
                           </span>
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           {cam.camera_disks && cam.camera_disks.length > 0 ? (
                             <div className="flex flex-col gap-1 min-w-[120px]">
                               {(() => {
@@ -1134,21 +1129,18 @@ export default function Cameras({ subview }: CamerasProps) {
                             <span className="text-[10px] font-bold text-slate-400">SIN DISCOS</span>
                           )}
                         </td>
-                        <td className="px-4 py-5 text-left">
+                        <td className="px-4 py-4 text-left">
                           <span className="text-[11px] font-black text-slate-500 uppercase tracking-tighter">{humanAccess(cam.access_type)}</span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={e => { e.stopPropagation(); handleView(cam); }} className="p-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors" title="Ver Detalles">
-                              <Eye size={16} />
-                            </button>
                             {canEdit() && (
                               <>
-                                <button onClick={e => { e.stopPropagation(); openEdit(cam); }} className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded transition-colors" title="Editar">
-                                  <Edit size={16} />
+                                <button onClick={e => { e.stopPropagation(); openEdit(cam); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Editar">
+                                  <Edit size={14} />
                                 </button>
-                                <button onClick={e => { e.stopPropagation(); del(cam); }} className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded transition-colors" title="Eliminar">
-                                  <Trash2 size={16} />
+                                <button onClick={e => { e.stopPropagation(); del(cam); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Eliminar">
+                                  <Trash2 size={14} />
                                 </button>
                               </>
                             )}
@@ -1401,26 +1393,11 @@ export default function Cameras({ subview }: CamerasProps) {
                 </DetailModalGrid>
               </DetailModalBody>
 
-              <DetailModalFooter>
-                <button
-                  onClick={() => setShowDetails(false)}
-                  className="w-full sm:w-auto order-1 sm:order-2 px-6 py-3 sm:py-2.5 min-h-[44px] bg-[#002855] sm:bg-slate-200 text-white sm:text-slate-700 text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 sm:hover:bg-slate-300 transition-all"
-                >
-                  Cerrar
-                </button>
-                {canEdit() && (
-                  <button
-                    onClick={() => { setShowDetails(false); openEdit(selectedCamera); }}
-                    className="w-full sm:w-auto order-3 sm:order-3 px-6 py-3 sm:py-2.5 min-h-[44px] bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
-                  >
-                    <Edit size={14} /> Editar
-                  </button>
-                )}
-                <div className="hidden sm:flex items-center gap-2 order-2 sm:order-1 mr-auto">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sistema GS</span>
-                </div>
-              </DetailModalFooter>
+              <StandardModalFooter
+                onClose={() => setShowDetails(false)}
+                onEdit={canEdit() ? () => { setShowDetails(false); openEdit(selectedCamera); } : undefined}
+                editLabel="Editar"
+              />
             </DetailModal>
           )
         }

@@ -15,22 +15,16 @@ type NotificationData = {
 const NOTIFICATION_ROLES = ['super_admin', 'gerencia', 'sistemas', 'supervisores'];
 
 export async function createNotification(data: NotificationData) {
-  console.log('📨 createNotification llamado con:', data);
-  
   try {
     // Primero verificar si la tabla existe
-    console.log('🔍 Verificando si existe la tabla notifications...');
     const { error: tableError } = await supabase
       .from('notifications')
       .select('count')
       .limit(1);
     
     if (tableError) {
-      console.error('❌ La tabla notifications no existe:', tableError);
       return false;
     }
-    
-    console.log('✅ Tabla notifications existe');
     
     // Crear notificaciones para cada rol que debe recibirlas
     const notifications = NOTIFICATION_ROLES.map(role => ({
@@ -40,40 +34,27 @@ export async function createNotification(data: NotificationData) {
       ticket_id: data.ticket_id || null,
       user_name: data.user_name,
       location_name: data.location_name,
-      target_role: role, // Rol objetivo de la notificación
+      target_role: role,
       read: false,
       created_at: new Date().toISOString()
     }));
-    
-    console.log('📝 Notificaciones a crear:', notifications);
 
-    const { data: insertedData, error } = await supabase
+    const { error } = await supabase
       .from('notifications')
       .insert(notifications)
       .select();
 
     if (error) {
-      console.error('❌ Error insertando notificaciones:', error);
       return false;
     }
 
-    console.log('✅ Notificaciones insertadas exitosamente:', insertedData);
     return true;
   } catch (error) {
-    console.error('❌ Error en createNotification:', error);
     return false;
   }
 }
 
 export async function notifyTicketCreated(ticketId: string, ticketTitle: string, userId: string, userName: string, locationName?: string) {
-  console.log('🎫 notifyTicketCreated llamado con:');
-  console.log('  - ticketId:', ticketId);
-  console.log('  - ticketTitle:', ticketTitle);
-  console.log('  - userId:', userId);
-  console.log('  - userName:', userName);
-  console.log('  - locationName:', locationName);
-  console.log('  - NOTIFICATION_ROLES:', NOTIFICATION_ROLES);
-  
   try {
     const result = await createNotification({
       type: 'ticket_created',
@@ -85,10 +66,8 @@ export async function notifyTicketCreated(ticketId: string, ticketTitle: string,
       location_name: locationName
     });
     
-    console.log('📊 Resultado de createNotification:', result);
     return result;
   } catch (error) {
-    console.error('❌ Error en notifyTicketCreated:', error);
     return false;
   }
 }

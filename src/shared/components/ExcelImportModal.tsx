@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
 import { supabase, AssetType, Location, Category, Subcategory } from '../services/supabase';
 import { useNotify } from '../hooks/useNotify';
+import { generateAndDownloadTemplate } from '../utils/excelTemplate';
 
 type ExcelImportModalProps = {
     isOpen: boolean;
@@ -130,12 +131,16 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
     const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const [localAssetTypes, setLocalAssetTypes] = useState<AssetType[]>(assetTypes);
+
     useEffect(() => {
         const fetchExtra = async () => {
             const { data: catData } = await supabase.from('categories').select('*');
             if (catData) setCategories(catData as Category[]);
             const { data: subData } = await supabase.from('subcategories').select('*');
             if (subData) setSubcategories(subData as Subcategory[]);
+            const { data: typeData } = await supabase.from('asset_types').select('*');
+            if (typeData) setLocalAssetTypes(typeData as AssetType[]);
         };
         fetchExtra();
     }, []);
@@ -143,8 +148,13 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
     // Función helper para convertir fechas vacías a null
     const parseDateField = (value: any): string | null => {
         if (!value || value === '' || value === null || value === undefined) return null;
-        // Si es un número de Excel (días desde 1900)
+        // Si es un número (puede ser año o fecha de Excel)
         if (typeof value === 'number') {
+            // Si es un año (ej. 2024)
+            if (value >= 1900 && value <= 2100) {
+                return `${value}-01-01`;
+            }
+            // Si es una fecha de Excel (días desde 1900)
             try {
                 const excelEpoch = new Date(1899, 11, 30);
                 const date = new Date(excelEpoch.getTime() + value * 86400000);
@@ -157,6 +167,13 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
         if (typeof value === 'string') {
             const trimmed = value.trim();
             if (!trimmed) return null;
+            // Si el string es solo un año (ej. "2024")
+            if (/^\d{4}$/.test(trimmed)) {
+                const yearNum = parseInt(trimmed, 10);
+                if (yearNum >= 1900 && yearNum <= 2100) {
+                    return `${trimmed}-01-01`;
+                }
+            }
             // Intentar parsear como fecha
             const parsed = new Date(trimmed);
             if (!isNaN(parsed.getTime())) {
@@ -188,17 +205,10 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
             const mapping = mappings.find(m => m.sheetName === sheet.name);
             if (!mapping || mapping.ignore) return; // Si se ignora, no suma a nada
 
-            const locationId = mapping.locationId;
-            // Si no tiene ubicación seleccionada, cuenta como inválido si queremos ser estrictos
-            // O simplemente lo marcamos. Asumamos que para importar DEBE tener ID.
+            const sheetLocationId = mapping.locationId;
 
             sheet.data.forEach((row) => {
                 totalRecords++;
-
-                if (!locationId) {
-                    invalidRecords++;
-                    return;
-                }
 
                 // Normalizar keys
                 const normalizedRow: any = {};
@@ -206,15 +216,31 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                     normalizedRow[key.toUpperCase().trim()] = row[key];
                 });
 
+                let locationId = sheetLocationId;
+                if (!locationId) {
+                    const rowLocationName = (normalizedRow['UBICACIÓN DEL ACTIVO'] || normalizedRow['UBICACION DEL ACTIVO'] || normalizedRow['SEDE'] || '').toString().trim().toUpperCase();
+                    if (rowLocationName) {
+                        const locMatch = locations.find(l => l.name.toUpperCase() === rowLocationName || l.name.toUpperCase().includes(rowLocationName) || rowLocationName.includes(l.name.toUpperCase()));
+                        if (locMatch) {
+                            locationId = locMatch.id;
+                        }
+                    }
+                }
+
+                if (!locationId) {
+                    invalidRecords++;
+                    return;
+                }
+
                 // Detección de Tipo - Mejorada
-                const typeRaw = (normalizedRow['TIPO DE ACTIVO'] || normalizedRow['CATEGORÍA'] || normalizedRow['CATEGORIA'] || '').toString().trim().toUpperCase();
+                const typeRaw = (cleanField(normalizedRow['TIPO DE ITEM'] || normalizedRow['ITEM'] || normalizedRow['TIPO DE ACTIVO'] || normalizedRow['TIPO'] || normalizedRow['CATEGORÍA'] || normalizedRow['CATEGORIA'] || normalizedRow['GRUPO']) || '').toString().trim().toUpperCase();
                 let typeId = null;
                 let categoryId = null;
                 let subcategoryId = null;
                 let typeMatch = null;
-                
+
                 // 1. Búsqueda exacta en BD
-                typeMatch = assetTypes.find(t => t.name.toUpperCase() === typeRaw);
+                typeMatch = localAssetTypes.find(t => t.name.toUpperCase() === typeRaw);
 
                 // 2. Búsqueda por palabras clave (orden de prioridad - buscar coincidencias más específicas primero)
                 if (!typeMatch && typeRaw) {
@@ -227,16 +253,16 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                         const priority: Record<string, number> = { 'MONITOR': 100, 'MONITORES': 99, 'MONITO': 98, 'PANTALLA': 97, 'PANTALLAS': 96, 'PC ': 95, 'CPU ': 94, 'MAQUINARIA': 1 };
                         return (priority[b] || 50) - (priority[a] || 50);
                     });
-                    
+
                     for (const keyword of sortedKeywords) {
                         // Buscar palabra clave completa (no parcial) para evitar falsos positivos
                         // Usar regex para buscar como palabra completa o inicio de palabra
                         const keywordEscaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                         const regex = new RegExp(`\\b${keywordEscaped}\\b|^${keywordEscaped}`, 'i');
-                        
+
                         if (regex.test(typeRaw) || typeRaw === keyword || typeRaw.startsWith(keyword + ' ')) {
                             const targetTypeName = ASSET_TYPE_KEYWORDS[keyword];
-                            typeMatch = assetTypes.find(t => t.name.toUpperCase() === targetTypeName.toUpperCase());
+                            typeMatch = localAssetTypes.find(t => t.name.toUpperCase() === targetTypeName.toUpperCase());
                             if (typeMatch) break;
                         }
                     }
@@ -244,14 +270,14 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
 
                 // 3. Si no hay coincidencia, usar "Otros" como fallback
                 if (!typeMatch) {
-                    typeMatch = assetTypes.find(t => t.name.toUpperCase() === 'OTROS');
-                    if (!typeMatch && assetTypes.length > 0) {
-                        typeMatch = assetTypes[0];
+                    typeMatch = localAssetTypes.find(t => t.name.toUpperCase() === 'OTROS');
+                    if (!typeMatch && localAssetTypes.length > 0) {
+                        typeMatch = localAssetTypes[0];
                     }
                 }
 
                 if (typeMatch) typeId = typeMatch.id;
-                
+
                 // Si no hay match en BD pero hay match por keyword, guardamos el nombre para el preview
                 let typeName = typeMatch?.name || 'Otros';
                 if (!typeMatch && typeRaw) {
@@ -263,15 +289,17 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                     }
                 }
 
-                // Determinar category_id (buscando coincidencia heurística)
-                const targetCatName = 
-                    ['PC', 'Laptop', 'Monitor', 'Impresora', 'Escáner', 'Proyector', 'Switch', 'Periféricos', 'Fuente de Poder', 'DVR', 'Cámara', 'Estabilizador'].includes(typeName) ? 'Equipos de Cómputo y TI' : 
-                    ['Biométrico'].includes(typeName) ? 'Equipos Biométricos y Control' :
-                    ['Mobiliario'].includes(typeName) ? 'Mobiliario' :
-                    ['Seguridad'].includes(typeName) ? 'Seguridad' :
-                    ['Herramientas'].includes(typeName) ? 'Herramientas' : 
-                    typeName === 'Maquinaria' ? 'Maquinaria' :
-                    typeName === 'Vehículo' ? 'Maquinaria' : 'Otros';
+                // Determinar category_id (buscando coincidencia heurística o desde el excel)
+                const excelCategory = cleanField(normalizedRow['CATEGORÍA'] || normalizedRow['CATEGORIA']);
+                const targetCatName = excelCategory || (
+                    ['PC', 'Laptop', 'Monitor', 'Impresora', 'Escáner', 'Proyector', 'Switch', 'Periféricos', 'Fuente de Poder', 'DVR', 'Cámara', 'Estabilizador'].includes(typeName) ? 'Equipos de Cómputo y TI' :
+                        ['Biométrico'].includes(typeName) ? 'Equipos Biométricos y Control' :
+                            ['Mobiliario'].includes(typeName) ? 'Mobiliario' :
+                                ['Seguridad'].includes(typeName) ? 'Seguridad' :
+                                    ['Herramientas'].includes(typeName) ? 'Herramientas' :
+                                        typeName === 'Maquinaria' ? 'Maquinaria' :
+                                            typeName === 'Vehículo' ? 'Maquinaria' : 'Otros'
+                );
 
                 // Determinar subcategory_id (buscando coincidencia heurística)
                 let targetSubName = typeName;
@@ -286,7 +314,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                 const catMatch = categories.find(c => c.name.toUpperCase().includes(targetCatName.toUpperCase()) || targetCatName.toUpperCase().includes(c.name.toUpperCase()));
                 if (catMatch) categoryId = catMatch.id;
                 else if (categories.length > 0) categoryId = categories[0].id; // Fallback
-                
+
                 const categoryName = catMatch?.name || (targetCatName === 'Herramientas' ? 'Herramientas' : categories[0]?.name || 'Sin Categoría');
 
                 // Si el usuario seleccionó un grupo/categoría para esta hoja, sobreescribimos
@@ -297,7 +325,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                 // Determinar subcategory_id
                 const subCatMatch = subcategories.find(s => s.name.toUpperCase().includes(typeName.toUpperCase()) || typeName.toUpperCase().includes(s.name.toUpperCase()));
                 if (subCatMatch) subcategoryId = subCatMatch.id;
-                
+
                 let subcategoryName = subCatMatch?.name || 'Área General';
                 if (typeName === 'Herramientas') {
                     const descRaw = (normalizedRow['DESCRIPCIÓN'] || normalizedRow['DESCRIPCION'] || '').toString().toUpperCase();
@@ -321,7 +349,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                     // Generar código único aleatorio si no viene en el Excel
                     const excelCode = cleanField(normalizedRow['CÓDIGO ÚNICO'] || normalizedRow['CODIGO UNICO']);
                     const generatedCode = 'INV-' + Math.random().toString(36).substring(2, 8).toUpperCase() + Date.now().toString(36).slice(-3).toUpperCase();
-                    
+
                     // Crear objeto base del activo
                     const assetRecord: any = {
                         codigo_unico: excelCode || generatedCode,
@@ -329,9 +357,9 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                         category_id: categoryId,
                         subcategory_id: subcategoryId,
                         location_id: locationId,
-                        area: cleanField(normalizedRow['UBICACIÓN DEL ACTIVO'] || normalizedRow['ÁREA'] || normalizedRow['AREA'] || normalizedRow['DEPARTAMENTO'] || normalizedRow['LOCALIZACIÓN'] || normalizedRow['LOCALIZACION'] || normalizedRow['PISO'] || normalizedRow['OFICINA'] || normalizedRow['SECCIÓN'] || normalizedRow['SECCION']),
-                        brand: normalizedRow['MARCA'] || 'Genérico',
-                        model: normalizedRow['MODELO'] || 'Genérico',
+                        area: cleanField(normalizedRow['UBICACIÓN DEL ACTIVO'] || normalizedRow['DEPARTAMENTO'] || normalizedRow['LOCALIZACIÓN'] || normalizedRow['LOCALIZACION'] || normalizedRow['PISO'] || normalizedRow['OFICINA'] || normalizedRow['SECCIÓN'] || normalizedRow['SECCION']),
+                        brand: cleanField(normalizedRow['MARCA']),
+                        model: cleanField(normalizedRow['MODELO']),
                         serial_number: cleanField(normalizedRow['SERIE'] || normalizedRow['N° DE SERIE'] || normalizedRow['Nº DE SERIE']),
                         status: status,
                         _typeRaw: typeRaw,
@@ -342,17 +370,15 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
 
                     // Agregar campos del Excel para TODOS los tipos de activos
                     assetRecord.item = cleanField(normalizedRow['ITEM']);
-                    assetRecord.descripcion = cleanField(normalizedRow['DESCRIPCIÓN'] || normalizedRow['DESCRIPCION']);
-                    assetRecord.unidad_medida = cleanField(normalizedRow['UNIDAD DE MEDIDA'] || normalizedRow['UNIDAD_MEDIDA']);
-                    assetRecord.cantidad = parseInt(normalizedRow['CANT.'] || normalizedRow['CANTIDAD'] || '1') || 1;
+                    assetRecord.descripcion = cleanField(normalizedRow['ACTIVO'] || normalizedRow['ITEM'] || normalizedRow['DESCRIPCIÓN'] || normalizedRow['DESCRIPCION']);
+                    assetRecord.cantidad = parseInt(normalizedRow['CANTIDAD'] || normalizedRow['CANT.'] || '1') || 1;
                     assetRecord.condicion = cleanField(normalizedRow['CONDICIÓN'] || normalizedRow['CONDICION']);
                     assetRecord.color = cleanField(normalizedRow['COLOR']);
-                    assetRecord.gama = cleanField(normalizedRow['GAMA']);
                     // Convertir fecha vacía a null
-                    assetRecord.fecha_adquisicion = parseDateField(normalizedRow['FECHA ADQUISICION'] || normalizedRow['FECHA_ADQUISICION']);
+                    assetRecord.fecha_adquisicion = parseDateField(normalizedRow['AÑO DE ADQUISICIÓN'] || normalizedRow['AÑO ADQUISICION'] || normalizedRow['FECHA DE ADQUISICIÓN'] || normalizedRow['FECHA ADQUISICION'] || normalizedRow['FECHA_ADQUISICION']);
                     const valorEstimado = parseFloat(normalizedRow['VALOR ESTIMADO'] || normalizedRow['VALOR_ESTIMADO'] || '0') || 0;
                     assetRecord.valor_estimado = valorEstimado > 0 ? valorEstimado : null;
-                    assetRecord.estado_uso = cleanField(normalizedRow['ESTADO OPERATIVO'] || normalizedRow['ESTADO USO'] || normalizedRow['ESTADO_USO']);
+                    assetRecord.estado_uso = cleanField(normalizedRow['ESTADO DE USO'] || normalizedRow['ESTADO USO'] || normalizedRow['ESTADO_USO'] || normalizedRow['ESTADO OPERATIVO']);
 
                     // Agregar campos específicos para PC/Laptop
                     if (typeName === 'PC' || typeName === 'Laptop') {
@@ -535,16 +561,16 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
     };
 
     // Función para asegurar que existan tipos base en la BD
-    const ensureRequiredTypes = async (): Promise<{ 
-        otrosId: string | null, 
-        herramientasId: string | null, 
+    const ensureRequiredTypes = async (): Promise<{
+        otrosId: string | null,
+        herramientasId: string | null,
         herramientasCatId: string | null,
         manualSubcatId: string | null,
         electricaSubcatId: string | null
     }> => {
-        const result = { 
-            otrosId: null as string | null, 
-            herramientasId: null as string | null, 
+        const result = {
+            otrosId: null as string | null,
+            herramientasId: null as string | null,
             herramientasCatId: null as string | null,
             manualSubcatId: null as string | null,
             electricaSubcatId: null as string | null
@@ -610,19 +636,19 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
         try {
             // Asegurar que tipos base existen
             const { otrosId, herramientasId, herramientasCatId, manualSubcatId, electricaSubcatId } = await ensureRequiredTypes();
-            
+
             const batchSize = 50;
             const records = preview.processedRecords.map(record => {
                 let finalTypeId = record.asset_type_id;
                 let finalCatId = record.category_id;
                 let finalSubcatId = record.subcategory_id;
-                
+
                 const typeRaw = record._typeRaw?.toUpperCase() || '';
                 const descRaw = (record.descripcion || '').toUpperCase();
 
                 // Si no tiene tipo, o es un fallback manual
                 if (!finalTypeId) {
-                    if (typeRaw.includes('HERRAMIENTA') || 
+                    if (typeRaw.includes('HERRAMIENTA') ||
                         ['ALICATE', 'LLAVE', 'MARTILLO', 'TALADRO', 'DESTORNILLADOR', 'PINZA', 'ESMERIL'].some(t => typeRaw.includes(t)) ||
                         ['ALICATE', 'LLAVE', 'MARTILLO', 'TALADRO', 'DESTORNILLADOR', 'PINZA', 'ESMERIL'].some(t => descRaw.includes(t))) {
                         finalTypeId = herramientasId;
@@ -634,10 +660,10 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                 // Lógica de Categoría y Subcategoría para Herramientas
                 if (finalTypeId === herramientasId) {
                     finalCatId = herramientasCatId || finalCatId;
-                    
+
                     // Detección de subcategoría (Manual vs Eléctrica)
                     const isElectric = ['ELECTRICO', 'ELECTRICA', 'BATERIA', 'VOLTIOS', 'WATTS', 'MOTOR', 'CABLE', 'ENCHUFE', 'TALADRO', 'ESMERIL', 'SOLDADORA', 'COMPRESORA'].some(term => descRaw.includes(term) || typeRaw.includes(term));
-                    
+
                     if (isElectric) {
                         finalSubcatId = electricaSubcatId || finalSubcatId;
                     } else {
@@ -645,10 +671,10 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                         finalSubcatId = manualSubcatId || finalSubcatId;
                     }
                 }
-                
+
                 // Eliminar campos auxiliares antes de insertar
                 const { _typeRaw, _typeName, _categoryName, _subcategoryName, ...cleanData } = record;
-                
+
                 return {
                     ...cleanData,
                     asset_type_id: finalTypeId || otrosId,
@@ -676,110 +702,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
 
     const handleDownloadTemplate = async () => {
         try {
-            const workbook = new ExcelJS.Workbook();
-            const worksheet = workbook.addWorksheet('Plantilla');
-            const validationSheet = workbook.addWorksheet('Validaciones');
-            validationSheet.state = 'hidden'; // Ocultar hoja de datos auxiliares
-
-            // Consultar áreas y tipos para dejarlos disponibles en formato lista
-            const { data: areasData } = await supabase.from('areas').select('name');
-            const { data: assetTypesData } = await supabase.from('asset_types').select('name');
-            
-            const areasList = [...new Set([...(areasData || []).map(a => a.name), 'Línea de inspección', 'Recepción'])].filter(Boolean);
-            const typesList = [...new Set((assetTypesData || []).map(t => t.name))].filter(Boolean);
-            const catList = categories.map(c => c.name);
-            const subcatList = subcategories.map(c => c.name);
-            const estados = ['Activo', 'Inactivo', 'Mantenimiento', 'Extraído'];
-            const condiciones = ['Nuevo', 'Bueno', 'Regular', 'Malo', 'Averiado', 'Inoperativo', 'De Baja', 'Desuso'];
-
-            // Llenar hoja de validaciones
-            const maxRows = Math.max(typesList.length, catList.length, subcatList.length, areasList.length, estados.length, condiciones.length);
-            
-            validationSheet.getCell('A1').value = 'Tipos';
-            validationSheet.getCell('B1').value = 'Categorías';
-            validationSheet.getCell('C1').value = 'Subcategorías';
-            validationSheet.getCell('D1').value = 'Áreas';
-            validationSheet.getCell('E1').value = 'Estados';
-            validationSheet.getCell('F1').value = 'Condiciones';
-
-            for (let i = 0; i < maxRows; i++) {
-                if (typesList[i]) validationSheet.getCell(`A${i+2}`).value = typesList[i];
-                if (catList[i]) validationSheet.getCell(`B${i+2}`).value = catList[i];
-                if (subcatList[i]) validationSheet.getCell(`C${i+2}`).value = subcatList[i];
-                if (areasList[i]) validationSheet.getCell(`D${i+2}`).value = areasList[i];
-                if (estados[i]) validationSheet.getCell(`E${i+2}`).value = estados[i];
-                if (condiciones[i]) validationSheet.getCell(`F${i+2}`).value = condiciones[i];
-            }
-
-            const columns = [
-                'DESCRIPCIÓN', 'UNIDAD DE MEDIDA', 'CANT.', 'CONDICIÓN', 
-                'TIPO DE ACTIVO', 'UBICACIÓN DEL ACTIVO', 'COLOR', 
-                'SERIE', 'GAMA', 'MODELO', 'MARCA', 
-                'FECHA ADQUISICION', 'VALOR ESTIMADO', 'ESTADO USO',
-                'CATEGORÍA', 'SUBCATEGORÍA', 'ÁREA', 'CÓDIGO ÚNICO'
-            ];
-            
-            worksheet.addRow(columns);
-            const headerRow = worksheet.getRow(1);
-            headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-            headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002855' } }; // Corporate Blue
-            headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-            headerRow.height = 25;
-
-            // Aplicar listas desplegables a las 1000 primeras filas
-            for (let row = 2; row <= 1000; row++) {
-                // TIPO DE ACTIVO (B)
-                if(typesList.length) {
-                    worksheet.getCell(`B${row}`).dataValidation = {
-                        type: 'list', allowBlank: true, formulae: [`Validaciones!$A$2:$A$${typesList.length + 1}`]
-                    };
-                }
-                
-                // CATEGORÍA (C)
-                if(catList.length) {
-                    worksheet.getCell(`C${row}`).dataValidation = {
-                        type: 'list', allowBlank: true, formulae: [`Validaciones!$B$2:$B$${catList.length + 1}`]
-                    };
-                }
-
-                // SUBCATEGORÍA (D)
-                if(subcatList.length) {
-                    worksheet.getCell(`D${row}`).dataValidation = {
-                        type: 'list', allowBlank: true, formulae: [`Validaciones!$C$2:$C$${subcatList.length + 1}`]
-                    };
-                }
-
-                // ÁREA (E)
-                if(areasList.length) {
-                    worksheet.getCell(`E${row}`).dataValidation = {
-                        type: 'list', allowBlank: true, formulae: [`Validaciones!$D$2:$D$${areasList.length + 1}`]
-                    };
-                }
-
-                // ESTADO OPERATIVO (F)
-                worksheet.getCell(`F${row}`).dataValidation = {
-                    type: 'list', allowBlank: true, formulae: [`Validaciones!$E$2:$E$${estados.length + 1}`]
-                };
-
-                // CONDICIÓN (L)
-                worksheet.getCell(`L${row}`).dataValidation = {
-                    type: 'list', allowBlank: true, formulae: [`Validaciones!$F$2:$F$${condiciones.length + 1}`]
-                };
-            }
-
-            worksheet.columns.forEach(column => {
-                column.width = 22;
-            });
-
-            const buffer = await workbook.xlsx.writeBuffer();
-            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'Plantilla_Inventario.xlsx';
-            link.click();
-            URL.revokeObjectURL(url);
-            
+            await generateAndDownloadTemplate();
         } catch (error) {
             console.error('Error generando plantilla interactiva:', error);
             notifyError('Ocurrió un error generando la plantilla interactiva.');
@@ -796,8 +719,8 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                         <p className="text-sm text-slate-500">Mapear manualmente las hojas a las sedes</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button 
-                            onClick={handleDownloadTemplate} 
+                        <button
+                            onClick={handleDownloadTemplate}
                             className="text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors uppercase tracking-widest flex items-center gap-1"
                             title="Descargar una plantilla con las columnas recomendadas"
                         >
@@ -889,7 +812,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                                             {mappings.map((mapping, idx) => {
                                                 const sheetStat = rawSheets.find(s => s.name === mapping.sheetName);
                                                 const recordCount = sheetStat?.data.length || 0;
-                                                const isMapped = !!mapping.locationId;
+                                                const isMapped = !!mapping.locationId || (preview?.validRecords !== undefined && preview.invalidRecords === 0);
 
                                                 return (
                                                     <tr key={idx} className={`hover:bg-slate-50 transition-colors ${mapping.ignore ? 'opacity-50' : ''}`}>
@@ -907,7 +830,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                                                                 className={`w-full max-w-xs px-3 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${!isMapped && !mapping.ignore ? 'border-red-300 bg-red-50 text-red-900' : 'border-slate-200'
                                                                     }`}
                                                             >
-                                                                <option value="">-- Seleccionar Sede --</option>
+                                                                <option value="">-- Autodetectar Sede desde fila --</option>
                                                                 {locations.map(loc => (
                                                                     <option key={loc.id} value={loc.id}>{loc.name}</option>
                                                                 ))}
@@ -955,96 +878,38 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                                 </div>
                             </div>
 
-                             {/* Preview of first few records */}
-                             {preview && preview.processedRecords.length > 0 && (
-                                 <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-                                     <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
-                                         <h5 className="font-bold text-slate-700 text-sm uppercase tracking-wide">Vista Previa de Categorización (Primeros 5 registros)</h5>
-                                     </div>
-                                     <div className="overflow-x-auto">
-                                         <table className="w-full text-[11px] text-left">
-                                             <thead className="bg-slate-50 text-slate-500 uppercase font-black tracking-widest">
-                                                 <tr>
-                                                     <th className="px-6 py-3">Descripción</th>
-                                                     <th className="px-6 py-3">Tipo Detectado</th>
-                                                     <th className="px-6 py-3">Categoría</th>
-                                                     <th className="px-6 py-3">Subcategoría</th>
-                                                 </tr>
-                                             </thead>
-                                             <tbody className="divide-y divide-slate-100">
-                                                 {preview.processedRecords.filter(r => !!r.location_id).slice(0, 5).map((record, i) => (
-                                                     <tr key={i} className="hover:bg-blue-50/30 transition-colors">
-                                                         <td className="px-6 py-3 font-bold text-slate-700 uppercase">{record.descripcion}</td>
-                                                         <td className="px-6 py-3">
-                                                             <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-black uppercase rounded-none">{record._typeName}</span>
-                                                         </td>
-                                                         <td className="px-6 py-3 font-bold text-slate-500 uppercase">{record._categoryName}</td>
-                                                         <td className="px-6 py-3 font-bold text-slate-400 uppercase">{record._subcategoryName}</td>
-                                                     </tr>
-                                                 ))}
-                                             </tbody>
-                                         </table>
-                                     </div>
-                                 </div>
-                             )}
-
-                            {/* Maquinaria Fields Help */}
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <div className="flex items-start gap-3">
-                                    <AlertCircle size={20} className="text-blue-600 mt-0.5" />
-                                    <div>
-                                        <h5 className="font-bold text-blue-800 text-sm mb-2">Campos para Maquinaria</h5>
-                                        <p className="text-blue-700 text-xs mb-3">Para importar maquinarias, tu Excel debe incluir estas columnas:</p>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">ITEM</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">DESCRIPCIÓN</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">UNIDAD DE MEDIDA</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">CANT.</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">CONDICIÓN</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">TIPO DE ACTIVO</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">UBICACIÓN DEL ACTIVO</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">COLOR</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">SERIE</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">GAMA</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">MODELO</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">MARCA</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">FECHA ADQUISICIÓN</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">VALOR ESTIMADO</span>
-                                            </div>
-                                            <div className="bg-white rounded px-2 py-1 border border-blue-200">
-                                                <span className="font-medium">ESTADO USO</span>
-                                            </div>
-                                        </div>
+                            {/* Preview of first few records */}
+                            {preview && preview.processedRecords.length > 0 && (
+                                <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+                                    <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
+                                        <h5 className="font-bold text-slate-700 text-sm uppercase tracking-wide">Vista Previa de Categorización (Primeros 5 registros)</h5>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-[11px] text-left">
+                                            <thead className="bg-slate-50 text-slate-500 uppercase font-black tracking-widest">
+                                                <tr>
+                                                    <th className="px-6 py-3">Descripción</th>
+                                                    <th className="px-6 py-3">Tipo Detectado</th>
+                                                    <th className="px-6 py-3">Categoría</th>
+                                                    <th className="px-6 py-3">Subcategoría</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {preview.processedRecords.filter(r => !!r.location_id).slice(0, 5).map((record, i) => (
+                                                    <tr key={i} className="hover:bg-blue-50/30 transition-colors">
+                                                        <td className="px-6 py-3 font-bold text-slate-700 uppercase">{record.descripcion}</td>
+                                                        <td className="px-6 py-3">
+                                                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-black uppercase rounded-none">{record._typeName}</span>
+                                                        </td>
+                                                        <td className="px-6 py-3 font-bold text-slate-500 uppercase">{record._categoryName}</td>
+                                                        <td className="px-6 py-3 font-bold text-slate-400 uppercase">{record._subcategoryName}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
-                            </div>
+                            )}
 
                             {/* Validation Errors */}
                             {preview && preview.errors.length > 0 && (

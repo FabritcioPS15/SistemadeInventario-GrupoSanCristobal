@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, History, ExternalLink, GraduationCap, Stethoscope, Car, MapPin, Building2 } from 'lucide-react';
+import { ArrowLeft, FileText, History, ExternalLink, GraduationCap, Stethoscope, Car, MapPin, Building2, Trash2 } from 'lucide-react';
 import { supabase, Location } from '../../../shared/services/supabase';
 
 export default function ChecklistDetail() {
@@ -23,6 +23,19 @@ export default function ChecklistDetail() {
       console.error('Error fetching location:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('locations')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      navigate('/checklist');
+    } catch (err) {
+      console.error('Error deleting location:', err);
     }
   };
 
@@ -97,6 +110,10 @@ export default function ChecklistDetail() {
           >
             <ArrowLeft size={20} />
             <span className="text-sm font-semibold">Volver a Checklist</span>
+          </button>
+          <button onClick={handleDelete} className="flex items-center gap-2 text-red-600 hover:text-red-800 transition-colors mb-6">
+            <Trash2 size={20} />
+            <span className="text-sm font-semibold">Eliminar checklist</span>
           </button>
 
           {/* Location Info Card */}

@@ -6,15 +6,22 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Pagination from '../../../shared/components/ui/Pagination';
 import { supabase, Location } from '../../../shared/services/supabase';
+import Swal from 'sweetalert2';
 import { useAuth } from '../../../app/providers/AuthContext';
+import TituloHabilitanteForm from '../forms/TituloHabilitanteForm';
+import TituloHabilitanteDetails from '../components/TituloHabilitanteDetails';
 
 type TituloHabilitante = {
   id: string;
   titulo: string;
   tipo: string;
   numero: string;
-  fecha_emision: string;
-  fecha_vencimiento: string;
+  fecha_emision?: string;
+  fecha_vencimiento?: string;
+  vigencia_del?: string;
+  vigencia_al?: string;
+  vigencia_documento?: string;
+  dias_para_vencer?: number;
   ubicacion_id: string;
   estado: 'vigente' | 'por_vencer' | 'vencido';
   notas?: string;
@@ -35,6 +42,10 @@ export default function TitulosHabilitantes() {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [sortField, setSortField] = useState<'titulo' | 'tipo' | 'fecha_vencimiento' | 'ubicacion'>('titulo');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTitulo, setEditingTitulo] = useState<TituloHabilitante | undefined>(undefined);
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedTitulo, setSelectedTitulo] = useState<TituloHabilitante | undefined>(undefined);
 
   useEffect(() => {
     (async () => {
@@ -47,18 +58,27 @@ export default function TitulosHabilitantes() {
   const fetchTitulos = async () => {
     const { data, error } = await supabase.from('titulos_habilitantes').select('*, locations(*)').order('created_at', { ascending: false });
     if (!error && data) {
-      setTitulos(data as TituloHabilitante[]);
+      // Filtrar para mostrar solo los títulos de sedes tipo CITV (type === 'revision')
+      const citvTitulos = (data as TituloHabilitante[]).filter(t => t.locations?.type === 'revision');
+      setTitulos(citvTitulos);
     }
   };
 
   const fetchLocations = async () => {
     const { data } = await supabase.from('locations').select('*').order('name');
-    if (data) setLocations(data);
+    if (data) {
+      // Filtrar para mostrar solo las sedes tipo CITV (type === 'revision')
+      const citvLocations = data.filter(loc => loc.type === 'revision');
+      setLocations(citvLocations);
+    }
   };
 
   const getDaysUntil = (dateString: string) => {
+    if (!dateString) return 0;
     const target = new Date(dateString);
     const today = new Date();
+    target.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
     const diffTime = target.getTime() - today.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
@@ -76,10 +96,13 @@ export default function TitulosHabilitantes() {
         aValue = a.tipo || '';
         bValue = b.tipo || '';
         break;
-      case 'fecha_vencimiento':
-        aValue = a.fecha_vencimiento ? new Date(a.fecha_vencimiento).getTime() : 0;
-        bValue = b.fecha_vencimiento ? new Date(b.fecha_vencimiento).getTime() : 0;
+      case 'fecha_vencimiento': {
+        const dateA = a.vigencia_al || a.fecha_vencimiento;
+        const dateB = b.vigencia_al || b.fecha_vencimiento;
+        aValue = dateA ? new Date(dateA).getTime() : 0;
+        bValue = dateB ? new Date(dateB).getTime() : 0;
         break;
+      }
       case 'ubicacion':
         aValue = a.locations?.name || '';
         bValue = b.locations?.name || '';
@@ -119,9 +142,55 @@ export default function TitulosHabilitantes() {
     setCurrentPage(1);
   };
 
+  const handleDelete = async (id: string) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar título habilitante?',
+      text: "Esta acción no se puede deshacer",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      customClass: {
+        popup: 'rounded-2xl',
+        title: 'text-xl font-bold text-slate-800',
+        confirmButton: 'rounded-xl font-bold tracking-wide',
+        cancelButton: 'rounded-xl font-bold tracking-wide'
+      }
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const { error } = await supabase.from('titulos_habilitantes').delete().eq('id', id);
+        if (error) throw error;
+
+        Swal.fire({
+          title: 'Eliminado',
+          text: 'El título habilitante ha sido eliminado.',
+          icon: 'success',
+          customClass: { popup: 'rounded-2xl' }
+        });
+
+        fetchTitulos();
+      } catch (error) {
+        console.error('Error al eliminar título habilitante:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'Hubo un error al intentar eliminar el título habilitante.',
+          icon: 'error',
+          customClass: { popup: 'rounded-2xl' }
+        });
+      }
+    }
+  };
+
   const renderStatus = (titulo: TituloHabilitante) => {
-    const daysLeft = getDaysUntil(titulo.fecha_vencimiento);
-    const dateStr = new Date(titulo.fecha_vencimiento).toLocaleDateString('es-PE');
+    const targetDate = titulo.vigencia_al || titulo.fecha_vencimiento;
+    if (!targetDate) return <span className="text-[10px] text-slate-400 italic">Sin vencimiento</span>;
+
+    const daysLeft = getDaysUntil(targetDate);
+    const dateStr = new Date(targetDate).toLocaleDateString('es-PE', { timeZone: 'UTC' });
 
     if (daysLeft <= 0) {
       return (
@@ -159,18 +228,25 @@ export default function TitulosHabilitantes() {
   };
 
   const downloadReport = () => {
-    const headers = ['Título', 'Tipo', 'Número', 'Fecha Emisión', 'Fecha Vencimiento', 'Ubicación', 'Estado'];
+    const headers = ['Título', 'Tipo', 'Número', 'Vigencia Del', 'Vigencia Al', 'Vigencia Documento', 'Días para Vencer', 'Ubicación', 'Estado'];
     const csvContent = [
       headers.join(','),
-      ...filtered.map(t => [
-        `"${t.titulo || ''}"`,
-        `"${t.tipo || ''}"`,
-        `"${t.numero || ''}"`,
-        `"${t.fecha_emision ? new Date(t.fecha_emision).toLocaleDateString('es-PE') : ''}"`,
-        `"${t.fecha_vencimiento ? new Date(t.fecha_vencimiento).toLocaleDateString('es-PE') : ''}"`,
-        `"${t.locations?.name || ''}"`,
-        `"${t.estado || ''}"`
-      ].join(','))
+      ...filtered.map(t => {
+        const startDate = t.vigencia_del || t.fecha_emision;
+        const targetDate = t.vigencia_al || t.fecha_vencimiento;
+        const daysLeft = targetDate ? getDaysUntil(targetDate) : '';
+        return [
+          `"${t.titulo || ''}"`,
+          `"${t.tipo || ''}"`,
+          `"${t.numero || ''}"`,
+          `"${startDate ? new Date(startDate).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : ''}"`,
+          `"${targetDate ? new Date(targetDate).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : ''}"`,
+          `"${t.vigencia_documento || ''}"`,
+          `"${daysLeft}"`,
+          `"${t.locations?.name || ''}"`,
+          `"${t.estado || ''}"`
+        ].join(',');
+      })
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -186,18 +262,25 @@ export default function TitulosHabilitantes() {
 
   const downloadReportPdf = () => {
     const doc = new jsPDF();
-    const tableData = filtered.map(t => [
-      t.titulo || '',
-      t.tipo || '',
-      t.numero || '',
-      t.fecha_emision ? new Date(t.fecha_emision).toLocaleDateString('es-PE') : '',
-      t.fecha_vencimiento ? new Date(t.fecha_vencimiento).toLocaleDateString('es-PE') : '',
-      t.locations?.name || '',
-      t.estado || ''
-    ]);
+    const tableData = filtered.map(t => {
+      const startDate = t.vigencia_del || t.fecha_emision;
+      const targetDate = t.vigencia_al || t.fecha_vencimiento;
+      const daysLeft = targetDate ? getDaysUntil(targetDate) : '';
+      return [
+        t.titulo || '',
+        t.tipo || '',
+        t.numero || '',
+        startDate ? new Date(startDate).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
+        targetDate ? new Date(targetDate).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
+        t.vigencia_documento || '',
+        daysLeft !== '' ? `${daysLeft} días` : '',
+        t.locations?.name || '',
+        t.estado || ''
+      ];
+    });
 
     autoTable(doc, {
-      head: [['Título', 'Tipo', 'Número', 'Emisión', 'Vencimiento', 'Ubicación', 'Estado']],
+      head: [['Título', 'Tipo', 'Número', 'Vigencia Del', 'Vigencia Al', 'Vigencia Doc.', 'Días Vencer', 'Ubicación', 'Estado']],
       body: tableData,
       theme: 'grid',
       styles: { fontSize: 8 },
@@ -248,16 +331,16 @@ export default function TitulosHabilitantes() {
               </div>
 
               <div className="flex bg-slate-100 p-1 border border-slate-200">
-                <button 
-                  onClick={() => setViewMode('grid')} 
-                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
                   title="Vista Cuadrícula"
                 >
                   <LayoutGrid size={16} />
                 </button>
-                <button 
-                  onClick={() => setViewMode('table')} 
-                  className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
                   title="Vista Tabla"
                 >
                   <List size={16} />
@@ -266,7 +349,7 @@ export default function TitulosHabilitantes() {
 
               {canEdit() && (
                 <button
-                  onClick={() => alert('Función para crear nuevo título habilitante')}
+                  onClick={() => { setEditingTitulo(undefined); setIsFormOpen(true); }}
                   className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
                 >
                   <Plus size={14} />
@@ -318,14 +401,24 @@ export default function TitulosHabilitantes() {
                       <span className="truncate">{titulo.locations?.name || 'Sede N/A'}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-1">
+                      <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
                         <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Número</label>
                         <span className="text-[9px] font-black text-slate-600 uppercase truncate">{titulo.numero || '—'}</span>
                       </div>
-                      <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-1">
-                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Emisión</label>
+                      <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Doc.</label>
+                        <span className="text-[9px] font-black text-slate-600 uppercase truncate">{titulo.vigencia_documento || '—'}</span>
+                      </div>
+                      <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Del</label>
                         <span className="text-[9px] font-black text-slate-600 uppercase truncate">
-                          {titulo.fecha_emision ? new Date(titulo.fecha_emision).toLocaleDateString('es-PE') : '—'}
+                          {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
+                        </span>
+                      </div>
+                      <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Al</label>
+                        <span className="text-[9px] font-black text-slate-600 uppercase truncate">
+                          {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
                         </span>
                       </div>
                     </div>
@@ -334,13 +427,15 @@ export default function TitulosHabilitantes() {
                   <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150 mt-auto">
                     {canEdit() && (
                       <>
-                        <button 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
                           className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
                           title="Editar"
                         >
                           <Edit size={14} />
                         </button>
-                        <button 
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
                           className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
                           title="Eliminar"
                         >
@@ -394,11 +489,20 @@ export default function TitulosHabilitantes() {
                         <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Número</span>
                       </th>
                       <th className="px-4 py-4 text-left">
+                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Del</span>
+                      </th>
+                      <th className="px-4 py-4 text-left">
+                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Al</span>
+                      </th>
+                      <th className="px-4 py-4 text-left">
+                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Doc.</span>
+                      </th>
+                      <th className="px-4 py-4 text-left">
                         <button
                           onClick={() => handleSort('fecha_vencimiento')}
                           className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
                         >
-                          <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vencimiento</span>
+                          <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Días para Vencer</span>
                           {sortField === 'fecha_vencimiento' && (
                             sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
                           )}
@@ -425,6 +529,7 @@ export default function TitulosHabilitantes() {
                       <tr
                         key={titulo.id}
                         className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20"
+                        onClick={() => { setSelectedTitulo(titulo); setShowDetails(true); }}
                       >
                         <td className="px-6 py-4 font-bold text-left">
                           <div className="flex items-center gap-4">
@@ -444,6 +549,19 @@ export default function TitulosHabilitantes() {
                           <span className="text-[12px] font-mono font-black text-slate-800">{titulo.numero || '—'}</span>
                         </td>
                         <td className="px-4 py-4 text-left">
+                          <span className="text-[12px] font-bold text-slate-700">
+                            {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-left">
+                          <span className="text-[12px] font-bold text-slate-700">
+                            {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-left">
+                          <span className="text-[12px] font-bold text-slate-700 uppercase">{titulo.vigencia_documento || '—'}</span>
+                        </td>
+                        <td className="px-4 py-4 text-left">
                           {renderStatus(titulo)}
                         </td>
                         <td className="px-4 py-4 text-left">
@@ -456,13 +574,15 @@ export default function TitulosHabilitantes() {
                           <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150">
                             {canEdit() && (
                               <>
-                                <button 
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
                                   className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
                                   title="Editar"
                                 >
                                   <Edit size={14} />
                                 </button>
-                                <button 
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
                                   className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
                                   title="Eliminar"
                                 >
@@ -481,6 +601,33 @@ export default function TitulosHabilitantes() {
           )}
         </div>
       </div>
+      {isFormOpen && (
+        <TituloHabilitanteForm
+          tituloHabilitante={editingTitulo}
+          locations={locations}
+          onClose={() => setIsFormOpen(false)}
+          onSave={() => {
+            setIsFormOpen(false);
+            fetchTitulos();
+          }}
+        />
+      )}
+
+      {showDetails && selectedTitulo && (
+        <TituloHabilitanteDetails
+          titulo={selectedTitulo}
+          onClose={() => setShowDetails(false)}
+          onEdit={
+            canEdit()
+              ? () => {
+                setShowDetails(false);
+                setEditingTitulo(selectedTitulo);
+                setIsFormOpen(true);
+              }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

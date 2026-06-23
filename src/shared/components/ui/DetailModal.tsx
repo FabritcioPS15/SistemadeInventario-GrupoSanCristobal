@@ -147,3 +147,109 @@ export function DetailModalRow({
     </div>
   );
 }
+
+// --- NUEVOS COMPONENTES ESTANDARIZADOS PARA UNIFICACIÓN DE DISEÑO --- //
+
+export function StandardModalHeader({
+  title,
+  subtitle,
+  icon: Icon,
+  onClose,
+}: {
+  title: string;
+  subtitle: string;
+  icon: any;
+  onClose: () => void;
+}) {
+  return (
+    <div className="bg-[#001529] px-4 py-4 sm:px-6 flex items-center justify-between shrink-0 gap-3">
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 bg-blue-500/10 rounded-none flex items-center justify-center border border-blue-500/20">
+          <Icon size={20} className="text-blue-400" />
+        </div>
+        <div>
+          <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">{title}</h2>
+          <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-0.5">
+            {subtitle}
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={onClose}
+        className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+  );
+}
+
+export function StandardModalBanner({
+  title,
+  icon: Icon,
+  badges,
+  rightLabel,
+  rightValue,
+}: {
+  title: string;
+  icon: any;
+  badges?: ReactNode;
+  rightLabel?: string;
+  rightValue?: ReactNode;
+}) {
+  return (
+    <div className="bg-white border border-slate-200 p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 shadow-sm min-w-0">
+      <div className="flex items-center gap-4">
+        <div className="w-16 h-16 bg-slate-50 flex items-center justify-center border border-slate-100 shrink-0">
+          <Icon size={32} className="text-slate-300" strokeWidth={1} />
+        </div>
+        <div>
+          <h1 className="text-xl font-black text-[#002855] uppercase tracking-tight leading-none mb-2 line-clamp-2">
+            {title}
+          </h1>
+          {badges && <div className="flex flex-wrap gap-2">{badges}</div>}
+        </div>
+      </div>
+      {rightLabel && rightValue && (
+        <div className="text-right shrink-0">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{rightLabel}</p>
+          <p className="text-lg font-black text-blue-700 font-mono">{rightValue}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function StandardModalFooter({
+  onClose,
+  onEdit,
+  editLabel = 'Editar',
+}: {
+  onClose: () => void;
+  onEdit?: () => void;
+  editLabel?: string;
+}) {
+  return (
+    <DetailModalFooter>
+      <button
+        onClick={onClose}
+        className="w-full sm:w-auto order-1 sm:order-2 px-6 py-3 sm:py-2.5 min-h-[44px] bg-[#002855] sm:bg-slate-200 text-white sm:text-slate-700 text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 sm:hover:bg-slate-300 transition-all"
+      >
+        Cerrar
+      </button>
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          className="w-full sm:w-auto order-3 sm:order-3 px-6 py-3 sm:py-2.5 min-h-[44px] bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          {editLabel}
+        </button>
+      )}
+      <div className="hidden sm:flex items-center gap-2 order-2 sm:order-1 mr-auto">
+        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sistema GS</span>
+      </div>
+    </DetailModalFooter>
+  );
+}

@@ -11,6 +11,15 @@ import SutranVisitForm from '../forms/SutranVisitForm';
 import { useAuth } from '../../../app/providers/AuthContext';
 import Pagination from '../../../shared/components/ui/Pagination';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import DetailModal, {
+  DetailModalHeader,
+  DetailModalBody,
+  StandardModalFooter,
+  DetailModalGrid,
+  DetailModalSection,
+  DetailModalCard,
+  DetailModalRow,
+} from '../../../shared/components/ui/DetailModal';
 
 export default function Sutran() {
   const { canEdit } = useAuth();
@@ -189,7 +198,7 @@ export default function Sutran() {
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Visitas SUTRAN');
-      
+
       worksheet.columns = [
         { header: 'Fecha', key: 'visit_date', width: 15 },
         { header: 'Inspector', key: 'inspector_name', width: 25 },
@@ -198,14 +207,14 @@ export default function Sutran() {
         { header: 'Estado', key: 'status', width: 12 },
         { header: 'Hallazgos', key: 'findings', width: 30 }
       ];
-      
+
       worksheet.getRow(1).font = { bold: true, size: 12 };
       worksheet.getRow(1).fill = {
         type: 'pattern',
         pattern: 'solid',
         fgColor: { argb: 'FFE0E0E0' }
       };
-      
+
       filteredVisits.forEach(visit => {
         worksheet.addRow({
           visit_date: new Date(visit.visit_date).toLocaleDateString(),
@@ -216,7 +225,7 @@ export default function Sutran() {
           findings: visit.findings || 'Sin hallazgos'
         });
       });
-      
+
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -354,16 +363,16 @@ export default function Sutran() {
             </select>
 
             <div className="flex bg-slate-100 p-1 border border-slate-200">
-              <button 
-                onClick={() => setViewMode('grid')} 
-                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
                 title="Vista Cuadrícula"
               >
                 <LayoutGrid size={16} />
               </button>
-              <button 
-                onClick={() => setViewMode('table')} 
-                className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
                 title="Vista Tabla"
               >
                 <List size={16} />
@@ -436,9 +445,10 @@ export default function Sutran() {
                   <table className="w-full text-left border-collapse border-spacing-0">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
-                        <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Fecha / Inspector</span></th>
+                        <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Fecha</span></th>
                         <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span></th>
-                        <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tipo / Estado</span></th>
+                        <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tipo</span></th>
+                        <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
                         <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Principales Hallazgos</span></th>
                         <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
                       </tr>
@@ -446,46 +456,45 @@ export default function Sutran() {
                     <tbody className="divide-y divide-slate-100">
                       {paginatedVisits.map(visit => (
                         <tr key={visit.id} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0" onDoubleClick={() => handleViewVisit(visit)}>
-                          <td className="px-6 py-5 font-bold text-left">
+                          <td className="px-6 py-4 font-bold text-left">
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
                                 <Calendar size={14} />
                               </div>
                               <div className="flex flex-col">
-                                <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">
+                                <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">
                                   {new Date(visit.visit_date).toLocaleDateString()}
                                 </span>
                                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{visit.inspector_name}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-5 text-left">
-                            <span className="text-sm font-extrabold text-[#002855] uppercase">{visit.location_name}</span>
+                          <td className="px-4 py-4 text-left">
+                            <span className="text-[13px] font-extrabold text-[#002855] uppercase">{visit.location_name}</span>
                           </td>
-                          <td className="px-4 py-5 text-left">
+                          <td className="px-4 py-4 text-left">
                             <div className="flex flex-col gap-1.5">
-                              <span className={`inline-block px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border w-fit ${typeColors[visit.visit_type]}`}>
+                              <span className={`inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border w-fit ${typeColors[visit.visit_type]}`}>
                                 {getVisitTypeLabel(visit.visit_type)}
                               </span>
-                              <span className={`inline-block px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border w-fit ${statusColors[visit.status]}`}>
+                              <span className={`inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border w-fit ${statusColors[visit.status]}`}>
                                 {statusLabels[visit.status]}
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-5 text-left">
+                          <td className="px-4 py-4 text-left">
                             {visit.findings ? (
                               <p className="text-sm font-medium text-slate-600 line-clamp-2 max-w-[300px]">{visit.findings}</p>
                             ) : (
                               <span className="text-slate-300 italic text-xs">Sin hallazgos registrados</span>
                             )}
                           </td>
-                          <td className="px-6 py-5 text-center">
+                          <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={(e) => { e.stopPropagation(); handleViewVisit(visit); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><FileText size={14} /></button>
                               {canEdit() && (
                                 <>
-                                  <button onClick={(e) => { e.stopPropagation(); handleEditVisit(visit); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Edit size={14} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteVisit(visit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><AlertTriangle size={14} /></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleEditVisit(visit); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteVisit(visit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><AlertTriangle size={14} /></button>
                                 </>
                               )}
                             </div>
@@ -551,9 +560,6 @@ export default function Sutran() {
                         </div>
                       </div>
                       <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-50 flex gap-2">
-                        <button onClick={() => handleViewVisit(visit)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all active:scale-95 shadow-sm">
-                          <FileText size={14} /> DETALLES
-                        </button>
                         {canEdit() && (
                           <div className="flex gap-2">
                             <button onClick={() => handleEditVisit(visit)} className="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-sm"><Edit size={16} /></button>
@@ -574,83 +580,80 @@ export default function Sutran() {
             )}
 
             {viewingVisit && (
-              <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
-                <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
-                  <div className="px-8 py-6 flex items-center justify-between border-b border-gray-100 bg-slate-50">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-2xl bg-white shadow-sm border border-gray-100">
-                        <Building2 className="text-[#002855]" size={24} />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Detalle de Inspección</h2>
-                        <p className="text-xs font-bold text-[#002855] uppercase tracking-widest leading-none mt-1">SUTRAN - {viewingVisit.location_name}</p>
-                      </div>
+              <DetailModal maxWidth="2xl" onClose={() => setViewingVisit(undefined)} closeOnBackdrop>
+                <DetailModalHeader>
+                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+                  <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
+                    <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                      <Building2 size={20} />
                     </div>
-                    <button onClick={() => setViewingVisit(undefined)} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600">
-                      <X size={24} />
-                    </button>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-xs sm:text-base font-black text-white uppercase tracking-tight leading-snug line-clamp-1">Detalle de Inspección</h2>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1">SUTRAN — {viewingVisit.location_name}</p>
+                    </div>
                   </div>
-                  <div className="p-8 overflow-y-auto space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">Información General</label>
-                        <div className="space-y-3">
-                          <div className="flex justify-between border-b border-gray-200 pb-2">
-                            <span className="text-xs text-gray-500 font-bold uppercase">Fecha</span>
-                            <span className="text-xs font-black text-gray-900">{new Date(viewingVisit.visit_date).toLocaleDateString()}</span>
-                          </div>
-                          <div className="flex justify-between border-b border-gray-200 pb-2">
-                            <span className="text-xs text-gray-500 font-bold uppercase">Inspector</span>
-                            <span className="text-xs font-black text-gray-900">{viewingVisit.inspector_name}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-xs text-gray-500 font-bold uppercase">Estado</span>
-                            <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${statusColors[viewingVisit.status]}`}>{statusLabels[viewingVisit.status]}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
-                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3">Tipo de Visita</label>
-                        <span className={`inline-block px-3 py-1 text-[10px] font-black uppercase tracking-widest border mb-4 ${typeColors[viewingVisit.visit_type]}`}>{getVisitTypeLabel(viewingVisit.visit_type)}</span>
+                  <button onClick={() => setViewingVisit(undefined)} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1" aria-label="Cerrar">
+                    <X size={22} />
+                  </button>
+                </DetailModalHeader>
+
+                <DetailModalBody>
+                  <DetailModalGrid>
+                    <DetailModalSection title="Información General">
+                      <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                        <DetailModalRow label="Fecha">
+                          <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">{new Date(viewingVisit.visit_date).toLocaleDateString()}</span>
+                        </DetailModalRow>
+                        <DetailModalRow label="Inspector">
+                          <span className="text-[10px] sm:text-[11px] font-black text-slate-700">{viewingVisit.inspector_name}</span>
+                        </DetailModalRow>
+                        <DetailModalRow label="Estado">
+                          <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${statusColors[viewingVisit.status]}`}>{statusLabels[viewingVisit.status]}</span>
+                        </DetailModalRow>
+                      </DetailModalCard>
+                    </DetailModalSection>
+
+                    <DetailModalSection title="Tipo de Visita">
+                      <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                        <DetailModalRow label="Tipo">
+                          <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${typeColors[viewingVisit.visit_type]}`}>{getVisitTypeLabel(viewingVisit.visit_type)}</span>
+                        </DetailModalRow>
                         {viewingVisit.inspector_email && (
-                          <div>
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Contacto</label>
-                            <p className="text-xs font-bold text-blue-600">{viewingVisit.inspector_email}</p>
-                          </div>
+                          <DetailModalRow label="Contacto">
+                            <span className="text-[10px] sm:text-[11px] font-black text-blue-600">{viewingVisit.inspector_email}</span>
+                          </DetailModalRow>
                         )}
-                      </div>
+                      </DetailModalCard>
+                    </DetailModalSection>
+                  </DetailModalGrid>
+
+                  {viewingVisit.findings && (
+                    <div className="mt-4 sm:mt-6">
+                      <DetailModalSection title="Hallazgos Identificados">
+                        <DetailModalCard className="bg-amber-50 border-amber-100">
+                          <p className="text-[10px] sm:text-[11px] font-medium text-amber-950 leading-relaxed whitespace-pre-wrap">{viewingVisit.findings}</p>
+                        </DetailModalCard>
+                      </DetailModalSection>
                     </div>
+                  )}
 
-                    {viewingVisit.findings && (
-                      <div className="space-y-3">
-                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                          <AlertTriangle size={14} className="text-amber-500" /> Hallazgos Identificados
-                        </h3>
-                        <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100">
-                          <p className="text-sm text-amber-950 font-medium leading-relaxed whitespace-pre-wrap">{viewingVisit.findings}</p>
-                        </div>
-                      </div>
-                    )}
+                  {viewingVisit.observations && (
+                    <div className="mt-4 sm:mt-6">
+                      <DetailModalSection title="Observaciones Técnicas">
+                        <DetailModalCard>
+                          <p className="text-[10px] sm:text-[11px] font-medium text-slate-700 italic leading-relaxed whitespace-pre-wrap">{viewingVisit.observations}</p>
+                        </DetailModalCard>
+                      </DetailModalSection>
+                    </div>
+                  )}
+                </DetailModalBody>
 
-                    {viewingVisit.observations && (
-                      <div className="space-y-3">
-                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                          <FileText size={14} className="text-slate-500" /> Observaciones Técnicas
-                        </h3>
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                          <p className="text-sm text-slate-700 font-medium italic leading-relaxed whitespace-pre-wrap">{viewingVisit.observations}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
-                    <button onClick={() => setViewingVisit(undefined)} className="flex-1 px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-widest bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm">Cerrar</button>
-                    {canEdit() && (
-                      <button onClick={() => { setViewingVisit(undefined); handleEditVisit(viewingVisit); }} className="flex-1 px-4 py-3 text-xs font-black text-white uppercase tracking-widest bg-[#002855] rounded-xl hover:bg-blue-800 transition-all active:scale-95 shadow-lg">Editar Reporte</button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                <StandardModalFooter
+                  onClose={() => setViewingVisit(undefined)}
+                  onEdit={canEdit() ? () => { setViewingVisit(undefined); handleEditVisit(viewingVisit); } : undefined}
+                  editLabel="Editar Reporte"
+                />
+              </DetailModal>
             )}
           </div>
         )}

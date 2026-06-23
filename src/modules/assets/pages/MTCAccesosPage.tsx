@@ -9,7 +9,17 @@ import autoTable from 'jspdf-autotable';
 import { supabase } from '../../../shared/services/supabase';
 import MTCAccesoForm from '../forms/MTCAccesoForm';
 import { useAuth } from '../../../app/providers/AuthContext';
+import { useNotify } from '../../../shared/hooks/useNotify';
 import Pagination from '../../../shared/components/ui/Pagination';
+import DetailModal, {
+  DetailModalHeader,
+  DetailModalBody,
+  StandardModalFooter,
+  DetailModalGrid,
+  DetailModalSection,
+  DetailModalCard,
+  DetailModalRow,
+} from '../../../shared/components/ui/DetailModal';
 
 type MTCAcceso = {
   id: string;
@@ -27,6 +37,7 @@ type ViewType = 'list' | 'form';
 
 export default function MTCAccesos() {
   const { canEdit } = useAuth();
+  const { confirm, error: notifyError, success: notifySuccess } = useNotify();
   const [view, setView] = useState<ViewType>('list');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [accesos, setAccesos] = useState<MTCAcceso[]>([]);
@@ -66,7 +77,8 @@ export default function MTCAccesos() {
   };
 
   const handleDeleteAcceso = async (acceso: MTCAcceso) => {
-    if (window.confirm(`¿Estás seguro de que quieres eliminar el acceso "${acceso.name}"?`)) {
+    const confirmed = await confirm(`¿Estás seguro de que quieres eliminar el acceso "${acceso.name}"?`, 'Eliminar Acceso');
+    if (confirmed) {
       try {
         const { error } = await supabase
           .from('mtc_accesos')
@@ -75,14 +87,14 @@ export default function MTCAccesos() {
 
         if (error) {
           console.error('❌ Error al eliminar acceso MTC:', error);
-          alert(`Error al eliminar el acceso MTC: ${error.message}`);
+          notifyError(`Error al eliminar el acceso MTC: ${error.message}`);
         } else {
           await fetchAccesos();
-          alert('Acceso MTC eliminado correctamente');
+          notifySuccess('Acceso MTC eliminado correctamente');
         }
       } catch (err) {
         console.error('❌ Error inesperado al eliminar acceso MTC:', err);
-        alert('Error inesperado al eliminar el acceso MTC');
+        notifyError('Error inesperado al eliminar el acceso MTC');
       }
     }
   };
@@ -355,31 +367,31 @@ export default function MTCAccesos() {
                     <tbody className="divide-y divide-slate-100">
                       {paginatedAccesos.map(acceso => (
                         <tr key={acceso.id} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0" onDoubleClick={() => handleViewAcceso(acceso)}>
-                          <td className="px-6 py-5 font-bold text-left">
+                          <td className="px-6 py-4 font-bold text-left">
                             <div className="flex items-center gap-3">
                               <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
                                 {getAccessTypeIcon(acceso.access_type)}
                               </div>
                               <div className="flex flex-col">
-                                <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{acceso.name}</span>
+                                <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">{acceso.name}</span>
                                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(acceso.created_at).toLocaleDateString()}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-5 text-left">
-                            <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${getAccessTypeColor(acceso.access_type)}`}>
+                          <td className="px-4 py-4 text-left">
+                            <span className={`px-2 py-1 text-[10px] font-black uppercase tracking-widest border ${getAccessTypeColor(acceso.access_type)}`}>
                               {acceso.access_type}
                             </span>
                           </td>
-                          <td className="px-4 py-5 text-left">
-                            <a href={acceso.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-sm font-extrabold text-blue-600 truncate max-w-[220px] block hover:text-blue-800 transition-colors">
+                          <td className="px-4 py-4 text-left">
+                            <a href={acceso.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[13px] font-extrabold text-blue-600 truncate max-w-[220px] block hover:text-blue-800 transition-colors">
                               {acceso.url}
                             </a>
                           </td>
-                          <td className="px-4 py-5 text-left">
+                          <td className="px-4 py-4 text-left">
                             {acceso.username ? (
                               <div className="flex flex-col">
-                                <span className="text-[14px] font-black text-[#002855] font-mono">{acceso.username}</span>
+                                <span className="text-[13px] font-black text-[#002855] font-mono">{acceso.username}</span>
                                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                                   {acceso.password ? '••••••••' : 'Sin contraseña'}
                                 </span>
@@ -388,15 +400,12 @@ export default function MTCAccesos() {
                               <span className="text-slate-300 italic text-xs">Sin credenciales</span>
                             )}
                           </td>
-                          <td className="px-6 py-5 text-center">
+                          <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={(e) => { e.stopPropagation(); handleViewAcceso(acceso); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm" title="Ver Detalle">
-                                <Eye size={14} />
-                              </button>
                               {canEdit() && (
                                 <>
-                                  <button onClick={(e) => { e.stopPropagation(); handleEditAcceso(acceso); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Edit size={14} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteAcceso(acceso); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm"><Trash2 size={14} /></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleEditAcceso(acceso); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteAcceso(acceso); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Trash2 size={14} /></button>
                                 </>
                               )}
                             </div>
@@ -484,9 +493,6 @@ export default function MTCAccesos() {
                         </div>
                       </div>
                       <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-50 flex gap-2">
-                        <button onClick={() => handleViewAcceso(acceso)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all active:scale-95 shadow-sm">
-                          <Eye size={14} /> DETALLES
-                        </button>
                         {canEdit() && (
                           <div className="flex gap-2">
                             <button onClick={() => handleEditAcceso(acceso)} className="p-2 bg-white text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-800 hover:text-white transition-all active:scale-95 shadow-sm"><Edit size={16} /></button>
@@ -507,88 +513,75 @@ export default function MTCAccesos() {
             )}
 
             {viewingAcceso && (
-              <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
-                <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
-                  <div className={`px-8 py-6 flex items-center justify-between border-b border-gray-100 ${getAccessTypeColor(viewingAcceso.access_type).split(' ')[0]} bg-opacity-30`}>
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 rounded-2xl bg-white shadow-sm border border-gray-100">
-                        {getAccessTypeIcon(viewingAcceso.access_type)}
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">Acceso Detallado</h2>
-                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest leading-none mt-1">{viewingAcceso.access_type}</p>
-                      </div>
+              <DetailModal maxWidth="2xl" onClose={() => setViewingAcceso(undefined)} closeOnBackdrop>
+                <DetailModalHeader>
+                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+                  <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
+                    <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                      {getAccessTypeIcon(viewingAcceso.access_type)}
                     </div>
-                    <button onClick={() => setViewingAcceso(undefined)} className="p-2 hover:bg-white/50 rounded-full transition-colors text-gray-400 hover:text-gray-600">
-                      <X size={24} />
-                    </button>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-xs sm:text-base font-black text-white uppercase tracking-tight leading-snug line-clamp-1">{viewingAcceso.name}</h2>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1">MTC ACCESO — {viewingAcceso.access_type.toUpperCase()}</p>
+                    </div>
                   </div>
-                  <div className="p-8 overflow-y-auto space-y-8">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="w-1 h-4 bg-blue-500 rounded-full" />
-                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Identificación del Recurso</h3>
-                      </div>
-                      <div className="grid grid-cols-1 gap-6 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50">
-                        <div>
-                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nombre del Acceso</label>
-                          <p className="text-gray-900 font-bold text-lg leading-tight uppercase">{viewingAcceso.name}</p>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">URL / Endpoint</label>
-                          <a href={viewingAcceso.url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 font-medium hover:text-blue-800 flex items-center gap-2 break-all italic underline decoration-blue-200">
-                            {viewingAcceso.url} <ExternalLink size={14} />
+                  <button onClick={() => setViewingAcceso(undefined)} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1" aria-label="Cerrar">
+                    <X size={22} />
+                  </button>
+                </DetailModalHeader>
+
+                <DetailModalBody>
+                  <DetailModalGrid>
+                    <DetailModalSection title="Identificación del Recurso">
+                      <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                        <DetailModalRow label="URL / Endpoint">
+                          <a href={viewingAcceso.url} target="_blank" rel="noopener noreferrer" className="text-[10px] sm:text-[11px] font-black text-blue-600 hover:text-blue-800 flex items-center gap-1 break-all">
+                            {viewingAcceso.url} <ExternalLink size={12} />
                           </a>
-                        </div>
-                      </div>
-                    </div>
+                        </DetailModalRow>
+                      </DetailModalCard>
+                    </DetailModalSection>
+
                     {(viewingAcceso.username || viewingAcceso.password) && (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1 h-4 bg-purple-500 rounded-full" />
-                          <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Seguridad & Credenciales</h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <DetailModalSection title="Seguridad y Credenciales">
+                        <DetailModalCard className="space-y-2.5 sm:space-y-3">
                           {viewingAcceso.username && (
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Usuario</label>
-                              <p className="text-gray-900 font-black font-mono break-all">{viewingAcceso.username}</p>
-                            </div>
+                            <DetailModalRow label="Usuario">
+                              <span className="text-[10px] sm:text-[11px] font-black text-slate-700 font-mono">{viewingAcceso.username}</span>
+                            </DetailModalRow>
                           )}
                           {viewingAcceso.password && (
-                            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                              <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Contraseña</label>
-                              <div className="flex items-center gap-2">
-                                <p className="text-gray-900 font-black font-mono tracking-widest">{showPasswords[viewingAcceso.id] ? viewingAcceso.password : '••••••••'}</p>
-                                <button onClick={() => togglePasswordVisibility(viewingAcceso.id)} className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 ml-auto">
-                                  {showPasswords[viewingAcceso.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                            <DetailModalRow label="Contraseña">
+                              <div className="flex items-center gap-2 justify-end">
+                                <span className="text-[10px] sm:text-[11px] font-black text-slate-700 font-mono tracking-widest">{showPasswords[viewingAcceso.id] ? viewingAcceso.password : '••••••••'}</span>
+                                <button onClick={() => togglePasswordVisibility(viewingAcceso.id)} className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600">
+                                  {showPasswords[viewingAcceso.id] ? <EyeOff size={14} /> : <Eye size={14} />}
                                 </button>
                               </div>
-                            </div>
+                            </DetailModalRow>
                           )}
-                        </div>
-                      </div>
+                        </DetailModalCard>
+                      </DetailModalSection>
                     )}
-                    {viewingAcceso.notes && (
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-1 h-4 bg-amber-500 rounded-full" />
-                          <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em]">Observaciones Técnicas</h3>
-                        </div>
-                        <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100">
-                          <p className="text-sm text-amber-950 font-medium italic leading-relaxed whitespace-pre-wrap">{viewingAcceso.notes}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
-                    <button onClick={() => setViewingAcceso(undefined)} className="flex-1 px-4 py-3 text-xs font-black text-gray-500 uppercase tracking-widest bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all active:scale-95 shadow-sm">Cerrar</button>
-                    {canEdit() && (
-                      <button onClick={() => { setViewingAcceso(undefined); handleEditAcceso(viewingAcceso); }} className="flex-1 px-4 py-3 text-xs font-black text-white uppercase tracking-widest bg-slate-800 rounded-xl hover:bg-slate-900 transition-all active:scale-95 shadow-lg">Editar Acceso</button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                  </DetailModalGrid>
+
+                  {viewingAcceso.notes && (
+                    <div className="mt-4 sm:mt-6">
+                      <DetailModalSection title="Observaciones Técnicas">
+                        <DetailModalCard className="bg-amber-50 border-amber-100">
+                          <p className="text-[10px] sm:text-[11px] font-medium text-amber-950 italic leading-relaxed whitespace-pre-wrap">{viewingAcceso.notes}</p>
+                        </DetailModalCard>
+                      </DetailModalSection>
+                    </div>
+                  )}
+                </DetailModalBody>
+
+                <StandardModalFooter
+                  onClose={() => setViewingAcceso(undefined)}
+                  onEdit={canEdit() ? () => { setViewingAcceso(undefined); handleEditAcceso(viewingAcceso); } : undefined}
+                  editLabel="Editar Acceso"
+                />
+              </DetailModal>
             )}
           </div>
         )}

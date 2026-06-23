@@ -1,16 +1,16 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Wrench, Eye, X, MapPin, ShieldCheck, LayoutGrid, List as ListIcon, Search } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
+import { Plus, Wrench, X, MapPin, ShieldCheck, LayoutGrid, List as ListIcon, Search } from 'lucide-react';
 import { supabase, Location } from '../../../shared/services/supabase';
 import MaintenanceForm from '../forms/MaintenanceForm';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import Pagination from '../../../shared/components/ui/Pagination';
-import { 
-  MaintenanceRecord, 
+import {
+  MaintenanceRecord,
   AssetWithMaintenanceHistory,
-  InventoryFilter 
+  InventoryFilter
 } from '../../../shared/types/inventory.types';
-import InventoryFilters from '../../inventory/components/InventoryFilters';
 
 type MaintenanceProps = {
   categoryFilter?: string;
@@ -18,7 +18,7 @@ type MaintenanceProps = {
 
 export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const { canEdit } = useAuth();
-  const { success: notifySuccess, error: notifyError } = useNotify();
+  const { success: notifySuccess, error: notifyError, confirm } = useNotify();
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +26,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const [editingRecord, setEditingRecord] = useState<MaintenanceRecord | undefined>();
   const [viewingRecord, setViewingRecord] = useState<MaintenanceRecord | undefined>();
   const [viewingAssetHistory, setViewingAssetHistory] = useState<AssetWithMaintenanceHistory | undefined>();
-  const [searchTerm, setSearchTerm] = useState('');
+  const locationState = useLocation();
+  const [searchTerm, setSearchTerm] = useState(locationState.state?.searchTerm || '');
+  const [assetFilter, setAssetFilter] = useState(locationState.state?.assetFilter || '');
   const [multiEnterpriseFilters, setMultiEnterpriseFilters] = useState<InventoryFilter>({});
   const [statusFilter, setStatusFilter] = useState('');
   // itemsPerPage, setItemsPerPage and isHeaderVisible no longer needed if not used in the UI
@@ -97,7 +99,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   };
 
   const handleDeleteRecord = async (record: MaintenanceRecord) => {
-    if (window.confirm(`¿Estás seguro de que quieres eliminar el registro de mantenimiento "${record.description}"?`)) {
+    const confirmed = await confirm(`¿Estás seguro de que quieres eliminar el registro de mantenimiento "${record.description}"?`, 'Confirmar Eliminación');
+    if (confirmed) {
       try {
         const { error } = await supabase.from('maintenance_records').delete().eq('id', record.id);
         if (error) throw error;
@@ -173,7 +176,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         existing.maintenanceRecords.push(record);
         existing.totalRecords = existing.maintenanceRecords.length;
         // Actualizar el estado más reciente
-        const latest = existing.maintenanceRecords.sort((a, b) => 
+        const latest = existing.maintenanceRecords.sort((a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )[0];
         existing.latestStatus = latest.status;
@@ -197,10 +200,11 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const sortedRecords = useMemo(() => {
     const filtered = assetsWithHistory.filter(assetHistory => {
       const matchesSearch =
+        assetHistory.asset.codigo_unico?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         assetHistory.asset.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         assetHistory.asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         assetHistory.asset.serial_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        assetHistory.maintenanceRecords.some(r => 
+        assetHistory.maintenanceRecords.some(r =>
           r.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           r.technician?.toLowerCase().includes(searchTerm.toLowerCase())
         );
@@ -220,8 +224,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
       const matchesStatus = !statusFilter || assetHistory.latestStatus === statusFilter;
       const matchesType = !typeFilter || assetHistory.latestMaintenanceType === typeFilter;
       const matchesLocation = !locationFilter || assetHistory.asset.location_id === locationFilter;
+      const matchesAsset = !assetFilter || assetHistory.asset.id === assetFilter;
 
-      return matchesSearch && matchesCategory && matchesStatus && matchesType && matchesLocation;
+      return matchesSearch && matchesCategory && matchesStatus && matchesType && matchesLocation && matchesAsset;
     });
 
     if (!sortConfig) return filtered;
@@ -298,119 +303,123 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
-      
+
       <div className="p-6 space-y-6">
 
 
-          {/* Action Bar */}
-          <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
-            <div className="absolute -top-3 -left-3">
-              <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-                {sortedRecords.length} Registros
-              </div>
-            </div>
-
-            {/* Search */}
-            <div className="flex-1 relative group/search">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
-              <input
-                type="text"
-                placeholder="Buscar por equipo, técnico o tarea..."
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
-              />
-            </div>
-
-            {/* Filters + Toggle */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest min-w-[220px]">
-                <MapPin size={14} className="text-rose-500" />
-                <select
-                  value={locationFilter}
-                  onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}
-                  className="bg-transparent outline-none cursor-pointer flex-1"
-                >
-                  <option value="">TODAS LAS SEDES</option>
-                  {locations.map((loc) => (
-                    <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-                  ))}
-                </select>
-              </div>
-
-              <select
-                value={typeFilter}
-                onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
-              >
-                <option value="">TODOS LOS TIPOS</option>
-                {Object.entries(typeLabels).map(([key, label]) => (
-                  <option key={key} value={key}>{label.toUpperCase()}</option>
-                ))}
-              </select>
-
-              <select
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
-              >
-                <option value="">TODOS LOS ESTADOS</option>
-                {Object.entries(statusLabels).map(([key, label]) => (
-                  <option key={key} value={key}>{label.toUpperCase()}</option>
-                ))}
-              </select>
-
-              <div className="flex bg-slate-100 p-1 border border-slate-200">
-                <button 
-                  onClick={() => setViewMode('grid')} 
-                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
-                  title="Vista Cuadrícula"
-                >
-                  <LayoutGrid size={16} />
-                </button>
-                <button 
-                  onClick={() => setViewMode('table')} 
-                  className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
-                  title="Vista Tabla"
-                >
-                  <ListIcon size={16} />
-                </button>
-              </div>
-
-              {canEdit() && (
-                <button
-                  onClick={() => {
-                    setEditingRecord(undefined);
-                    setShowForm(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-                >
-                  <Plus size={14} />
-                  Nuevo Mantenimiento
-                </button>
-              )}
-
-              {hasActiveFilters && (
-                <button 
-                  onClick={clearFilters} 
-                  className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors" 
-                  title="Limpiar Filtros"
-                >
-                  <X size={18} />
-                </button>
-              )}
+        {/* Action Bar */}
+        <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
+          <div className="absolute -top-3 -left-3">
+            <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+              {sortedRecords.length} Registros
             </div>
           </div>
 
-        {/* Multi-Enterprise Filters */}
-        <InventoryFilters
-          onFilterChange={setMultiEnterpriseFilters}
-          initialFilters={multiEnterpriseFilters}
-          showCompanyFilter={true}
-          showLocationFilter={true}
-          showCategoryFilter={false}
-          showStatusFilter={true}
-        />
+          {/* Search */}
+          <div className="flex-1 relative group/search">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar por equipo, técnico o tarea..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+            />
+          </div>
+
+          {/* Filters + Toggle */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest min-w-[220px]">
+              <MapPin size={14} className="text-rose-500" />
+              <select
+                value={locationFilter}
+                onChange={(e) => { setLocationFilter(e.target.value); setCurrentPage(1); }}
+                className="bg-transparent outline-none cursor-pointer flex-1"
+              >
+                <option value="">TODAS LAS SEDES</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+                ))}
+              </select>
+            </div>
+
+            <select
+              value={typeFilter}
+              onChange={(e) => { setTypeFilter(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
+            >
+              <option value="">TODOS LOS TIPOS</option>
+              {Object.entries(typeLabels).map(([key, label]) => (
+                <option key={key} value={key}>{label.toUpperCase()}</option>
+              ))}
+            </select>
+
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
+            >
+              <option value="">TODOS LOS ESTADOS</option>
+              {Object.entries(statusLabels).map(([key, label]) => (
+                <option key={key} value={key}>{label.toUpperCase()}</option>
+              ))}
+            </select>
+
+            <select
+              value={assetFilter}
+              onChange={(e) => { setAssetFilter(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all max-w-[200px] truncate appearance-none cursor-pointer"
+            >
+              <option value="">TODOS LOS ACTIVOS</option>
+              {assetsWithHistory.map((history) => (
+                <option key={history.asset.id} value={history.asset.id}>
+                  {history.asset.codigo_unico ? `${history.asset.codigo_unico} - ` : ''}
+                  {history.asset.brand || 'SIN MARCA'} {history.asset.model || ''}
+                </option>
+              ))}
+            </select>
+
+            <div className="flex bg-slate-100 p-1 border border-slate-200">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+                title="Vista Cuadrícula"
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+                title="Vista Tabla"
+              >
+                <ListIcon size={16} />
+              </button>
+            </div>
+
+            {canEdit() && (
+              <button
+                onClick={() => {
+                  setEditingRecord(undefined);
+                  setShowForm(true);
+                }}
+                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+              >
+                <Plus size={14} />
+                Nuevo Mantenimiento
+              </button>
+            )}
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                title="Limpiar Filtros"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
+        </div>
 
         {
           loading ? (
@@ -462,7 +471,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                     </div>
                   </div>
                   <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex gap-2">
-                    <button onClick={(e) => { e.stopPropagation(); handleViewAssetHistory(assetHistory); }} className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 hover:text-blue-600 hover:border-blue-200 transition-all">Ver Historial</button>
                   </div>
                 </div>
               ))}
@@ -543,13 +551,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={e => { e.stopPropagation(); handleViewAssetHistory(assetHistory); }}
-                              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                              title="Ver Historial"
-                            >
-                              <Eye size={14} />
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -796,10 +797,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                                 </button>
                                 <button
                                   onClick={() => {
-                                    if (window.confirm('¿Eliminar este registro de mantenimiento?')) {
-                                      handleDeleteRecord(record);
-                                      setViewingAssetHistory(undefined);
-                                    }
+                                    handleDeleteRecord(record);
+                                    setViewingAssetHistory(undefined);
                                   }}
                                   className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-all"
                                 >

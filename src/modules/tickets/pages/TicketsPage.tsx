@@ -219,10 +219,8 @@ export default function Tickets() {
                             await supabase.storage.from('chat-attachments').remove(
                                 files.map(f => `ticket_${ticket.id}/${f.name}`)
                             );
-                            console.log(`🧹 Limpieza de almacenamiento completada para ticket ${ticket.id}`);
                         }
                     } catch (storageError) {
-                        console.error('Error al limpiar almacenamiento:', storageError);
                     }
                     
                     

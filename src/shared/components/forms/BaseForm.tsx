@@ -28,6 +28,8 @@ type BaseFormProps = {
 
   showChangesWarning?: boolean;
 
+  headerActions?: ReactNode;
+
 };
 
 
@@ -41,47 +43,31 @@ export default function BaseForm({
   onClose,
 
   onSubmit,
-
   loading = false,
-
   children,
-
   error,
-
   maxWidth = '6xl',
-
   icon,
-
-  showChangesWarning = false
+  showChangesWarning = false,
+  headerActions
 
 }: BaseFormProps) {
 
   const maxWidthClass = {
 
     sm: 'max-w-full sm:max-w-sm',
-
     md: 'max-w-full sm:max-w-md',
-
     lg: 'max-w-full sm:max-w-lg',
-
     xl: 'max-w-full sm:max-w-xl',
-
     '2xl': 'max-w-full sm:max-w-2xl',
-
     '3xl': 'max-w-full sm:max-w-3xl',
-
     '4xl': 'max-w-full sm:max-w-4xl',
-
     '5xl': 'max-w-full sm:max-w-5xl',
-
-    '6xl': 'max-w-full sm:max-w-6xl',
-
+    // Updated width for modern SaaS modal (approx 1000px)
+    '6xl': 'max-w-full sm:max-w-[1000px]',
     '7xl': 'max-w-full sm:max-w-7xl'
 
   }[maxWidth];
-
-
-
   return (
 
     <ModalOverlay className="bg-slate-900/40 backdrop-blur-sm">
@@ -96,13 +82,13 @@ export default function BaseForm({
 
         {/* Header Corporativo (Cuadrado) */}
 
-        <div className="bg-[#001529] px-4 py-3 flex items-center justify-between shrink-0">
+        <div className="bg-gradient-to-r from-blue-900 to-blue-900 px-5 py-4 flex items-center justify-between shrink-0">
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
 
             {icon && (
 
-              <div className="w-8 h-8 bg-blue-500/10 rounded-none flex items-center justify-center border border-blue-500/20">
+              <div className="w-9 h-9 bg-white/10 rounded-none flex items-center justify-center border border-white/20">
 
                 {icon}
 
@@ -114,25 +100,31 @@ export default function BaseForm({
 
               <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">{title}</h2>
 
-              {subtitle && <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-0.5">{subtitle}</p>}
+              {subtitle && <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">{subtitle}</p>}
 
             </div>
 
           </div>
 
-          <button
+          <div className="flex items-center gap-2">
 
-            onClick={onClose}
+            {headerActions}
 
-            className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
+            <button
 
-            disabled={loading}
+              onClick={onClose}
 
-          >
+              className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
 
-            <X size={24} />
+              disabled={loading}
 
-          </button>
+            >
+
+              <X size={24} />
+
+            </button>
+
+          </div>
 
         </div>
 
@@ -140,7 +132,7 @@ export default function BaseForm({
 
         <form onSubmit={onSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-gray-50/50">
 
-          <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2">
 
             {/* Error Message */}
 
@@ -149,56 +141,54 @@ export default function BaseForm({
               <div className="bg-rose-50 border border-rose-100 rounded-none p-4 flex items-center gap-3 text-rose-800">
 
                 <AlertCircle size={20} />
-
                 <p className="text-[11px] font-black uppercase tracking-widest">{error}</p>
-
               </div>
-
             )}
-
-
-
             {children}
-
           </div>
 
-
-
           {/* Footer Actions */}
+          <div className="sticky bottom-0 bg-white border-t px-4 py-3 flex items-center justify-between gap-3 z-10">
+            {showChangesWarning && (
+              <div className="flex items-center gap-2 text-amber-600">
+                <AlertCircle size={14} />
+                <span className="text-[10px] font-black uppercase tracking-widest">Cambios sin guardar</span>
+              </div>
+            )}
 
-          <div className="sticky bottom-0 bg-white border-t px-4 py-3 flex items-center justify-end gap-3 z-10">
+            <div className="flex items-center gap-3 ml-auto">
+              <button
 
-            <button
+                type="button"
 
-              type="button"
+                onClick={onClose}
 
-              onClick={onClose}
+                disabled={loading}
 
-              disabled={loading}
+                className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all disabled:opacity-50"
 
-              className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all disabled:opacity-50"
+              >
 
-            >
+                Cancelar
 
-              Cancelar
+              </button>
 
-            </button>
+              <button
 
-            <button
+                type="submit"
 
-              type="submit"
+                disabled={loading}
 
-              disabled={loading}
+                className="px-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg"
 
-              className="px-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg"
+              >
 
-            >
+                {loading && <Loader2 size={14} className="animate-spin" />}
 
-              {loading && <Loader2 size={14} className="animate-spin" />}
+                {loading ? 'Procesando...' : 'Guardar Cambios'}
 
-              {loading ? 'Procesando...' : 'Guardar Cambios'}
-
-            </button>
+              </button>
+            </div>
 
           </div>
 
@@ -209,89 +199,54 @@ export default function BaseForm({
     </ModalOverlay>
 
   );
-
 }
 
-
-
 // Form Section Component
-
 export function FormSection({
-
   title,
-
   children,
-
   color = 'blue',
-
   className = '',
-
-  titleRight
-
+  titleRight,
+  icon
 }: {
 
   title: string;
-
   children: ReactNode;
-
   color?: 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'indigo';
-
   className?: string;
-
   titleRight?: ReactNode;
-
+  icon?: ReactNode;
 }) {
 
   const colorClasses = {
-
     blue: 'bg-blue-600',
-
     emerald: 'bg-emerald-500',
-
     amber: 'bg-amber-500',
-
     rose: 'bg-rose-500',
-
     purple: 'bg-purple-500',
-
     indigo: 'bg-indigo-500'
-
   };
 
 
 
   return (
-
-    <section className={`bg-white rounded-none border border-slate-100 p-4 space-y-4 ${className}`}>
-
+    <section className={`bg-white rounded-lg border border-slate-100 p-4 space-y-4 shadow-sm ${className}`}>
       <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-
         <div className="flex items-center gap-3">
-
           <div className={`w-1 h-5 ${colorClasses[color]}`}></div>
-
-          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">{title}</h3>
-
+          {icon && <span className="text-slate-400">{icon}</span>}
+          <h3 className="text-[11px] font-black text-blue-900 uppercase tracking-[0.2em]">{title}</h3>
         </div>
-
         {titleRight && (
-
           <div className="flex items-center">
-
             {titleRight}
-
           </div>
-
         )}
-
       </div>
-
       {children}
-
     </section>
-
   );
-
 }
 
 
@@ -299,61 +254,35 @@ export function FormSection({
 // Form Field Component
 
 export function FormField({
-
   label,
-
   required = false,
-
   error,
-
   children,
-
   className = '',
-
   gridCols = 1
-
 }: {
 
   label: string;
-
   required?: boolean;
-
   error?: string;
-
   children: ReactNode;
-
   className?: string;
-
   gridCols?: number;
-
 }) {
 
   const gridClass = gridCols > 1 ? `md:col-span-${gridCols}` : '';
 
-
-
   return (
-
     <div className={`space-y-1 ${className} ${gridClass}`}>
-
       <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 ml-1">
-
         {label} {required && <span className="text-red-500">*</span>}
-
       </label>
-
       {children}
-
       {error && (
-
         <p className="text-red-500 text-[10px] font-semibold mt-1 ml-1">{error}</p>
-
       )}
-
     </div>
-
   );
-
 }
 
 
@@ -361,33 +290,19 @@ export function FormField({
 // Input Component
 
 export function FormInput({
-
   className = '',
-
   error,
-
   ...props
-
 }: React.InputHTMLAttributes<HTMLInputElement> & { error?: string }) {
 
-  const baseClasses = "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] tracking-wider placeholder:text-slate-300";
-
+  const baseClasses = "w-full px-3 py-2 h-9 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] tracking-wider placeholder:text-slate-300";
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
-
-
-
   return (
-
     <input
-
       className={`${baseClasses} ${errorClasses} ${className}`}
-
       {...props}
-
     />
-
   );
-
 }
 
 
@@ -395,76 +310,54 @@ export function FormInput({
 // Select Component
 
 export function FormSelect({
-
-  className = '',
-
-  error,
-
+  className = '',  error,
   children,
-
   ...props
-
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: string }) {
 
-  const baseClasses = "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] tracking-wider";
+  const baseClasses = "w-full px-3 py-2 h-9 bg-slate-50 border border-slate-200 rounded-lg focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] tracking-wider appearance-none cursor-pointer";
 
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
 
 
 
   return (
-
-    <select
-
-      className={`${baseClasses} ${errorClasses} ${className}`}
-
-      {...props}
-
-    >
-
-      {children}
-
-    </select>
-
+    <div className="relative">
+      <select
+        className={`${baseClasses} ${errorClasses} ${className}`}
+        {...props}
+      >
+        {children}
+      </select>
+      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+        <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+    </div>
   );
-
 }
-
-
 
 // Textarea Component
 
 export function FormTextarea({
-
   className = '',
-
   error,
-
   rows = 3,
-
   ...props
 
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { error?: string }) {
-
   const baseClasses = "w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-xs font-bold text-[#002855] tracking-wider placeholder:text-slate-300 resize-none";
-
   const errorClasses = error ? "border-red-300 focus:ring-red-500/20 focus:border-red-500" : "";
 
 
 
   return (
-
     <textarea
-
       rows={rows}
-
       className={`${baseClasses} ${errorClasses} ${className}`}
-
       {...props}
-
     />
-
   );
-
 }
 

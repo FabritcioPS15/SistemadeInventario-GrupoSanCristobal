@@ -22,6 +22,7 @@ export interface UseInventoryReturn {
   selectedLocations: string[];
   showLocationDropdown: boolean;
   filterStatus: string;
+  filterRubro: string;
   dropdownRef: React.RefObject<HTMLDivElement>;
   
   // Pagination
@@ -38,6 +39,7 @@ export interface UseInventoryReturn {
   setSelectedLocations: (value: string[]) => void;
   setShowLocationDropdown: (value: boolean) => void;
   setFilterStatus: (value: string) => void;
+  setFilterRubro: (value: string) => void;
   setCurrentPage: (value: number) => void;
   setItemsPerPage: (value: number) => void;
   setSortConfig: (value: { key: string; direction: 'asc' | 'desc' } | null) => void;
@@ -49,12 +51,11 @@ export interface UseInventoryReturn {
 }
 
 const pathCategoryMap: Record<string, string> = {
-  'computo-ti': 'Equipos de Cómputo y TI',
-  'biometricos-control': 'Equipos Biométricos y Control',
-  'equipos-medicos': 'Equipos Médicos',
+  'tecnologia': 'Tecnología',
+  'seguridad-control': 'Seguridad y Control',
+  'equipos-operativos': 'Equipos Operativos',
   'mobiliario': 'Mobiliario',
-  'seguridad': 'Seguridad',
-  'utiles-oficina': 'Útiles de Oficina',
+  'utiles-suministros': 'Útiles y Suministros',
   'disco-extraido': 'EXTRAIDO'
 };
 
@@ -74,6 +75,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterRubro, setFilterRubro] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Pagination state
@@ -164,6 +166,44 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       if (filterStatus) {
         query = query.eq('status', filterStatus);
       }
+
+      // Apply rubro filter (business_type de la empresa)
+      if (filterRubro) {
+        // Buscar empresas del rubro — sin filtro is_active para no perder datos
+        const { data: rubroCompanies } = await supabase
+          .from('companies')
+          .select('id, name, business_type')
+          .eq('business_type', filterRubro);
+
+        if (rubroCompanies && rubroCompanies.length > 0) {
+          const companyIds = rubroCompanies.map((c: any) => c.id);
+
+          // Obtener sedes que pertenecen a esas empresas
+          const { data: rubroLocations } = await supabase
+            .from('locations')
+            .select('id, name, company_id')
+            .in('company_id', companyIds);
+
+          const locationIds = (rubroLocations || []).map((l: any) => l.id);
+
+          // Aplicar filtro OR: activo pertenece al rubro por company_id o por location_id
+          if (locationIds.length > 0) {
+            query = query.or(
+              `company_id.in.(${companyIds.join(',')}),location_id.in.(${locationIds.join(',')})`
+            );
+          } else if (companyIds.length > 0) {
+            query = query.in('company_id', companyIds);
+          }
+        } else {
+          console.warn(`[Rubro Filter] No se encontraron empresas con business_type="${filterRubro}"`);
+          setRawInventory([]);
+          setTotalCount(0);
+          setLoading(false);
+          return;
+        }
+      }
+
+
       
       // Apply pagination and sort
       const { data, error, count } = await query
@@ -213,7 +253,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
   // Fetch inventory when dependencies change
   useEffect(() => {
     fetchInventory();
-  }, [currentPage, itemsPerPage, searchTerm, filterCategory, selectedLocations, filterStatus, categoryFilter, subcategoryFilter, sortConfig]);
+  }, [currentPage, itemsPerPage, searchTerm, filterCategory, selectedLocations, filterStatus, filterRubro, categoryFilter, subcategoryFilter, sortConfig]);
 
   // Compute inventory with in-memory mapping of categories and subcategories
   const inventory = useMemo(() => {
@@ -250,6 +290,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     selectedLocations,
     showLocationDropdown,
     filterStatus,
+    filterRubro,
     dropdownRef,
     
     // Pagination
@@ -266,6 +307,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     setSelectedLocations,
     setShowLocationDropdown,
     setFilterStatus,
+    setFilterRubro,
     setCurrentPage,
     setItemsPerPage,
     setSortConfig,

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Edit, Plus, Trash2, Save, X, Settings, ChevronDown } from 'lucide-react';
+import { useNotify } from '../hooks/useNotify';
 
 type ChecklistItem = {
   id: string;
@@ -26,6 +27,7 @@ type TemplateManagerProps = {
 
 export default function TemplateManager({ templates, onSaveTemplate, onClose }: TemplateManagerProps) {
   const mountedRef = useRef(true);
+  const { confirm, error: notifyError } = useNotify();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('escon');
   const [editingTemplate, setEditingTemplate] = useState<ChecklistTemplate | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -53,7 +55,7 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
     const uniqueIds = new Set(itemIds);
     
     if (itemIds.length !== uniqueIds.size) {
-      alert('Hay IDs duplicados en los ítems. Por favor corrija antes de guardar.');
+      notifyError('Hay IDs duplicados en los ítems. Por favor corrija antes de guardar.');
       return;
     }
 
@@ -90,14 +92,18 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
     });
   };
 
-  const handleDeleteItem = (itemId: string) => {
+  const handleDeleteItem = async (itemId: string) => {
     if (!editingTemplate || !mountedRef.current) return;
     
-    if (!confirm('¿Está seguro de eliminar este ítem?')) return;
+    const isConfirmed = await confirm('¿Está seguro de eliminar este ítem?', 'Eliminar Ítem');
+    if (!isConfirmed) return;
     
-    setEditingTemplate({
-      ...editingTemplate,
-      items: editingTemplate.items.filter(item => item.id !== itemId)
+    setEditingTemplate(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: prev.items.filter(item => item.id !== itemId)
+      };
     });
   };
 

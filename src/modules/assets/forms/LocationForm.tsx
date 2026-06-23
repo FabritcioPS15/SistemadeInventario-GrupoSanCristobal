@@ -89,7 +89,6 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
 
     try {
       if (editLocation) {
-        console.log('Diagnóstico: Verificando visibilidad del ID:', editLocation.id);
         const { data: existingRow, error: checkError } = await supabase
           .from('locations')
           .select('id')
@@ -97,11 +96,8 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
           .single();
 
         if (checkError || !existingRow) {
-          console.error('Error de visibilidad:', checkError);
           throw new Error('La sede no es visible o fue eliminada. Actualiza la página e intenta de nuevo.');
         }
-
-        console.log('ID confirmado, procediendo con la actualización...');
         
         const { error, count } = await supabase
           .from('locations')
@@ -109,16 +105,12 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
           .eq('id', editLocation.id);
 
         if (error) {
-          console.error('Error de Supabase al actualizar:', error);
           throw error;
         }
 
         if (count === 0) {
-          console.error('Ninguna fila afectada. ¿ID incorrecto o sin permisos?', editLocation.id);
           throw new Error('No se pudo actualizar la sede. Probablemente tienes permisos de lectura pero no de edición.');
         }
-
-        console.log('Actualización exitosa, filas afectadas:', count);
       } else {
         const { error } = await supabase
           .from('locations')

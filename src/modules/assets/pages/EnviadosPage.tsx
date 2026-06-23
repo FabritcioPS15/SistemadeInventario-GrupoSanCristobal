@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Edit, Trash2, Eye, MapPin, Package, Truck, X, Calendar, Plus, LayoutGrid, List, Search } from 'lucide-react';
+import { Edit, Trash2, MapPin, Package, Truck, X, Calendar, Plus, LayoutGrid, List, Search } from 'lucide-react';
 import { useHeaderVisible } from '../../../shared/hooks/useHeaderVisible';
 import { supabase, AssetWithDetails, Location } from '../../../shared/services/supabase';
 import ShipmentForm from '../forms/ShipmentForm';
 import { useAuth } from '../../../app/providers/AuthContext';
+import { useNotify } from '../../../shared/hooks/useNotify';
 import Pagination from '../../../shared/components/ui/Pagination';
 
 type Shipment = {
@@ -31,6 +32,7 @@ type EnviadosProps = {
 
 export default function Enviados({ locationFilter }: EnviadosProps) {
   const { canEdit } = useAuth();
+  const { confirm, error: notifyError, success: notifySuccess } = useNotify();
   const [shipments, setShipments] = useState<Shipment[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +85,8 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
   };
 
   const handleDeleteShipment = async (shipment: Shipment) => {
-    if (window.confirm(`¿Estás seguro de que quieres eliminar el envío del activo "${shipment.assets?.brand} ${shipment.assets?.model}"?`)) {
+    const confirmed = await confirm(`¿Estás seguro de que quieres eliminar el envío del activo "${shipment.assets?.brand} ${shipment.assets?.model}"?`, 'Eliminar Envío');
+    if (confirmed) {
       try {
         const { error } = await supabase
           .from('shipments')
@@ -92,14 +95,14 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
 
         if (error) {
           console.error('Error al eliminar envío:', error);
-          alert('Error al eliminar el envío');
+          notifyError('Error al eliminar el envío');
         } else {
           await fetchShipments();
-          alert('Envío eliminado correctamente');
+          notifySuccess('Envío eliminado correctamente');
         }
       } catch (err) {
         console.error('Error al eliminar envío:', err);
-        alert('Error al eliminar el envío');
+        notifyError('Error al eliminar el envío');
       }
     }
   };
@@ -348,7 +351,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                               </div>
                             )}
                           </div>
-                          <button onClick={() => handleViewShipment(shipment)} className="flex items-center gap-2 px-3 py-2 bg-white text-[#002855] border border-slate-200 text-[9px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"><Eye size={14} /> DETALLES</button>
+                          <button onClick={() => handleViewShipment(shipment)} className="flex items-center gap-2 px-3 py-2 bg-white text-[#002855] border border-slate-200 text-[9px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">DETALLES</button>
                         </div>
                       </div>
                     ))}
@@ -395,7 +398,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-5">
+                            <td className="px-4 py-4">
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-2">
                                   <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
@@ -409,24 +412,23 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-5">
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${statusColors[shipment.status]}`}>
+                            <td className="px-4 py-4">
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-black uppercase tracking-widest border ${statusColors[shipment.status]}`}>
                                 {statusLabels[shipment.status]}
                               </span>
                             </td>
-                            <td className="px-4 py-5">
+                            <td className="px-4 py-4">
                               <div className="flex flex-col">
                                 <span className="text-[13px] font-black text-slate-600 uppercase tabular-nums">{new Date(shipment.shipment_date).toLocaleDateString()}</span>
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{shipment.tracking_number || 'Sin Guía'}</span>
                               </div>
                             </td>
-                            <td className="px-6 py-5 text-center">
+                            <td className="px-6 py-4 text-center">
                               <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={(e) => { e.stopPropagation(); handleViewShipment(shipment); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white border border-slate-100 shadow-sm" title="Ver Detalles"><Eye size={14} /></button>
                                 {canEdit() && (
                                   <>
-                                    <button onClick={(e) => { e.stopPropagation(); handleEditShipment(shipment); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white border border-slate-100 shadow-sm" title="Editar"><Edit size={14} /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteShipment(shipment); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-100 shadow-sm" title="Eliminar"><Trash2 size={14} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleEditShipment(shipment); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Editar"><Edit size={14} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteShipment(shipment); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Eliminar"><Trash2 size={14} /></button>
                                   </>
                                 )}
                               </div>

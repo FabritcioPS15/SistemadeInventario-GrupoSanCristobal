@@ -18,7 +18,7 @@ export default function CategoryManager({
   selectedCategoryId,
   selectedSubcategoryId
 }: CategoryManagerProps) {
-  const { error: notifyError, success: notifySuccess } = useNotify();
+  const { error: notifyError, success: notifySuccess, confirm } = useNotify();
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +85,8 @@ export default function CategoryManager({
   };
 
   const handleDeleteCategory = async (category: Category) => {
-    if (!window.confirm(`¿Estás seguro de eliminar la categoría "${category.name}"? Esto también eliminará todas las subcategorías asociadas.`)) {
+    const confirmed = await confirm(`¿Estás seguro de eliminar la categoría "${category.name}"? Esto también eliminará todas las subcategorías asociadas.`, 'Eliminar Categoría');
+    if (!confirmed) {
       return;
     }
 
@@ -112,7 +113,8 @@ export default function CategoryManager({
   };
 
   const handleDeleteSubcategory = async (subcategory: Subcategory) => {
-    if (!window.confirm(`¿Estás seguro de eliminar la subcategoría "${subcategory.name}"?`)) {
+    const confirmed = await confirm(`¿Estás seguro de eliminar la subcategoría "${subcategory.name}"?`, 'Eliminar Subcategoría');
+    if (!confirmed) {
       return;
     }
 
@@ -150,6 +152,7 @@ export default function CategoryManager({
         if (error) throw error;
       }
       await fetchCategories();
+      notifySuccess('Categoría guardada exitosamente');
       setShowCategoryForm(false);
       setEditingCategory(undefined);
     } catch (err: any) {
@@ -182,6 +185,7 @@ export default function CategoryManager({
         if (error) throw error;
       }
       await fetchSubcategories();
+      notifySuccess('Subcategoría guardada exitosamente');
       setShowSubcategoryForm(false);
       setEditingSubcategory(undefined);
       setSelectedCategoryForSubcategory(undefined);

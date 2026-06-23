@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, Mail, MapPin, Eye, X, Users as UsersIcon, Shield, Crown, LayoutGrid, List, Lock, Settings, TrendingUp, User as UserIcon, Search, ChevronDown, Scale } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, MapPin, X, Users as UsersIcon, Shield, Crown, LayoutGrid, List, Lock, Settings, TrendingUp, User as UserIcon, Search, ChevronDown, Scale } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -10,6 +10,15 @@ import { supabase, Location } from '../../../shared/services/supabase';
 import UserForm from '../forms/UserForm';
 import { useAuth } from '../../../app/providers/AuthContext';
 import Pagination from '../../../shared/components/ui/Pagination';
+import DetailModal, {
+  DetailModalHeader,
+  DetailModalBody,
+  StandardModalFooter,
+  DetailModalGrid,
+  DetailModalSection,
+  DetailModalCard,
+  DetailModalRow,
+} from '../../../shared/components/ui/DetailModal';
 import { useNotify } from '../../../shared/hooks/useNotify';
 
 type User = {
@@ -38,7 +47,8 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>();
-  const [viewingUser, setViewingUser] = useState<User | undefined>();
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
   const [roleFilter, setRoleFilter] = useState('');
@@ -109,7 +119,7 @@ export default function Users() {
     setShowForm(true);
   };
 
-  const handleViewUser = (user: User) => setViewingUser(user);
+  const handleViewUser = (user: User) => { setSelectedUser(user); setShowDetails(true); };
 
   const handleDeleteUser = async (user: User) => {
     if (user.role === 'super_admin') {
@@ -217,8 +227,8 @@ export default function Users() {
   const renderSortableHeader = (label: string, sortKey: string) => {
     const isSorted = sortConfig?.key === sortKey;
     return (
-      <button 
-        onClick={() => handleSort(sortKey)} 
+      <button
+        onClick={() => handleSort(sortKey)}
         className="flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors"
       >
         <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">{label}</span>
@@ -328,12 +338,9 @@ export default function Users() {
   void isHeaderVisible;
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc] font-sans">
-      <div className="flex-1 overflow-y-auto">
-        <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-4">
-
-
-          {/* Action Bar — Sedes-style */}
+    <div className="flex flex-col h-full bg-[#f8fafc]">
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+        {/* Action Bar — Sedes-style */}
           <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
             <div className="absolute -top-3 -left-3">
               <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
@@ -437,16 +444,16 @@ export default function Users() {
               </select>
 
               <div className="flex bg-slate-100 p-1 border border-slate-200">
-                <button 
-                  onClick={() => setViewMode('grid')} 
-                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
                   title="Vista Cuadrícula"
                 >
                   <LayoutGrid size={16} />
                 </button>
-                <button 
-                  onClick={() => setViewMode('list')} 
-                  className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
                   title="Vista Tabla"
                 >
                   <List size={16} />
@@ -535,9 +542,6 @@ export default function Users() {
                       </div>
                     </div>
                     <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex gap-2">
-                      <button onClick={() => handleViewUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-white text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm">
-                        <Eye size={14} /> Ver
-                      </button>
                       {canEditValue && u.role !== 'super_admin' && (
                         <>
                           <button onClick={() => handleEditUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm">
@@ -592,9 +596,9 @@ export default function Users() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {paginatedUsers.map((u) => (
-                      <tr 
-                        key={u.id} 
-                        className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20" 
+                      <tr
+                        key={u.id}
+                        className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20"
                         onDoubleClick={() => handleViewUser(u)}
                         onClick={() => handleViewUser(u)}
                       >
@@ -639,24 +643,17 @@ export default function Users() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleViewUser(u); }} 
-                              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white border border-slate-200 transition-all shadow-sm rounded-lg" 
-                              title="Ver Ficha"
-                            >
-                              <Eye size={14} />
-                            </button>
                             {canEdit() && u.role !== 'super_admin' && (
                               <>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleEditUser(u); }} 
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleEditUser(u); }}
                                   className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white border border-slate-200 transition-all shadow-sm rounded-lg"
                                   title="Editar Usuario"
                                 >
                                   <Edit size={14} />
                                 </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }} 
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }}
                                   className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-200 transition-all shadow-sm rounded-lg"
                                   title="Eliminar Usuario"
                                 >
@@ -673,7 +670,6 @@ export default function Users() {
               </div>
             </div>
           )}
-        </div>
       </div>
 
       {/* Modals */}
@@ -681,59 +677,95 @@ export default function Users() {
         <UserForm editUser={editingUser} onClose={handleCloseForm} onSave={handleSaveUser} />
       )}
 
-      {viewingUser && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="px-8 py-6 flex items-center justify-between border-b border-gray-100">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100">{getRoleIcon(viewingUser.role)}</div>
-                <div>
-                  <h3 className="text-lg font-black text-[#002855] uppercase tracking-tight">Ficha de Usuario</h3>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{getRoleLabel(viewingUser.role)}</p>
-                </div>
+      {showDetails && selectedUser && (
+        <DetailModal maxWidth="5xl" onClose={() => setShowDetails(false)} closeOnBackdrop>
+          <DetailModalHeader>
+            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+            <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                {getRoleIcon(selectedUser.role)}
               </div>
-              <button onClick={() => setViewingUser(undefined)} className="text-gray-400 hover:text-gray-600 p-2"><X size={24} /></button>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                  {selectedUser.full_name}
+                </h2>
+                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                  <span className="line-clamp-2 sm:truncate">{getRoleLabel(selectedUser.role)}</span>
+                </p>
+              </div>
             </div>
-            <div className="p-8 overflow-y-auto space-y-6">
-              <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 rounded-xl bg-[#002855] text-white flex items-center justify-center text-lg font-black overflow-hidden flex-shrink-0">
-                    {viewingUser.avatar_url ? (
-                      <img src={viewingUser.avatar_url} alt={viewingUser.full_name} className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          target.parentElement!.innerHTML = `<div class="w-full h-full bg-[#002855] text-white flex items-center justify-center text-lg font-black">${viewingUser.full_name?.charAt(0) || '?'}</div>`;
-                        }} />
-                    ) : (viewingUser.full_name?.charAt(0) || '?')}
-                  </div>
-                  <div className="flex-1">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Nombre Completo</label>
-                    <p className="text-lg font-black text-[#002855] uppercase">{viewingUser.full_name}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Email</label>
-                  <p className="text-xs font-bold font-mono text-gray-700 truncate">{viewingUser.email}</p>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Sede</label>
-                  <p className="text-xs font-bold text-gray-700">{viewingUser.locations?.name || 'N/A'}</p>
-                </div>
-              </div>
-              {viewingUser.notes && (
-                <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100">
-                  <p className="text-sm font-medium italic text-amber-900 leading-relaxed">"{viewingUser.notes}"</p>
-                </div>
+            <button
+              onClick={() => setShowDetails(false)}
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
+              aria-label="Cerrar detalle"
+            >
+              <X size={22} />
+            </button>
+          </DetailModalHeader>
+
+          <DetailModalBody>
+            <DetailModalGrid layout="stack-until-xl">
+              <DetailModalSection title="Información del Usuario">
+                <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                  <DetailModalRow label="Nombre Completo">
+                    <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
+                      {selectedUser.full_name}
+                    </span>
+                  </DetailModalRow>
+                  <DetailModalRow label="Email">
+                    <span className="text-[10px] sm:text-[11px] font-mono font-black text-slate-700 break-all">
+                      {selectedUser.email}
+                    </span>
+                  </DetailModalRow>
+                  <DetailModalRow label="Rol">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border rounded-full ${getRoleColor(selectedUser.role)}`}>
+                      {getRoleIcon(selectedUser.role)}{getRoleLabel(selectedUser.role)}
+                    </span>
+                  </DetailModalRow>
+                  <DetailModalRow label="Estado">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border rounded-full ${statusColors[selectedUser.status]}`}>
+                      {statusLabels[selectedUser.status]}
+                    </span>
+                  </DetailModalRow>
+                </DetailModalCard>
+
+                <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                  <DetailModalRow label="Sede">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin size={14} className="text-rose-500 shrink-0" />
+                      <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
+                        {selectedUser.locations?.name || 'N/A'}
+                      </span>
+                    </div>
+                  </DetailModalRow>
+                  {selectedUser.phone && (
+                    <DetailModalRow label="Teléfono">
+                      <span className="text-[10px] sm:text-[11px] font-mono font-black text-slate-700">
+                        {selectedUser.phone}
+                      </span>
+                    </DetailModalRow>
+                  )}
+                </DetailModalCard>
+              </DetailModalSection>
+
+              {selectedUser.notes && (
+                <DetailModalSection title="Notas">
+                  <DetailModalCard className="bg-amber-50 border-amber-100">
+                    <p className="text-[10px] sm:text-[11px] font-medium text-amber-900 leading-relaxed">
+                      {selectedUser.notes}
+                    </p>
+                  </DetailModalCard>
+                </DetailModalSection>
               )}
-            </div>
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
-              <button onClick={() => setViewingUser(undefined)} className="flex-1 py-3 text-xs font-black text-gray-500 uppercase tracking-widest bg-white border border-gray-200 rounded-xl hover:bg-gray-50">Cerrar</button>
-            </div>
-          </div>
-        </div>
+            </DetailModalGrid>
+          </DetailModalBody>
+
+          <StandardModalFooter
+            onClose={() => setShowDetails(false)}
+            onEdit={canEdit() && selectedUser.role !== 'super_admin' ? () => { setShowDetails(false); handleEditUser(selectedUser); } : undefined}
+            editLabel="Editar"
+          />
+        </DetailModal>
       )}
     </div>
   );

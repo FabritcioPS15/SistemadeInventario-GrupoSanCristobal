@@ -174,24 +174,13 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
 
       // Enviar notificación de ticket creado
       if (ticketData) {
-        console.log('🎫 Creando notificación para ticket:', ticketData.id);
-        console.log('👤 Usuario:', user?.full_name, 'ID:', user?.id);
-        console.log('📍 Ubicación:', locations.find(l => l.id === formData.location_id)?.name);
-        
-        const notificationResult = await notifyTicketCreated(
+        await notifyTicketCreated(
           ticketData.id,
           ticketData.title,
           user?.id || '',
           user?.full_name || 'Usuario',
           locations.find(l => l.id === formData.location_id)?.name || 'Sin ubicación'
         );
-        
-        console.log('📊 Resultado de notificación:', notificationResult);
-        if (notificationResult) {
-          console.log('✅ Notificación creada exitosamente');
-        } else {
-          console.log('❌ Error creando notificación');
-        }
       }
 
       onSave();

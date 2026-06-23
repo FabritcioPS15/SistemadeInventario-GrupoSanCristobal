@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 
-import { Edit, Trash2, MapPin, X, Eye, Globe, Copy, Server as ServerLucide, ChevronDown, ChevronUp, LayoutGrid, List, Plus, Search } from 'lucide-react';
+import { Edit, Trash2, MapPin, X, Copy, ChevronDown, ChevronUp, LayoutGrid, List, Plus, Search } from 'lucide-react';
 
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 
@@ -22,7 +22,15 @@ import ServerForm from '../forms/ServerForm';
 
 import Pagination from '../../../shared/components/ui/Pagination';
 
-import ModalOverlay from '../../../shared/components/ui/ModalOverlay';
+import DetailModal, {
+  DetailModalHeader,
+  DetailModalBody,
+  StandardModalFooter,
+  DetailModalGrid,
+  DetailModalSection,
+  DetailModalCard,
+  DetailModalRow,
+} from '../../../shared/components/ui/DetailModal';
 import { useNotify } from '../../../shared/hooks/useNotify';
 
 // ─── Stats (tipado correcto) ─────────────────────────────────────────────────
@@ -35,7 +43,7 @@ interface ServerStats {
 export default function Servers() {
 
   const { canEdit } = useAuth();
-  const { info: notifyInfo } = useNotify();
+  const { success: notifySuccess, info: notifyInfo, confirm, error: notifyError } = useNotify();
 
   const [servers, setServers] = useState<Server[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -43,7 +51,8 @@ export default function Servers() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Server | undefined>();
-  const [viewingServer, setViewingServer] = useState<Server | undefined>();
+  const [showDetails, setShowDetails] = useState(false);
+  const [selectedServer, setSelectedServer] = useState<Server | undefined>();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -171,10 +180,16 @@ export default function Servers() {
   }, [downloadServersReport, downloadServersReportPdf, openCreate]);
 
   const del = async (s: Server) => {
-    if (confirm(`¿Eliminar servidor "${s.name}"?`)) {
-      await supabase.from('servers').delete().eq('id', s.id);
-      setSelectedIds(prev => prev.filter(id => id !== s.id));
-      await fetchServers();
+    const confirmed = await confirm(`¿Eliminar servidor "${s.name}"?`, 'Confirmar Eliminación');
+    if (confirmed) {
+      const { error } = await supabase.from('servers').delete().eq('id', s.id);
+      if (error) {
+         notifyError('Error al eliminar el servidor: ' + error.message);
+      } else {
+         setSelectedIds(prev => prev.filter(id => id !== s.id));
+         await fetchServers();
+         notifySuccess('Servidor eliminado correctamente');
+      }
     }
   };
 
@@ -193,14 +208,16 @@ export default function Servers() {
   };
 
   const handleBulkDelete = async () => {
-    if (confirm(`¿Eliminar ${selectedIds.length} servidores seleccionados?`)) {
+    const confirmed = await confirm(`¿Eliminar ${selectedIds.length} servidores seleccionados?`, 'Eliminación por Lote');
+    if (confirmed) {
       const { error } = await supabase.from('servers').delete().in('id', selectedIds);
       if (!error) {
         setSelectedIds([]);
         await fetchServers();
+        notifySuccess(`${selectedIds.length} servidores eliminados correctamente`);
       } else {
         // FIX #5: sin alert() bloqueante
-        notifyInfo('Error al eliminar: ' + error.message);
+        notifyError('Error al eliminar: ' + error.message);
       }
     }
   };
@@ -419,7 +436,7 @@ export default function Servers() {
 
                   <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex gap-2 z-10">
                     <button
-                      onClick={(e) => { e.stopPropagation(); setViewingServer(srv); }}
+                      onClick={(e) => { e.stopPropagation(); setSelectedServer(srv); setShowDetails(true); }}
                       className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 rounded-none hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
                     >
                       Ficha
@@ -552,12 +569,6 @@ export default function Servers() {
                           </div>
 
                           <div className="flex gap-2">
-                            <button
-                              onClick={() => setViewingServer(srv)}
-                              className="flex-1 py-3 bg-[#002855] text-[10px] font-black uppercase tracking-wider text-white rounded-none shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                            >
-                              <Eye size={14} /> Ficha Técnica
-                            </button>
                             {canEdit() && (
                               <div className="flex gap-2">
                                 <button onClick={() => openEdit(srv)} className="w-12 h-12 bg-white text-amber-600 rounded-none flex items-center justify-center border border-slate-100 shadow-sm active:scale-95 transition-all">
@@ -631,8 +642,7 @@ export default function Servers() {
                           <tr
                             key={srv.id}
                             className={`hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0 ${selectedIds.includes(srv.id) ? 'bg-blue-50/50' : ''}`}
-                            onDoubleClick={() => setViewingServer(srv)}
-                            onClick={() => canEdit() && toggleSelect(srv.id)}
+                            onClick={() => { setSelectedServer(srv); setShowDetails(true); if (canEdit()) toggleSelect(srv.id); }}
                           >
                             <td className="px-6 py-5 text-left w-12">
                               <input
@@ -643,27 +653,27 @@ export default function Servers() {
                                 className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
                               />
                             </td>
-                            <td className="px-6 py-5 font-bold text-left">
+                            <td className="px-6 py-4 font-bold text-left">
                               <div className="flex items-center justify-start gap-3">
                                 <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
                                   <ServerIcon size={14} />
                                 </div>
                                 <div className="flex flex-col items-start">
-                                  <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{srv.name}</span>
+                                  <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">{srv.name}</span>
                                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 md:hidden">{srv.locations?.name || 'VIRTUAL'}</span>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-5 text-left">
+                            <td className="px-4 py-4 text-left">
                               <div className="flex flex-col items-start">
-                                <span className="text-sm font-extrabold text-slate-600 uppercase tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
+                                <span className="text-[13px] font-extrabold text-slate-600 uppercase tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
                                 <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Sede Física</span>
                               </div>
                             </td>
-                            <td className="px-4 py-5 text-left">
+                            <td className="px-4 py-4 text-left">
                               <div className="flex flex-col items-start group/cell">
                                 <div className="flex items-center justify-start gap-2">
-                                  <span className={`text-[14px] font-mono font-black ${hasIp ? 'text-[#002855]' : 'text-slate-300'}`}>{srv.ip_address || '—'}</span>
+                                  <span className={`text-[13px] font-mono font-black ${hasIp ? 'text-[#002855]' : 'text-slate-300'}`}>{srv.ip_address || '—'}</span>
                                   {hasIp && (
                                     <button
                                       onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.ip_address!, 'IP'); }}
@@ -677,7 +687,7 @@ export default function Servers() {
                                 <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Red Interna</span>
                               </div>
                             </td>
-                            <td className="px-4 py-5 text-left">
+                            <td className="px-4 py-4 text-left">
                               <div className="flex flex-col items-start group/cell">
                                 <div className="flex items-center justify-start gap-2">
                                   <span className={`text-[14px] font-mono font-black ${hasAnydesk ? 'text-red-600' : 'text-slate-300'}`}>{srv.anydesk_id || '—'}</span>
@@ -694,22 +704,15 @@ export default function Servers() {
                                 <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">ID Remoto</span>
                               </div>
                             </td>
-                            <td className="px-6 py-5 text-center">
+                            <td className="px-6 py-4 text-center">
                               <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-1 group-hover:translate-x-0">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setViewingServer(srv); }}
-                                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm group/btn"
-                                  title="Ver Ficha"
-                                >
-                                  <Eye size={14} className="group-hover/btn:scale-110 transition-transform" />
-                                </button>
                                 {canEdit() && (
                                   <>
-                                    <button onClick={(e) => { e.stopPropagation(); openEdit(srv); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm group/btn" title="Editar">
-                                      <Edit size={14} className="group-hover/btn:scale-110 transition-transform" />
+                                    <button onClick={(e) => { e.stopPropagation(); openEdit(srv); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Editar">
+                                      <Edit size={14} />
                                     </button>
-                                    <button onClick={(e) => { e.stopPropagation(); del(srv); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-100 transition-all shadow-sm group/btn" title="Eliminar">
-                                      <Trash2 size={14} className="group-hover/btn:scale-110 transition-transform" />
+                                    <button onClick={(e) => { e.stopPropagation(); del(srv); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Eliminar">
+                                      <Trash2 size={14} />
                                     </button>
                                   </>
                                 )}
@@ -769,182 +772,135 @@ export default function Servers() {
           />
         )}
 
-        {/* Modal de detalle */}
-        {viewingServer && (
-          <ModalOverlay className="bg-[#001529]/95 backdrop-blur-sm">
-            <div
-              className="bg-white w-full h-full md:h-auto md:max-h-[95vh] max-w-7xl rounded-none md:rounded-[3.5rem] shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300 border border-white/20"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="bg-[#001529] px-6 py-4 md:px-8 md:py-6 flex items-center justify-between shrink-0 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-blue-500/10 rounded-full -mr-32 -mt-32 md:-mr-48 md:-mt-48 blur-2xl md:blur-3xl" />
-                <div className="flex items-center gap-4 md:gap-6 relative z-10">
-                  <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-none md:rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                    <ServerIcon size={24} className="text-white md:hidden" />
-                    <ServerIcon size={32} className="text-white hidden md:block" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-black text-white uppercase tracking-[0.3em] leading-tight">Ficha Técnica</h2>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
-                        Instancia: {viewingServer.name}
-                      </p>
-                    </div>
-                  </div>
+        {showDetails && selectedServer && (
+          <DetailModal maxWidth="7xl" onClose={() => setShowDetails(false)} closeOnBackdrop>
+            <DetailModalHeader>
+              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+              <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                  <ServerIcon size={20} />
                 </div>
-                <button
-                  onClick={() => setViewingServer(undefined)}
-                  className="p-2 md:p-2.5 bg-white/5 hover:bg-rose-500 rounded-none md:rounded-xl transition-all text-white/40 hover:text-white border border-white/10 hover:border-rose-500 relative z-10"
-                >
-                  <X size={18} className="md:hidden" />
-                  <X size={20} className="hidden md:block" />
-                </button>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                    {selectedServer.name}
+                  </h2>
+                  <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                    <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
+                    <span className="line-clamp-2 sm:truncate">{selectedServer.locations?.name || 'N/A'}</span>
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={() => setShowDetails(false)}
+                className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
+                aria-label="Cerrar detalle"
+              >
+                <X size={22} />
+              </button>
+            </DetailModalHeader>
 
-              <div className="flex-1 overflow-y-auto p-5 md:p-8 space-y-6 md:space-y-8 bg-slate-50/50">
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                  {[
-                    { label: 'Direccionamiento LAN', val: viewingServer.ip_address, icon: <Globe size={18} />, color: 'emerald', copy: viewingServer.ip_address },
-                    { label: 'Identificador AnyDesk', val: viewingServer.anydesk_id, icon: <SiAnydesk size={18} />, color: 'red', copy: viewingServer.anydesk_id },
-                    { label: 'Ubicación Física', val: viewingServer.locations?.name || 'N/A', icon: <MapPin size={18} />, color: 'slate' },
-                  ].map((item, i) => (
-                    <div key={i} className="bg-white p-4 rounded-none border border-slate-100 shadow-sm group/card transition-all hover:shadow-lg flex items-center gap-4">
-                      <div className={`p-3 rounded-none bg-${item.color}-50 text-${item.color}-600 shrink-0`}>
-                        {item.icon}
+            <DetailModalBody>
+              <DetailModalGrid layout="stack-until-xl">
+                <DetailModalSection title="Información de Conexión">
+                  <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                    <DetailModalRow label="Dirección IP">
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="font-mono text-[10px] sm:text-[11px] font-black text-blue-600 break-all">{selectedServer.ip_address || '—'}</span>
+                        {selectedServer.ip_address && (
+                          <button onClick={() => copyToClipboard(selectedServer.ip_address || '')} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors shrink-0">
+                            <Copy size={14} />
+                          </button>
+                        )}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">{item.label}</label>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-black text-[#002855] truncate">{item.val || '—'}</p>
-                          {item.copy && (
-                            <button
-                              onClick={() => copyToClipboard(item.copy || '', item.label)}
-                              className="text-slate-300 hover:text-blue-500 transition-colors shrink-0"
-                            >
-                              <Copy size={12} />
-                            </button>
-                          )}
-                        </div>
+                    </DetailModalRow>
+                    <DetailModalRow label="AnyDesk ID">
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="font-mono text-[10px] sm:text-[11px] font-black text-blue-600">{selectedServer.anydesk_id || '—'}</span>
+                        {selectedServer.anydesk_id && (
+                          <button onClick={() => copyToClipboard(selectedServer.anydesk_id || '')} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors shrink-0">
+                            <Copy size={14} />
+                          </button>
+                        )}
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    </DetailModalRow>
+                  </DetailModalCard>
+                </DetailModalSection>
 
-                {/* Credenciales principales */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 ml-2">
-                    <div className="w-8 h-1 bg-emerald-500 rounded-full" />
-                    <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-[0.3em]">Acceso Principal</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-white border-2 border-slate-100 rounded-none p-8 relative overflow-hidden group/cred transition-all hover:shadow-2xl">
-                      <div className="space-y-4">
-                        <div>
-                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Usuario Principal</label>
-                          <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                            <p className="text-sm font-black text-[#002855]">{viewingServer.username || '—'}</p>
-                            {viewingServer.username && (
-                              <button onClick={() => copyToClipboard(viewingServer.username || '', 'Usuario')} className="text-slate-300 hover:text-emerald-500 transition-all">
-                                <Copy size={16} />
+                <DetailModalSection title="Credenciales Principales">
+                  <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                    <DetailModalRow label="Usuario">
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="text-[10px] sm:text-[11px] font-black text-[#002855] truncate">{selectedServer.username || '—'}</span>
+                        {selectedServer.username && (
+                          <button onClick={() => copyToClipboard(selectedServer.username || '')} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors shrink-0">
+                            <Copy size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </DetailModalRow>
+                    <DetailModalRow label="Contraseña">
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <span className="font-mono text-[10px] sm:text-xs font-bold text-slate-600 tracking-wide break-all">
+                          {selectedServer.password ? '••••••••••••' : '—'}
+                        </span>
+                        {selectedServer.password && (
+                          <button onClick={() => copyToClipboard(selectedServer.password || '')} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors shrink-0">
+                            <Copy size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </DetailModalRow>
+                  </DetailModalCard>
+                </DetailModalSection>
+
+                {selectedServer.windows_credentials && selectedServer.windows_credentials.length > 0 && (
+                  <DetailModalSection title="Credenciales Adicionales">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {selectedServer.windows_credentials.map((cred: any, i: number) => (
+                        <DetailModalCard key={i}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest">{cred.description || 'ACCESO'}</span>
+                          </div>
+                          <DetailModalRow label="Usuario">
+                            <div className="flex items-center justify-between gap-2 min-w-0">
+                              <span className="text-[10px] sm:text-[11px] font-black text-[#002855] truncate">{cred.username}</span>
+                              <button onClick={() => copyToClipboard(cred.username || '')} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors shrink-0">
+                                <Copy size={14} />
                               </button>
-                            )}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Contraseña Principal</label>
-                          <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                            <p className="text-sm font-black text-slate-300 tracking-[0.4em] select-none">••••••••••••</p>
-                            <button
-                              onClick={() => copyToClipboard(viewingServer.password || '', 'Contraseña')}
-                              className="text-[10px] font-black text-emerald-600 hover:bg-emerald-50 px-3 py-1.5 rounded-none transition-all uppercase"
-                            >
-                              Obtener
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Credenciales Windows */}
-                {viewingServer.windows_credentials && viewingServer.windows_credentials.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 ml-2">
-                      <div className="w-8 h-1 bg-blue-500 rounded-full" />
-                      <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-[0.3em]">Credenciales de Seguridad (Windows)</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {viewingServer.windows_credentials.map((cred, i) => (
-                        <div key={i} className="bg-white border-2 border-slate-100 hover:border-blue-500/20 rounded-none p-8 relative overflow-hidden group/cred transition-all hover:shadow-2xl">
-                          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover/cred:opacity-20 transition-opacity">
-                            <ServerLucide size={64} />
-                          </div>
-                          <div className="flex justify-between items-start mb-6">
-                            <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-none text-[9px] font-black uppercase tracking-widest">
-                              {cred.description || 'ACCESO'}
                             </div>
-                          </div>
-                          <div className="space-y-4">
-                            <div>
-                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Usuario</label>
-                              <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                                <p className="text-sm font-black text-[#002855]">{cred.username}</p>
-                                <button onClick={() => copyToClipboard(cred.username || '', 'Usuario')} className="text-slate-300 hover:text-blue-500 transition-all">
-                                  <Copy size={16} />
-                                </button>
-                              </div>
+                          </DetailModalRow>
+                          <DetailModalRow label="Contraseña">
+                            <div className="flex items-center justify-between gap-2 min-w-0">
+                              <span className="font-mono text-[10px] sm:text-xs font-bold text-slate-600 tracking-wide">••••••••••••</span>
+                              <button onClick={() => copyToClipboard(cred.password || '')} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors shrink-0">
+                                <Copy size={14} />
+                              </button>
                             </div>
-                            <div>
-                              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Clave de Acceso</label>
-                              <div className="flex items-center justify-between py-2 border-b border-slate-50">
-                                <p className="text-sm font-black text-slate-300 tracking-[0.4em] select-none">••••••••••••</p>
-                                <button
-                                  onClick={() => copyToClipboard(cred.password || '', 'Contraseña')}
-                                  className="text-[10px] font-black text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-none transition-all uppercase"
-                                >
-                                  Obtener
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                          </DetailModalRow>
+                        </DetailModalCard>
                       ))}
                     </div>
-                  </div>
+                  </DetailModalSection>
                 )}
 
-                {/* Notas */}
-                {viewingServer.notes && (
-                  <div className="bg-amber-50/30 rounded-none border border-amber-200/50 p-6 relative overflow-hidden group/notes">
-                    <h3 className="text-[10px] font-black text-amber-900 uppercase tracking-widest mb-3 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
-                      Observaciones
-                    </h3>
-                    <p className="text-sm font-medium text-amber-900/80 leading-relaxed italic border-l-2 border-amber-400 pl-4 py-1">
-                      "{viewingServer.notes}"
-                    </p>
-                  </div>
+                {selectedServer.notes && (
+                  <DetailModalSection title="Notas">
+                    <DetailModalCard className="bg-amber-50 border-amber-100">
+                      <p className="text-[10px] sm:text-[11px] font-medium text-amber-900 leading-relaxed">
+                        {selectedServer.notes}
+                      </p>
+                    </DetailModalCard>
+                  </DetailModalSection>
                 )}
-              </div>
+              </DetailModalGrid>
+            </DetailModalBody>
 
-              {/* Footer */}
-              <div className="bg-white border-t border-slate-100 px-6 py-4 md:px-8 md:py-5 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                  Última Actualización: {new Date(viewingServer.updated_at).toLocaleDateString()}
-                </p>
-                <button
-                  onClick={() => setViewingServer(undefined)}
-                  className="w-full sm:w-auto px-8 py-3 text-[10px] md:text-[11px] font-black text-white bg-[#002855] rounded-none md:rounded-2xl hover:bg-blue-600 transition-all shadow-lg shadow-blue-900/10 active:scale-95 uppercase tracking-widest"
-                >
-                  Finalizar Consulta
-                </button>
-              </div>
-            </div>
-          </ModalOverlay>
+            <StandardModalFooter
+              onClose={() => setShowDetails(false)}
+              onEdit={canEdit() ? () => { setShowDetails(false); openEdit(selectedServer); } : undefined}
+              editLabel="Editar"
+            />
+          </DetailModal>
         )}
 
       </div>

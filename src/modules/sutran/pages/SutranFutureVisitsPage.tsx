@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, MapPin, AlertTriangle, User, RefreshCw, Search } from 'lucide-react';
+import { Calendar, Clock, MapPin, AlertTriangle, RefreshCw, Search } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 
 interface FutureVisit {
@@ -26,7 +26,7 @@ export default function SutranFutureVisits() {
   const fetchFutureVisits = async () => {
     try {
       setLoading(true);
-      
+
       // 1. Obtener todas las visitas históricas y las pendientes
       const { data: allVisits, error } = await supabase
         .from('sutran_visits')
@@ -37,7 +37,7 @@ export default function SutranFutureVisits() {
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const ninetyDaysFromNow = new Date();
       ninetyDaysFromNow.setDate(today.getDate() + 90);
       ninetyDaysFromNow.setHours(23, 59, 59, 999);
@@ -59,14 +59,14 @@ export default function SutranFutureVisits() {
       Object.entries(visitsByLocation).forEach(([locationId, history]) => {
         const completedVisits = history.filter(v => v.status === 'completed');
         const pendingVisits = history.filter(v => v.status === 'pending' || v.status === 'scheduled');
-        
+
         const lastVisitDate = completedVisits.length > 0 ? completedVisits[0].visit_date : undefined;
 
         // Si ya hay una visita pendiente futura
         if (pendingVisits.length > 0) {
           const nextPending = pendingVisits[0];
           const pendingDate = new Date(nextPending.visit_date);
-          
+
           // Solo mostrar si está dentro de los próximos 90 días
           if (pendingDate >= today && pendingDate <= ninetyDaysFromNow) {
             projections.push({
@@ -89,7 +89,7 @@ export default function SutranFutureVisits() {
         if (completedVisits.length > 0) {
           const lastVisit = completedVisits[0];
           const lastDate = new Date(lastVisit.visit_date);
-          
+
           let intervalDays = 180; // Default: 6 meses
 
           if (completedVisits.length >= 2) {
@@ -123,7 +123,7 @@ export default function SutranFutureVisits() {
 
       // Ordenar por fecha
       projections.sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime());
-      
+
       setVisits(projections);
     } catch (error) {
       console.error('Error calculating future visits:', error);
@@ -172,7 +172,7 @@ export default function SutranFutureVisits() {
     }
   };
 
-  const filteredVisits = visits.filter(visit => 
+  const filteredVisits = visits.filter(visit =>
     visit.inspector_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     visit.location_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -297,11 +297,10 @@ export default function SutranFutureVisits() {
                         </div>
                       </td>
                       <td className="px-6 py-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${
-                          getDaysRemaining(visit.visit_date).includes('hace') 
-                            ? 'border-rose-200 bg-rose-50 text-rose-700' 
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${getDaysRemaining(visit.visit_date).includes('hace')
+                            ? 'border-rose-200 bg-rose-50 text-rose-700'
                             : 'border-amber-200 bg-amber-50 text-amber-700'
-                        }`}>
+                          }`}>
                           <Clock size={10} />
                           {getDaysRemaining(visit.visit_date)}
                         </span>

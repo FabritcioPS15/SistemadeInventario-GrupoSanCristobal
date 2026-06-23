@@ -442,7 +442,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         'sent-lima-view', 'sent-provincias-view',
 
-        'audit-view', 'audit-export'
+        'audit-view', 'audit-export', 'cvs-view'
 
       ],
 
@@ -498,7 +498,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         'sent-lima-view', 'sent-provincias-view',
 
-        'audit-view', 'audit-export',
+        'audit-view', 'audit-export', 'cvs-view',
         'titulos-habilitantes-view',
 
       ],
@@ -557,7 +557,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         'sent-lima-view', 'sent-provincias-view',
 
-        'audit-view', 'audit-export',
+        'audit-view', 'audit-export', 'cvs-view',
         'titulos-habilitantes-view',
         'planos-defensa-civil-view',
 
@@ -579,7 +579,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'flota-vehicular-view', 'flota-vehicular-edit',
         'sutran-view', 'sutran-edit',
         'mtc-view', 'mtc-edit',
-        'audit-view', 'audit-export'
+        'audit-view', 'audit-export', 'cvs-view'
       ],
       
       // Administradores: Acceso limitado - solo visualización y gestión básica
@@ -595,7 +595,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         'flota-vehicular-view', // Solo ver flota
         'locations-view', // Solo ver sedes, no editar
         'sutran-view', // Solo ver sutran
-        'sent-lima-view', 'sent-provincias-view'
+        'sent-lima-view', 'sent-provincias-view',
+        'cvs-view'
       ],
 
 

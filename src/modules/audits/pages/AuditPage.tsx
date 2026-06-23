@@ -5,11 +5,13 @@ import { supabase, BranchAudit } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
 import AuditForm from '../forms/AuditForm';
 import HeaderSearch from '../../../app/layouts/HeaderSearch';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type ViewType = 'history' | 'form';
 
 export default function Audit() {
   const { canEdit } = useAuth();
+  const { confirm, error: notifyError } = useNotify();
   const [view, setView] = useState<ViewType>('history');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [audits, setAudits] = useState<BranchAudit[]>([]);
@@ -31,8 +33,10 @@ export default function Audit() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('¿Estás seguro de eliminar este registro?')) return;
-    await supabase.from('branch_audits').delete().eq('id', id);
+    const confirmed = await confirm('¿Estás seguro de eliminar este registro?', 'Eliminar Registro');
+    if (!confirmed) return;
+    const { error } = await supabase.from('branch_audits').delete().eq('id', id);
+    if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchAudits();
   };
 
@@ -183,8 +187,8 @@ export default function Audit() {
                         </div>
 
                         <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-end gap-2">
-                          <button onClick={(e) => { e.stopPropagation(); handleEdit(audit); }} className="p-2.5 bg-white text-slate-400 hover:text-blue-600 border border-slate-100 hover:border-blue-100 shadow-sm transition-all"><Edit size={16} /></button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDelete(audit.id); }} className="p-2.5 bg-white text-slate-400 hover:text-rose-600 border border-slate-100 hover:border-rose-100 shadow-sm transition-all"><Trash2 size={16} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleEdit(audit); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete(audit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Trash2 size={14} /></button>
                         </div>
                       </div>
                     </div>
@@ -196,12 +200,12 @@ export default function Audit() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-white border-b border-slate-100">
-                      <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Auditoría / Auditor</th>
-                      <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Ubicación</th>
-                      <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha</th>
-                      <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Score</th>
-                      <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Estado</th>
-                      <th className="px-8 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
+                      <th className="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Auditoría / Auditor</th>
+                      <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Ubicación</th>
+                      <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha</th>
+                      <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Score</th>
+                      <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Estado</th>
+                      <th className="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -209,19 +213,19 @@ export default function Audit() {
                       const statusCfg = getStatusConfig(audit.status);
                       return (
                         <tr key={audit.id} className="hover:bg-blue-50/30 cursor-pointer transition-all duration-200 group border-b border-slate-50 last:border-0" onClick={() => handleEdit(audit)}>
-                          <td className="px-8 py-6">
+                          <td className="px-8 py-4">
                             <div className="flex flex-col">
                               <span className="text-[13px] font-black text-[#002855] uppercase tracking-tight group-hover:text-blue-600 transition-colors uppercase">{audit.id.slice(0, 8)}</span>
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 italic">{audit.auditor_name}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-6 font-black text-[11px] text-[#002855] uppercase tracking-widest">
+                          <td className="px-4 py-4 font-black text-[11px] text-[#002855] uppercase tracking-widest">
                             {audit.locations?.name || 'N/A'}
                           </td>
-                          <td className="px-4 py-6 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                          <td className="px-4 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                             {formatDate(audit.audit_date)}
                           </td>
-                          <td className="px-4 py-6 text-center">
+                          <td className="px-4 py-4 text-center">
                             <div className="flex flex-col items-center">
                               <span className={`text-[16px] font-black ${audit.score >= 90 ? 'text-emerald-600' : audit.score >= 70 ? 'text-[#002855]' : 'text-rose-600'}`}>{audit.score}%</span>
                               <div className="w-16 h-1 bg-slate-100 mt-1">
@@ -229,13 +233,13 @@ export default function Audit() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-6 text-center">
+                          <td className="px-4 py-4 text-center">
                             <span className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-widest border ${statusCfg.color}`}>{statusCfg.label}</span>
                           </td>
-                          <td className="px-8 py-6 text-right">
+                          <td className="px-8 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button onClick={(e) => { e.stopPropagation(); handleEdit(audit); }} className="p-2 text-slate-300 hover:text-blue-600 transition-colors"><Edit size={16} /></button>
-                              <button onClick={(e) => { e.stopPropagation(); handleDelete(audit.id); }} className="p-2 text-slate-300 hover:text-rose-600 transition-colors"><Trash2 size={16} /></button>
+                              <button onClick={(e) => { e.stopPropagation(); handleEdit(audit); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDelete(audit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Trash2 size={14} /></button>
                             </div>
                           </td>
                         </tr>

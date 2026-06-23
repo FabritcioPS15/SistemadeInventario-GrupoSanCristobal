@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Edit, Trash2, Eye, MapPin, Upload, Package, Layers, ChevronDown, LayoutGrid, List, BarChart3 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Edit, Trash2, MapPin, Upload, Package, Layers, ChevronDown, LayoutGrid, List, BarChart3, FileSpreadsheet } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -10,6 +10,7 @@ import { supabase, AssetWithDetails } from '../../../shared/services/supabase';
 import AssetForm from '../forms/AssetForm';
 import AssetDetails from '../components/AssetDetails';
 import ExcelImportModal from '../../../shared/components/ExcelImportModal';
+import { generateAndDownloadTemplate } from '../../../shared/utils/excelTemplate';
 import Pagination from '../../../shared/components/ui/Pagination';
 import { useAuth } from '../../../app/providers/AuthContext';
 import SearchBar from '../../../shared/components/ui/SearchBar';
@@ -17,7 +18,6 @@ import SortableTableHeader from '../../../shared/components/ui/SortableTableHead
 import StatusBadge from '../../../shared/components/ui/StatusBadge';
 import { useInventory } from '../hooks/useInventory';
 import { STATUS_MAP, PATH_CATEGORY_MAP, SUBCATEGORY_SLUG_MAP } from '../constants/inventory.constants';
-import InventoryFilters from '../components/InventoryFilters';
 import InventoryDashboard from '../components/InventoryDashboard';
 import { InventoryFilter } from '../../../shared/types/inventory.types';
 
@@ -29,7 +29,7 @@ type InventoryProps = {
 export default function Inventory({ categoryFilter, subcategoryFilter }: InventoryProps) {
   const { success: notifySuccess, error: notifyError, confirm } = useNotify();
   const { canEdit } = useAuth();
-  
+
   // UI-only state
   const [showAssetForm, setShowAssetForm] = useState(false);
   const [showAssetDetails, setShowAssetDetails] = useState(false);
@@ -40,6 +40,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [showDashboard, setShowDashboard] = useState(false);
   const [multiEnterpriseFilters, setMultiEnterpriseFilters] = useState<InventoryFilter>({});
+  const [showRubroDropdown, setShowRubroDropdown] = useState(false);
+  const rubroRef = useRef<HTMLDivElement>(null);
 
   // Use hook for inventory logic
   const {
@@ -52,7 +54,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     searchTerm,
     selectedLocations,
     showLocationDropdown,
-    filterStatus,
+    filterRubro,
     dropdownRef,
     currentPage,
     itemsPerPage,
@@ -61,12 +63,24 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     setSearchTerm,
     setSelectedLocations,
     setShowLocationDropdown,
-    setFilterStatus,
+
+    setFilterRubro,
     setCurrentPage,
     setItemsPerPage,
     refresh,
     handleSort,
   } = useInventory({ categoryFilter, subcategoryFilter });
+
+  // Cierra dropdown rubro al hacer click fuera
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (rubroRef.current && !rubroRef.current.contains(event.target as Node)) {
+        setShowRubroDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Listen to TopHeader action events
   useEffect(() => {
@@ -204,7 +218,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
-      
+
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
         {/* Action Bar — Standardized */}
         <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
@@ -251,8 +265,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                           type="checkbox"
                           checked={selectedLocations.includes(loc.id)}
                           onChange={() => {
-                            const newSelected = selectedLocations.includes(loc.id) 
-                              ? selectedLocations.filter((id: string) => id !== loc.id) 
+                            const newSelected = selectedLocations.includes(loc.id)
+                              ? selectedLocations.filter((id: string) => id !== loc.id)
                               : [...selectedLocations, loc.id];
                             setSelectedLocations(newSelected);
                             setCurrentPage(1);
@@ -267,29 +281,82 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
               )}
             </div>
 
-            <select
-              value={filterStatus}
-              onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest outline-none transition-all min-w-[130px] appearance-none cursor-pointer"
-            >
-              <option value="">Estados</option>
-              <option value="active">Activo</option>
-              <option value="inactive">Inactivo</option>
-              <option value="maintenance">Mantenimiento</option>
-              <option value="extracted">Extraído</option>
-            </select>
+            {/* Dropdown Rubros */}
+            {(() => {
+              const RUBROS = [
+                { id: '', label: 'Todos los rubros' },
+                { id: 'revisiones_tecnicas', label: 'CTIV' },
+                { id: 'escuela_conductores', label: 'ESCON' },
+                { id: 'polclinico', label: 'ECSAL' },
+                { id: 'oficinas_administrativas', label: 'CIRCUITOS' },
+              ];
+              const activeRubro = RUBROS.find(r => r.id === filterRubro);
+              return (
+                <div className="relative" ref={rubroRef}>
+                  <button
+                    onClick={() => setShowRubroDropdown(!showRubroDropdown)}
+                    className={`px-4 py-3 bg-slate-50 border text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[170px] ${showRubroDropdown
+                      ? 'border-[#002855]/30 bg-white'
+                      : filterRubro
+                        ? 'border-blue-300 bg-blue-50'
+                        : 'border-slate-200 hover:border-[#002855]/30'
+                      }`}
+                  >
+                    <Layers size={14} className={filterRubro ? 'text-blue-600' : 'text-slate-400'} />
+                    <span className="truncate flex-1 text-left">
+                      {activeRubro?.id ? activeRubro.label : 'Rubros'}
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      className={`text-slate-400 ml-auto transition-transform ${showRubroDropdown ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {showRubroDropdown && (
+                    <div className="absolute top-full left-0 z-[70] mt-2 bg-white border border-slate-200 shadow-2xl min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="p-1">
+                        {RUBROS.map(r => (
+                          <button
+                            key={r.id}
+                            onClick={() => {
+                              setFilterRubro(r.id);
+                              setCurrentPage(1);
+                              setShowRubroDropdown(false);
+                            }}
+                            className={`w-full text-left flex items-center gap-2 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors ${filterRubro === r.id
+                              ? 'text-[#002855] bg-blue-50'
+                              : 'text-slate-600'
+                              }`}
+                          >
+                            {filterRubro === r.id && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#002855] shrink-0" />
+                            )}
+                            {r.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div className="flex bg-slate-100 p-1 border border-slate-200">
               <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+                onClick={() => {
+                  setViewMode('grid');
+                  setShowDashboard(false);
+                }}
+                className={`p-1.5 transition-all ${viewMode === 'grid' && !showDashboard ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
                 title="Vista Cuadrícula"
               >
                 <LayoutGrid size={16} />
               </button>
               <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+                onClick={() => {
+                  setViewMode('table');
+                  setShowDashboard(false);
+                }}
+                className={`p-1.5 transition-all ${viewMode === 'table' && !showDashboard ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
                 title="Vista Tabla"
               >
                 <List size={16} />
@@ -319,29 +386,32 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                 <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
               </button>
               {canEdit() && (
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-blue-700 hover:border-blue-200 hover:bg-blue-50 transition-all shadow-sm"
-                  title="Importar Excel"
-                >
-                  <Upload size={20} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
-                </button>
+                <>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await generateAndDownloadTemplate();
+                      } catch (err) {
+                        notifyError('Error al descargar plantilla');
+                      }
+                    }}
+                    className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm rounded-l-md"
+                    title="Descargar Plantilla"
+                  >
+                    <FileSpreadsheet size={20} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                  </button>
+                  <button
+                    onClick={() => setShowUploadModal(true)}
+                    className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-blue-700 hover:border-blue-200 hover:bg-blue-50 transition-all shadow-sm rounded-r-md -ml-px"
+                    title="Importar Excel"
+                  >
+                    <Upload size={20} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
+                  </button>
+                </>
               )}
             </div>
           </div>
         </div>
-
-        {/* Multi-Enterprise Filters */}
-        {!showDashboard && (
-          <InventoryFilters
-            onFilterChange={setMultiEnterpriseFilters}
-            initialFilters={multiEnterpriseFilters}
-            showCompanyFilter={true}
-            showLocationFilter={true}
-            showCategoryFilter={!categoryFilter}
-            showStatusFilter={true}
-          />
-        )}
 
         {/* Dashboard View */}
         {showDashboard ? (
@@ -387,12 +457,13 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         }}
                       />
                     </th>
-                    <th className="px-6 py-4 text-left"><SortableTableHeader label="Producto / Marca" sortKey="brand" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Categoría / Subcat." sortKey="category_id" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Cantidad / Unidad" sortKey="cantidad" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Ubicación / Área" sortKey="location_id" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Estado" sortKey="status" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-6 py-4 text-center"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span></th>
+                    <th className="px-6 py-4 text-left"><SortableTableHeader label="Activo" sortKey="brand" sortConfig={sortConfig} onSort={handleSort} /></th>
+                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Categoría" sortKey="category_id" sortConfig={sortConfig} onSort={handleSort} /></th>
+                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Sede" sortKey="location_id" sortConfig={sortConfig} onSort={handleSort} /></th>
+                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Cantidad" sortKey="cantidad" sortConfig={sortConfig} onSort={handleSort} /></th>
+                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Costo" sortKey="valor_estimado" sortConfig={sortConfig} onSort={handleSort} /></th>
+                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Estado Operativo" sortKey="status" sortConfig={sortConfig} onSort={handleSort} /></th>
+                    <th className="px-6 py-4 text-center"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acción</span></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -428,8 +499,14 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         </td>
                         <td className="px-6 py-4 font-bold text-left">
                           <div className="flex flex-col">
-                            <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{asset.brand} {asset.model}</span>
-                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.descripcion || 'Sin descripción'}</span>
+                            <span className="text-[13px] font-black text-slate-800 uppercase leading-none">
+                              {asset.item || asset.descripcion || 'Sin descripción'}
+                            </span>
+                            {(asset.brand || asset.model) && (
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">
+                                {asset.brand} {asset.model}
+                              </span>
+                            )}
                             {asset.codigo_unico && (
                               <span className="inline-flex items-center text-[9px] font-bold text-slate-400 font-mono mt-1.5 bg-slate-100 px-2 py-0.5 rounded w-max">
                                 CÓD: {asset.codigo_unico}
@@ -439,8 +516,14 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         </td>
                         <td className="px-4 py-4 text-left">
                           <div className="flex flex-col">
-                            <span className="text-[12px] font-black text-slate-800 uppercase leading-none">{asset.categories?.name}</span>
+                            <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{asset.categories?.name}</span>
                             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.subcategories?.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-left">
+                          <div className="flex flex-col">
+                            <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{asset.locations?.name || 'No asignada'}</span>
+                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.areas?.name || 'Sin área'}</span>
                           </div>
                         </td>
                         <td className="px-4 py-4 text-left">
@@ -451,11 +534,9 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         </td>
                         <td className="px-4 py-4 text-left">
                           <div className="flex flex-col">
-                            <div className="flex items-center gap-1 text-slate-700">
-                              <MapPin size={13} className="text-rose-500 shrink-0" />
-                              <span className="text-[12px] font-bold uppercase truncate max-w-xs block leading-none">{asset.locations?.name || 'No asignada'}</span>
-                            </div>
-                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5 pl-4">{asset.areas?.name || 'Área general'}</span>
+                            <span className="text-[13px] font-black text-slate-800 leading-none">
+                              {asset.valor_estimado != null ? `S/ ${Number(asset.valor_estimado).toFixed(2)}` : '—'}
+                            </span>
                           </div>
                         </td>
                         <td className="px-4 py-4 text-left">
@@ -463,24 +544,17 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); setSelectedAsset(asset); setShowAssetDetails(true); }} 
-                              className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                              title="Ver Detalle"
-                            >
-                              <Eye size={14} />
-                            </button>
                             {canEdit() && (
                               <>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setShowAssetForm(true); }} 
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setShowAssetForm(true); }}
                                   className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
                                   title="Editar Activo"
                                 >
                                   <Edit size={14} />
                                 </button>
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset); }} 
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset); }}
                                   className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
                                   title="Eliminar Activo"
                                 >
@@ -538,12 +612,11 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                             CÓD: {asset.codigo_unico || 'N/A'}
                           </span>
                         </div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                          asset.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${asset.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                           asset.status === 'inactive' ? 'bg-slate-50 text-slate-700 border-slate-200' :
-                          asset.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                          'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}>
+                            asset.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}>
                           {status.label}
                         </span>
                       </div>
@@ -570,12 +643,6 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                     </div>
 
                     <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex gap-2">
-                      <button
-                        onClick={() => { setSelectedAsset(asset); setShowAssetDetails(true); }}
-                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[10px] font-black uppercase tracking-widest bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm"
-                      >
-                        <Eye size={14} /> Detalle
-                      </button>
                       {canEdit() && (
                         <>
                           <button

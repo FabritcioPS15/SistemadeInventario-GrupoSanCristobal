@@ -63,6 +63,8 @@ import ChecklistDetail from './modules/checklist/pages/ChecklistDetailPage';
 
 import Vacations from './modules/users/pages/VacationsPage';
 
+import CVsPage from './modules/rrhh/pages/CVsPage';
+
 import Tickets from './modules/tickets/pages/TicketsPage';
 
 import TicketHistory from './modules/tickets/pages/TicketHistoryPage';
@@ -393,6 +395,9 @@ function AppContent() {
             {/* Vacaciones */}
             <Route path="/vacations" element={<ProtectedRoute permission="vacations"><Vacations /></ProtectedRoute>} />
 
+            {/* Recursos Humanos */}
+            <Route path="/cvs" element={<ProtectedRoute permission="cvs"><CVsPage /></ProtectedRoute>} />
+
             {/* Otras Rutas */}
             <Route path="/sutran" element={<ProtectedRoute permission="sutran"><Sutran /></ProtectedRoute>} />
             <Route path="/sutran/future-visits" element={<ProtectedRoute permission="sutran"><SutranFutureVisits /></ProtectedRoute>} />
@@ -439,6 +444,6 @@ function AppContent() {
 }
 
 
-
 export default AppContent;
+
 
