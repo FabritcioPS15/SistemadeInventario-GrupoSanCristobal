@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, LayoutGrid, List, MapPin, Search, FileText, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
-import { RiFileExcel2Fill } from "react-icons/ri";
-import { FaFilePdf } from "react-icons/fa6";
+import { Plus, Edit, Trash2, MapPin, Search, FileText, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Pagination from '../../../shared/components/ui/Pagination';
@@ -10,6 +8,13 @@ import Swal from 'sweetalert2';
 import { useAuth } from '../../../app/providers/AuthContext';
 import TituloHabilitanteForm from '../forms/TituloHabilitanteForm';
 import TituloHabilitanteDetails from '../components/TituloHabilitanteDetails';
+import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import ViewToggle from '../../../shared/components/ui/ViewToggle';
+import ExportButtons from '../../../shared/components/ui/ExportButtons';
+import LoadingSpinner from '../../../shared/components/ui/LoadingSpinner';
+import PrimaryButton from '../../../shared/components/ui/PrimaryButton';
+import RowActions from '../../../shared/components/ui/RowActions';
 
 type TituloHabilitante = {
   id: string;
@@ -190,7 +195,7 @@ export default function TitulosHabilitantes() {
     if (!targetDate) return <span className="text-[10px] text-slate-400 italic">Sin vencimiento</span>;
 
     const daysLeft = getDaysUntil(targetDate);
-    const dateStr = new Date(targetDate).toLocaleDateString('es-PE', { timeZone: 'UTC' });
+    const dateStr = new Date(String(targetDate).includes('T') ? String(targetDate) : `${targetDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' });
 
     if (daysLeft <= 0) {
       return (
@@ -239,8 +244,8 @@ export default function TitulosHabilitantes() {
           `"${t.titulo || ''}"`,
           `"${t.tipo || ''}"`,
           `"${t.numero || ''}"`,
-          `"${startDate ? new Date(startDate).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : ''}"`,
-          `"${targetDate ? new Date(targetDate).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : ''}"`,
+          `"${startDate ? new Date(String(startDate).includes('T') ? String(startDate) : `${startDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : ''}"`,
+          `"${targetDate ? new Date(String(targetDate).includes('T') ? String(targetDate) : `${targetDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : ''}"`,
           `"${t.vigencia_documento || ''}"`,
           `"${daysLeft}"`,
           `"${t.locations?.name || ''}"`,
@@ -270,8 +275,8 @@ export default function TitulosHabilitantes() {
         t.titulo || '',
         t.tipo || '',
         t.numero || '',
-        startDate ? new Date(startDate).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
-        targetDate ? new Date(targetDate).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
+        startDate ? new Date(String(startDate).includes('T') ? String(startDate) : `${startDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
+        targetDate ? new Date(String(targetDate).includes('T') ? String(targetDate) : `${targetDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
         t.vigencia_documento || '',
         daysLeft !== '' ? `${daysLeft} días` : '',
         t.locations?.name || '',
@@ -291,94 +296,51 @@ export default function TitulosHabilitantes() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white font-sans min-h-screen relative overflow-hidden">
-      <div className="flex-1 overflow-y-auto bg-[#f8fafc]">
-        <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-4">
-          {/* Action Bar */}
-          <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
-            <div className="absolute -top-3 -left-3">
-              <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-                {filtered.length} Títulos
-              </div>
-            </div>
+    <div className="flex flex-col h-full bg-[#f8fafc]">
+      <div className="p-6 space-y-6 flex-1 overflow-y-auto">
 
-            {/* Search */}
-            <div className="flex-1 relative group/search">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
-              <input
-                type="text"
-                placeholder="Buscar por título, tipo o número..."
-                value={search}
-                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
-              />
-            </div>
+          <ActionToolbar
+            totalItems={filtered.length}
+            label="Títulos"
+            searchComponent={
+              <>
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+                <input
+                  type="text"
+                  placeholder="Buscar por título, tipo o número..."
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                  className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                />
+              </>
+            }
+          >
+            <FilterSelect
+              icon={MapPin}
+              iconClassName="text-rose-500"
+              value={selectedLocations[0] || ''}
+              onChange={e => { setSelectedLocations(e.target.value ? [e.target.value] : []); setCurrentPage(1); }}
+              wrapperClassName="md:min-w-[220px]"
+            >
+              <option value="">Todas las sedes</option>
+              {locations.map(loc => (
+                <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+              ))}
+            </FilterSelect>
 
-            {/* Filters + Toggle */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest min-w-[220px]">
-                <MapPin size={14} className="text-rose-500" />
-                <select
-                  value={selectedLocations[0] || ''}
-                  onChange={e => { setSelectedLocations(e.target.value ? [e.target.value] : []); setCurrentPage(1); }}
-                  className="bg-transparent outline-none cursor-pointer flex-1"
-                >
-                  <option value="">Todas las sedes</option>
-                  {locations.map(loc => (
-                    <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-                  ))}
-                </select>
-              </div>
+            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
-              <div className="flex bg-slate-100 p-1 border border-slate-200">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                  title="Vista Cuadrícula"
-                >
-                  <LayoutGrid size={16} />
-                </button>
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                  title="Vista Tabla"
-                >
-                  <List size={16} />
-                </button>
-              </div>
+            {canEdit() && (
+              <PrimaryButton icon={Plus} onClick={() => { setEditingTitulo(undefined); setIsFormOpen(true); }}>
+                Nuevo Título
+              </PrimaryButton>
+            )}
 
-              {canEdit() && (
-                <button
-                  onClick={() => { setEditingTitulo(undefined); setIsFormOpen(true); }}
-                  className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-                >
-                  <Plus size={14} />
-                  Nuevo Título
-                </button>
-              )}
-
-              <button
-                onClick={downloadReport}
-                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
-                title="Exportar a Excel"
-              >
-                <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
-              </button>
-
-              <button
-                onClick={downloadReportPdf}
-                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
-                title="Exportar a PDF"
-              >
-                <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
-              </button>
-            </div>
-          </div>
+            <ExportButtons onExportExcel={downloadReport} onExportPDF={downloadReportPdf} />
+          </ActionToolbar>
 
           {loading ? (
-            <div className="flex items-center justify-center min-h-[40vh]">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#002855]"></div>
-            </div>
+            <LoadingSpinner />
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {paginatedData.map(titulo => (
@@ -425,24 +387,11 @@ export default function TitulosHabilitantes() {
                   </div>
 
                   <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150 mt-auto">
-                    {canEdit() && (
-                      <>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
-                          className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                          title="Editar"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
-                          className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                          title="Eliminar"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
+                    <RowActions
+                      canEdit={canEdit()}
+                      onEdit={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
+                      onDelete={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
+                    />
                   </div>
                 </div>
               ))}
@@ -572,24 +521,11 @@ export default function TitulosHabilitantes() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150">
-                            {canEdit() && (
-                              <>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
-                                  className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                                  title="Editar"
-                                >
-                                  <Edit size={14} />
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
-                                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
+                            <RowActions
+                              canEdit={canEdit()}
+                              onEdit={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
+                              onDelete={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -600,7 +536,6 @@ export default function TitulosHabilitantes() {
             </div>
           )}
         </div>
-      </div>
       {isFormOpen && (
         <TituloHabilitanteForm
           tituloHabilitante={editingTitulo}

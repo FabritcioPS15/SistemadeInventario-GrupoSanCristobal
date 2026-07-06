@@ -1,7 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Plus, Building2, Calendar, FileText, User, AlertTriangle, Edit, X, LayoutGrid, List, Search, MapPin, ChevronDown } from 'lucide-react';
-import { FaFilePdf } from "react-icons/fa6";
-import { RiFileExcel2Fill } from "react-icons/ri";
+import { useState, useEffect } from 'react';
+import { Plus, Building2, Calendar, FileText, User, AlertTriangle, Edit, X, Search, MapPin } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -20,6 +18,10 @@ import DetailModal, {
   DetailModalCard,
   DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
+import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import ViewToggle from '../../../shared/components/ui/ViewToggle';
+import ExportButtons from '../../../shared/components/ui/ExportButtons';
 
 export default function Sutran() {
   const { canEdit } = useAuth();
@@ -31,8 +33,6 @@ export default function Sutran() {
   const [statusFilter, setStatusFilter] = useState('');
   const [visitTypeFilter, setVisitTypeFilter] = useState('');
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingVisit, setEditingVisit] = useState<SutranVisit | undefined>();
   const [viewingVisit, setViewingVisit] = useState<SutranVisit | undefined>();
@@ -43,16 +43,6 @@ export default function Sutran() {
   useEffect(() => {
     fetchVisits();
     fetchLocations();
-  }, []);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowLocationDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const fetchVisits = async () => {
@@ -217,7 +207,7 @@ export default function Sutran() {
 
       filteredVisits.forEach(visit => {
         worksheet.addRow({
-          visit_date: new Date(visit.visit_date).toLocaleDateString(),
+          visit_date: new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString(),
           inspector_name: visit.inspector_name || '',
           location_name: visit.location_name || '',
           visit_type: getVisitTypeLabel(visit.visit_type),
@@ -243,7 +233,7 @@ export default function Sutran() {
   const handleGeneratePDF = () => {
     const doc = new jsPDF();
     const tableData = filteredVisits.map(v => [
-      new Date(v.visit_date).toLocaleDateString(),
+      new Date(String(v.visit_date).includes('T') ? String(v.visit_date) : `${v.visit_date}T12:00:00`).toLocaleDateString(),
       v.inspector_name,
       v.location_name,
       getVisitTypeLabel(v.visit_type),
@@ -265,147 +255,68 @@ export default function Sutran() {
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-        {/* Action Bar — Standardized */}
-        <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
-          <div className="absolute -top-3 -left-3">
-            <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-              {filteredVisits.length} Visitas
-            </div>
-          </div>
+        <ActionToolbar
+          totalItems={filteredVisits.length}
+          label="Visitas"
+          searchComponent={
+            <>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+              <input
+                type="text"
+                placeholder="Buscar por inspector, sede o hallazgos..."
+                value={searchTerm}
+                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+              />
+            </>
+          }
+        >
+          <FilterSelect
+            icon={MapPin}
+            iconClassName="text-rose-500"
+            value={selectedLocations[0] || ''}
+            onChange={e => { const v = e.target.value as string; setSelectedLocations(v ? [v] : []); setCurrentPage(1); }}
+            wrapperClassName="md:min-w-[220px]"
+          >
+            <option value="">TODAS LAS SEDES</option>
+            {locations.map(loc => (
+              <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+            ))}
+          </FilterSelect>
+          <FilterSelect
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value as string); setCurrentPage(1); }}
+          >
+            <option value="">TODOS LOS ESTADOS</option>
+            {Object.entries(statusLabels).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </FilterSelect>
 
-          <div className="flex-1 relative group/search">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar por inspector, sede o hallazgos..."
-              value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
-            />
-          </div>
+          <FilterSelect
+            value={visitTypeFilter}
+            onChange={e => { setVisitTypeFilter(e.target.value as string); setCurrentPage(1); }}
+          >
+            <option value="">TODOS LOS TIPOS</option>
+            <option value="programada">PROGRAMADA</option>
+            <option value="no_programada">NO PROGRAMADA</option>
+            <option value="de_gabinete">DE GABINETE</option>
+          </FilterSelect>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
-              >
-                <MapPin size={14} className="text-rose-500" />
-                <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === locations.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
-                <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              {showLocationDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                  <div className="p-2 border-b border-slate-200 bg-[#001529]">
-                    <button
-                      onClick={() => {
-                        setSelectedLocations(locations.map(loc => loc.id));
-                        setShowLocationDropdown(false);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-white hover:bg-white/10 rounded transition-colors"
-                    >
-                      Seleccionar todas las sedes
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedLocations([]);
-                        setShowLocationDropdown(false);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-white hover:bg-white/10 rounded transition-colors"
-                    >
-                      Limpiar selección
-                    </button>
-                  </div>
-                  {locations.map(location => (
-                    <label key={location.id} className="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={selectedLocations.includes(location.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedLocations([...selectedLocations, location.id]);
-                          } else {
-                            setSelectedLocations(selectedLocations.filter(id => id !== location.id));
-                          }
-                          setCurrentPage(1);
-                        }}
-                        className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mr-3"
-                      />
-                      <span className="text-xs font-medium text-slate-700">{location.name}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
-            <select
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
-            >
-              <option value="">TODOS LOS ESTADOS</option>
-              {Object.entries(statusLabels).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
-            </select>
-
-            <select
-              value={visitTypeFilter}
-              onChange={e => { setVisitTypeFilter(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
-            >
-              <option value="">TODOS LOS TIPOS</option>
-              <option value="programada">PROGRAMADA</option>
-              <option value="no_programada">NO PROGRAMADA</option>
-              <option value="de_gabinete">DE GABINETE</option>
-            </select>
-
-            <div className="flex bg-slate-100 p-1 border border-slate-200">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                title="Vista Cuadrícula"
-              >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                title="Vista Tabla"
-              >
-                <List size={16} />
-              </button>
-            </div>
-
-            {canEdit() && (
-              <button
-                onClick={() => { setEditingVisit(undefined); setShowForm(true); }}
-                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-              >
-                <Plus size={14} />
-                Nuevo Registro
-              </button>
-            )}
-
+          {canEdit() && (
             <button
-              onClick={handleGenerateExcel}
-              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
-              title="Exportar a Excel"
+              onClick={() => { setEditingVisit(undefined); setShowForm(true); }}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
             >
-              <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+              <Plus size={14} />
+              Nuevo Registro
             </button>
+          )}
 
-            <button
-              onClick={handleGeneratePDF}
-              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
-              title="Exportar a PDF"
-            >
-              <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
-            </button>
-          </div>
-        </div>
+          <ExportButtons onExportExcel={handleGenerateExcel} onExportPDF={handleGeneratePDF} />
+        </ActionToolbar>
 
         {showForm ? (
           <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
@@ -463,7 +374,7 @@ export default function Sutran() {
                               </div>
                               <div className="flex flex-col">
                                 <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">
-                                  {new Date(visit.visit_date).toLocaleDateString()}
+                                  {new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString()}
                                 </span>
                                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{visit.inspector_name}</span>
                               </div>
@@ -491,10 +402,15 @@ export default function Sutran() {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {visit.evidence_url && (
+                                <a href={visit.evidence_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="w-8 h-8 flex items-center justify-center text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Ver Evidencias">
+                                  <FileText size={14} />
+                                </a>
+                              )}
                               {canEdit() && (
                                 <>
-                                  <button onClick={(e) => { e.stopPropagation(); handleEditVisit(visit); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteVisit(visit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><AlertTriangle size={14} /></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleEditVisit(visit); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Editar"><Edit size={14} /></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteVisit(visit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Eliminar"><AlertTriangle size={14} /></button>
                                 </>
                               )}
                             </div>
@@ -540,7 +456,7 @@ export default function Sutran() {
                               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Fecha</label>
                               <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
                                 <Calendar size={14} className="text-blue-500" />
-                                {new Date(visit.visit_date).toLocaleDateString()}
+                                {new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString()}
                               </div>
                             </div>
                             <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
@@ -551,6 +467,15 @@ export default function Sutran() {
                               </div>
                             </div>
                           </div>
+                          {visit.evidence_url && (
+                            <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100/50">
+                              <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Evidencias</label>
+                              <a href={visit.evidence_url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-indigo-600 hover:text-indigo-800 underline flex items-center gap-2">
+                                <FileText size={14} />
+                                Ver Archivos Adjuntos
+                              </a>
+                            </div>
+                          )}
                           {visit.findings && (
                             <div className="bg-amber-50/30 p-4 rounded-xl border border-amber-100/30">
                               <label className="text-[10px] font-black text-amber-600 uppercase tracking-widest block mb-2">Hallazgos principales</label>
@@ -602,7 +527,7 @@ export default function Sutran() {
                     <DetailModalSection title="Información General">
                       <DetailModalCard className="space-y-2.5 sm:space-y-3">
                         <DetailModalRow label="Fecha">
-                          <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">{new Date(viewingVisit.visit_date).toLocaleDateString()}</span>
+                          <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">{new Date(String(viewingVisit.visit_date).includes('T') ? String(viewingVisit.visit_date) : `${viewingVisit.visit_date}T12:00:00`).toLocaleDateString()}</span>
                         </DetailModalRow>
                         <DetailModalRow label="Inspector">
                           <span className="text-[10px] sm:text-[11px] font-black text-slate-700">{viewingVisit.inspector_name}</span>
@@ -621,6 +546,13 @@ export default function Sutran() {
                         {viewingVisit.inspector_email && (
                           <DetailModalRow label="Contacto">
                             <span className="text-[10px] sm:text-[11px] font-black text-blue-600">{viewingVisit.inspector_email}</span>
+                          </DetailModalRow>
+                        )}
+                        {viewingVisit.evidence_url && (
+                          <DetailModalRow label="Evidencias">
+                            <a href={viewingVisit.evidence_url} target="_blank" rel="noopener noreferrer" className="text-[10px] sm:text-[11px] font-black text-blue-600 hover:text-blue-800 underline truncate block max-w-full">
+                              Ver Evidencias (Drive)
+                            </a>
                           </DetailModalRow>
                         )}
                       </DetailModalCard>

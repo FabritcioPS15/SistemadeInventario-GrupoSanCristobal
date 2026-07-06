@@ -1,14 +1,21 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
-import { Edit, Trash2, MapPin, X, Building, ChevronDown, ChevronUp, LayoutGrid, List, Search, Plus } from 'lucide-react';
-import { RiFileExcel2Fill } from "react-icons/ri";
-import { FaFilePdf } from "react-icons/fa6";
+import { useEffect, useState, useMemo } from 'react';
+import { Trash2, MapPin, X, Building, ChevronUp, ChevronDown, Search, Plus, Filter } from 'lucide-react';
+import FilterSelect from '../../../shared/components/ui/FilterSelect';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase, Location } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
 import LocationForm from '../forms/LocationForm';
-import Pagination from '../../../shared/components/ui/Pagination';
+import {
+  ActionToolbar,
+  ViewToggle,
+  ExportButtons,
+  LoadingSpinner,
+  PrimaryButton,
+  RowActions,
+  Pagination,
+} from '../../../shared/components/ui';
 import DetailModal, {
   DetailModalHeader,
   DetailModalBody,
@@ -47,26 +54,14 @@ export default function Sedes() {
   const [editing, setEditing] = useState<Location | undefined>();
   const [showDetails, setShowDetails] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | undefined>();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortField, setSortField] = useState<'name' | 'type' | 'cameras'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowTypeDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -217,8 +212,8 @@ export default function Sedes() {
   const renderSortableHeader = (label: string, sortKey: 'name' | 'type' | 'cameras') => {
     const isSorted = sortField === sortKey;
     return (
-      <button 
-        onClick={() => handleSort(sortKey)} 
+      <button
+        onClick={() => handleSort(sortKey)}
         className="flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors"
       >
         <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">{label}</span>
@@ -238,109 +233,52 @@ export default function Sedes() {
     : null;
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc]">
-      <div className="flex-1 overflow-y-auto bg-[#f8fafc]">
+    <>
+      <div className="flex flex-col h-full bg-[#f8fafc]">
         <div className="p-6 space-y-6 flex-1 overflow-y-auto">
 
-          {/* Action Bar */}
-          <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
-            <div className="absolute -top-3 -left-3">
-              <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-                {filtered.length} Sedes
-              </div>
-            </div>
+          <ActionToolbar
+            totalItems={filtered.length}
+            label="Sedes"
+            searchComponent={
+              <>
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre, dirección o notas..."
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                  className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                />
+              </>
+            }
+          >
+            <FilterSelect
+              icon={Filter}
+              iconClassName="text-rose-500"
+              value={selectedTypes.length === 1 ? selectedTypes[0] : ''}
+              onChange={e => { const v = e.target.value as string; setSelectedTypes(v ? [v] : []); setCurrentPage(1); }}
+              wrapperClassName="md:min-w-[220px]"
+            >
+              <option value="">TODOS LOS TIPOS</option>
+              {typeEntries.map(type => (
+                <option key={type} value={type}>{typeLabels[type]}</option>
+              ))}
+            </FilterSelect>
 
-            {/* Search */}
-            <div className="flex-1 relative group/search">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
-              <input
-                type="text"
-                placeholder="Buscar por nombre, dirección o notas..."
-                value={search}
-                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
-              />
-            </div>
+            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Type Dropdown */}
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowTypeDropdown(!showTypeDropdown)}
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
-                >
-                  <MapPin size={14} className="text-rose-500" />
-                  <span className="truncate">{selectedTypes.length === 0 || selectedTypes.length === typeEntries.length ? 'Todos los tipos' : `${selectedTypes.length} tipos`}</span>
-                  <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showTypeDropdown ? 'rotate-180' : ''}`} />
-                </button>
-                {showTypeDropdown && (
-                  <div className="absolute top-full right-0 z-[70] mt-2 bg-white border border-slate-200 shadow-2xl min-w-[260px] animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-2 max-h-[300px] overflow-y-auto">
-                      <label className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedTypes.length === typeEntries.length}
-                          onChange={() => { setSelectedTypes(selectedTypes.length === typeEntries.length ? [] : typeEntries); setCurrentPage(1); }}
-                          className="w-4 h-4 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]"
-                        />
-                        <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest">Todos los tipos</span>
-                      </label>
-                      <div className="h-px bg-slate-100 my-1" />
-                      {typeEntries.map(type => (
-                        <label key={type} className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedTypes.includes(type)}
-                            onChange={() => { setSelectedTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]); setCurrentPage(1); }}
-                            className="w-4 h-4 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]"
-                          />
-                          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{typeLabels[type]}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+            {canEdit() && (
+              <PrimaryButton icon={Plus} onClick={openCreate}>
+                Nueva Sede
+              </PrimaryButton>
+            )}
 
-              {/* View Toggle */}
-              <div className="flex bg-slate-100 p-1 border border-slate-200">
-                <button onClick={() => setViewMode('grid')} className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}><LayoutGrid size={16} /></button>
-                <button onClick={() => setViewMode('list')} className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400'}`}><List size={16} /></button>
-              </div>
-
-              {canEdit() && (
-                <button
-                  onClick={openCreate}
-                  className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-                >
-                  <Plus size={14} />
-                  Nueva Sede
-                </button>
-              )}
-
-              <button
-                onClick={exportToExcel}
-                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
-                title="Exportar a Excel"
-              >
-                <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
-              </button>
-
-              <button
-                onClick={exportToPdf}
-                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
-                title="Exportar a PDF"
-              >
-                <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
-              </button>
-            </div>
-          </div>
+            <ExportButtons onExportExcel={exportToExcel} onExportPDF={exportToPdf} />
+          </ActionToolbar>
 
           {loading ? (
-            <div className="flex items-center justify-center min-h-[40vh]">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#002855]"></div>
-            </div>
+            <LoadingSpinner />
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-1">
               {paginatedData.map(loc => {
@@ -384,13 +322,12 @@ export default function Sedes() {
                       </div>
                     </div>
 
-                    <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex gap-2 z-10">
-                      {canEdit() && (
-                        <div className="flex gap-2">
-                          <button onClick={e => { e.stopPropagation(); openEdit(loc); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
-                          <button onClick={e => { e.stopPropagation(); del(loc); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Trash2 size={14} /></button>
-                        </div>
-                      )}
+                    <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex items-center justify-center gap-2 z-10">
+                      <RowActions
+                        canEdit={canEdit()}
+                        onEdit={(e) => { e.stopPropagation(); openEdit(loc); }}
+                        onDelete={(e) => { e.stopPropagation(); del(loc); }}
+                      />
                     </div>
                   </div>
                 );
@@ -459,12 +396,11 @@ export default function Sedes() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              {canEdit() && (
-                                <div className="flex gap-2">
-                                  <button onClick={() => openEdit(loc)} className="w-12 h-12 bg-white text-amber-600 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm active:scale-95 transition-all"><Edit size={14} /></button>
-                                  <button onClick={() => del(loc)} className="w-12 h-12 bg-white text-rose-500 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm active:scale-95 transition-all"><Trash2 size={14} /></button>
-                                </div>
-                              )}
+                              <RowActions
+                                canEdit={canEdit()}
+                                onEdit={() => openEdit(loc)}
+                                onDelete={() => del(loc)}
+                              />
                             </div>
                           </div>
                         )}
@@ -539,24 +475,11 @@ export default function Sedes() {
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
-                                  {canEdit() && (
-                                    <>
-                                      <button 
-                                        onClick={e => { e.stopPropagation(); openEdit(loc); }} 
-                                        className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                                        title="Editar Sede"
-                                      >
-                                        <Edit size={14} />
-                                      </button>
-                                      <button 
-                                        onClick={e => { e.stopPropagation(); del(loc); }} 
-                                        className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                                        title="Eliminar Sede"
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
-                                    </>
-                                  )}
+                                  <RowActions
+                                    canEdit={canEdit()}
+                                    onEdit={(e) => { e.stopPropagation(); openEdit(loc); }}
+                                    onDelete={(e) => { e.stopPropagation(); del(loc); }}
+                                  />
                                 </div>
                               </td>
                             </tr>
@@ -672,6 +595,6 @@ export default function Sedes() {
           />
         </DetailModal>
       )}
-    </div>
+    </>
   );
 }

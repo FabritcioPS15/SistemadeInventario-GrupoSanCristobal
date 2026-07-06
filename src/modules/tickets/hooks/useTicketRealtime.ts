@@ -1,6 +1,14 @@
+// Hook personalizado para gestionar actualizaciones en tiempo real de tickets
+// Utiliza Supabase Realtime para escuchar cambios en tickets y comentarios
+// También maneja la presencia de usuarios en el ticket
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../shared/services/supabase';
 
+// Props que recibe el hook
+// ticketId: ID del ticket a escuchar en tiempo real
+// user: Usuario actual para rastrear su presencia
+// onTicketUpdate: Callback cuando el ticket se actualiza
+// onCommentsUpdate: Callback cuando se agregan comentarios
 export interface UseTicketRealtimeProps {
   ticketId: string | undefined;
   user?: any;
@@ -8,6 +16,9 @@ export interface UseTicketRealtimeProps {
   onCommentsUpdate?: () => void;
 }
 
+// Valores que expone el hook
+// onlineUsers: Set de IDs de usuarios actualmente en el ticket
+// isSubscribed: Indica si está suscrito a los canales de realtime
 export interface UseTicketRealtimeReturn {
   onlineUsers: Set<string>;
   isSubscribed: boolean;
@@ -22,6 +33,10 @@ export function useTicketRealtime({
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [isSubscribed, setIsSubscribed] = useState(false);
 
+  // Suscribe a cambios en tiempo real del ticket y sus comentarios
+  // - Escucha actualizaciones del ticket (cambios de estado, asignaciones)
+  // - Escucha inserciones de nuevos comentarios
+  // Limpia las suscripciones cuando el componente se desmonta
   useEffect(() => {
     if (!ticketId) return;
 
@@ -62,6 +77,9 @@ export function useTicketRealtime({
     };
   }, [ticketId, onTicketUpdate, onCommentsUpdate]);
 
+  // Rastrea la presencia de usuarios en el ticket
+// Muestra quién está viendo el ticket en tiempo real
+// Usa el canal de presencia de Supabase
   useEffect(() => {
     if (!ticketId || !user) return;
 

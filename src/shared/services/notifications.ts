@@ -143,7 +143,7 @@ export async function notifySutranVisitScheduled(locationName: string, visitDate
   const notifications = notificationRoles.map(role => ({
     type: 'sutran_visit_scheduled' as const,
     title: '📅 Visita SUTRAN Programada',
-    message: `Se ha programado una visita SUTRAN para ${locationName} el ${new Date(visitDate).toLocaleDateString('es-ES')}`,
+    message: `Se ha programado una visita SUTRAN para ${locationName} el ${new Date(String(visitDate).includes('T') ? String(visitDate) : `${visitDate}T12:00:00`).toLocaleDateString('es-ES')}`,
     user_name: inspectorName,
     location_name: locationName,
     target_role: role

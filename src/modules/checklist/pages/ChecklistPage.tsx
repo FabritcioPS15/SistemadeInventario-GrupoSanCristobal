@@ -3,7 +3,7 @@ import { Car, ChevronRight, Stethoscope, GraduationCap, FileText, ExternalLink, 
 import { supabase, Location } from '../../../shared/services/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthContext';
-import LocationForm from '../../assets/forms/LocationForm';
+import LocationForm from '../../sedes/forms/LocationForm';
 
 export default function Checklist({ type }: { type?: string }) {
    const navigate = useNavigate();

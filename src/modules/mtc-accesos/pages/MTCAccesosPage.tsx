@@ -20,6 +20,10 @@ import DetailModal, {
   DetailModalCard,
   DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
+import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import ViewToggle from '../../../shared/components/ui/ViewToggle';
+import ExportButtons from '../../../shared/components/ui/ExportButtons';
 
 type MTCAcceso = {
   id: string;
@@ -242,29 +246,25 @@ export default function MTCAccesos() {
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-        <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
-          <div className="absolute -top-3 -left-3">
-            <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-              {filteredAccesos.length} Accesos
-            </div>
-          </div>
-
-          <div className="flex-1 relative group/search">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar acceso, URL o tipo..."
-              value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <select
+        <ActionToolbar
+          totalItems={filteredAccesos.length}
+          label="Accesos"
+          searchComponent={
+            <>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+              <input
+                type="text"
+                placeholder="Buscar acceso, URL o tipo..."
+                value={searchTerm}
+                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+              />
+            </>
+          }
+        >
+            <FilterSelect
               value={accessTypeFilter}
               onChange={e => { setAccessTypeFilter(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
             >
               <option value="">TODOS LOS TIPOS</option>
               <option value="web">WEB SERVICES</option>
@@ -272,52 +272,22 @@ export default function MTCAccesos() {
               <option value="database">BASES DE DATOS</option>
               <option value="ssh">TERMINAL SSH</option>
               <option value="ftp">SERVIDORES FTP</option>
-            </select>
+            </FilterSelect>
 
-            <div className="flex bg-slate-100 p-1 border border-slate-200">
-              <button 
-                onClick={() => setViewMode('grid')} 
-                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
-                title="Vista Cuadrícula"
-              >
-                <LayoutGrid size={16} />
-              </button>
-              <button 
-                onClick={() => setViewMode('table')} 
-                className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`} 
-                title="Vista Tabla"
-              >
-                <List size={16} />
-              </button>
-            </div>
+            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
             {canEdit() && (
               <button
                 onClick={() => setView(view === 'form' ? 'list' : 'form')}
-                className={`flex items-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${view === 'form' ? 'bg-slate-800 text-white' : 'bg-[#002855] text-white hover:bg-blue-800'}`}
+                className={`w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${view === 'form' ? 'bg-slate-800 text-white' : 'bg-[#002855] text-white hover:bg-blue-800'}`}
               >
                 {view === 'form' ? <List size={14} /> : <Plus size={14} />}
                 {view === 'form' ? 'Ver Lista' : 'Nuevo Acceso'}
               </button>
             )}
 
-            <button
-              onClick={handleExportExcel}
-              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
-              title="Exportar a Excel"
-            >
-              <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
-            </button>
-
-            <button
-              onClick={handleExportPDF}
-              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
-              title="Exportar a PDF"
-            >
-              <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
-            </button>
-          </div>
-        </div>
+            <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
+        </ActionToolbar>
 
         {view === 'form' ? (
           <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
@@ -374,7 +344,7 @@ export default function MTCAccesos() {
                               </div>
                               <div className="flex flex-col">
                                 <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">{acceso.name}</span>
-                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(acceso.created_at).toLocaleDateString()}</span>
+                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(String(acceso.created_at).includes('T') ? String(acceso.created_at) : `${acceso.created_at}T12:00:00`).toLocaleDateString()}</span>
                               </div>
                             </div>
                           </td>

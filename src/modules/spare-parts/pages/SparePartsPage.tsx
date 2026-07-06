@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, Package, Star, X, Download, FileText, LayoutGrid, List as ListIcon, AlertTriangle, Search, MapPin, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Package,  X,  FileText, LayoutGrid, List as ListIcon, AlertTriangle, Search, MapPin, ChevronDown } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -12,7 +12,7 @@ import { useAuth } from '../../../app/providers/AuthContext';
 import DetailModal, {
   DetailModalHeader,
   DetailModalBody,
-  StandardModalFooter,
+  DetailModalFooter,
   DetailModalGrid,
   DetailModalSection,
   DetailModalCard,
@@ -668,11 +668,22 @@ export default function SpareParts() {
             </DetailModalGrid>
           </DetailModalBody>
 
-          <StandardModalFooter
-            onClose={() => setShowDetails(false)}
-            onEdit={canEdit() ? () => { setShowDetails(false); setEditingPart(selectedPart); setShowForm(true); } : undefined}
-            editLabel="Editar"
-          />
+          <DetailModalFooter>
+            {canEdit() && (
+              <button
+                onClick={() => { setShowDetails(false); setEditingPart(selectedPart); setShowForm(true); }}
+                className="flex items-center gap-2 px-4 py-2.5 text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-500 hover:text-white transition-all uppercase tracking-widest"
+              >
+                <Edit size={14} /> Editar
+              </button>
+            )}
+            <button
+              onClick={() => setShowDetails(false)}
+              className="px-6 py-2.5 text-[10px] font-black text-white bg-[#002855] rounded-lg hover:bg-blue-800 transition-all uppercase tracking-widest"
+            >
+              Cerrar
+            </button>
+          </DetailModalFooter>
         </DetailModal>
       )}
     </div>

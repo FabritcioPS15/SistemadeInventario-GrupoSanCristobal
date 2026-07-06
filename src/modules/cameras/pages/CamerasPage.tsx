@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
-import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, LayoutGrid, List, Star, Video, ArrowRight, Search, HardDrive, ArrowUpDown } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, Star, Video, ArrowRight, Search, HardDrive } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import ExcelJS from 'exceljs';
 import { jsPDF } from 'jspdf';
@@ -8,8 +8,6 @@ import { supabase, Camera as CameraType, Location, StoredDisk } from '../../../s
 import CameraForm from '../forms/CameraForm';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
-import { RiFileExcel2Fill } from "react-icons/ri";
-import { FaFilePdf } from "react-icons/fa6";
 import Pagination from '../../../shared/components/ui/Pagination';
 import StoredDiskForm from '../forms/StoredDiskForm';
 import DetailModal, {
@@ -22,6 +20,18 @@ import DetailModal, {
   DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
 import ModalOverlay from '../../../shared/components/ui/ModalOverlay';
+import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import ViewToggle from '../../../shared/components/ui/ViewToggle';
+import ExportButtons from '../../../shared/components/ui/ExportButtons';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '../../../shared/components/ui/Table';
 
 type Camera = CameraType;
 
@@ -42,8 +52,6 @@ export default function Cameras({ subview }: CamerasProps) {
   const [expandedStorage, setExpandedStorage] = useState<Set<string>>(new Set());
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const [filterStatus, setFilterStatus] = useState('todos');
   const [filterStorage, setFilterStorage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,36 +72,8 @@ export default function Cameras({ subview }: CamerasProps) {
     setSortConfig({ key, direction });
   };
 
-  const renderSortableHeader = (label: string, sortKey: string) => {
-    const isSorted = sortConfig?.key === sortKey;
-    const isAsc = sortConfig?.direction === 'asc';
-
-    return (
-      <div
-        onClick={() => handleSort(sortKey)}
-        className="group/header inline-flex items-center gap-2 cursor-pointer select-none text-[11px] font-black text-[#002855] uppercase tracking-[0.15em] hover:text-blue-700 transition-colors"
-      >
-        <span>{label}</span>
-        <ArrowUpDown
-          size={13}
-          className={`text-slate-300 group-hover/header:text-blue-500 transition-all ${isSorted ? (isAsc ? 'rotate-180 text-blue-600' : 'text-blue-600') : ''
-            }`}
-        />
-      </div>
-    );
-  };
 
 
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowLocationDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -350,7 +330,7 @@ export default function Cameras({ subview }: CamerasProps) {
           d.brand || '—',
           d.camera_name || '—',
           d.location_name || '—',
-          d.stored_from ? `${new Date(d.stored_from).toLocaleDateString()} - ${new Date(d.stored_to || '').toLocaleDateString()}` : '—',
+          d.stored_from ? `${new Date(String(d.stored_from).includes('T') ? String(d.stored_from) : `${d.stored_from}T12:00:00`).toLocaleDateString()} - ${new Date(String(d.stored_to || '').includes('T') ? String(d.stored_to || '') : `${d.stored_to || ''}T12:00:00`).toLocaleDateString()}` : '—',
           `${d.used_space_gb}/${d.total_capacity_gb} GB`,
           d.notes || '—'
         ]);
@@ -367,7 +347,7 @@ export default function Cameras({ subview }: CamerasProps) {
         const tableData = filteredCameras.map(c => [
           c.name,
           (c as any).locations?.name || '—',
-          c.recording_start_date ? new Date(c.recording_start_date + 'T00:00:00').toLocaleDateString() : '—',
+          c.recording_start_date ? new Date(String(c.recording_start_date + 'T00:00:00').includes('T') ? String(c.recording_start_date + 'T00:00:00') : `${c.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—',
           c.brand || '—',
           `${c.ip_address || '—'}:${c.port || '—'}`,
           c.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
@@ -505,97 +485,50 @@ export default function Cameras({ subview }: CamerasProps) {
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
 
-        <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
-          <div className="absolute -top-3 -left-3">
-            <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-              {subview === 'cameras-disks' ? `${filteredDisks.length} Discos` : `${filteredCameras.length} Equipos`}
-            </div>
-          </div>
-
-          {/* Search */}
-          <div className="flex-1 relative group/search">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar cámara por nombre, IP, marca..."
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
-            />
-          </div>
-
-          {/* Filters + Toggle */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
-              >
-                <MapPin size={14} className="text-rose-500" />
-                <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === locations.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
-                <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              {showLocationDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                  <div className="p-2 border-b border-slate-100">
-                    <button
-                      onClick={() => {
-                        setSelectedLocations(locations.map(loc => loc.id));
-                        setShowLocationDropdown(false);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                    >
-                      Seleccionar todas las sedes
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedLocations([]);
-                        setShowLocationDropdown(false);
-                        setCurrentPage(1);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded transition-colors"
-                    >
-                      Limpiar selección
-                    </button>
-                  </div>
-                  {locations.map(location => (
-                    <label key={location.id} className="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
-                      <input
-                        type="checkbox"
-                        checked={selectedLocations.includes(location.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedLocations([...selectedLocations, location.id]);
-                          } else {
-                            setSelectedLocations(selectedLocations.filter(id => id !== location.id));
-                          }
-                          setCurrentPage(1);
-                        }}
-                        className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mr-3"
-                      />
-                      <span className="text-xs font-medium text-slate-700">{location.name.toUpperCase()}</span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
+        <ActionToolbar
+          totalItems={subview === 'cameras-disks' ? filteredDisks.length : filteredCameras.length}
+          label={subview === 'cameras-disks' ? 'Discos' : 'Equipos'}
+          searchComponent={
+            <>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+              <input
+                type="text"
+                placeholder="Buscar cámara por nombre, IP, marca..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+              />
+            </>
+          }
+        >
+            <FilterSelect
+              icon={MapPin}
+              iconClassName="text-rose-500"
+              multiple
+              value={selectedLocations}
+              onChange={e => { setSelectedLocations(e.target.value as string[]); setCurrentPage(1); }}
+              wrapperClassName="md:min-w-[220px]"
+            >
+              <option value="">TODAS LAS SEDES</option>
+              {locations.map(loc => (
+                <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+              ))}
+            </FilterSelect>
 
             {subview !== 'cameras-disks' && (
-              <select
+              <FilterSelect
                 value={filterStatus}
-                onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
+                onChange={(e) => { setFilterStatus(e.target.value as string); setCurrentPage(1); }}
               >
                 <option value="todos">TODOS LOS ESTADOS</option>
                 <option value="active">ACTIVO</option>
                 <option value="maintenance">MANTENIMIENTO</option>
                 <option value="inactive">INACTIVO</option>
-              </select>
+              </FilterSelect>
             )}
 
             {subview !== 'cameras-disks' && (
-              <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30">
+              <div className="w-full md:w-auto flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30">
                 <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-1">
                   <Star size={12} />
                   Crítico:
@@ -613,28 +546,13 @@ export default function Cameras({ subview }: CamerasProps) {
             )}
 
             {subview !== 'cameras-disks' && (
-              <div className="flex bg-slate-100 p-1 border border-slate-200">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                  title="Vista Cuadrícula"
-                >
-                  <LayoutGrid size={16} />
-                </button>
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`p-1.5 transition-all ${viewMode === 'table' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                  title="Vista Tabla"
-                >
-                  <List size={16} />
-                </button>
-              </div>
+              <ViewToggle viewMode={viewMode} onChange={setViewMode} />
             )}
 
             {subview === 'cameras-disks' ? (
               <button
                 onClick={() => setShowStoredDiskForm(true)}
-                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+                className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
               >
                 <Plus size={14} />
                 Nuevo Disco Almacenado
@@ -642,30 +560,15 @@ export default function Cameras({ subview }: CamerasProps) {
             ) : canEdit() && (
               <button
                 onClick={openCreate}
-                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+                className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
               >
                 <Plus size={14} />
                 Agregar Equipo
               </button>
             )}
 
-            <button
-              onClick={handleExportExcel}
-              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
-              title="Exportar a Excel"
-            >
-              <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
-            </button>
-
-            <button
-              onClick={handleExportPDF}
-              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
-              title="Exportar a PDF"
-            >
-              <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
-            </button>
-          </div>
-        </div>
+            <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
+        </ActionToolbar>
 
         {
           loading ? (
@@ -933,23 +836,23 @@ export default function Cameras({ subview }: CamerasProps) {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse border-spacing-0">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Disco / Serie</span></th>
-                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Marca</span></th>
-                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Origen</span></th>
-                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Periodo Grabación</span></th>
-                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Capacidad</span></th>
-                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
-                      <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Notas</span></th>
-                      <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Disco / Serie</TableHead>
+                      <TableHead>Marca</TableHead>
+                      <TableHead>Origen</TableHead>
+                      <TableHead>Periodo Grabación</TableHead>
+                      <TableHead>Capacidad</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Notas</TableHead>
+                      <TableHead className="text-center">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {paginatedDisks.map((disk) => (
-                      <tr key={disk.id} className="hover:bg-blue-50/70 transition-colors duration-200 border-b border-slate-50 last:border-0 group">
-                        <td className="px-6 py-5 font-bold text-left">
+                      <TableRow key={disk.id}>
+                        <TableCell className="font-bold">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm bg-rose-50 text-rose-600 border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-colors">
                               <HardDrive size={18} />
@@ -959,44 +862,44 @@ export default function Cameras({ subview }: CamerasProps) {
                               <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest mt-1">S/N: {disk.serial_number || 'S/N DESCONOCIDA'}</span>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <span className="text-[11px] font-black text-slate-500 uppercase tracking-tighter">{disk.brand || '—'}</span>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <div className="flex flex-col">
                             <span className="text-sm font-black text-slate-600 uppercase">{disk.camera_name || '—'}</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{disk.location_name || 'SEDE N/A'}</span>
                           </div>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded text-[10px] font-black text-blue-600 uppercase">
-                              {disk.stored_from ? new Date(disk.stored_from).toLocaleDateString() : 'INICIO N/A'}
+                              {disk.stored_from ? new Date(String(disk.stored_from).includes('T') ? String(disk.stored_from) : `${disk.stored_from}T12:00:00`).toLocaleDateString() : 'INICIO N/A'}
                             </div>
                             <span className="text-slate-300">—</span>
                             <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded text-[10px] font-black text-blue-600 uppercase">
-                              {disk.stored_to ? new Date(disk.stored_to).toLocaleDateString() : 'FIN N/A'}
+                              {disk.stored_to ? new Date(String(disk.stored_to).includes('T') ? String(disk.stored_to) : `${disk.stored_to}T12:00:00`).toLocaleDateString() : 'FIN N/A'}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <div className="flex flex-col gap-1">
                             <span className="text-[12px] font-black text-[#002855]">{disk.used_space_gb}/{disk.total_capacity_gb} GB</span>
                             <div className="w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
                               <div className="bg-rose-500 h-full" style={{ width: `${Math.min(100, Math.round((Number(disk.used_space_gb) / Number(disk.total_capacity_gb)) * 100))}%` }} />
                             </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border bg-rose-50 text-rose-700 border-rose-100">
                             ALMACENADO
                           </span>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <span className="text-[11px] font-medium text-slate-500 italic max-w-xs block truncate">{disk.notes || 'Sin observaciones'}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
+                        </TableCell>
+                        <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             {canEdit() && (
                               <>
@@ -1020,18 +923,18 @@ export default function Cameras({ subview }: CamerasProps) {
                               </>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
                     {paginatedDisks.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="px-6 py-10 text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest">
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest py-10">
                           No se encontraron discos extraídos almacenados
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           ) : (
@@ -1048,22 +951,22 @@ export default function Cameras({ subview }: CamerasProps) {
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse border-spacing-0">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-5 text-left">{renderSortableHeader('Cámara', 'name')}</th>
-                      <th className="px-4 py-5 text-left">{renderSortableHeader('Sede', 'location')}</th>
-                      <th className="px-4 py-5 text-left">{renderSortableHeader('Inicio Grabación', 'recording_start_date')}</th>
-                      <th className="px-4 py-5 text-left">{renderSortableHeader('Estado', 'status')}</th>
-                      <th className="px-4 py-5 text-left">{renderSortableHeader('Almacenamiento', 'disks')}</th>
-                      <th className="px-4 py-5 text-left">{renderSortableHeader('Tecnología', 'access_type')}</th>
-                      <th className="px-6 py-5 text-center"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead sortable isSorted={sortConfig?.key === 'name'} sortDirection={sortConfig?.direction} onClick={() => handleSort('name')}>Cámara</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'location'} sortDirection={sortConfig?.direction} onClick={() => handleSort('location')}>Sede</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'recording_start_date'} sortDirection={sortConfig?.direction} onClick={() => handleSort('recording_start_date')}>Inicio Grabación</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'status'} sortDirection={sortConfig?.direction} onClick={() => handleSort('status')}>Estado</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'disks'} sortDirection={sortConfig?.direction} onClick={() => handleSort('disks')}>Almacenamiento</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'access_type'} sortDirection={sortConfig?.direction} onClick={() => handleSort('access_type')}>Tecnología</TableHead>
+                      <TableHead className="text-center">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {paginatedData.map((cam) => (
-                      <tr key={cam.id} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0" onClick={() => handleView(cam)}>
-                        <td className="px-6 py-5 font-bold text-left">
+                      <TableRow key={cam.id} onClick={() => handleView(cam)}>
+                        <TableCell className="font-bold">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white">
                               <GiCctvCamera size={18} />
@@ -1073,21 +976,21 @@ export default function Cameras({ subview }: CamerasProps) {
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{cam.brand || ''} {cam.model || ''}</span>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block">{(cam as any).locations?.name || 'Sede N/A'}</span>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <span className="text-[12px] font-black text-[#002855] uppercase">
-                            {cam.recording_start_date ? new Date(cam.recording_start_date + 'T00:00:00').toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                            {cam.recording_start_date ? new Date(String(cam.recording_start_date + 'T00:00:00').includes('T') ? String(cam.recording_start_date + 'T00:00:00') : `${cam.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                           </span>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                             {cam.status === 'active' ? 'ACTIVO' : cam.status === 'maintenance' ? 'MANTENIMIENTO' : 'INACTIVO'}
                           </span>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           {cam.camera_disks && cam.camera_disks.length > 0 ? (
                             <div className="flex flex-col gap-1 min-w-[120px]">
                               {(() => {
@@ -1128,11 +1031,11 @@ export default function Cameras({ subview }: CamerasProps) {
                           ) : (
                             <span className="text-[10px] font-bold text-slate-400">SIN DISCOS</span>
                           )}
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <span className="text-[11px] font-black text-slate-500 uppercase tracking-tighter">{humanAccess(cam.access_type)}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
+                        </TableCell>
+                        <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             {canEdit() && (
                               <>
@@ -1145,11 +1048,11 @@ export default function Cameras({ subview }: CamerasProps) {
                               </>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
           )
@@ -1209,12 +1112,12 @@ export default function Cameras({ subview }: CamerasProps) {
                       <DetailModalCard className="space-y-2.5 sm:space-y-3">
                         <DetailModalRow label="Registro de Alta">
                           <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
-                            {new Date(selectedCamera.created_at).toLocaleDateString()}
+                            {new Date(String(selectedCamera.created_at).includes('T') ? String(selectedCamera.created_at) : `${selectedCamera.created_at}T12:00:00`).toLocaleDateString()}
                           </span>
                         </DetailModalRow>
                         <DetailModalRow label="Último Cambio">
                           <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
-                            {new Date(selectedCamera.updated_at).toLocaleDateString()}
+                            {new Date(String(selectedCamera.updated_at).includes('T') ? String(selectedCamera.updated_at) : `${selectedCamera.updated_at}T12:00:00`).toLocaleDateString()}
                           </span>
                         </DetailModalRow>
                       </DetailModalCard>
@@ -1363,7 +1266,7 @@ export default function Cameras({ subview }: CamerasProps) {
                                   </div>
                                   {(d.stored_from || d.stored_to) && (
                                     <div className="text-[7px] sm:text-[8px] font-black text-blue-600 uppercase border-t border-slate-50 pt-1.5 mt-1.5 leading-relaxed">
-                                      Grabación: {d.stored_from ? new Date(d.stored_from + 'T00:00:00').toLocaleDateString() : '—'} — {d.stored_to ? new Date(d.stored_to + 'T00:00:00').toLocaleDateString() : '—'}
+                                      Grabación: {d.stored_from ? new Date(String(d.stored_from + 'T00:00:00').includes('T') ? String(d.stored_from + 'T00:00:00') : `${d.stored_from + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—'} — {d.stored_to ? new Date(String(d.stored_to + 'T00:00:00').includes('T') ? String(d.stored_to + 'T00:00:00') : `${d.stored_to + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—'}
                                     </div>
                                   )}
                                 </div>

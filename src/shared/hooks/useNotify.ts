@@ -21,9 +21,25 @@ const baseConfig = {
 
 /**
  * Hook de utilidad para disparar notificaciones SweetAlert2 fácilmente.
- * Usa: const { success, error, info, warning, confirm } = useNotify();
+ * Usa: const { success, error, info, warning, confirm, toast } = useNotify();
  */
 export function useNotify() {
+  const toast = (message: string, title?: string) => {
+    Swal.fire({
+      toast: true,
+      position: 'bottom-end',
+      showConfirmButton: false,
+      timer: 4000,
+      timerProgressBar: true,
+      icon: 'info',
+      title: title || 'Notificación',
+      text: message,
+      customClass: {
+        popup: 'rounded-xl shadow-2xl border border-slate-100',
+        title: 'text-sm font-bold text-slate-800',
+      }
+    });
+  };
   const success = (message: string, title?: string) =>
     Swal.fire({
       ...baseConfig,
@@ -92,5 +108,5 @@ export function useNotify() {
     return result.isConfirmed;
   };
 
-  return { success, error, info, warning, confirm };
+  return { success, error, info, warning, confirm, toast };
 }

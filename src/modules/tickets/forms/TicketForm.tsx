@@ -1,3 +1,5 @@
+// Formulario para crear nuevos tickets de soporte técnico
+// Incluye sugerencias de problemas frecuentes y auto-asignación de sede
 import { useState, useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
@@ -5,11 +7,16 @@ import { useAuth } from '../../../app/providers/AuthContext';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 import { notifyTicketCreated } from '../../../shared/services/notifications';
 
+// Props del componente
+// onClose: Función para cerrar el modal/formulario
+// onSave: Función para recargar la lista después de guardar
 type TicketFormProps = {
   onClose: () => void;
   onSave: () => void;
 };
 
+// Lista de problemas frecuentes para sugerencias automáticas
+// Ayuda a los usuarios a reportar incidencias comunes rápidamente
 const FREQUENT_ISSUES = [
   { title: 'Impresora no enciende / no imprime', category: 'sistemas', priority: 'critical', description: 'La impresora de la sede no responde a los comandos de impresión o está apagada.' },
   { title: 'Olvidé mi contraseña de acceso del MTC / Correo', category: 'sistemas', priority: 'high', description: 'Requiero un reset de contraseña para ingresar al sistema.' },
@@ -50,11 +57,13 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     { value: 'operaciones', label: 'Área de operaciones' },
   ];
 
+  // Carga la lista de sedes disponibles al montar el componente
   useEffect(() => {
     fetchLocations();
   }, []);
 
-  // Auto-asignar la sede del usuario
+  // Auto-asigna la sede del usuario actual
+  // Si el usuario tiene una sede asignada, la usa por defecto
   useEffect(() => {
     if (user?.location_id && !formData.location_id) {
       setFormData(prev => ({
@@ -64,6 +73,8 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     }
   }, [user?.location_id]);
 
+  // Obtiene todas las sedes desde la base de datos
+  // Se usa para el selector de ubicación del ticket
   const fetchLocations = async () => {
     try {
       const { data, error } = await supabase
@@ -79,6 +90,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     }
   };
 
+  // Cierra el menú de sugerencias al hacer clic fuera del componente
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
@@ -90,10 +102,13 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Filtra las sugerencias basándose en lo que el usuario escribe en el título
   const filteredSuggestions = FREQUENT_ISSUES.filter(issue =>
     issue.title.toLowerCase().includes(formData.title.toLowerCase())
   );
 
+  // Selecciona una sugerencia de problema frecuente
+  // Autocompleta el formulario con los datos predefinidos
   const handleSelectIssue = (issue: typeof FREQUENT_ISSUES[0]) => {
     setFormData({
       ...formData,
@@ -105,6 +120,9 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     setShowSuggestions(false);
   };
 
+  // Valida y envía el formulario para crear un nuevo ticket
+  // Crea el ticket, agrega el AnyDesk como comentario si existe,
+  // auto-asigna al creador y envía notificaciones
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -191,6 +209,8 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
     }
   };
 
+  // Maneja los cambios en los campos del formulario
+  // Actualiza el estado, limpia errores y muestra sugerencias
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 

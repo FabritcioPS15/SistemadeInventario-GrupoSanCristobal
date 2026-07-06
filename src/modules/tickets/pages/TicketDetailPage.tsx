@@ -1261,7 +1261,7 @@ export default function TicketDetail() {
                                         else return `${Math.floor(diffMs / (1000 * 60))} MIN`;
                                     })()}
                                 </p>
-                                <p className="text-[12px] text-slate-500 font-bold uppercase text-center">{new Date(ticket.created_at).toLocaleDateString()}</p>
+                                <p className="text-[12px] text-slate-500 font-bold uppercase text-center">{new Date(String(ticket.created_at).includes('T') ? String(ticket.created_at) : `${ticket.created_at}T12:00:00`).toLocaleDateString()}</p>
                             </div>
                         </div>
                     </div>

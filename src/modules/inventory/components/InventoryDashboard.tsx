@@ -317,7 +317,7 @@ export default function InventoryDashboard({ companyId, locationId }: InventoryD
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] font-semibold text-slate-600">
-                      {new Date(record.created_at).toLocaleDateString()}
+                      {new Date(String(record.created_at).includes('T') ? String(record.created_at) : `${record.created_at}T12:00:00`).toLocaleDateString()}
                     </p>
                   </div>
                 </div>

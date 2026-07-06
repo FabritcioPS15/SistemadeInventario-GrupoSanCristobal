@@ -1,9 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { History, ShieldCheck, Search, Calendar, Filter, RefreshCw, Ticket as TicketIcon, Clock, User } from 'lucide-react';
+import {  ShieldCheck, Search, Calendar, RefreshCw, Ticket as TicketIcon, Clock, User } from 'lucide-react';
 import { FaFilePdf } from "react-icons/fa6";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { supabase } from '../../../shared/services/supabase';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '../../../shared/components/ui/Table';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -177,8 +185,8 @@ export default function TicketHistory() {
             t.requester?.full_name || 'N/A',
             t.attendant?.full_name || 'Sin asignar',
             PRIORITY_STYLES[t.priority]?.label || t.priority,
-            new Date(t.created_at).toLocaleDateString(),
-            t.closed_at ? new Date(t.closed_at).toLocaleDateString() : 'N/A',
+            new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString(),
+            t.closed_at ? new Date(String(t.closed_at).includes('T') ? String(t.closed_at) : `${t.closed_at}T12:00:00`).toLocaleDateString() : 'N/A',
             getTimeToClose(t)
         ]);
 
@@ -357,30 +365,30 @@ export default function TicketHistory() {
                     ) : (
                         <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse border-spacing-0">
-                                    <thead>
-                                        <tr className="bg-slate-50 border-b border-slate-200">
-                                            <th className="px-6 py-5 text-left w-12"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">ID</span></th>
-                                            <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Incidente</span></th>
-                                            <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Solicitante</span></th>
-                                            <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Atendido por</span></th>
-                                            <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Prioridad</span></th>
-                                            <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tiempos</span></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-12">ID</TableHead>
+                                            <TableHead>Incidente</TableHead>
+                                            <TableHead>Solicitante</TableHead>
+                                            <TableHead>Atendido por</TableHead>
+                                            <TableHead>Prioridad</TableHead>
+                                            <TableHead>Tiempos</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
                                         {filteredTickets.map((ticket) => {
                                             const prio = PRIORITY_STYLES[ticket.priority] || PRIORITY_STYLES.medium;
                                             return (
-                                                <tr key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0">
-                                                    <td className="px-6 py-5 font-bold text-left w-12">
+                                                <TableRow key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)}>
+                                                    <TableCell className="font-bold w-12">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
                                                                 <TicketIcon size={14} />
                                                             </div>
                                                         </div>
-                                                    </td>
-                                                    <td className="px-4 py-5 text-left">
+                                                    </TableCell>
+                                                    <TableCell>
                                                         <div className="flex flex-col">
                                                             <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-blue-600 transition-colors">
                                                                 #{ticket.id.slice(0, 6).toUpperCase()} - {ticket.title}
@@ -389,14 +397,14 @@ export default function TicketHistory() {
                                                                 {ticket.locations?.name || 'Central'}
                                                             </span>
                                                         </div>
-                                                    </td>
-                                                    <td className="px-4 py-5 text-left">
+                                                    </TableCell>
+                                                    <TableCell>
                                                         <div className="flex items-center gap-2">
                                                             <User size={12} className="text-slate-400" />
                                                             <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{ticket.requester?.full_name || 'N/A'}</span>
                                                         </div>
-                                                    </td>
-                                                    <td className="px-4 py-5 text-left">
+                                                    </TableCell>
+                                                    <TableCell>
                                                         {ticket.attendant ? (
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{ticket.attendant.full_name}</span>
@@ -404,19 +412,19 @@ export default function TicketHistory() {
                                                         ) : (
                                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sin asignar</span>
                                                         )}
-                                                    </td>
-                                                    <td className="px-4 py-5 text-left">
+                                                    </TableCell>
+                                                    <TableCell>
                                                         <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
                                                             <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
                                                             {prio.label}
                                                         </span>
-                                                    </td>
-                                                    <td className="px-4 py-5 text-left">
+                                                    </TableCell>
+                                                    <TableCell>
                                                         <div className="flex flex-col gap-1 text-[10px] font-bold text-slate-600">
                                                             <div className="flex items-center gap-1.5">
                                                                 <Calendar size={12} className="text-slate-400" />
                                                                 <span className="uppercase tracking-widest">
-                                                                    {ticket.closed_at ? new Date(ticket.closed_at).toLocaleDateString('es-PE', {
+                                                                    {ticket.closed_at ? new Date(String(ticket.closed_at).includes('T') ? String(ticket.closed_at) : `${ticket.closed_at}T12:00:00`).toLocaleDateString('es-PE', {
                                                                         day: '2-digit', month: 'short', year: 'numeric'
                                                                     }) : 'N/A'}
                                                                 </span>
@@ -426,12 +434,12 @@ export default function TicketHistory() {
                                                                 <span className="uppercase tracking-widest">Resuelto en {getTimeToClose(ticket)}</span>
                                                             </div>
                                                         </div>
-                                                    </td>
-                                                </tr>
+                                                    </TableCell>
+                                                </TableRow>
                                             );
                                         })}
-                                    </tbody>
-                                </table>
+                                    </TableBody>
+                                </Table>
                             </div>
                         </div>
                     )}

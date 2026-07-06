@@ -1,5 +1,5 @@
-import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
-
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Trash2, Settings2, X } from 'lucide-react';
 interface PaginationProps {
     currentPage: number;
     totalPages: number;
@@ -55,41 +55,69 @@ export default function Pagination({
         return pages;
     };
 
+    const [isOpen, setIsOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    // Cerrar el menú si se hace clic fuera de él
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        if (isOpen) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [isOpen]);
+
     if (totalItems === 0) return null;
 
     return (
         <div className="bg-[#002855] px-6 py-4 border-t border-white/10 relative">
             <div className="flex flex-col xl:flex-row items-center justify-between gap-6 relative z-10">
                 {/* Left Section: Info & Items Per Page */}
-                <div className="flex flex-col sm:flex-row items-center gap-6 w-full xl:w-auto">
-                    {/* Item count info */}
-                    <div className="flex items-center gap-3 bg-white px-4 py-2 border border-blue-900/50 shadow-sm">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">
-                            Mostrando <span className="text-[#002855] text-[11px] font-black">{startItem}</span> - <span className="text-[#002855] text-[11px] font-black px-2">{endItem}</span>
-                            EN TOTAL: <span className="text-[#002855] text-[11px] font-black ml-1">{totalItems}</span>
-                        </p>
+                <div className="flex flex-col sm:flex-row items-center gap-6 w-full xl:w-auto relative" ref={menuRef}>
+                    <div className="flex w-full sm:w-auto items-center justify-between gap-2">
+                        {/* Item count info */}
+                        <div className="flex items-center gap-3 bg-white px-4 py-2 border border-blue-900/50 shadow-sm flex-1 sm:flex-none">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">
+                                Mostrando <span className="text-[#002855] text-[11px] font-black">{startItem}</span> - <span className="text-[#002855] text-[11px] font-black px-2">{endItem}</span>
+                                EN TOTAL: <span className="text-[#002855] text-[11px] font-black ml-1">{totalItems}</span>
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setIsOpen(!isOpen)}
+                            className="sm:hidden flex-shrink-0 px-3 py-2 bg-white text-[#002855] border border-blue-900/50 shadow-sm flex items-center justify-center transition-all"
+                        >
+                            {isOpen ? <X size={16} /> : <Settings2 size={16} />}
+                        </button>
                     </div>
 
                     {/* Items per page selector */}
-                    <div className="flex items-center gap-3">
-                        <label htmlFor="itemsPerPage" className="text-[10px] font-black text-white/50 uppercase tracking-widest">
-                            Por página:
-                        </label>
-                        <select
-                            id="itemsPerPage"
-                            value={itemsPerPage}
-                            onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-                            className="bg-white border-transparent text-[11px] font-black text-[#002855] px-4 py-2 hover:bg-slate-50 transition-all outline-none cursor-pointer shadow-sm"
-                        >
-                            <option value={10}>10 REGISTROS</option>
-                            <option value={20}>20 REGISTROS</option>
-                            <option value={50}>50 REGISTROS</option>
-                            <option value={100}>100 REGISTROS</option>
-                        </select>
+                    <div className={`sm:flex items-center gap-3 ${isOpen ? 'flex flex-col absolute top-full left-0 right-0 bg-white border border-slate-200 shadow-xl p-4 mt-2 z-50' : 'hidden'}`}>
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
+                            <label htmlFor="itemsPerPage" className="text-[10px] font-black text-[#002855] sm:text-white/50 uppercase tracking-widest whitespace-nowrap">
+                                Por página:
+                            </label>
+                            <select
+                                id="itemsPerPage"
+                                value={itemsPerPage}
+                                onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
+                                className="bg-slate-50 sm:bg-white border sm:border-transparent border-slate-200 text-[11px] font-black text-[#002855] px-4 py-2 hover:bg-slate-100 sm:hover:bg-slate-50 transition-all outline-none cursor-pointer shadow-sm w-full sm:w-auto"
+                            >
+                                <option value={10}>10 REGISTROS</option>
+                                <option value={20}>20 REGISTROS</option>
+                                <option value={50}>50 REGISTROS</option>
+                                <option value={100}>100 REGISTROS</option>
+                            </select>
+                        </div>
                         {selectedCount > 0 && onDeleteSelected && (
                             <button
                                 onClick={onDeleteSelected}
-                                className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all rounded-lg shadow-sm active:scale-95"
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all rounded-lg shadow-sm active:scale-95 w-full sm:w-auto mt-2 sm:mt-0"
                             >
                                 <Trash2 size={14} />
                                 Eliminar {selectedCount} {selectedCount === 1 ? 'seleccionado' : 'seleccionados'}

@@ -342,7 +342,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                           <div className="flex items-center gap-4">
                             <div className="flex flex-col">
                               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Fecha</p>
-                              <span className="text-[10px] font-black text-slate-700 uppercase tracking-tighter">{new Date(shipment.shipment_date).toLocaleDateString()}</span>
+                              <span className="text-[10px] font-black text-slate-700 uppercase tracking-tighter">{new Date(String(shipment.shipment_date).includes('T') ? String(shipment.shipment_date) : `${shipment.shipment_date}T12:00:00`).toLocaleDateString()}</span>
                             </div>
                             {shipment.tracking_number && (
                               <div className="flex flex-col">
@@ -419,7 +419,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                             </td>
                             <td className="px-4 py-4">
                               <div className="flex flex-col">
-                                <span className="text-[13px] font-black text-slate-600 uppercase tabular-nums">{new Date(shipment.shipment_date).toLocaleDateString()}</span>
+                                <span className="text-[13px] font-black text-slate-600 uppercase tabular-nums">{new Date(String(shipment.shipment_date).includes('T') ? String(shipment.shipment_date) : `${shipment.shipment_date}T12:00:00`).toLocaleDateString()}</span>
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{shipment.tracking_number || 'Sin Guía'}</span>
                               </div>
                             </td>
@@ -512,7 +512,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                       <p className="text-[10px] font-black text-emerald-600/60 uppercase tracking-widest mb-2">Fecha de Envío</p>
                       <div className="flex items-center gap-2 text-sm font-black text-emerald-900 uppercase">
                         <Calendar size={16} />
-                        {new Date(viewingShipment.shipment_date).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                        {new Date(String(viewingShipment.shipment_date).includes('T') ? String(viewingShipment.shipment_date) : `${viewingShipment.shipment_date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                       </div>
                     </div>
                   </div>

@@ -175,7 +175,6 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
               <option value="sistema">Sistema Interno</option>
               <option value="portal">Portal Web</option>
               <option value="api">API/WS</option>
-              <option value="bd">Base de Datos</option>
               <option value="externo">Acceso Externo</option>
             </FormSelect>
           </FormField>

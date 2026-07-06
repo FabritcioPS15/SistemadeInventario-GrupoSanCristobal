@@ -1087,29 +1087,14 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                     )) || []}
 
                                 </div>
-
                             </div>
-
                         )}
-
                     </div>
-
                 )}
-
-
-
                 <div className="flex items-center gap-1">
-
                     {/* Sistema de Notificaciones - FUNCIONANDO */}
-
-
-
                     <NotificationsFinal />
-
-
-
                     {/* SUTRAN Indicator */}
-
                     <div className="relative" ref={sutranPopupRef}>
                         <button
                             onClick={() => setShowSutranPopup(!showSutranPopup)}
@@ -1128,13 +1113,8 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                 </span>
                             )}
                         </button>
-
-
-
                         {showSutranPopup && (
-
                             <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[200] animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-
                                 <div className="p-4 border-b border-gray-100 bg-[#001529] text-white">
 
                                     <div className="flex items-center gap-3">
@@ -1173,7 +1153,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                             <span className="text-xs font-bold text-orange-700">
 
-                                                {new Date(visit.visit_date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                {new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
 
                                             </span>
 

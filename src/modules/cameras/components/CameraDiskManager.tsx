@@ -150,7 +150,7 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
                   </p>
                   {disk.stored_from || disk.stored_to ? (
                     <p className="text-[9px] font-black text-blue-600 uppercase mt-1">
-                      Grabación: {disk.stored_from ? new Date(disk.stored_from + 'T00:00:00').toLocaleDateString() : '—'} al {disk.stored_to ? new Date(disk.stored_to + 'T00:00:00').toLocaleDateString() : '—'}
+                      Grabación: {disk.stored_from ? new Date(String(disk.stored_from + 'T00:00:00').includes('T') ? String(disk.stored_from + 'T00:00:00') : `${disk.stored_from + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—'} al {disk.stored_to ? new Date(String(disk.stored_to + 'T00:00:00').includes('T') ? String(disk.stored_to + 'T00:00:00') : `${disk.stored_to + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—'}
                     </p>
                   ) : (
                     <p className="text-[9px] font-bold text-slate-300 uppercase mt-1 italic">Sin fechas de grabación</p>

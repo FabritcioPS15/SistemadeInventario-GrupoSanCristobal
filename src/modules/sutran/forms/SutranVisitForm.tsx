@@ -28,6 +28,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
     findings: visit?.findings || '',
     recommendations: visit?.recommendations || '',
     documents: visit?.documents || [],
+    evidence_url: visit?.evidence_url || '',
     estimated_duration: visit?.estimated_duration || '',
     estimated_cost: visit?.estimated_cost || ''
   });
@@ -65,6 +66,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
         findings: visit.findings || '',
         recommendations: visit.recommendations || '',
         documents: visit.documents || [],
+        evidence_url: visit.evidence_url || '',
         estimated_duration: visit.estimated_duration || '',
         estimated_cost: visit.estimated_cost || ''
       });
@@ -81,6 +83,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
         findings: '',
         recommendations: '',
         documents: [],
+        evidence_url: '',
         estimated_duration: '',
         estimated_cost: ''
       });
@@ -116,19 +119,6 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
 
     if (!formData.visit_date) {
       newErrors.visit_date = 'La fecha de visita es requerida';
-    }
-
-    // Inspector data is optional - only validate if provided
-    if (formData.inspector_name.trim() && !formData.inspector_email.trim()) {
-      newErrors.inspector_email = 'Si ingresa el nombre del inspector, debe ingresar el email';
-    } else if (formData.inspector_email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.inspector_email)) {
-      newErrors.inspector_email = 'El email no es válido';
-    }
-
-    if (formData.inspector_name.trim() && !formData.inspector_phone.trim()) {
-      newErrors.inspector_phone = 'Si ingresa el nombre del inspector, debe ingresar el teléfono';
-    } else if (formData.inspector_phone.trim() && !/^9\d{8}$/.test(formData.inspector_phone.replace(/\s/g, ''))) {
-      newErrors.inspector_phone = 'El teléfono debe tener 9 dígitos empezando con 9';
     }
 
     if (!formData.location_id) {
@@ -354,68 +344,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
               </div>
             </FormSection>
 
-            {/* Section: Información del Inspector */}
-            <FormSection title="Información del Inspector" color="emerald">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <FormField label="Nombre del Inspector" error={errors.inspector_name}>
-                  <FormInput
-                    type="text"
-                    name="inspector_name"
-                    value={formData.inspector_name}
-                    onChange={handleChange}
-                    placeholder="Nombre completo del inspector (opcional)"
-                    error={errors.inspector_name}
-                  />
-                </FormField>
 
-                <FormField label="Email del Inspector" error={errors.inspector_email}>
-                  <FormInput
-                    type="email"
-                    name="inspector_email"
-                    value={formData.inspector_email}
-                    onChange={handleChange}
-                    placeholder="inspector@ejemplo.com (opcional)"
-                    error={errors.inspector_email}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Email oficial del inspector SUTRAN (opcional)</p>
-                </FormField>
-
-                <FormField label="Teléfono del Inspector" error={errors.inspector_phone}>
-                  <FormInput
-                    type="tel"
-                    name="inspector_phone"
-                    value={formData.inspector_phone}
-                    onChange={handleChange}
-                    placeholder="987654321 (opcional)"
-                    error={errors.inspector_phone}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Celular peruano (opcional)</p>
-                </FormField>
-
-                <FormField label="Duración Estimada" error={errors.estimated_duration}>
-                  <FormInput
-                    type="text"
-                    name="estimated_duration"
-                    value={formData.estimated_duration}
-                    onChange={handleChange}
-                    placeholder="Ej: 4 horas, 1 día"
-                    error={errors.estimated_duration}
-                  />
-                </FormField>
-
-                <FormField label="Costo Estimado" error={errors.estimated_cost}>
-                  <FormInput
-                    type="number"
-                    name="estimated_cost"
-                    value={formData.estimated_cost}
-                    onChange={handleChange}
-                    placeholder="Ej: 500.00"
-                    step="0.01"
-                    error={errors.estimated_cost}
-                  />
-                </FormField>
-              </div>
-            </FormSection>
 
             {/* Section: Documentos */}
             <FormSection title="Documentos de la Visita" color="amber">
@@ -453,6 +382,23 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                     ))}
                   </div>
                 )}
+              </div>
+            </FormSection>
+
+            {/* Section: Evidencias */}
+            <FormSection title="Evidencias" color="indigo">
+              <div className="space-y-4">
+                <FormField label="Enlace de Evidencias (Google Drive, OneDrive, etc.)" error={errors.evidence_url}>
+                  <FormInput
+                    type="url"
+                    name="evidence_url"
+                    value={formData.evidence_url}
+                    onChange={handleChange}
+                    placeholder="https://drive.google.com/..."
+                    error={errors.evidence_url}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Pegue el enlace a la carpeta de evidencias</p>
+                </FormField>
               </div>
             </FormSection>
 

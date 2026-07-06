@@ -114,7 +114,9 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMa
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Domains\201.230.15.35" /v http /t REG_DWORD /d 2 /f >nul
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Domains\190.117.59.228" /v http /t REG_DWORD /d 2 /f >nul
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Domains\209.45.83.213" /v http /t REG_DWORD /d 2 /f >nul
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Domains\209.61.72.152" /v http /t REG_DWORD /d 2 /f >nul
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Domains\209.61.72.152
+
+" /v http /t REG_DWORD /d 2 /f >nul
 
 
 :: =========================================================

@@ -1,27 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
-
-import { Edit, Trash2, MapPin, X, Copy, ChevronDown, ChevronUp, LayoutGrid, List, Plus, Search } from 'lucide-react';
-
+import { Edit, Trash2, MapPin, X, Copy, ChevronDown, Search } from 'lucide-react';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
-
 import { SiAnydesk } from "react-icons/si";
-
-import { RiFileExcel2Fill } from "react-icons/ri";
-
-import { FaFilePdf } from "react-icons/fa6";
-
 import jsPDF from 'jspdf';
-
 import autoTable from 'jspdf-autotable';
-
 import { supabase, Server, Location } from '../../../shared/services/supabase';
-
 import { useAuth } from '../../../app/providers/AuthContext';
-
 import ServerForm from '../forms/ServerForm';
-
 import Pagination from '../../../shared/components/ui/Pagination';
-
 import DetailModal, {
   DetailModalHeader,
   DetailModalBody,
@@ -32,6 +18,21 @@ import DetailModal, {
   DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import ViewToggle from '../../../shared/components/ui/ViewToggle';
+import ExportButtons from '../../../shared/components/ui/ExportButtons';
+import LoadingSpinner from '../../../shared/components/ui/LoadingSpinner';
+import PrimaryButton from '../../../shared/components/ui/PrimaryButton';
+import RowActions from '../../../shared/components/ui/RowActions';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '../../../shared/components/ui/Table';
 
 // ─── Stats (tipado correcto) ─────────────────────────────────────────────────
 interface ServerStats {
@@ -53,7 +54,7 @@ export default function Servers() {
   const [editing, setEditing] = useState<Server | undefined>();
   const [showDetails, setShowDetails] = useState(false);
   const [selectedServer, setSelectedServer] = useState<Server | undefined>();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
@@ -123,7 +124,7 @@ export default function Servers() {
         `"${server.ip_address || ''}"`,
         `"${server.anydesk_id || ''}"`,
         `"${server.username || ''}"`,
-        `"${new Date(server.updated_at).toLocaleDateString()}"`
+        `"${new Date(String(server.updated_at).includes('T') ? String(server.updated_at) : `${server.updated_at}T12:00:00`).toLocaleDateString()}"`
       ].join(','))
     ].join('\n');
 
@@ -145,7 +146,7 @@ export default function Servers() {
       s.locations?.name || 'VIRTUAL',
       s.ip_address || '',
       s.anydesk_id || '',
-      new Date(s.updated_at).toLocaleDateString()
+      new Date(String(s.updated_at).includes('T') ? String(s.updated_at) : `${s.updated_at}T12:00:00`).toLocaleDateString()
     ]);
 
     autoTable(doc, {
@@ -164,7 +165,7 @@ export default function Servers() {
     const handleDownload = () => downloadServersReport();
     const handleDownloadPdf = () => downloadServersReportPdf();
     const handleNewServer = () => openCreate();
-    const handleToggleView = () => setViewMode(prev => prev === 'grid' ? 'list' : 'grid');
+    const handleToggleView = () => setViewMode(prev => prev === 'grid' ? 'table' : 'grid');
 
     window.addEventListener('servers:download', handleDownload);
     window.addEventListener('servers:download-pdf', handleDownloadPdf);
@@ -297,90 +298,49 @@ export default function Servers() {
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
 
         {/* Barra de Acciones */}
-        <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 group shadow-sm hover:shadow-md transition-all relative">
+        <ActionToolbar
+          totalItems={filtered.length}
+          label="Instancias"
+          searchComponent={
+            <>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+              <input
+                type="text"
+                placeholder="Buscar servidor, IP, ID o sede..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); resetPagination(); }}
+                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+              />
+            </>
+          }
+        >
+          <FilterSelect
+            icon={MapPin}
+            iconClassName="text-rose-500"
+            value={selectedLocations[0] || ''}
+            onChange={e => { const v = e.target.value as string; setSelectedLocations(v ? [v] : []); setCurrentPage(1); }}
+            wrapperClassName="md:min-w-[220px]"
+          >
+            <option value="">TODAS LAS SEDES</option>
+            {locations.map(loc => (
+              <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+            ))}
+          </FilterSelect>
 
-          <div className="absolute -top-3 -left-3">
-            <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-              {filtered.length} Instancias
-            </div>
-          </div>
+          <ViewToggle viewMode={viewMode} onChange={v => setViewMode(v)} />
 
-          <div className="flex-1 relative group/search">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar servidor, IP, ID o sede..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); resetPagination(); }}
-              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
-            />
-          </div>
+          {canEdit() && (
+            <PrimaryButton onClick={openCreate}>
+              Nuevo Servidor
+            </PrimaryButton>
+          )}
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest min-w-[220px]">
-              <MapPin size={14} className="text-rose-500" />
-              <select
-                value={selectedLocations[0] || ''}
-                onChange={e => { setSelectedLocations(e.target.value ? [e.target.value] : []); resetPagination(); }}
-                className="bg-transparent outline-none cursor-pointer flex-1"
-              >
-                <option value="">TODAS LAS SEDES</option>
-                {locations.map(loc => (
-                  <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex bg-slate-100 p-1 border border-slate-200">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                title="Vista Cuadrícula"
-              >
-                <LayoutGrid size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                title="Vista Tabla"
-              >
-                <List size={16} />
-              </button>
-            </div>
-
-            {canEdit() && (
-              <button
-                onClick={openCreate}
-                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-              >
-                <Plus size={14} />
-                Nuevo Servidor
-              </button>
-            )}
-
-            <button
-              onClick={downloadServersReport}
-              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
-              title="Exportar a Excel"
-            >
-              <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
-            </button>
-
-            <button
-              onClick={downloadServersReportPdf}
-              className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
-              title="Exportar a PDF"
-            >
-              <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
-            </button>
-          </div>
-        </div>
+          <ExportButtons onExportExcel={downloadServersReport} onExportPDF={downloadServersReportPdf} />
+        </ActionToolbar>
 
         {/* Contenido principal */}
         {loading ? (
-          <div className="flex items-center justify-center min-h-[40vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#002855]"></div>
-          </div>
+          <LoadingSpinner />
         ) : viewMode === 'grid' ? (
 
           /* ── VISTA GRID ── */
@@ -441,22 +401,11 @@ export default function Servers() {
                     >
                       Ficha
                     </button>
-                    {canEdit() && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openEdit(srv); }}
-                          className="w-7 h-7 flex items-center justify-center text-amber-600 bg-white border border-amber-100 rounded-none hover:bg-amber-500 hover:text-white transition-all shadow-sm"
-                        >
-                          <Edit size={12} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); del(srv); }}
-                          className="w-7 h-7 flex items-center justify-center text-rose-500 bg-white border border-rose-100 rounded-none hover:bg-rose-500 hover:text-white transition-all shadow-sm"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    )}
+                    <RowActions
+                      canEdit={canEdit()}
+                      onEdit={(e) => { e.stopPropagation(); openEdit(srv); }}
+                      onDelete={(e) => { e.stopPropagation(); del(srv); }}
+                    />
                   </div>
                 </div>
               );
@@ -588,147 +537,117 @@ export default function Servers() {
               </div>
 
               {/* Vista Desktop Table */}
-              <div className="hidden md:block overflow-hidden relative group/table">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse border-spacing-0">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200">
-                        <th className="px-6 py-5 text-left w-12">
-                          {canEdit() && (
-                            <input
-                              type="checkbox"
-                              checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length}
-                              onChange={toggleSelectAll}
-                              className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
-                            />
-                          )}
-                        </th>
-                        <th className="px-6 py-5 text-left">
-                          <button onClick={() => handleSort('name')} className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors">
-                            <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Servidor</span>
-                            {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-                          </button>
-                        </th>
-                        <th className="px-4 py-5 text-left">
-                          <button onClick={() => handleSort('location')} className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors">
-                            <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Ubicación</span>
-                            {sortField === 'location' && (sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-                          </button>
-                        </th>
-                        <th className="px-4 py-5 text-left">
-                          <button onClick={() => handleSort('ip')} className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors">
-                            <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">IP</span>
-                            {sortField === 'ip' && (sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-                          </button>
-                        </th>
-                        <th className="px-4 py-5 text-left">
-                          <button onClick={() => handleSort('anydesk')} className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors">
-                            <SiAnydesk size={12} className="text-red-500" />
-                            <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">AnyDesk</span>
-                            {sortField === 'anydesk' && (sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-                          </button>
-                        </th>
-                        <th className="px-6 py-5 text-center">
-                          <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {paginatedData.map((srv) => {
-                        const hasIp = !!srv.ip_address;
-                        const hasAnydesk = !!srv.anydesk_id;
+              <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      {canEdit() && (
+                        <input
+                          type="checkbox"
+                          checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length}
+                          onChange={toggleSelectAll}
+                          className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                        />
+                      )}
+                    </TableHead>
+                    <TableHead sortable isSorted={sortField === 'name'} sortDirection={sortDirection} onClick={() => handleSort('name')}>Servidor</TableHead>
+                    <TableHead sortable isSorted={sortField === 'location'} sortDirection={sortDirection} onClick={() => handleSort('location')}>Ubicación</TableHead>
+                    <TableHead sortable isSorted={sortField === 'ip'} sortDirection={sortDirection} onClick={() => handleSort('ip')}>IP</TableHead>
+                    <TableHead sortable isSorted={sortField === 'anydesk'} sortDirection={sortDirection} onClick={() => handleSort('anydesk')}>
+                      <div className="flex items-center gap-1.5"><SiAnydesk size={12} className="text-red-500" /> ANYDESK</div>
+                    </TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {paginatedData.map((srv) => {
+                    const hasIp = !!srv.ip_address;
+                    const hasAnydesk = !!srv.anydesk_id;
 
-                        return (
-                          <tr
-                            key={srv.id}
-                            className={`hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0 ${selectedIds.includes(srv.id) ? 'bg-blue-50/50' : ''}`}
-                            onClick={() => { setSelectedServer(srv); setShowDetails(true); if (canEdit()) toggleSelect(srv.id); }}
-                          >
-                            <td className="px-6 py-5 text-left w-12">
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.includes(srv.id)}
-                                onChange={() => toggleSelect(srv.id)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
-                              />
-                            </td>
-                            <td className="px-6 py-4 font-bold text-left">
-                              <div className="flex items-center justify-start gap-3">
-                                <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
-                                  <ServerIcon size={14} />
-                                </div>
-                                <div className="flex flex-col items-start">
-                                  <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">{srv.name}</span>
-                                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 md:hidden">{srv.locations?.name || 'VIRTUAL'}</span>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 text-left">
-                              <div className="flex flex-col items-start">
-                                <span className="text-[13px] font-extrabold text-slate-600 uppercase tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Sede Física</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 text-left">
-                              <div className="flex flex-col items-start group/cell">
-                                <div className="flex items-center justify-start gap-2">
-                                  <span className={`text-[13px] font-mono font-black ${hasIp ? 'text-[#002855]' : 'text-slate-300'}`}>{srv.ip_address || '—'}</span>
-                                  {hasIp && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.ip_address!, 'IP'); }}
-                                      className="p-1.5 hover:bg-blue-50 rounded-lg text-slate-300 hover:text-blue-500 transition-all opacity-0 group-hover/cell:opacity-100"
-                                      title="Copiar IP"
-                                    >
-                                      <Copy size={13} />
-                                    </button>
-                                  )}
-                                </div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Red Interna</span>
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 text-left">
-                              <div className="flex flex-col items-start group/cell">
-                                <div className="flex items-center justify-start gap-2">
-                                  <span className={`text-[14px] font-mono font-black ${hasAnydesk ? 'text-red-600' : 'text-slate-300'}`}>{srv.anydesk_id || '—'}</span>
-                                  {hasAnydesk && (
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.anydesk_id!, 'AnyDesk ID'); }}
-                                      className="p-1.5 hover:bg-red-50 rounded-lg text-slate-300 hover:text-red-500 transition-all opacity-0 group-hover/cell:opacity-100"
-                                      title="Copiar AnyDesk"
-                                    >
-                                      <Copy size={13} />
-                                    </button>
-                                  )}
-                                </div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">ID Remoto</span>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-1 group-hover:translate-x-0">
-                                {canEdit() && (
-                                  <>
-                                    <button onClick={(e) => { e.stopPropagation(); openEdit(srv); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Editar">
-                                      <Edit size={14} />
-                                    </button>
-                                    <button onClick={(e) => { e.stopPropagation(); del(srv); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Eliminar">
-                                      <Trash2 size={14} />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                    return (
+                      <TableRow
+                        key={srv.id}
+                        className={selectedIds.includes(srv.id) ? 'bg-blue-50/50' : ''}
+                        onClick={() => { setSelectedServer(srv); setShowDetails(true); if (canEdit()) toggleSelect(srv.id); }}
+                      >
+                        <TableCell className="w-12">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(srv.id)}
+                            onChange={() => toggleSelect(srv.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-start gap-3">
+                            <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
+                              <ServerIcon size={14} />
+                            </div>
+                            <div className="flex flex-col items-start">
+                              <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">{srv.name}</span>
+                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 md:hidden">{srv.locations?.name || 'VIRTUAL'}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col items-start">
+                            <span className="text-[13px] font-extrabold text-slate-600 uppercase tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Sede Física</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col items-start group/cell">
+                            <div className="flex items-center justify-start gap-2">
+                              <span className={`text-[13px] font-mono font-black ${hasIp ? 'text-[#002855]' : 'text-slate-300'}`}>{srv.ip_address || '—'}</span>
+                              {hasIp && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.ip_address!, 'IP'); }}
+                                  className="p-1.5 hover:bg-blue-50 rounded-lg text-slate-300 hover:text-blue-500 transition-all opacity-0 group-hover/cell:opacity-100"
+                                  title="Copiar IP"
+                                >
+                                  <Copy size={13} />
+                                </button>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Red Interna</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col items-start group/cell">
+                            <div className="flex items-center justify-start gap-2">
+                              <span className={`text-[14px] font-mono font-black ${hasAnydesk ? 'text-red-600' : 'text-slate-300'}`}>{srv.anydesk_id || '—'}</span>
+                              {hasAnydesk && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.anydesk_id!, 'AnyDesk ID'); }}
+                                  className="p-1.5 hover:bg-red-50 rounded-lg text-slate-300 hover:text-red-500 transition-all opacity-0 group-hover/cell:opacity-100"
+                                  title="Copiar AnyDesk"
+                                >
+                                  <Copy size={13} />
+                                </button>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">ID Remoto</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-1 group-hover:translate-x-0">
+                            <RowActions
+                              canEdit={canEdit()}
+                              onEdit={(e) => { e.stopPropagation(); openEdit(srv); }}
+                            />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
               </div>
 
             </div>
           </div>
-          // FIX #1: fin del ternario grid/list — sin } sueltos
         )}
 
         {/* FIX #1: Floating bulk-action bar correctamente dentro del return */}
@@ -901,9 +820,11 @@ export default function Servers() {
               editLabel="Editar"
             />
           </DetailModal>
+          
         )}
 
       </div>
     </div>
+    
   );
 }

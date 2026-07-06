@@ -1,7 +1,10 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, Mail, MapPin, X, Users as UsersIcon, Shield, Crown, LayoutGrid, List, Lock, Settings, TrendingUp, User as UserIcon, Search, ChevronDown, Scale } from 'lucide-react';
-import { RiFileExcel2Fill } from "react-icons/ri";
-import { FaFilePdf } from "react-icons/fa6";
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Edit, Trash2, Mail, MapPin, X, Users as UsersIcon, Shield, Crown, Lock, Settings, TrendingUp, User as UserIcon, Search, Scale } from 'lucide-react';
+import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import ExportButtons from '../../../shared/components/ui/ExportButtons';
+import ViewToggle from '../../../shared/components/ui/ViewToggle';
+import PrimaryButton from '../../../shared/components/ui/PrimaryButton';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -54,12 +57,11 @@ export default function Users() {
   const [roleFilter, setRoleFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   const canEditValue = canEdit();
   const { success: notifySuccess, error: notifyError, warning: notifyWarning, confirm } = useNotify();
@@ -75,15 +77,6 @@ export default function Users() {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowLocationDropdown(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   useEffect(() => {
     const handleNew = () => handleNewUserClick();
@@ -97,7 +90,7 @@ export default function Users() {
       window.removeEventListener('users:export', handleExport);
       window.removeEventListener('users:export-pdf', handleExportPdf);
     };
-  }, [users, searchTerm, roleFilter, statusFilter]);
+  }, [users, searchTerm, roleFilter, statusFilter, selectedLocations, sortConfig]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -213,8 +206,6 @@ export default function Users() {
 
   const statusColors = { active: 'bg-green-100 text-green-800', inactive: 'bg-gray-100 text-gray-800' };
   const statusLabels = { active: 'Activo', inactive: 'Inactivo' };
-
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -341,15 +332,11 @@ export default function Users() {
     <div className="flex flex-col h-full bg-[#f8fafc]">
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
         {/* Action Bar — Sedes-style */}
-          <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
-            <div className="absolute -top-3 -left-3">
-              <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-                {filteredUsers.length} Usuarios
-              </div>
-            </div>
-
-            {/* Search */}
-            <div className="flex-1 relative group/search">
+        <ActionToolbar
+          totalItems={filteredUsers.length}
+          label="Usuarios"
+          searchComponent={
+            <>
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
@@ -358,318 +345,241 @@ export default function Users() {
                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
-            </div>
+            </>
+          }
+        >
+          <FilterSelect
+            icon={MapPin}
+            iconClassName="text-rose-500"
+            value={selectedLocations[0] || ''}
+            onChange={e => { const v = e.target.value as string; setSelectedLocations(v ? [v] : []); setCurrentPage(1); }}
+            wrapperClassName="md:min-w-[220px]"
+          >
+            <option value="">TODAS LAS SEDES</option>
+            {locations.map(loc => (
+              <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+            ))}
+          </FilterSelect>
 
-            {/* Filters + Toggle */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                  className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[220px]"
-                >
-                  <MapPin size={14} className="text-rose-500" />
-                  <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === locations.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
-                  <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
-                </button>
-                {showLocationDropdown && (
-                  <div className="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
-                    <div className="p-2 border-b border-slate-100">
-                      <button
-                        onClick={() => {
-                          setSelectedLocations(locations.map(loc => loc.id));
-                          setShowLocationDropdown(false);
-                          setCurrentPage(1);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      >
-                        Seleccionar todas las sedes
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedLocations([]);
-                          setShowLocationDropdown(false);
-                          setCurrentPage(1);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded transition-colors"
-                      >
-                        Limpiar selección
-                      </button>
-                    </div>
-                    {locations.map(location => (
-                      <label key={location.id} className="flex items-center px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={selectedLocations.includes(location.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedLocations([...selectedLocations, location.id]);
-                            } else {
-                              setSelectedLocations(selectedLocations.filter(id => id !== location.id));
-                            }
-                            setCurrentPage(1);
-                          }}
-                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mr-3"
-                        />
-                        <span className="text-xs font-medium text-slate-700">{location.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
+          <FilterSelect
+            value={roleFilter}
+            onChange={e => { setRoleFilter(e.target.value as string); setCurrentPage(1); }}
+            wrapperClassName="md:min-w-[180px]"
+          >
+            <option value="">TODOS LOS ROLES</option>
+            <option value="super_admin">Super Admin</option>
+            <option value="gerencia">Gerencia</option>
+            <option value="sistemas">Sistemas</option>
+            <option value="supervisores">Supervisores</option>
+            <option value="area_legal">Área Legal</option>
+            <option value="area_contable">Área Contable</option>
+            <option value="administradores">Administradores</option>
+            <option value="personalizado">Personalizado</option>
+          </FilterSelect>
 
-              <select
-                value={roleFilter}
-                onChange={e => { setRoleFilter(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] cursor-pointer"
-              >
-                <option value="">TODOS LOS ROLES</option>
-                <option value="super_admin">Super Admin</option>
-                <option value="gerencia">Gerencia</option>
-                <option value="sistemas">Sistemas</option>
-                <option value="supervisores">Supervisores</option>
-                <option value="area_legal">Área Legal</option>
-                <option value="area_contable">Área Contable</option>
-                <option value="administradores">Administradores</option>
-                <option value="personalizado">Personalizado</option>
-              </select>
+          <FilterSelect
+            value={statusFilter}
+            onChange={e => { setStatusFilter(e.target.value as string); setCurrentPage(1); }}
+            wrapperClassName="md:min-w-[160px]"
+          >
+            <option value="">TODOS LOS ESTADOS</option>
+            <option value="active">Activo</option>
+            <option value="inactive">Inactivo</option>
+          </FilterSelect>
 
-              <select
-                value={statusFilter}
-                onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] tracking-widest outline-none transition-all min-w-[150px] appearance-none cursor-pointer"
-              >
-                <option value="">TODOS LOS ESTADOS</option>
-                <option value="active">Activo</option>
-                <option value="inactive">Inactivo</option>
-              </select>
+          <ViewToggle viewMode={viewMode} onChange={v => setViewMode(v as 'grid' | 'table')} />
 
-              <div className="flex bg-slate-100 p-1 border border-slate-200">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-1.5 transition-all ${viewMode === 'grid' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                  title="Vista Cuadrícula"
-                >
-                  <LayoutGrid size={16} />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-1.5 transition-all ${viewMode === 'list' ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                  title="Vista Tabla"
-                >
-                  <List size={16} />
-                </button>
-              </div>
+          {canEditValue && (
+            <PrimaryButton icon={Plus} onClick={handleNewUserClick}>
+              Nuevo Usuario
+            </PrimaryButton>
+          )}
 
-              {canEditValue && (
-                <button
-                  onClick={handleNewUserClick}
-                  className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-                >
-                  <Plus size={14} />
-                  Nuevo Usuario
-                </button>
-              )}
+          <ExportButtons onExportExcel={exportToExcel} onExportPDF={exportToPdf} />
+        </ActionToolbar>
 
-              <button
-                onClick={exportToExcel}
-                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
-                title="Exportar a Excel"
-              >
-                <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
-              </button>
-
-              <button
-                onClick={exportToPdf}
-                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
-                title="Exportar a PDF"
-              >
-                <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
-              </button>
-            </div>
+        {/* Content */}
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[40vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-[#002855]"></div>
           </div>
-
-          {/* Content */}
-          {loading ? (
-            <div className="flex items-center justify-center min-h-[40vh]">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-[#002855]"></div>
+        ) : viewMode === 'grid' ? (
+          <div className="space-y-4">
+            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden mb-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredUsers.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+              />
             </div>
-          ) : viewMode === 'grid' ? (
-            <div className="space-y-4">
-              <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden mb-4">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={filteredUsers.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                  onItemsPerPageChange={setItemsPerPage}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {paginatedUsers.map((u) => (
-                  <div key={u.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400 transition-all duration-300 flex flex-col group overflow-hidden">
-                    <div className="p-6 flex-1">
-                      <div className="flex items-center gap-4 mb-6">
-                        <div className="w-12 h-12 rounded-xl bg-[#002855] text-white flex items-center justify-center text-sm font-black overflow-hidden flex-shrink-0">
-                          {u.avatar_url ? (
-                            <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                target.parentElement!.innerHTML = `<div class="w-full h-full bg-[#002855] text-white flex items-center justify-center text-sm font-black">${u.full_name?.charAt(0) || '?'}</div>`;
-                              }} />
-                          ) : (u.full_name?.charAt(0) || '?')}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-sm font-black text-[#002855] uppercase tracking-tight mb-2 truncate">{u.full_name}</h3>
-                          <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
-                            {getRoleIcon(u.role)}{getRoleLabel(u.role)}
-                          </div>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${statusColors[u.status]}`}>{statusLabels[u.status]}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {paginatedUsers.map((u) => (
+                <div key={u.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-400 transition-all duration-300 flex flex-col group overflow-hidden">
+                  <div className="p-6 flex-1">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="w-12 h-12 rounded-xl bg-[#002855] text-white flex items-center justify-center text-sm font-black overflow-hidden flex-shrink-0">
+                        {u.avatar_url ? (
+                          <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.parentElement!.innerHTML = `<div class="w-full h-full bg-[#002855] text-white flex items-center justify-center text-sm font-black">${u.full_name?.charAt(0) || '?'}</div>`;
+                            }} />
+                        ) : (u.full_name?.charAt(0) || '?')}
                       </div>
-                      <div className="space-y-3 mb-6">
-                        <div className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 p-2 rounded-xl border border-gray-100">
-                          <Mail size={14} className="text-blue-500 shrink-0" />
-                          <span className="font-bold truncate">{u.email}</span>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-black text-[#002855] uppercase tracking-tight mb-2 truncate">{u.full_name}</h3>
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
+                          {getRoleIcon(u.role)}{getRoleLabel(u.role)}
                         </div>
-                        {u.locations && (
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
-                            <MapPin size={14} className="text-rose-500" />
-                            <span>{u.locations.name}</span>
-                          </div>
-                        )}
                       </div>
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${statusColors[u.status]}`}>{statusLabels[u.status]}</span>
                     </div>
-                    <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex gap-2">
-                      {canEditValue && u.role !== 'super_admin' && (
-                        <>
-                          <button onClick={() => handleEditUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm">
-                            <Edit size={14} /> Editar
-                          </button>
-                          <button onClick={() => handleDeleteUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-rose-600 text-white rounded-lg hover:bg-rose-700 shadow-sm">
-                            <Trash2 size={14} /> Eliminar
-                          </button>
-                        </>
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 p-2 rounded-xl border border-gray-100">
+                        <Mail size={14} className="text-blue-500 shrink-0" />
+                        <span className="font-bold truncate">{u.email}</span>
+                      </div>
+                      {u.locations && (
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">
+                          <MapPin size={14} className="text-rose-500" />
+                          <span>{u.locations.name}</span>
+                        </div>
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex gap-2">
+                    {canEditValue && u.role !== 'super_admin' && (
+                      <>
+                        <button onClick={() => handleEditUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm">
+                          <Edit size={14} /> Editar
+                        </button>
+                        <button onClick={() => handleDeleteUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-rose-600 text-white rounded-lg hover:bg-rose-700 shadow-sm">
+                          <Trash2 size={14} /> Eliminar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : (
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
-              {/* Pagination Header */}
-              <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={filteredUsers.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                  onItemsPerPageChange={setItemsPerPage}
-                />
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse border-spacing-0">
-                  <thead className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
-                    <tr>
-                      <th className="px-6 py-4">
-                        {renderSortableHeader('Usuario', 'user')}
-                      </th>
-                      <th className="px-4 py-4 hidden lg:table-cell">
-                        {renderSortableHeader('Correo', 'email')}
-                      </th>
-                      <th className="px-4 py-4">
-                        {renderSortableHeader('Rol', 'role')}
-                      </th>
-                      <th className="px-4 py-4">
-                        {renderSortableHeader('Estado', 'status')}
-                      </th>
-                      <th className="px-4 py-4">
-                        {renderSortableHeader('Sede', 'location')}
-                      </th>
-                      <th className="px-6 py-4 text-center">
-                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span>
-                      </th>
+          </div>
+        ) : (
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
+            {/* Pagination Header */}
+            <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredUsers.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+              />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse border-spacing-0">
+                <thead className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
+                  <tr>
+                    <th className="px-6 py-4">
+                      {renderSortableHeader('Usuario', 'user')}
+                    </th>
+                    <th className="px-4 py-4 hidden lg:table-cell">
+                      {renderSortableHeader('Correo', 'email')}
+                    </th>
+                    <th className="px-4 py-4">
+                      {renderSortableHeader('Rol', 'role')}
+                    </th>
+                    <th className="px-4 py-4">
+                      {renderSortableHeader('Estado', 'status')}
+                    </th>
+                    <th className="px-4 py-4">
+                      {renderSortableHeader('Sede', 'location')}
+                    </th>
+                    <th className="px-6 py-4 text-center">
+                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedUsers.map((u) => (
+                    <tr
+                      key={u.id}
+                      className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20"
+                      onDoubleClick={() => handleViewUser(u)}
+                      onClick={() => handleViewUser(u)}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-all duration-300 bg-[#002855] text-white group-hover:bg-blue-600 overflow-hidden text-xs font-black shrink-0">
+                            {u.avatar_url ? (
+                              <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                  target.parentElement!.innerHTML = `<div class="w-full h-full bg-[#002855] text-white flex items-center justify-center text-xs font-black">${u.full_name?.charAt(0) || '?'}</div>`;
+                                }} />
+                            ) : (u.full_name?.charAt(0) || '?')}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[13px] font-black text-[#002855] uppercase leading-none">{u.full_name}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 lg:hidden">{u.email}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 hidden lg:table-cell">
+                        <span className="text-sm font-extrabold text-slate-600 font-mono leading-none">{u.email}</span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${getRoleColor(u.role)}`}>
+                          {getRoleIcon(u.role)}{getRoleLabel(u.role)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full ${u.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                          {statusLabels[u.status]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        {u.locations ? (
+                          <div className="flex items-center gap-1.5 text-slate-700">
+                            <MapPin size={13} className="text-rose-500 shrink-0" />
+                            <span className="text-[12px] font-bold uppercase truncate max-w-xs block leading-none">{u.locations.name}</span>
+                          </div>
+                        ) : <span className="text-slate-300 italic text-[11px]">Sin asignar</span>}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
+                          {canEdit() && u.role !== 'super_admin' && (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEditUser(u); }}
+                                className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white border border-slate-200 transition-all shadow-sm rounded-lg"
+                                title="Editar Usuario"
+                              >
+                                <Edit size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }}
+                                className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-200 transition-all shadow-sm rounded-lg"
+                                title="Eliminar Usuario"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {paginatedUsers.map((u) => (
-                      <tr
-                        key={u.id}
-                        className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20"
-                        onDoubleClick={() => handleViewUser(u)}
-                        onClick={() => handleViewUser(u)}
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-all duration-300 bg-[#002855] text-white group-hover:bg-blue-600 overflow-hidden text-xs font-black shrink-0">
-                              {u.avatar_url ? (
-                                <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = 'none';
-                                    target.parentElement!.innerHTML = `<div class="w-full h-full bg-[#002855] text-white flex items-center justify-center text-xs font-black">${u.full_name?.charAt(0) || '?'}</div>`;
-                                  }} />
-                              ) : (u.full_name?.charAt(0) || '?')}
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[13px] font-black text-[#002855] uppercase leading-none">{u.full_name}</span>
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 lg:hidden">{u.email}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 hidden lg:table-cell">
-                          <span className="text-sm font-extrabold text-slate-600 font-mono leading-none">{u.email}</span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${getRoleColor(u.role)}`}>
-                            {getRoleIcon(u.role)}{getRoleLabel(u.role)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full ${u.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
-                            {statusLabels[u.status]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          {u.locations ? (
-                            <div className="flex items-center gap-1.5 text-slate-700">
-                              <MapPin size={13} className="text-rose-500 shrink-0" />
-                              <span className="text-[12px] font-bold uppercase truncate max-w-xs block leading-none">{u.locations.name}</span>
-                            </div>
-                          ) : <span className="text-slate-300 italic text-[11px]">Sin asignar</span>}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
-                            {canEdit() && u.role !== 'super_admin' && (
-                              <>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleEditUser(u); }}
-                                  className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white border border-slate-200 transition-all shadow-sm rounded-lg"
-                                  title="Editar Usuario"
-                                >
-                                  <Edit size={14} />
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }}
-                                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white border border-slate-200 transition-all shadow-sm rounded-lg"
-                                  title="Eliminar Usuario"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+          </div>
+        )}
       </div>
 
       {/* Modals */}

@@ -265,7 +265,7 @@ export default function SutranFutureVisits() {
                           </div>
                           <div className="flex flex-col">
                             <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-blue-600 transition-colors">
-                              {new Date(visit.visit_date).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              {new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Estimada</span>
                           </div>
@@ -280,7 +280,7 @@ export default function SutranFutureVisits() {
                       <td className="px-4 py-5 text-left">
                         <div className="flex flex-col">
                           <span className="text-[11px] font-black text-slate-600 uppercase tracking-tight">
-                            {visit.last_visit_date ? new Date(visit.last_visit_date).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin registros'}
+                            {visit.last_visit_date ? new Date(String(visit.last_visit_date).includes('T') ? String(visit.last_visit_date) : `${visit.last_visit_date}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin registros'}
                           </span>
                           <span className="text-[9px] font-bold text-slate-400 uppercase">Fecha Real</span>
                         </div>

@@ -13,15 +13,15 @@ import Inventory from './modules/inventory/pages/InventoryPage';
 
 import Maintenance from './modules/maintenance/pages/MaintenancePage';
 
-import Enviados from './modules/assets/pages/EnviadosPage';
+import Enviados from './modules/enviados/pages/EnviadosPage';
 
 import Sutran from './modules/sutran/pages/SutranPage';
 
 import SutranFutureVisits from './modules/sutran/pages/SutranFutureVisitsPage';
 
-import Sedes from './modules/assets/pages/SedesPage';
+import Sedes from './modules/sedes/pages/SedesPage';
 
-import MTCAccesos from './modules/assets/pages/MTCAccesosPage';
+import MTCAccesos from './modules/mtc-accesos/pages/MTCAccesosPage';
 
 import Users from './modules/users/pages/UsersPage';
 
@@ -41,7 +41,7 @@ import Servers from './modules/servers/pages/ServersPage';
 
 import FlotaVehicular from './modules/vehicles/pages/FlotaVehicularPage';
 
-import SpareParts from './modules/assets/pages/SparePartsPage';
+import SpareParts from './modules/spare-parts/pages/SparePartsPage';
 
 import TitulosHabilitantes from './modules/titulos-habilitantes/pages/TitulosHabilitantesPage';
 
@@ -72,7 +72,6 @@ import TicketHistory from './modules/tickets/pages/TicketHistoryPage';
 import Painpoints from './modules/tickets/pages/PainpointsPage';
 
 import TicketDetail from './modules/tickets/pages/TicketDetailPage';
-
 
 
 // Componente para proteger rutas basadas en permisos
@@ -422,7 +421,6 @@ function AppContent() {
             <Route path="/ticket/:ticketId" element={<ProtectedRoute permission="tickets"><TicketDetail /></ProtectedRoute>} />
 
             <Route path="/painpoint" element={<ProtectedRoute permission="painpoint"><Painpoints /></ProtectedRoute>} />
-
 
 
             {/* Fallback */}

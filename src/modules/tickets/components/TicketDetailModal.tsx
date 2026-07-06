@@ -1,10 +1,17 @@
+// Modal para ver y gestionar detalles de un ticket
+// Muestra información del ticket, chat en tiempo real y gestión de estado
+// Diseñado para uso en vista de lista (no página completa)
 import { useState, useEffect, useRef } from 'react';
-import { X, Send, User, Clock, MessageSquare, Trash2, ShieldCheck, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { X, Send, User, Clock, MessageSquare, Trash2, ShieldCheck, Image as ImageIcon, Loader2, Ticket } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { IoChatbubbles } from "react-icons/io5";
 import { useNotify } from '../../../shared/hooks/useNotify';
 
+// Props del componente modal
+// ticket: Datos del ticket a mostrar
+// onClose: Función para cerrar el modal
+// onUpdate: Función para recargar la lista de tickets
 type TicketDetailModalProps = {
     ticket: any;
     onClose: () => void;
@@ -24,10 +31,14 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     const [uploadingImage, setUploadingImage] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Actualiza el ticket cuando cambia el prop inicialTicket
     useEffect(() => {
         setCurrentTicket(initialTicket);
     }, [initialTicket]);
 
+    // Carga comentarios y suscribe a actualizaciones en tiempo real
+    // - Escucha cambios en el ticket (estado, asignaciones)
+    // - Escucha nuevos comentarios
     useEffect(() => {
         fetchComments();
 
@@ -88,16 +99,19 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         };
     }, [currentTicket.id]);
 
+    // Auto-scroll al fondo cuando se agregan nuevos comentarios
     useEffect(() => {
         scrollToBottom();
     }, [comments]);
 
+    // Hace scroll suave hasta el último comentario
     const scrollToBottom = () => {
         setTimeout(() => {
             commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
     };
 
+    // Carga todos los comentarios del ticket ordenados cronológicamente
     const fetchComments = async () => {
         try {
             const { data, error } = await supabase
@@ -116,6 +130,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
+    // Sube una imagen al storage de Supabase y la agrega como comentario
+    // Usa formato markdown para mostrar la imagen en el chat
     const uploadFile = async (file: File) => {
         if (!currentTicket) return;
         try {
@@ -153,11 +169,13 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
+    // Maneja la selección de imagen desde el input file
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) await uploadFile(file);
     };
 
+    // Permite pegar imágenes directamente desde el portapapeles
     const handlePaste = async (e: React.ClipboardEvent) => {
         const item = e.clipboardData.items[0];
         if (item?.type.startsWith('image/')) {
@@ -166,6 +184,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
+    // Envía un nuevo comentario al ticket
     const handleSendComment = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newComment.trim()) return;
@@ -192,6 +211,9 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
+    // Elimina el ticket si tiene permisos
+    // Solo el creador (3 min) o staff pueden eliminar
+    // Limpia archivos adjuntos antes de borrar
     const handleDeleteTicket = async () => {
         const now = new Date();
         const createdDate = new Date(currentTicket.created_at);
@@ -233,6 +255,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
+    // Actualiza el estado del ticket (solo el técnico asignado)
+    // Registra el cambio como comentario automático
     const handleStatusUpdate = async (newStatus: string) => {
         const isAssignedTechnician = user?.id === currentTicket.assigned_to;
         
@@ -264,6 +288,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
+    // Funciones auxiliares para mostrar etiquetas y estilos
     const getStatusLabel = (status: string) => {
         switch (status) {
             case 'open': return 'Pendiente';
@@ -293,6 +318,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
+    // Solo el técnico asignado puede cambiar el estado
     const canManageStatus = user?.id === currentTicket.assigned_to;
 
     return (
@@ -508,14 +534,24 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
 
                                 return (
                                     <div key={c.id} className={`flex gap-3 sm:gap-4 md:gap-5 ${isMe ? 'flex-row-reverse' : ''} group`}>
-                                        <div className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-xl sm:rounded-2xl shrink-0 overflow-hidden border-2 border-white shadow-lg sm:shadow-xl ${
-                                            isMe ? 'bg-blue-600' : 'bg-[#002855]'
-                                        }`}>
-                                            {c.author?.avatar_url ? (
-                                                <img src={c.author.avatar_url} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-white font-black text-xs sm:text-sm">
-                                                    {c.author?.full_name?.charAt(0)}
+                                        <div className="relative shrink-0">
+                                            <div className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-xl sm:rounded-2xl overflow-hidden border-2 border-white shadow-lg sm:shadow-xl ${
+                                                isMe ? 'bg-blue-600' : 'bg-[#002855]'
+                                            }`}>
+                                                {c.author?.avatar_url ? (
+                                                    <img src={c.author.avatar_url} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-white font-black text-xs sm:text-sm">
+                                                        {c.author?.full_name?.charAt(0)}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {c.user_id === currentTicket.requester_id && (
+                                                <div 
+                                                    className={`absolute -top-1 sm:-top-1.5 ${isMe ? '-left-1 sm:-left-1.5' : '-right-1 sm:-right-1.5'} bg-amber-500 text-white rounded-full p-0.5 sm:p-1 border-2 border-white shadow-sm z-10`}
+                                                    title="Solicitante del Ticket"
+                                                >
+                                                    <Ticket className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                                 </div>
                                             )}
                                         </div>

@@ -1,3 +1,6 @@
+// Página principal de Mesa de Ayuda
+// Muestra dashboard de tickets, reportes y gestión de tickets
+// Incluye automatización de estados y exportación a PDF/Excel
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { History, ArrowRight, CheckCircle2 } from 'lucide-react';
@@ -9,7 +12,8 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import TicketForm from '../forms/TicketForm';
 
-// Definición de Estilos de Prioridad (P1 más crítico)
+// Estilos visuales para las prioridades de tickets
+// P1 (crítica) es la más urgente, P4 (baja) la menos
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string, badge: string }> = {
     critical: { label: 'P1', color: 'text-red-700 bg-red-50 border-red-200', dot: 'bg-red-600', badge: 'bg-red-600 text-white' },
     high: { label: 'P2', color: 'text-orange-700 bg-orange-50 border-orange-200', dot: 'bg-orange-600', badge: 'bg-orange-600 text-white' },
@@ -29,19 +33,27 @@ export default function Tickets() {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
-    // Sincronizar activeTab con la URL
+    // Determina la vista activa basándose en la URL
+    // - dashboard: vista general de todos los tickets
+    // - my_tickets: tickets creados por el usuario
+    // - reports: reportes y métricas
     const activeTab = useMemo(() => {
         if (view === 'mine' || view === 'mine_tickets') return 'my_tickets';
         if (view === 'reports') return 'reports';
         return 'dashboard';
     }, [view]);
 
+    // Redirige al dashboard si no hay vista especificada
     useEffect(() => {
         if (!view) {
             navigate('/tickets/dashboard', { replace: true });
         }
     }, [view, navigate]);
 
+    // Carga inicial de tickets y suscripción a cambios en tiempo real
+    // - INSERT: agrega nuevo ticket al inicio de la lista
+    // - UPDATE: actualiza ticket existente en el estado local
+    // - DELETE: elimina ticket de la lista
     useEffect(() => {
         fetchTickets();
 
@@ -82,7 +94,8 @@ export default function Tickets() {
         };
     }, []);
 
-    // Listen to TopHeader action events
+    // Escucha eventos del header global (búsqueda, nuevo ticket, exportaciones)
+    // Permite que el header controle acciones de esta página
     useEffect(() => {
         const onSearch = (e: Event) => setSearchTerm((e as CustomEvent).detail ?? '');
         const onNew = () => setShowForm(true);
@@ -102,6 +115,8 @@ export default function Tickets() {
         };
     }, [tickets]);
 
+    // Carga todos los tickets desde la base de datos
+    // Incluye relaciones: solicitante, asignado y ubicación
     const fetchTickets = async () => {
         try {
             const { data, error } = await supabase
@@ -134,7 +149,10 @@ export default function Tickets() {
         }
     };
 
-    // --- LÓGICA DE AUTOMATIZACIÓN (10 MINUTOS) ---
+    // --- AUTOMATIZACIÓN DE ESTADOS ---
+    // Revisa cada minuto si hay tickets que necesitan cambio automático de estado:
+    // - Resuelto -> Cerrado (después de 3 minutos)
+    // - Cerrado -> Archivado (después de 10 minutos)
     useEffect(() => {
         const interval = setInterval(() => {
             handleAutomation();
@@ -237,6 +255,8 @@ export default function Tickets() {
     };
  
     
+    // Filtra y categoriza los tickets según la vista activa
+    // Aplica filtros de búsqueda, rango de fechas y estado
     const filteredTickets = useMemo(() => {
         let active = tickets.filter(t => t.status !== 'archived');
         
@@ -289,6 +309,10 @@ export default function Tickets() {
         };
     }, [tickets, searchTerm, activeTab, user?.id, startDate, endDate]);
 
+    // Calcula métricas del periodo seleccionado
+    // - Tasa de resolución (resueltos / total)
+    // - Tiempo promedio de respuesta
+    // - Tickets activos
     const metricsData = useMemo(() => {
         let filteredForMetrics = [...tickets];
         if (startDate) {
@@ -323,6 +347,8 @@ export default function Tickets() {
         return { resolutionRate, avgResponseTime, activeTickets, total, resolved };
     }, [tickets, startDate, endDate]);
 
+    // Genera un reporte PDF con métricas y lista de tickets
+    // Incluye tabla con los primeros 100 tickets del periodo
     const generatePDF = () => {
         const doc = new jsPDF();
 
@@ -368,7 +394,7 @@ export default function Tickets() {
             t.title,
             t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : t.status === 'closed' ? 'Cerrado' : 'Archivado',
             t.priority === 'critical' ? 'P1 - Crítica' : t.priority === 'high' ? 'P2 - Alta' : t.priority === 'medium' ? 'P3 - Media' : 'P4 - Baja',
-            new Date(t.created_at).toLocaleDateString()
+            new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString()
         ]);
 
         autoTable(doc, {
@@ -383,6 +409,8 @@ export default function Tickets() {
         doc.save(`Reporte_Tickets_${new Date().toISOString().split('T')[0]}.pdf`);
     };
 
+    // Genera un reporte Excel con todos los datos de los tickets
+    // Incluye más detalles que el PDF (descripción, fechas, etc.)
     const generateExcel = () => {
         // Filter tickets for report
         let reportTickets = [...tickets];
@@ -562,7 +590,7 @@ export default function Tickets() {
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-4 py-4 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                                                                    {new Date(t.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                                    {new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                                 </td>
                                                             </tr>
                                                         );
@@ -629,7 +657,7 @@ export default function Tickets() {
                                                                     </span>
                                                                 </td>
                                                                 <td className="px-4 py-4 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                                                                    {new Date(t.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                                    {new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                                 </td>
                                                             </tr>
                                                         );
@@ -948,7 +976,7 @@ export default function Tickets() {
                                                                 <td className="px-4 py-4">
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[13px] font-black text-slate-700 uppercase leading-tight line-clamp-1">{t.title}</span>
-                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(t.created_at).toLocaleDateString()}</span>
+                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString()}</span>
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-4 py-4">

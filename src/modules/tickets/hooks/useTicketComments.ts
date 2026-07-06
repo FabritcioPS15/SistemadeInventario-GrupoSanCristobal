@@ -1,11 +1,25 @@
+// Hook personalizado para gestionar los comentarios de un ticket
+// Maneja la carga de datos del ticket, sus comentarios, y la interacción con ellos
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../shared/services/supabase';
 
+// Props que recibe el hook
+// ticketId: ID del ticket a cargar
+// user: Usuario actual para identificar sus comentarios
 export interface UseTicketCommentsProps {
   ticketId: string | undefined;
   user?: any;
 }
 
+// Valores y funciones que expone el hook
+// ticket: Datos completos del ticket con relaciones
+// comments: Lista de comentarios del ticket
+// loading: Estado de carga
+// commentsEndRef: Referencia para scroll automático
+// fetchTicket: Función para recargar datos del ticket
+// fetchComments: Función para recargar comentarios
+// addComment: Función para agregar un nuevo comentario
+// scrollToBottom: Función para scroll al último comentario
 export interface UseTicketCommentsReturn {
   ticket: any;
   comments: any[];
@@ -23,6 +37,9 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
   const [loading, setLoading] = useState(true);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
+  // Carga los datos del ticket desde Supabase
+  // Incluye relaciones: solicitante, asignado, ubicación y asignaciones
+  // También busca el ID de AnyDesk en los comentarios si existe
   const fetchTicket = async () => {
     try {
       const { data, error } = await supabase
@@ -39,7 +56,7 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
 
       if (error) throw error;
 
-      // Buscar AnyDesk en los comentarios
+      // Buscar AnyDesk en los comentarios para mostrarlo en el detalle
       const { data: comments } = await supabase
         .from('ticket_comments')
         .select('content')
@@ -65,6 +82,8 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
     }
   };
 
+  // Carga todos los comentarios del ticket ordenados cronológicamente
+  // Incluye información del autor de cada comentario
   const fetchComments = async () => {
     try {
       const { data, error } = await supabase
@@ -83,6 +102,8 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
     }
   };
 
+  // Agrega un nuevo comentario al ticket
+  // Recarga la lista de comentarios después de insertar
   const addComment = async (content: string) => {
     if (!content.trim()) return;
 
@@ -98,12 +119,15 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
     await fetchComments();
   };
 
+  // Hace scroll suave hasta el último comentario
+  // Útil para mostrar nuevos comentarios automáticamente
   const scrollToBottom = () => {
     setTimeout(() => {
       commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   };
 
+  // Carga inicial del ticket y comentarios cuando cambia el ticketId
   useEffect(() => {
     if (ticketId) {
       fetchTicket();
@@ -111,6 +135,7 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
     }
   }, [ticketId]);
 
+  // Auto-scroll al fondo cuando se agregan nuevos comentarios
   useEffect(() => {
     scrollToBottom();
   }, [comments]);

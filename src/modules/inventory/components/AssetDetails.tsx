@@ -315,7 +315,7 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Fecha</label>
                     <p className="text-[11px] font-bold text-slate-700 flex items-center gap-2">
                       <Calendar size={14} className="text-slate-300" />
-                      {asset.fecha_adquisicion ? new Date(asset.fecha_adquisicion).toLocaleDateString('es-ES') : 'N/A'}
+                      {asset.fecha_adquisicion ? new Date(String(asset.fecha_adquisicion).includes('T') ? String(asset.fecha_adquisicion) : `${asset.fecha_adquisicion}T12:00:00`).toLocaleDateString('es-ES') : 'N/A'}
                     </p>
                   </div>
                   <div>

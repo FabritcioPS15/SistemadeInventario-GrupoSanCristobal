@@ -11,7 +11,7 @@ export const muiTheme = createTheme({
     },
   },
   components: {
-    MuiPickersDay: {
+    MuiPickerDay: {
       styleOverrides: {
         root: {
           fontSize: '13px',

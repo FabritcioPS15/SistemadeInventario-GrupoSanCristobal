@@ -197,7 +197,7 @@ export default function MyChats() {
                                                     <span className="text-[10px] font-black uppercase">{prio.label}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-5 text-[10px] font-bold text-slate-400">{new Date(t.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                            <td className="px-5 py-5 text-[10px] font-bold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                                         </tr>
                                     );
                                 })}
@@ -260,7 +260,7 @@ export default function MyChats() {
                                                     <span className="text-[10px] font-black uppercase">{prio.label}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-5 py-5 text-[10px] font-bold text-slate-400">{new Date(t.created_at).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                            <td className="px-5 py-5 text-[10px] font-bold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                                         </tr>
                                     );
                                 })}

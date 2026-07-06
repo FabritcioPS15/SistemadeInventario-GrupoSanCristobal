@@ -1,7 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { Edit, Trash2, MapPin, Upload, Package, Layers, ChevronDown, LayoutGrid, List, BarChart3, FileSpreadsheet } from 'lucide-react';
-import { RiFileExcel2Fill } from "react-icons/ri";
-import { FaFilePdf } from "react-icons/fa6";
+import { useState, useEffect } from 'react';
+import { Edit, Trash2, MapPin, Upload, Package, Layers, LayoutGrid, List, BarChart3, FileSpreadsheet, } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -14,12 +12,22 @@ import { generateAndDownloadTemplate } from '../../../shared/utils/excelTemplate
 import Pagination from '../../../shared/components/ui/Pagination';
 import { useAuth } from '../../../app/providers/AuthContext';
 import SearchBar from '../../../shared/components/ui/SearchBar';
-import SortableTableHeader from '../../../shared/components/ui/SortableTableHeader';
 import StatusBadge from '../../../shared/components/ui/StatusBadge';
 import { useInventory } from '../hooks/useInventory';
 import { STATUS_MAP, PATH_CATEGORY_MAP, SUBCATEGORY_SLUG_MAP } from '../constants/inventory.constants';
 import InventoryDashboard from '../components/InventoryDashboard';
 import { InventoryFilter } from '../../../shared/types/inventory.types';
+import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import ExportButtons from '../../../shared/components/ui/ExportButtons';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '../../../shared/components/ui/Table';
 
 type InventoryProps = {
   categoryFilter?: string; // e.g., 'inventory-computo-ti'
@@ -39,9 +47,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [showDashboard, setShowDashboard] = useState(false);
-  const [multiEnterpriseFilters, setMultiEnterpriseFilters] = useState<InventoryFilter>({});
-  const [showRubroDropdown, setShowRubroDropdown] = useState(false);
-  const rubroRef = useRef<HTMLDivElement>(null);
+  const [multiEnterpriseFilters] = useState<InventoryFilter>({});
 
   // Use hook for inventory logic
   const {
@@ -53,34 +59,19 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     totalCount,
     searchTerm,
     selectedLocations,
-    showLocationDropdown,
     filterRubro,
-    dropdownRef,
     currentPage,
     itemsPerPage,
     totalPages,
     sortConfig,
     setSearchTerm,
     setSelectedLocations,
-    setShowLocationDropdown,
-
     setFilterRubro,
     setCurrentPage,
     setItemsPerPage,
     refresh,
     handleSort,
   } = useInventory({ categoryFilter, subcategoryFilter });
-
-  // Cierra dropdown rubro al hacer click fuera
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (rubroRef.current && !rubroRef.current.contains(event.target as Node)) {
-        setShowRubroDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Listen to TopHeader action events
   useEffect(() => {
@@ -173,7 +164,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
           location: a.locations?.name,
           area: a.areas?.name,
           status: a.status,
-          purchase_date: a.fecha_adquisicion ? new Date(a.fecha_adquisicion).toLocaleDateString() : '—',
+          purchase_date: a.fecha_adquisicion ? new Date(String(a.fecha_adquisicion).includes('T') ? String(a.fecha_adquisicion) : `${a.fecha_adquisicion}T12:00:00`).toLocaleDateString() : '—',
           notes: a.notes || '—'
         });
       });
@@ -220,198 +211,100 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     <div className="flex flex-col h-full bg-[#f8fafc]">
 
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-        {/* Action Bar — Standardized */}
-        <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
-          <div className="absolute -top-3 -left-3">
-            <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
-              {totalCount} Activos
-            </div>
+        <ActionToolbar
+          totalItems={totalCount}
+          label="Activos"
+          searchComponent={
+            <SearchBar
+              placeholder="BUSCAR POR CÓDIGO, MARCA, SERIE O MODELO..."
+              value={searchTerm}
+              onChange={(value) => { setSearchTerm(value); setCurrentPage(1); }}
+            />
+          }
+        >
+          <FilterSelect
+            icon={MapPin}
+            iconClassName="text-rose-500"
+            value={selectedLocations[0] || ''}
+            onChange={e => { setSelectedLocations(e.target.value ? [e.target.value as string] : []); setCurrentPage(1); }}
+            wrapperClassName="md:min-w-[220px]"
+          >
+            <option value="">TODAS LAS SEDES</option>
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+            ))}
+          </FilterSelect>
+
+          <FilterSelect
+            icon={Layers}
+            iconClassName="text-blue-600"
+            value={filterRubro}
+            onChange={e => { setFilterRubro(e.target.value as string); setCurrentPage(1); }}
+            wrapperClassName="md:min-w-[170px]"
+          >
+            <option value="">TODOS LOS RUBROS</option>
+            <option value="revisiones_tecnicas">CTIV</option>
+            <option value="escuela_conductores">ESCON</option>
+            <option value="polclinico">ECSAL</option>
+            <option value="oficinas_administrativas">CIRCUITOS</option>
+          </FilterSelect>
+
+          <div className="flex bg-slate-100 p-1 border border-slate-200 w-full md:w-auto justify-center">
+            <button
+              onClick={() => {
+                setViewMode('grid');
+                setShowDashboard(false);
+              }}
+              className={`flex-1 md:flex-none p-1.5 transition-all flex items-center justify-center ${viewMode === 'grid' && !showDashboard ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+              title="Vista Cuadrícula"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => {
+                setViewMode('table');
+                setShowDashboard(false);
+              }}
+              className={`flex-1 md:flex-none p-1.5 transition-all flex items-center justify-center ${viewMode === 'table' && !showDashboard ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+              title="Vista Tabla"
+            >
+              <List size={16} />
+            </button>
+            <button
+              onClick={() => setShowDashboard(!showDashboard)}
+              className={`flex-1 md:flex-none p-1.5 transition-all flex items-center justify-center ${showDashboard ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
+              title="Dashboard"
+            >
+              <BarChart3 size={16} />
+            </button>
           </div>
 
-          {/* Search */}
-          <SearchBar
-            placeholder="BUSCAR POR CÓDIGO, MARCA, SERIE O MODELO..."
-            value={searchTerm}
-            onChange={(value) => { setSearchTerm(value); setCurrentPage(1); }}
-          />
-
-          {/* Filters + Toggle */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative" ref={dropdownRef}>
+          <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPdf} />
+          {canEdit() && (
+            <>
               <button
-                onClick={() => setShowLocationDropdown(!showLocationDropdown)}
-                className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[200px]"
-              >
-                <MapPin size={14} className="text-rose-500" />
-                <span className="truncate">{selectedLocations.length === 0 || selectedLocations.length === locations.length ? 'Todas las sedes' : `${selectedLocations.length} Sedes`}</span>
-                <ChevronDown size={14} className={`text-slate-300 ml-auto transition-transform ${showLocationDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              {showLocationDropdown && (
-                <div className="absolute top-full left-0 z-[70] mt-2 bg-white border border-slate-200 shadow-2xl min-w-[320px] animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="p-2 max-h-[300px] overflow-y-auto sidebar-scroll">
-                    <label className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer group/loc">
-                      <input
-                        type="checkbox"
-                        checked={selectedLocations.length === locations.length && locations.length > 0}
-                        onChange={() => { setSelectedLocations(selectedLocations.length === locations.length ? [] : locations.map(l => l.id)); setCurrentPage(1); }}
-                        className="w-3.5 h-3.5 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]"
-                      />
-                      <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest">Todas las sedes</span>
-                    </label>
-                    <div className="h-px bg-slate-100 my-1" />
-                    {locations.map((loc) => (
-                      <label key={loc.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 cursor-pointer group/loc">
-                        <input
-                          type="checkbox"
-                          checked={selectedLocations.includes(loc.id)}
-                          onChange={() => {
-                            const newSelected = selectedLocations.includes(loc.id)
-                              ? selectedLocations.filter((id: string) => id !== loc.id)
-                              : [...selectedLocations, loc.id];
-                            setSelectedLocations(newSelected);
-                            setCurrentPage(1);
-                          }}
-                          className="w-3.5 h-3.5 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]"
-                        />
-                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-none group-hover/loc:text-[#002855] transition-colors">{loc.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Dropdown Rubros */}
-            {(() => {
-              const RUBROS = [
-                { id: '', label: 'Todos los rubros' },
-                { id: 'revisiones_tecnicas', label: 'CTIV' },
-                { id: 'escuela_conductores', label: 'ESCON' },
-                { id: 'polclinico', label: 'ECSAL' },
-                { id: 'oficinas_administrativas', label: 'CIRCUITOS' },
-              ];
-              const activeRubro = RUBROS.find(r => r.id === filterRubro);
-              return (
-                <div className="relative" ref={rubroRef}>
-                  <button
-                    onClick={() => setShowRubroDropdown(!showRubroDropdown)}
-                    className={`px-4 py-3 bg-slate-50 border text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-3 transition-all min-w-[170px] ${showRubroDropdown
-                      ? 'border-[#002855]/30 bg-white'
-                      : filterRubro
-                        ? 'border-blue-300 bg-blue-50'
-                        : 'border-slate-200 hover:border-[#002855]/30'
-                      }`}
-                  >
-                    <Layers size={14} className={filterRubro ? 'text-blue-600' : 'text-slate-400'} />
-                    <span className="truncate flex-1 text-left">
-                      {activeRubro?.id ? activeRubro.label : 'Rubros'}
-                    </span>
-                    <ChevronDown
-                      size={14}
-                      className={`text-slate-400 ml-auto transition-transform ${showRubroDropdown ? 'rotate-180' : ''}`}
-                    />
-                  </button>
-                  {showRubroDropdown && (
-                    <div className="absolute top-full left-0 z-[70] mt-2 bg-white border border-slate-200 shadow-2xl min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
-                      <div className="p-1">
-                        {RUBROS.map(r => (
-                          <button
-                            key={r.id}
-                            onClick={() => {
-                              setFilterRubro(r.id);
-                              setCurrentPage(1);
-                              setShowRubroDropdown(false);
-                            }}
-                            className={`w-full text-left flex items-center gap-2 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-colors ${filterRubro === r.id
-                              ? 'text-[#002855] bg-blue-50'
-                              : 'text-slate-600'
-                              }`}
-                          >
-                            {filterRubro === r.id && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#002855] shrink-0" />
-                            )}
-                            {r.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            <div className="flex bg-slate-100 p-1 border border-slate-200">
-              <button
-                onClick={() => {
-                  setViewMode('grid');
-                  setShowDashboard(false);
+                onClick={async () => {
+                  try {
+                    await generateAndDownloadTemplate();
+                  } catch (err) {
+                    notifyError('Error al descargar plantilla');
+                  }
                 }}
-                className={`p-1.5 transition-all ${viewMode === 'grid' && !showDashboard ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                title="Vista Cuadrícula"
+                className="flex-1 md:flex-none group flex items-center justify-center h-10 px-4 bg-white text-slate-400 border border-slate-200 hover:text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm"
+                title="Descargar Plantilla"
               >
-                <LayoutGrid size={16} />
+                <FileSpreadsheet size={20} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
               </button>
               <button
-                onClick={() => {
-                  setViewMode('table');
-                  setShowDashboard(false);
-                }}
-                className={`p-1.5 transition-all ${viewMode === 'table' && !showDashboard ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                title="Vista Tabla"
+                onClick={() => setShowUploadModal(true)}
+                className="flex-1 md:flex-none group flex items-center justify-center h-10 px-4 bg-white text-slate-400 border border-slate-200 hover:text-blue-700 hover:border-blue-200 hover:bg-blue-50 transition-all shadow-sm"
+                title="Importar Excel"
               >
-                <List size={16} />
+                <Upload size={20} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
               </button>
-              <button
-                onClick={() => setShowDashboard(!showDashboard)}
-                className={`p-1.5 transition-all ${showDashboard ? 'bg-white text-[#002855] shadow-sm' : 'text-slate-400 hover:text-[#002855]'}`}
-                title="Dashboard"
-              >
-                <BarChart3 size={16} />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-1 border-l border-slate-100 pl-2">
-              <button
-                onClick={handleExportExcel}
-                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm"
-                title="Exportar a Excel"
-              >
-                <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
-              </button>
-              <button
-                onClick={handleExportPdf}
-                className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm"
-                title="Exportar a PDF"
-              >
-                <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
-              </button>
-              {canEdit() && (
-                <>
-                  <button
-                    onClick={async () => {
-                      try {
-                        await generateAndDownloadTemplate();
-                      } catch (err) {
-                        notifyError('Error al descargar plantilla');
-                      }
-                    }}
-                    className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm rounded-l-md"
-                    title="Descargar Plantilla"
-                  >
-                    <FileSpreadsheet size={20} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                  </button>
-                  <button
-                    onClick={() => setShowUploadModal(true)}
-                    className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-blue-700 hover:border-blue-200 hover:bg-blue-50 transition-all shadow-sm rounded-r-md -ml-px"
-                    title="Importar Excel"
-                  >
-                    <Upload size={20} className="text-slate-400 group-hover:text-blue-600 transition-colors" />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+            </>
+          )}
+        </ActionToolbar>
 
         {/* Dashboard View */}
         {showDashboard ? (
@@ -438,10 +331,10 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
               />
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse border-spacing-0">
-                <thead>
-                  <tr className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
-                    <th className="px-4 py-4 text-center w-12">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-center w-12">
                       <input
                         type="checkbox"
                         className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
@@ -456,22 +349,22 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                           setSelectedIds(newSelected);
                         }}
                       />
-                    </th>
-                    <th className="px-6 py-4 text-left"><SortableTableHeader label="Activo" sortKey="brand" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Categoría" sortKey="category_id" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Sede" sortKey="location_id" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Cantidad" sortKey="cantidad" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Costo" sortKey="valor_estimado" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-4 py-4 text-left"><SortableTableHeader label="Estado Operativo" sortKey="status" sortConfig={sortConfig} onSort={handleSort} /></th>
-                    <th className="px-6 py-4 text-center"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acción</span></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
+                    </TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'brand'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('brand')}>Activo</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'category_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('category_id')}>Categoría</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'location_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location_id')}>Sede</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'cantidad'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('cantidad')}>Cantidad</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'valor_estimado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('valor_estimado')}>Costo</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'status'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('status')}>Estado Operativo</TableHead>
+                    <TableHead className="text-center">Acción</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {inventory.map((asset: any) => {
                     return (
-                      <tr
+                      <TableRow
                         key={asset.id}
-                        className={`hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20 ${selectedIds.has(asset.id) ? '!bg-blue-50/50' : ''}`}
+                        className={selectedIds.has(asset.id) ? '!bg-blue-50/50' : ''}
                         onClick={() => {
                           const newSelected = new Set(selectedIds);
                           if (newSelected.has(asset.id)) newSelected.delete(asset.id);
@@ -484,7 +377,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                           setShowAssetDetails(true);
                         }}
                       >
-                        <td className="px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
@@ -496,8 +389,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                               setSelectedIds(newSelected);
                             }}
                           />
-                        </td>
-                        <td className="px-6 py-4 font-bold text-left">
+                        </TableCell>
+                        <TableCell className="font-bold">
                           <div className="flex flex-col">
                             <span className="text-[13px] font-black text-slate-800 uppercase leading-none">
                               {asset.item || asset.descripcion || 'Sin descripción'}
@@ -513,36 +406,34 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                               </span>
                             )}
                           </div>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <div className="flex flex-col">
                             <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{asset.categories?.name}</span>
                             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.subcategories?.name}</span>
                           </div>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <div className="flex flex-col">
                             <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{asset.locations?.name || 'No asignada'}</span>
                             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.areas?.name || 'Sin área'}</span>
                           </div>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
                           <div className="flex flex-col">
                             <span className="text-[13px] font-black text-[#002855] leading-none">{asset.cantidad || 1}</span>
                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">{asset.unidad_medida || 'UNIDAD(ES)'}</span>
                           </div>
-                        </td>
-                        <td className="px-4 py-4 text-left">
-                          <div className="flex flex-col">
-                            <span className="text-[13px] font-black text-slate-800 leading-none">
-                              {asset.valor_estimado != null ? `S/ ${Number(asset.valor_estimado).toFixed(2)}` : '—'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-left">
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-[13px] font-black text-slate-800 leading-none">
+                            {asset.valor_estimado != null ? `S/ ${Number(asset.valor_estimado).toFixed(2)}` : '—'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
                           <StatusBadge status={asset.status} statusMap={STATUS_MAP} size="md" />
-                        </td>
-                        <td className="px-6 py-4 text-center">
+                        </TableCell>
+                        <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
                             {canEdit() && (
                               <>
@@ -563,12 +454,12 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                               </>
                             )}
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         ) : (

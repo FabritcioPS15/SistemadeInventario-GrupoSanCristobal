@@ -601,6 +601,8 @@ export type SutranVisit = {
 
   documents: string[];
 
+  evidence_url?: string;
+
   estimated_duration?: string;
 
   estimated_cost?: number;
