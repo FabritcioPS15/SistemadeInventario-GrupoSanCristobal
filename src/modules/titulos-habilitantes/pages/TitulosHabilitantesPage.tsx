@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Edit, Trash2, MapPin, Search, FileText, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, MapPin, Search, FileText, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Pagination from '../../../shared/components/ui/Pagination';
@@ -9,7 +9,7 @@ import { useAuth } from '../../../app/providers/AuthContext';
 import TituloHabilitanteForm from '../forms/TituloHabilitanteForm';
 import TituloHabilitanteDetails from '../components/TituloHabilitanteDetails';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
-import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
 import LoadingSpinner from '../../../shared/components/ui/LoadingSpinner';
@@ -45,6 +45,44 @@ export default function TitulosHabilitantes() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = (paginated: TituloHabilitante[]) => {
+    if (selectedIds.length === paginated.length && paginated.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(paginated.map(t => t.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const result = await Swal.fire({
+      title: `¿Eliminar ${selectedIds.length} títulos seleccionados?`,
+      text: "Esta acción no se puede deshacer",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+    if (result.isConfirmed) {
+      try {
+        const { error } = await supabase.from('titulos_habilitantes').delete().in('id', selectedIds);
+        if (error) throw error;
+        setSelectedIds([]);
+        fetchTitulos();
+        Swal.fire('Eliminado', 'Los títulos han sido eliminados.', 'success');
+      } catch (error) {
+        Swal.fire('Error', 'Hubo un error al eliminar los títulos.', 'error');
+      }
+    }
+  };
   const [sortField, setSortField] = useState<'titulo' | 'tipo' | 'fecha_vencimiento' | 'ubicacion'>('titulo');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -63,8 +101,8 @@ export default function TitulosHabilitantes() {
   const fetchTitulos = async () => {
     const { data, error } = await supabase.from('titulos_habilitantes').select('*, locations(*)').order('created_at', { ascending: false });
     if (!error && data) {
-      // Filtrar para mostrar solo los títulos de sedes tipo CITV (type === 'revision')
-      const citvTitulos = (data as TituloHabilitante[]).filter(t => t.locations?.type === 'revision');
+      // Filtrar para mostrar solo los títulos de sedes tipo CITV, ESCON y ECSAL
+      const citvTitulos = (data as TituloHabilitante[]).filter(t => t.locations && ['revision', 'escuela_conductores', 'policlinico'].includes(t.locations.type));
       setTitulos(citvTitulos);
     }
   };
@@ -72,8 +110,8 @@ export default function TitulosHabilitantes() {
   const fetchLocations = async () => {
     const { data } = await supabase.from('locations').select('*').order('name');
     if (data) {
-      // Filtrar para mostrar solo las sedes tipo CITV (type === 'revision')
-      const citvLocations = data.filter(loc => loc.type === 'revision');
+      // Filtrar para mostrar solo las sedes tipo CITV, ESCON y ECSAL
+      const citvLocations = data.filter(loc => ['revision', 'escuela_conductores', 'policlinico'].includes(loc.type));
       setLocations(citvLocations);
     }
   };
@@ -299,243 +337,277 @@ export default function TitulosHabilitantes() {
     <div className="flex flex-col h-full bg-[#f8fafc]">
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
 
-          <ActionToolbar
-            totalItems={filtered.length}
-            label="Títulos"
-            searchComponent={
-              <>
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
-                <input
-                  type="text"
-                  placeholder="Buscar por título, tipo o número..."
-                  value={search}
-                  onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                  className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
-                />
-              </>
-            }
-          >
-            <FilterSelect
-              icon={MapPin}
-              iconClassName="text-rose-500"
-              value={selectedLocations[0] || ''}
-              onChange={e => { setSelectedLocations(e.target.value ? [e.target.value] : []); setCurrentPage(1); }}
-              wrapperClassName="md:min-w-[220px]"
+        <ActionToolbar
+          totalItems={filtered.length}
+          label="Títulos"
+          searchComponent={
+            <>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
+              <input
+                type="text"
+                placeholder="Buscar por título, tipo o número..."
+                value={search}
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+              />
+            </>
+          }
+        >
+          <FilterBar
+            filters={[
+              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+            ]}
+            values={{ location: selectedLocations[0] || '' }}
+            onChange={(_key, value) => {
+              setSelectedLocations(value ? [value as string] : []);
+              setCurrentPage(1);
+            }}
+          />
+
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+
+          {canEdit() && (
+            <PrimaryButton icon={Plus} onClick={() => { setEditingTitulo(undefined); setIsFormOpen(true); }}>
+              Nuevo Título
+            </PrimaryButton>
+          )}
+
+          <ExportButtons onExportExcel={downloadReport} onExportPDF={downloadReportPdf} />
+
+          {canEdit() && selectedIds.length > 0 && viewMode === 'table' && (
+            <button
+              onClick={handleBulkDelete}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-widest"
             >
-              <option value="">Todas las sedes</option>
-              {locations.map(loc => (
-                <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-              ))}
-            </FilterSelect>
+              <Trash2 size={14} />
+              Eliminar ({selectedIds.length})
+            </button>
+          )}
+        </ActionToolbar>
 
-            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
-
-            {canEdit() && (
-              <PrimaryButton icon={Plus} onClick={() => { setEditingTitulo(undefined); setIsFormOpen(true); }}>
-                Nuevo Título
-              </PrimaryButton>
-            )}
-
-            <ExportButtons onExportExcel={downloadReport} onExportPDF={downloadReportPdf} />
-          </ActionToolbar>
-
-          {loading ? (
-            <LoadingSpinner />
-          ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {paginatedData.map(titulo => (
-                <div key={titulo.id} className="bg-white rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-xl transition-all p-6 flex flex-col group overflow-hidden hover:-translate-y-0.5 duration-200">
-                  <div className="flex justify-between items-center mb-5">
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-100 text-slate-400 group-hover:bg-[#002855] group-hover:text-white transition-all shadow-sm">
-                      <FileText size={20} />
-                    </div>
-                    {renderStatus(titulo)}
-                  </div>
-
-                  <div className="mb-4">
-                    <h4 className="text-[14px] font-black text-slate-800 uppercase leading-none">{titulo.titulo}</h4>
-                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{titulo.tipo}</p>
-                  </div>
-
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
-                      <MapPin size={14} className="text-rose-500 shrink-0" />
-                      <span className="truncate">{titulo.locations?.name || 'Sede N/A'}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Número</label>
-                        <span className="text-[9px] font-black text-slate-600 uppercase truncate">{titulo.numero || '—'}</span>
-                      </div>
-                      <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Doc.</label>
-                        <span className="text-[9px] font-black text-slate-600 uppercase truncate">{titulo.vigencia_documento || '—'}</span>
-                      </div>
-                      <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Del</label>
-                        <span className="text-[9px] font-black text-slate-600 uppercase truncate">
-                          {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
-                        </span>
-                      </div>
-                      <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                        <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Al</label>
-                        <span className="text-[9px] font-black text-slate-600 uppercase truncate">
-                          {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150 mt-auto">
-                    <RowActions
-                      canEdit={canEdit()}
-                      onEdit={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
-                      onDelete={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
+        {loading ? (
+          <LoadingSpinner />
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {paginatedData.map(titulo => (
+              <div key={titulo.id} className={`bg-white rounded-2xl shadow-sm border transition-all p-6 flex flex-col group overflow-hidden hover:-translate-y-0.5 duration-200 relative ${selectedIds.includes(titulo.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-200/80 hover:shadow-xl'}`}>
+                {canEdit() && (
+                  <div className="absolute top-4 right-4 z-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(titulo.id)}
+                      onChange={() => toggleSelect(titulo.id)}
+                      onClick={e => e.stopPropagation()}
+                      className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer shadow-sm"
                     />
                   </div>
+                )}
+                <div className="flex justify-between items-center mb-5">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-slate-100 text-slate-400 group-hover:bg-[#002855] group-hover:text-white transition-all shadow-sm">
+                    <FileText size={20} />
+                  </div>
+                  {renderStatus(titulo)}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
-              <div className="bg-slate-50/50 border-b border-slate-100 shrink-0">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={filtered.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                  onItemsPerPageChange={setItemsPerPage}
-                />
+
+                <div className="mb-4">
+                  <h4 className="text-[14px] font-black text-slate-800 uppercase leading-none">{titulo.titulo}</h4>
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{titulo.tipo}</p>
+                </div>
+
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
+                    <MapPin size={14} className="text-rose-500 shrink-0" />
+                    <span className="truncate">{titulo.locations?.name || 'Sede N/A'}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Número</label>
+                      <span className="text-[9px] font-black text-slate-600 uppercase truncate">{titulo.numero || '—'}</span>
+                    </div>
+                    <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Doc.</label>
+                      <span className="text-[9px] font-black text-slate-600 uppercase truncate">{titulo.vigencia_documento || '—'}</span>
+                    </div>
+                    <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Del</label>
+                      <span className="text-[9px] font-black text-slate-600 uppercase truncate">
+                        {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
+                      </span>
+                    </div>
+                    <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
+                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Al</label>
+                      <span className="text-[9px] font-black text-slate-600 uppercase truncate">
+                        {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150 mt-auto">
+                  <RowActions
+                    canEdit={canEdit()}
+                    onEdit={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
+                    onDelete={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
+                  />
+                </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse border-spacing-0">
-                  <thead>
-                    <tr className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
-                      <th className="px-6 py-4 text-left">
-                        <button
-                          onClick={() => handleSort('titulo')}
-                          className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
-                        >
-                          <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Título</span>
-                          {sortField === 'titulo' && (
-                            sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
-                          )}
-                        </button>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
+            <div className="bg-slate-50/50 border-b border-slate-100 shrink-0">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filtered.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setItemsPerPage}
+              />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse border-spacing-0">
+                <thead>
+                  <tr className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
+                    {canEdit() && (
+                      <th className="px-4 py-4 text-center w-12">
+                        <input
+                          type="checkbox"
+                          checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length}
+                          onChange={() => toggleSelectAll(paginatedData)}
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                        />
                       </th>
-                      <th className="px-4 py-4 text-left">
-                        <button
-                          onClick={() => handleSort('tipo')}
-                          className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
-                        >
-                          <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Tipo</span>
-                          {sortField === 'tipo' && (
-                            sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
-                          )}
-                        </button>
-                      </th>
-                      <th className="px-4 py-4 text-left">
-                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Número</span>
-                      </th>
-                      <th className="px-4 py-4 text-left">
-                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Del</span>
-                      </th>
-                      <th className="px-4 py-4 text-left">
-                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Al</span>
-                      </th>
-                      <th className="px-4 py-4 text-left">
-                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Doc.</span>
-                      </th>
-                      <th className="px-4 py-4 text-left">
-                        <button
-                          onClick={() => handleSort('fecha_vencimiento')}
-                          className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
-                        >
-                          <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Días para Vencer</span>
-                          {sortField === 'fecha_vencimiento' && (
-                            sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
-                          )}
-                        </button>
-                      </th>
-                      <th className="px-4 py-4 text-left">
-                        <button
-                          onClick={() => handleSort('ubicacion')}
-                          className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
-                        >
-                          <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Ubicación</span>
-                          {sortField === 'ubicacion' && (
-                            sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
-                          )}
-                        </button>
-                      </th>
-                      <th className="px-6 py-4 text-center">
-                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {paginatedData.map((titulo) => (
-                      <tr
-                        key={titulo.id}
-                        className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20"
-                        onClick={() => { setSelectedTitulo(titulo); setShowDetails(true); }}
+                    )}
+
+                    <th className="px-4 py-4 text-left">
+                      <button
+                        onClick={() => handleSort('titulo')}
+                        className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
                       >
-                        <td className="px-6 py-4 font-bold text-left">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100 text-slate-400 group-hover:bg-[#002855] group-hover:text-white transition-all shadow-sm">
-                              <FileText size={16} />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{titulo.titulo}</span>
-                              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{titulo.tipo}</span>
-                            </div>
-                          </div>
+                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Título</span>
+                        {sortField === 'titulo' && (
+                          sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-4 py-4 text-left">
+                      <button
+                        onClick={() => handleSort('tipo')}
+                        className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
+                      >
+                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Tipo</span>
+                        {sortField === 'tipo' && (
+                          sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-4 py-4 text-left">
+                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Número</span>
+                    </th>
+                    <th className="px-4 py-4 text-left">
+                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Del</span>
+                    </th>
+                    <th className="px-4 py-4 text-left">
+                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Al</span>
+                    </th>
+                    <th className="px-4 py-4 text-left">
+                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Doc.</span>
+                    </th>
+                    <th className="px-4 py-4 text-left">
+                      <button
+                        onClick={() => handleSort('fecha_vencimiento')}
+                        className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
+                      >
+                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Días para Vencer</span>
+                        {sortField === 'fecha_vencimiento' && (
+                          sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-4 py-4 text-left">
+                      <button
+                        onClick={() => handleSort('ubicacion')}
+                        className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
+                      >
+                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Ubicación</span>
+                        {sortField === 'ubicacion' && (
+                          sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
+                        )}
+                      </button>
+                    </th>
+                    <th className="px-4 py-4 text-center">
+                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {paginatedData.map((titulo) => (
+                    <tr
+                      key={titulo.id}
+                      className={`hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20 ${selectedIds.includes(titulo.id) ? 'bg-blue-50/40' : ''}`}
+                      onClick={() => { setSelectedTitulo(titulo); setShowDetails(true); }}
+                    >
+                      {canEdit() && (
+                        <td className="px-4 py-4 text-center w-12">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(titulo.id)}
+                            onChange={() => toggleSelect(titulo.id)}
+                            onClick={e => e.stopPropagation()}
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                          />
                         </td>
-                        <td className="px-4 py-4 text-left">
-                          <span className="text-[12px] font-bold text-slate-700 uppercase">{titulo.tipo}</span>
-                        </td>
-                        <td className="px-4 py-4 text-left">
-                          <span className="text-[12px] font-mono font-black text-slate-800">{titulo.numero || '—'}</span>
-                        </td>
-                        <td className="px-4 py-4 text-left">
-                          <span className="text-[12px] font-bold text-slate-700">
-                            {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-left">
-                          <span className="text-[12px] font-bold text-slate-700">
-                            {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-left">
-                          <span className="text-[12px] font-bold text-slate-700 uppercase">{titulo.vigencia_documento || '—'}</span>
-                        </td>
-                        <td className="px-4 py-4 text-left">
-                          {renderStatus(titulo)}
-                        </td>
-                        <td className="px-4 py-4 text-left">
-                          <div className="flex items-center gap-1.5 text-slate-700">
-                            <MapPin size={14} className="text-rose-500 shrink-0" />
-                            <span className="text-[12px] font-bold uppercase truncate max-w-xs block">{titulo.locations?.name || 'Sede N/A'}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150">
-                            <RowActions
-                              canEdit={canEdit()}
-                              onEdit={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
-                              onDelete={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                      )}
+                      <td className="px-4 py-4 text-left">
+                        <span className="text-[12px] font-black text-slate-800 uppercase">{titulo.titulo}</span>
+                      </td>
+                      <td className="px-4 py-4 text-left">
+                        <span className="text-[12px] font-bold text-slate-700 uppercase">{titulo.tipo}</span>
+                      </td>
+                      <td className="px-4 py-4 text-left">
+                        <span className="text-[12px] font-mono font-black text-slate-800">{titulo.numero || '—'}</span>
+                      </td>
+                      <td className="px-4 py-4 text-left">
+                        <span className="text-[12px] font-bold text-slate-700">
+                          {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-left">
+                        <span className="text-[12px] font-bold text-slate-700">
+                          {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-left">
+                        <span className="text-[12px] font-bold text-slate-700 uppercase">{titulo.vigencia_documento || '—'}</span>
+                      </td>
+                      <td className="px-4 py-4 text-left">
+                        {renderStatus(titulo)}
+                      </td>
+                      <td className="px-4 py-4 text-left">
+                        <div className="flex items-center gap-1.5 text-slate-700">
+                          <MapPin size={14} className="text-rose-500 shrink-0" />
+                          <span className="text-[12px] font-bold uppercase truncate max-w-xs block">{titulo.locations?.name || 'Sede N/A'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150">
+                          <RowActions
+                            canEdit={canEdit()}
+                            onEdit={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
+                            onDelete={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
+
       {isFormOpen && (
         <TituloHabilitanteForm
           tituloHabilitante={editingTitulo}

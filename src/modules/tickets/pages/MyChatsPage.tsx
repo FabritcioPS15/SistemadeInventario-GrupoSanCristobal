@@ -1,9 +1,20 @@
+// =============================================================================
+// MyChatsPage.tsx — Página "Mis Chats" del usuario actual
+// Funcionalidades:
+//   - Muestra tickets creados por el usuario y tickets que atiende
+//   - Filtros por estado (Todos, Pendientes, En Proceso, Resueltos)
+//   - Búsqueda por título o solicitante
+//   - Modal de detalle del ticket (TicketDetailModal)
+//   - Suscripción en tiempo real a cambios en tickets propios
+// =============================================================================
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { supabase } from '../../../shared/services/supabase';
 import { MessageSquare } from 'lucide-react';
 import TicketDetailModal from '../components/TicketDetailModal';
 
+// Mapa de estilos visuales para las prioridades en badges
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string }> = {
     critical: { label: 'P1 - Crítica', color: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
     high: { label: 'P2 - Alta', color: 'text-orange-600 bg-orange-50', dot: 'bg-orange-500' },
@@ -15,10 +26,12 @@ export default function MyChats() {
     const { user } = useAuth();
     const [tickets, setTickets] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedTicket, setSelectedTicket] = useState<any>(null);
+    const [selectedTicket, setSelectedTicket] = useState<any>(null); // Ticket seleccionado para modal
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState<'all' | 'open' | 'in_progress' | 'resolved'>('all');
 
+    // Carga inicial + suscripción en tiempo real a cambios en tickets
+    // Escucha INSERT, UPDATE, DELETE para mantener la lista sincronizada
     useEffect(() => {
         const initializeData = async () => {
             await fetchMyTickets();
@@ -26,6 +39,7 @@ export default function MyChats() {
 
         initializeData();
 
+        // Canal de tiempo real para cambios en tickets que nos pertenecen
         const subscription = supabase
             .channel(`my-tickets-updates-${user?.id}`)
             .on('postgres_changes', {
@@ -34,9 +48,10 @@ export default function MyChats() {
                 table: 'tickets'
             }, async (payload) => {
                 if (payload.eventType === 'UPDATE') {
+                    // Actualización: reemplazar el ticket modificado en el estado local
                     setTickets(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
                 } else if (payload.eventType === 'INSERT') {
-                    // Solo si nos pertenece
+                    // Solo recargar si el ticket nos pertenece (creado o asignado)
                     if (payload.new.requester_id === user?.id || payload.new.assigned_to === user?.id) {
                         fetchMyTickets();
                     }
@@ -49,6 +64,7 @@ export default function MyChats() {
         return () => { void supabase.removeChannel(subscription); };
     }, [user?.id]);
 
+    // Obtiene tickets donde el usuario es solicitante o está asignado como técnico
     const fetchMyTickets = async () => {
         try {
             const { data, error } = await supabase
@@ -71,6 +87,7 @@ export default function MyChats() {
         }
     };
 
+    // Convierte el código de estado interno a una etiqueta legible en español
     const getStatusLabel = (status: string) => {
         switch (status) {
             case 'open': return 'Pendiente';
@@ -81,6 +98,7 @@ export default function MyChats() {
         }
     };
 
+    // Filtra tickets por término de búsqueda y filtro de estado activo
     const filteredTickets = tickets.filter(ticket => {
         const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             ticket.requester?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -90,6 +108,9 @@ export default function MyChats() {
         return matchesSearch && matchesFilter;
     });
 
+    // Separa los tickets en dos categorías:
+    // - Creados por mí (soy el solicitante)
+    // - Atendidos por mí (soy el técnico asignado, pero no el creador)
     const myCreatedTickets = filteredTickets.filter(t => t.requester_id === user?.id);
     const myAttendedTickets = filteredTickets.filter(t => t.assigned_to === user?.id && t.requester_id !== user?.id);
 

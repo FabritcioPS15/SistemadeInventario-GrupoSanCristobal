@@ -12,6 +12,17 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import TicketForm from '../forms/TicketForm';
 
+// =============================================================================
+// TicketsPage.tsx — Página principal del módulo Mesa de Ayuda
+// Funcionalidades:
+//   - Dashboard Kanban con columnas: Pendiente, En Proceso, Finalizados, Cerrados
+//   - Vista "Mis Tickets" con tickets creados y atendidos por el usuario
+//   - Reportes con métricas, filtros por fecha y exportación PDF/Excel
+//   - Automatización de estados: Resuelto→Cerrado (3min), Cerrado→Archivado (10min)
+//   - Suscripción en tiempo real a cambios via Supabase Realtime
+//   - Comunicación con el header global via CustomEvents (search, new, export)
+// =============================================================================
+
 // Estilos visuales para las prioridades de tickets
 // P1 (crítica) es la más urgente, P4 (baja) la menos
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string, badge: string }> = {
@@ -23,15 +34,16 @@ const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: strin
 
 export default function Tickets() {
     const { user } = useAuth();
-    const { view } = useParams();
+    const { view } = useParams(); // Vista activa desde la URL: dashboard, mine, reports
     const navigate = useNavigate();
 
-    const [tickets, setTickets] = useState<any[]>([]);
+    // Estado global de la página
+    const [tickets, setTickets] = useState<any[]>([]); // Todos los tickets cargados
     const [loading, setLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
+    const [showForm, setShowForm] = useState(false); // Controla visibilidad del modal de creación
     const [searchTerm, setSearchTerm] = useState('');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [startDate, setStartDate] = useState(''); // Filtro de fecha inicio
+    const [endDate, setEndDate] = useState(''); // Filtro de fecha fin
 
     // Determina la vista activa basándose en la URL
     // - dashboard: vista general de todos los tickets
@@ -153,6 +165,7 @@ export default function Tickets() {
     // Revisa cada minuto si hay tickets que necesitan cambio automático de estado:
     // - Resuelto -> Cerrado (después de 3 minutos)
     // - Cerrado -> Archivado (después de 10 minutos)
+    // También limpia archivos adjuntos de tickets archivados del storage
     useEffect(() => {
         const interval = setInterval(() => {
             handleAutomation();

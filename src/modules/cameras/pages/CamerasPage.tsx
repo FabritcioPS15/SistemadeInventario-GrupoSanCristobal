@@ -21,7 +21,7 @@ import DetailModal, {
 } from '../../../shared/components/ui/DetailModal';
 import ModalOverlay from '../../../shared/components/ui/ModalOverlay';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
-import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
 import {
@@ -38,7 +38,6 @@ type Camera = CameraType;
 type CamerasProps = {
   subview?: string;
 };
-
 export default function Cameras({ subview }: CamerasProps) {
   const { canEdit, user } = useAuth();
   const { error: notifyError, confirm } = useNotify();
@@ -52,7 +51,7 @@ export default function Cameras({ subview }: CamerasProps) {
   const [expandedStorage, setExpandedStorage] = useState<Set<string>>(new Set());
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [filterStatus, setFilterStatus] = useState('todos');
+  const [filterStatus, setFilterStatus] = useState('');
   const [filterStorage, setFilterStorage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
@@ -62,6 +61,7 @@ export default function Cameras({ subview }: CamerasProps) {
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [storedDisks, setStoredDisks] = useState<StoredDisk[]>([]);
   const [editingDisk, setEditingDisk] = useState<StoredDisk | undefined>();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   const handleSort = (key: string) => {
@@ -155,6 +155,29 @@ export default function Cameras({ subview }: CamerasProps) {
     const { error } = await supabase.from('cameras').delete().eq('id', cam.id);
     if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchCameras();
+    setSelectedIds(prev => prev.filter(selectedId => selectedId !== cam.id));
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = await confirm(`¿Eliminar ${selectedIds.length} cámaras seleccionadas?`, 'Eliminación por Lote');
+    if (!confirmed) return;
+    const { error } = await supabase.from('cameras').delete().in('id', selectedIds);
+    if (error) return notifyError('Error al eliminar por lote: ' + error.message);
+    await fetchCameras();
+    setSelectedIds([]);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = (items: Camera[]) => {
+    if (selectedIds.length === items.length && items.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(items.map(i => i.id));
+    }
   };
 
   const onSave = async () => {
@@ -240,7 +263,7 @@ export default function Cameras({ subview }: CamerasProps) {
           if (!cameraLocationId || !selectedLocations.includes(cameraLocationId)) return false;
         }
 
-        if (filterStatus !== 'todos' && c.status !== filterStatus) return false;
+        if (filterStatus && c.status !== filterStatus) return false;
 
         if (filterStorage) {
           const hasCriticalDisk = c.camera_disks?.some(d => {
@@ -501,73 +524,76 @@ export default function Cameras({ subview }: CamerasProps) {
             </>
           }
         >
-            <FilterSelect
-              icon={MapPin}
-              iconClassName="text-rose-500"
-              multiple
-              value={selectedLocations}
-              onChange={e => { setSelectedLocations(e.target.value as string[]); setCurrentPage(1); }}
-              wrapperClassName="md:min-w-[220px]"
+          <FilterBar
+            filters={[
+              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', multiple: true, options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+              ...(subview !== 'cameras-disks' ? [{
+                key: 'status', placeholder: 'TODOS LOS ESTADOS', options: [
+                  { value: 'active', label: 'ACTIVO' },
+                  { value: 'maintenance', label: 'MANTENIMIENTO' },
+                  { value: 'inactive', label: 'INACTIVO' },
+                ]
+              }] : []),
+            ]}
+            values={{ location: selectedLocations, status: filterStatus }}
+            onChange={(key, value) => {
+              if (key === 'location') setSelectedLocations(value as string[]);
+              else if (key === 'status') setFilterStatus(value as string);
+              setCurrentPage(1);
+            }}
+          />
+
+          {subview !== 'cameras-disks' && (
+            <div className="w-full md:w-auto flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30">
+              <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-1">
+                <Star size={12} />
+                Crítico:
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={filterStorage}
+                  onChange={(e) => { setFilterStorage(e.target.checked); setCurrentPage(1); }}
+                />
+                <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          )}
+
+          {subview !== 'cameras-disks' && (
+            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+          )}
+
+          {subview === 'cameras-disks' ? (
+            <button
+              onClick={() => setShowStoredDiskForm(true)}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
             >
-              <option value="">TODAS LAS SEDES</option>
-              {locations.map(loc => (
-                <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-              ))}
-            </FilterSelect>
+              <Plus size={14} />
+              Nuevo Disco Almacenado
+            </button>
+          ) : canEdit() && (
+            <button
+              onClick={openCreate}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+            >
+              <Plus size={14} />
+              Agregar Equipo
+            </button>
+          )}
 
-            {subview !== 'cameras-disks' && (
-              <FilterSelect
-                value={filterStatus}
-                onChange={(e) => { setFilterStatus(e.target.value as string); setCurrentPage(1); }}
-              >
-                <option value="todos">TODOS LOS ESTADOS</option>
-                <option value="active">ACTIVO</option>
-                <option value="maintenance">MANTENIMIENTO</option>
-                <option value="inactive">INACTIVO</option>
-              </FilterSelect>
-            )}
+          <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
 
-            {subview !== 'cameras-disks' && (
-              <div className="w-full md:w-auto flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30">
-                <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-1">
-                  <Star size={12} />
-                  Crítico:
-                </span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={filterStorage}
-                    onChange={(e) => { setFilterStorage(e.target.checked); setCurrentPage(1); }}
-                  />
-                  <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-            )}
-
-            {subview !== 'cameras-disks' && (
-              <ViewToggle viewMode={viewMode} onChange={setViewMode} />
-            )}
-
-            {subview === 'cameras-disks' ? (
-              <button
-                onClick={() => setShowStoredDiskForm(true)}
-                className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-              >
-                <Plus size={14} />
-                Nuevo Disco Almacenado
-              </button>
-            ) : canEdit() && (
-              <button
-                onClick={openCreate}
-                className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-              >
-                <Plus size={14} />
-                Agregar Equipo
-              </button>
-            )}
-
-            <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
+          {canEdit() && selectedIds.length > 0 && viewMode === 'table' && !subview && (
+            <button
+              onClick={handleBulkDelete}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm"
+            >
+              <Trash2 size={14} />
+              Eliminar ({selectedIds.length})
+            </button>
+          )}
         </ActionToolbar>
 
         {
@@ -578,7 +604,18 @@ export default function Cameras({ subview }: CamerasProps) {
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {paginatedData.map((cam) => (
-                <div key={cam.id} className="group bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-blue-300 transition-all duration-200 overflow-hidden flex flex-col">
+                <div key={cam.id} className={`group bg-white rounded-xl shadow-sm border hover:shadow-lg transition-all duration-200 overflow-hidden flex flex-col relative ${selectedIds.includes(cam.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-gray-200 hover:border-blue-300'}`}>
+                  {canEdit() && !subview && (
+                    <div className="absolute top-4 right-4 z-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(cam.id)}
+                        onChange={() => toggleSelect(cam.id)}
+                        onClick={e => e.stopPropagation()}
+                        className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer shadow-sm"
+                      />
+                    </div>
+                  )}
                   {/* Header con diseño minimalista */}
                   <div className="relative bg-gray-50 px-5 pt-4 pb-4 border-b border-gray-100">
                     <div className="flex items-start justify-between">
@@ -858,7 +895,7 @@ export default function Cameras({ subview }: CamerasProps) {
                               <HardDrive size={18} />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">Disco #{disk.disk_number}</span>
+                              <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">Disco #{disk.disk_number}</span>
                               <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest mt-1">S/N: {disk.serial_number || 'S/N DESCONOCIDA'}</span>
                             </div>
                           </div>
@@ -868,7 +905,7 @@ export default function Cameras({ subview }: CamerasProps) {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-sm font-black text-slate-600 uppercase">{disk.camera_name || '—'}</span>
+                            <span className="text-[11px] font-bold text-slate-600 uppercase">{disk.camera_name || '—'}</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{disk.location_name || 'SEDE N/A'}</span>
                           </div>
                         </TableCell>
@@ -885,7 +922,7 @@ export default function Cameras({ subview }: CamerasProps) {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            <span className="text-[12px] font-black text-[#002855]">{disk.used_space_gb}/{disk.total_capacity_gb} GB</span>
+                            <span className="text-[11px] font-black text-[#002855]">{disk.used_space_gb}/{disk.total_capacity_gb} GB</span>
                             <div className="w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
                               <div className="bg-rose-500 h-full" style={{ width: `${Math.min(100, Math.round((Number(disk.used_space_gb) / Number(disk.total_capacity_gb)) * 100))}%` }} />
                             </div>
@@ -954,34 +991,58 @@ export default function Cameras({ subview }: CamerasProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {canEdit() && !subview && (
+                        <TableHead className="w-12 text-center">
+                          <input
+                            type="checkbox"
+                            checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length}
+                            onChange={() => toggleSelectAll(paginatedData)}
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                          />
+                        </TableHead>
+                      )}
                       <TableHead sortable isSorted={sortConfig?.key === 'name'} sortDirection={sortConfig?.direction} onClick={() => handleSort('name')}>Cámara</TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'location'} sortDirection={sortConfig?.direction} onClick={() => handleSort('location')}>Sede</TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'recording_start_date'} sortDirection={sortConfig?.direction} onClick={() => handleSort('recording_start_date')}>Inicio Grabación</TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'status'} sortDirection={sortConfig?.direction} onClick={() => handleSort('status')}>Estado</TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'disks'} sortDirection={sortConfig?.direction} onClick={() => handleSort('disks')}>Almacenamiento</TableHead>
-                      <TableHead sortable isSorted={sortConfig?.key === 'access_type'} sortDirection={sortConfig?.direction} onClick={() => handleSort('access_type')}>Tecnología</TableHead>
                       <TableHead className="text-center">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedData.map((cam) => (
-                      <TableRow key={cam.id} onClick={() => handleView(cam)}>
-                        <TableCell className="font-bold">
+                      <TableRow 
+                        key={cam.id} 
+                        className={`cursor-pointer transition-colors duration-150 group relative ${selectedIds.includes(cam.id) ? 'bg-blue-50/40' : ''}`}
+                        onClick={() => handleView(cam)}
+                      >
+                        {canEdit() && !subview && (
+                          <TableCell className="text-center w-12">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(cam.id)}
+                              onChange={() => toggleSelect(cam.id)}
+                              onClick={e => e.stopPropagation()}
+                              className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                            />
+                          </TableCell>
+                        )}
+                        <TableCell className="font-bold" noTruncate>
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white">
                               <GiCctvCamera size={18} />
                             </div>
-                            <div className="flex flex-col">
-                              <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{cam.name}</span>
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{cam.brand || ''} {cam.model || ''}</span>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[13px] font-black text-[#002855] uppercase leading-tight truncate max-w-[350px]">{cam.name}</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 truncate max-w-[350px]">{cam.brand || ''} {cam.model || ''}</span>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block">{(cam as any).locations?.name || 'Sede N/A'}</span>
+                          <span className="text-[11px] font-bold text-slate-600 truncate max-w-xs block">{(cam as any).locations?.name || 'Sede N/A'}</span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-[12px] font-black text-[#002855] uppercase">
+                          <span className="text-[11px] font-bold text-[#002855] uppercase">
                             {cam.recording_start_date ? new Date(String(cam.recording_start_date + 'T00:00:00').includes('T') ? String(cam.recording_start_date + 'T00:00:00') : `${cam.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                           </span>
                         </TableCell>
@@ -1031,9 +1092,6 @@ export default function Cameras({ subview }: CamerasProps) {
                           ) : (
                             <span className="text-[10px] font-bold text-slate-400">SIN DISCOS</span>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-[11px] font-black text-slate-500 uppercase tracking-tighter">{humanAccess(cam.access_type)}</span>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

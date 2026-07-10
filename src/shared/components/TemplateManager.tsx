@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Edit, Plus, Trash2, Save, X, Settings, ChevronDown } from 'lucide-react';
+import { Edit, Plus, Trash2, Save, X, Settings, ChevronDown, ClipboardList } from 'lucide-react';
 import { useNotify } from '../hooks/useNotify';
+import ModalOverlay from './ui/ModalOverlay';
 
 type ChecklistItem = {
   id: string;
@@ -152,19 +153,22 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
 
   if (!editingTemplate) {
     return (
-      <div className="fixed inset-0 bg-[#002855]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-none shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col relative border border-slate-200">
-          <div className="absolute top-0 left-0 w-1 h-full bg-[#002855]" />
-          <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Settings size={20} className="text-[#002855]" />
-              <h2 className="text-[16px] font-black text-[#002855] uppercase tracking-tight">Gestión de Plantillas</h2>
+      <ModalOverlay className="bg-slate-900/40 backdrop-blur-sm">
+        <div className="bg-white w-full h-full md:h-[90vh] max-w-full sm:max-w-4xl rounded-none shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="bg-gradient-to-r from-blue-900 to-blue-900 px-5 py-4 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-6">
+              <div className="w-9 h-9 bg-white/10 rounded-none flex items-center justify-center border border-white/20">
+                <ClipboardList size={18} className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">Gestión de Plantillas</h2>
+                <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Seleccionar y administrar plantillas</p>
+              </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-            >
-              <X size={20} />
+            <button onClick={onClose} className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all">
+              <X size={24} />
             </button>
           </div>
 
@@ -240,35 +244,41 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
             </div>
           </div>
         </div>
-      </div>
+      </ModalOverlay>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-[#002855]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-none shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-200">
-        <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Edit size={20} className="text-[#002855]" />
-            <h2 className="text-[16px] font-black text-[#002855] uppercase tracking-tight">Estructura: {editingTemplate.name}</h2>
+    <ModalOverlay className="bg-slate-900/40 backdrop-blur-sm">
+      <div className="bg-white w-full h-full md:h-[90vh] max-w-full sm:max-w-6xl rounded-none shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="bg-gradient-to-r from-blue-900 to-blue-900 px-5 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-6">
+            <div className="w-9 h-9 bg-white/10 rounded-none flex items-center justify-center border border-white/20">
+              <Settings size={18} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">Estructura: {editingTemplate.name}</h2>
+              <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Configuración de requerimientos</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleSaveTemplate}
-              className="px-5 py-2 bg-emerald-600 text-white rounded-none font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-none transition-all"
             >
               <Save size={14} />
               CONFIRMAR
             </button>
             <button
-              onClick={() => {
-                if (mountedRef.current) {
-                  setEditingTemplate(null);
-                }
-              }}
-              className="px-5 py-2 bg-slate-100 text-slate-600 border border-slate-200 rounded-none font-black text-[10px] uppercase tracking-[0.2em] hover:bg-slate-200 transition-all"
+              onClick={() => { if (mountedRef.current) setEditingTemplate(null); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-none transition-all"
             >
               CANCELAR
+            </button>
+            <button onClick={() => { if (mountedRef.current) setEditingTemplate(null); }} className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all">
+              <X size={24} />
             </button>
           </div>
         </div>
@@ -411,6 +421,6 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
           </div>
         </div>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

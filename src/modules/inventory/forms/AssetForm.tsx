@@ -341,8 +341,13 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
             <FormInput name="codigo_unico" value={formData.codigo_unico} onChange={handleChange} placeholder="ACT-XXXXXX" className="font-mono bg-slate-100" readOnly />
           </FormField>
 
-          {/* Activo */}
-          <FormField label="Activo">
+          {/* Nombre del Activo */}
+          <FormField label="Nombre del Activo">
+            <FormInput name="item" value={formData.item} onChange={handleChange} placeholder="Ej. Laptop HP" />
+          </FormField>
+
+          {/* Descripción */}
+          <FormField label="Descripción">
             <FormInput name="descripcion" value={formData.descripcion} onChange={handleChange} placeholder="Ej. DVR 16 Canales" />
           </FormField>
 

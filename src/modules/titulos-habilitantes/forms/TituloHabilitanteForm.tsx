@@ -39,6 +39,10 @@ interface TituloHabilitanteFormProps {
 
 const DOCUMENT_TYPES = [
   'Resolución de autorización (publicación)',
+  'Autorización del MTC',
+  'Autorización de DIRESA',
+  'Certificado de control sanitario',
+  'Calibración de Norklan',
   'Póliza de seguros',
   'Certificado de inspección anual',
   'Certificado de homologación',
@@ -53,6 +57,10 @@ const DOCUMENT_TYPES = [
 
 const DOCUMENT_PRESETS: Record<string, { duration: string; years?: number; months?: number }> = {
   'Resolución de autorización (publicación)': { duration: '5 años', years: 5 },
+  'Autorización del MTC': { duration: '' },
+  'Autorización de DIRESA': { duration: '' },
+  'Certificado de control sanitario': { duration: '' },
+  'Calibración de Norklan': { duration: '' },
   'Póliza de seguros': { duration: '1 año', years: 1 },
   'Certificado de inspección anual': { duration: '1 año', years: 1 },
   'Certificado de homologación': { duration: '5 años', years: 5 },
@@ -299,7 +307,7 @@ export default function TituloHabilitanteForm({
   return (
     <BaseForm
       title={tituloHabilitante ? 'Editar Título Habilitante' : 'Nuevo Título Habilitante'}
-      subtitle="Módulo de Gestión de Títulos Habilitantes (Sedes CITV)"
+      subtitle="Módulo de Gestión de Títulos Habilitantes (Sedes CITV, ESCON y ECSAL)"
       onClose={onClose}
       onSubmit={handleSubmit}
       loading={loading}
@@ -349,7 +357,7 @@ export default function TituloHabilitanteForm({
                   />
                 </FormField>
 
-                <FormField label="Sede CITV" required error={errors.ubicacion_id}>
+                <FormField label="Sede (CITV / ESCON / ECSAL)" required error={errors.ubicacion_id}>
                   <FormSelect
                     name="ubicacion_id"
                     value={formData.ubicacion_id}
@@ -371,7 +379,13 @@ export default function TituloHabilitanteForm({
                 <FormField label="Vigencia Del (Emisión / Inicio)" error={errors.vigencia_del}>
                   <DatePicker
                     value={formData.vigencia_del ? dayjs(formData.vigencia_del) : null}
-                    onChange={(newValue) => handleChange({ target: { name: 'vigencia_del', value: newValue ? newValue.format('YYYY-MM-DD') : '' } } as any)}
+                    onChange={(newValue) => {
+                      if (newValue && newValue.isValid()) {
+                        handleChange({ target: { name: 'vigencia_del', value: newValue.format('YYYY-MM-DD') } } as any);
+                      } else if (newValue === null) {
+                        handleChange({ target: { name: 'vigencia_del', value: '' } } as any);
+                      }
+                    }}
                     format="DD/MM/YYYY"
                     slotProps={{
                       textField: {
@@ -402,7 +416,13 @@ export default function TituloHabilitanteForm({
                 <FormField label="Vigencia Al (Vencimiento / Término)" required={formData.vigencia_documento !== 'indeterminado'} error={errors.vigencia_al}>
                   <DatePicker
                     value={formData.vigencia_al ? dayjs(formData.vigencia_al) : null}
-                    onChange={(newValue) => handleChange({ target: { name: 'vigencia_al', value: newValue ? newValue.format('YYYY-MM-DD') : '' } } as any)}
+                    onChange={(newValue) => {
+                      if (newValue && newValue.isValid()) {
+                        handleChange({ target: { name: 'vigencia_al', value: newValue.format('YYYY-MM-DD') } } as any);
+                      } else if (newValue === null) {
+                        handleChange({ target: { name: 'vigencia_al', value: '' } } as any);
+                      }
+                    }}
                     disabled={formData.vigencia_documento === 'indeterminado'}
                     format="DD/MM/YYYY"
                     slotProps={{

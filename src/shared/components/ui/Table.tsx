@@ -56,7 +56,7 @@ export function TableHead({
   onClick?: () => void;
 }) {
   return (
-    <th className={`px-4 py-4 text-left ${className}`}>
+    <th className={`px-4 py-4 text-left whitespace-nowrap overflow-hidden text-ellipsis ${className}`}>
       {sortable ? (
         <button 
           onClick={onClick} 
@@ -78,10 +78,12 @@ export function TableHead({
   );
 }
 
-export function TableCell({ children, className = '', colSpan, onClick }: { children: React.ReactNode; className?: string; colSpan?: number; onClick?: (e: React.MouseEvent) => void }) {
+export function TableCell({ children, className = '', colSpan, onClick, noTruncate }: { children: React.ReactNode; className?: string; colSpan?: number; onClick?: (e: React.MouseEvent) => void; noTruncate?: boolean }) {
   return (
     <td colSpan={colSpan} onClick={onClick} className={`px-4 py-4 text-left ${className}`}>
-      {children}
+      <div className={noTruncate ? '' : 'truncate max-w-[200px]'}>
+        {children}
+      </div>
     </td>
   );
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit, Trash2, Mail, MapPin, X, Users as UsersIcon, Shield, Crown, Lock, Settings, TrendingUp, User as UserIcon, Search, Scale } from 'lucide-react';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
-import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import PrimaryButton from '../../../shared/components/ui/PrimaryButton';
@@ -23,6 +23,7 @@ import DetailModal, {
   DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import UserLocationAccess from '../components/UserLocationAccess';
 
 type User = {
   id: string;
@@ -52,6 +53,8 @@ export default function Users() {
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [showDetails, setShowDetails] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | undefined>();
+  const [showLocationAccess, setShowLocationAccess] = useState(false);
+  const [userForLocationAccess, setUserForLocationAccess] = useState<User | undefined>();
   const [searchTerm, setSearchTerm] = useState('');
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
   const [roleFilter, setRoleFilter] = useState('');
@@ -62,6 +65,7 @@ export default function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const canEditValue = canEdit();
   const { success: notifySuccess, error: notifyError, warning: notifyWarning, confirm } = useNotify();
@@ -113,6 +117,15 @@ export default function Users() {
   };
 
   const handleViewUser = (user: User) => { setSelectedUser(user); setShowDetails(true); };
+
+  const handleLocationAccess = (user: User) => {
+    if (user.role === 'super_admin') {
+      notifyWarning('El Super Administrador tiene acceso a todas las sedes.', 'Acceso restringido');
+      return;
+    }
+    setUserForLocationAccess(user);
+    setShowLocationAccess(true);
+  };
 
   const handleDeleteUser = async (user: User) => {
     if (user.role === 'super_admin') {
@@ -176,19 +189,8 @@ export default function Users() {
     }
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'super_admin': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'gerencia': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'sistemas': return 'bg-rose-50 text-rose-700 border-rose-200';
-      case 'supervisores': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'administradores': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'personalizado': return 'bg-gray-50 text-gray-700 border-gray-200';
-      case 'area_legal': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
-      case 'area_contable': return 'bg-teal-50 text-teal-700 border-teal-200';
-      default: return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
+  // Uniform corporate palette — same for all roles
+  const getRoleColor = (_role: string) => 'bg-[#002855]/8 text-[#002855] border-[#002855]/20';
 
   const getRoleLabel = (role: string) => {
     switch (role) {
@@ -204,7 +206,7 @@ export default function Users() {
     }
   };
 
-  const statusColors = { active: 'bg-green-100 text-green-800', inactive: 'bg-gray-100 text-gray-800' };
+  const statusColors = { active: 'bg-emerald-50 text-emerald-700 border border-emerald-200', inactive: 'bg-slate-50 text-slate-500 border border-slate-200' };
   const statusLabels = { active: 'Activo', inactive: 'Inactivo' };
 
   const handleSort = (key: string) => {
@@ -290,6 +292,36 @@ export default function Users() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
+  const toggleSelectAll = () => {
+    if (selectedIds.length === paginatedUsers.length && paginatedUsers.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(paginatedUsers.map(u => u.id));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = await confirm(`¿Eliminar ${selectedIds.length} usuarios seleccionados?`, 'Eliminación por Lote');
+    if (confirmed) {
+      try {
+        const { error } = await supabase.from('users').delete().in('id', selectedIds);
+        if (error) throw error;
+        setSelectedIds([]);
+        await fetchUsers();
+        notifySuccess(`${selectedIds.length} usuarios eliminados correctamente`, 'Eliminados');
+      } catch (err: any) {
+        notifyError('Error: ' + err.message, 'Error al eliminar');
+      }
+    }
+  };
+
   const exportToExcel = async () => {
     try {
       const wb = new ExcelJS.Workbook();
@@ -348,51 +380,52 @@ export default function Users() {
             </>
           }
         >
-          <FilterSelect
-            icon={MapPin}
-            iconClassName="text-rose-500"
-            value={selectedLocations[0] || ''}
-            onChange={e => { const v = e.target.value as string; setSelectedLocations(v ? [v] : []); setCurrentPage(1); }}
-            wrapperClassName="md:min-w-[220px]"
-          >
-            <option value="">TODAS LAS SEDES</option>
-            {locations.map(loc => (
-              <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-            ))}
-          </FilterSelect>
-
-          <FilterSelect
-            value={roleFilter}
-            onChange={e => { setRoleFilter(e.target.value as string); setCurrentPage(1); }}
-            wrapperClassName="md:min-w-[180px]"
-          >
-            <option value="">TODOS LOS ROLES</option>
-            <option value="super_admin">Super Admin</option>
-            <option value="gerencia">Gerencia</option>
-            <option value="sistemas">Sistemas</option>
-            <option value="supervisores">Supervisores</option>
-            <option value="area_legal">Área Legal</option>
-            <option value="area_contable">Área Contable</option>
-            <option value="administradores">Administradores</option>
-            <option value="personalizado">Personalizado</option>
-          </FilterSelect>
-
-          <FilterSelect
-            value={statusFilter}
-            onChange={e => { setStatusFilter(e.target.value as string); setCurrentPage(1); }}
-            wrapperClassName="md:min-w-[160px]"
-          >
-            <option value="">TODOS LOS ESTADOS</option>
-            <option value="active">Activo</option>
-            <option value="inactive">Inactivo</option>
-          </FilterSelect>
+          <FilterBar
+            filters={[
+              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+              { key: 'role', placeholder: 'TODOS LOS ROLES', wrapperClassName: 'md:min-w-[180px]', options: [
+                { value: 'super_admin', label: 'Super Admin' },
+                { value: 'gerencia', label: 'Gerencia' },
+                { value: 'sistemas', label: 'Sistemas' },
+                { value: 'supervisores', label: 'Supervisores' },
+                { value: 'area_legal', label: 'Área Legal' },
+                { value: 'area_contable', label: 'Área Contable' },
+                { value: 'administradores', label: 'Administradores' },
+                { value: 'personalizado', label: 'Personalizado' },
+              ]},
+              { key: 'status', placeholder: 'TODOS LOS ESTADOS', wrapperClassName: 'md:min-w-[160px]', options: [
+                { value: 'active', label: 'Activo' },
+                { value: 'inactive', label: 'Inactivo' },
+              ]},
+            ]}
+            values={{ location: selectedLocations[0] || '', role: roleFilter, status: statusFilter }}
+            onChange={(key, value) => {
+              if (key === 'location') setSelectedLocations(value ? [value as string] : []);
+              else if (key === 'role') setRoleFilter(value as string);
+              else if (key === 'status') setStatusFilter(value as string);
+              setCurrentPage(1);
+            }}
+          />
 
           <ViewToggle viewMode={viewMode} onChange={v => setViewMode(v as 'grid' | 'table')} />
 
           {canEditValue && (
-            <PrimaryButton icon={Plus} onClick={handleNewUserClick}>
-              Nuevo Usuario
-            </PrimaryButton>
+            <div className="flex gap-2">
+              {selectedIds.length > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-none hover:bg-rose-100 transition-colors border border-rose-200"
+                >
+                  <Trash2 size={16} />
+                  <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
+                    Eliminar ({selectedIds.length})
+                  </span>
+                </button>
+              )}
+              <PrimaryButton icon={Plus} onClick={handleNewUserClick}>
+                Nuevo Usuario
+              </PrimaryButton>
+            </div>
           )}
 
           <ExportButtons onExportExcel={exportToExcel} onExportPDF={exportToPdf} />
@@ -432,11 +465,11 @@ export default function Users() {
                       </div>
                       <div className="flex-1">
                         <h3 className="text-sm font-black text-[#002855] uppercase tracking-tight mb-2 truncate">{u.full_name}</h3>
-                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none text-[8px] font-black uppercase tracking-widest border ${getRoleColor(u.role)}`}>
                           {getRoleIcon(u.role)}{getRoleLabel(u.role)}
                         </div>
                       </div>
-                      <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${statusColors[u.status]}`}>{statusLabels[u.status]}</span>
+                      <span className={`px-2 py-0.5 rounded-none text-[8px] font-black uppercase tracking-widest ${statusColors[u.status]}`}>{statusLabels[u.status]}</span>
                     </div>
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 p-2 rounded-xl border border-gray-100">
@@ -454,6 +487,9 @@ export default function Users() {
                   <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100 flex gap-2">
                     {canEditValue && u.role !== 'super_admin' && (
                       <>
+                        <button onClick={() => handleLocationAccess(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-slate-600 text-white rounded-lg hover:bg-slate-700 shadow-sm">
+                          <MapPin size={14} /> Sedes
+                        </button>
                         <button onClick={() => handleEditUser(u)} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-[9px] font-black uppercase tracking-widest bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm">
                           <Edit size={14} /> Editar
                         </button>
@@ -484,6 +520,16 @@ export default function Users() {
               <table className="w-full text-left border-collapse border-spacing-0">
                 <thead className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
                   <tr>
+                    {canEditValue && (
+                      <th className="px-4 py-4 w-12 text-center">
+                        <input
+                          type="checkbox"
+                          checked={paginatedUsers.length > 0 && selectedIds.length === paginatedUsers.length}
+                          onChange={toggleSelectAll}
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                        />
+                      </th>
+                    )}
                     <th className="px-6 py-4">
                       {renderSortableHeader('Usuario', 'user')}
                     </th>
@@ -512,6 +558,17 @@ export default function Users() {
                       onDoubleClick={() => handleViewUser(u)}
                       onClick={() => handleViewUser(u)}
                     >
+                      {canEditValue && (
+                        <td className="px-4 py-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(u.id)}
+                            onChange={() => toggleSelect(u.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                          />
+                        </td>
+                      )}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-all duration-300 bg-[#002855] text-white group-hover:bg-blue-600 overflow-hidden text-xs font-black shrink-0">
@@ -531,15 +588,15 @@ export default function Users() {
                         </div>
                       </td>
                       <td className="px-4 py-4 hidden lg:table-cell">
-                        <span className="text-sm font-extrabold text-slate-600 font-mono leading-none">{u.email}</span>
+                        <span className="text-[11px] font-bold text-slate-700 font-mono leading-none">{u.email}</span>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${getRoleColor(u.role)}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-none ${getRoleColor(u.role)}`}>
                           {getRoleIcon(u.role)}{getRoleLabel(u.role)}
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full ${u.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                        <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-none ${u.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                           {statusLabels[u.status]}
                         </span>
                       </td>
@@ -547,7 +604,7 @@ export default function Users() {
                         {u.locations ? (
                           <div className="flex items-center gap-1.5 text-slate-700">
                             <MapPin size={13} className="text-rose-500 shrink-0" />
-                            <span className="text-[12px] font-bold uppercase truncate max-w-xs block leading-none">{u.locations.name}</span>
+                            <span className="text-[11px] font-bold uppercase truncate max-w-xs block leading-none">{u.locations.name}</span>
                           </div>
                         ) : <span className="text-slate-300 italic text-[11px]">Sin asignar</span>}
                       </td>
@@ -555,6 +612,13 @@ export default function Users() {
                         <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
                           {canEdit() && u.role !== 'super_admin' && (
                             <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleLocationAccess(u); }}
+                                className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 bg-white border border-slate-200 transition-all shadow-sm rounded-lg"
+                                title="Administrar Accesos a Sedes"
+                              >
+                                <MapPin size={14} />
+                              </button>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleEditUser(u); }}
                                 className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white border border-slate-200 transition-all shadow-sm rounded-lg"
@@ -585,6 +649,18 @@ export default function Users() {
       {/* Modals */}
       {showForm && (
         <UserForm editUser={editingUser} onClose={handleCloseForm} onSave={handleSaveUser} />
+      )}
+
+      {showLocationAccess && userForLocationAccess && (
+        <UserLocationAccess
+          userId={userForLocationAccess.id}
+          userName={userForLocationAccess.full_name}
+          isOpen={showLocationAccess}
+          onClose={() => {
+            setShowLocationAccess(false);
+            setUserForLocationAccess(undefined);
+          }}
+        />
       )}
 
       {showDetails && selectedUser && (
@@ -628,12 +704,12 @@ export default function Users() {
                     </span>
                   </DetailModalRow>
                   <DetailModalRow label="Rol">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border rounded-full ${getRoleColor(selectedUser.role)}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border rounded-none ${getRoleColor(selectedUser.role)}`}>
                       {getRoleIcon(selectedUser.role)}{getRoleLabel(selectedUser.role)}
                     </span>
                   </DetailModalRow>
                   <DetailModalRow label="Estado">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border rounded-full ${statusColors[selectedUser.status]}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border rounded-none ${statusColors[selectedUser.status]}`}>
                       {statusLabels[selectedUser.status]}
                     </span>
                   </DetailModalRow>

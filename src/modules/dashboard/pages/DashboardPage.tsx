@@ -8,12 +8,14 @@ import {
   AlertTriangle,
   Camera,
   CheckSquare,
-  MapPin
+  MapPin,
+  FileText
 } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthContext';
-import { format, formatDistanceToNow, addMonths, differenceInDays } from 'date-fns';
+import ModalOverlay from '../../../shared/components/ui/ModalOverlay';
+import { format, formatDistanceToNow, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface QuickStats {
@@ -145,7 +147,7 @@ export default function Dashboard() {
           .order('created_at', { ascending: false })
           .limit(10),
         supabase.from('sutran_visits')
-          .select('visit_date, location_name')
+          .select('visit_date, location_name, status')
           .order('visit_date', { ascending: false }),
         user ? supabase.from('notifications')
           .select('*')
@@ -208,35 +210,30 @@ export default function Dashboard() {
       let nextSutranVisit = null;
 
       if (allVisits.length > 0) {
-        const latestVisits = new Map<string, string>();
-        allVisits.forEach((visit: any) => {
-          if (visit.location_name && !latestVisits.has(visit.location_name)) {
-            latestVisits.set(visit.location_name, visit.visit_date);
-          }
-        });
-
         const today = new Date();
-        let closestLocation = '';
-        let minDaysLeft = Infinity;
-        let expectedDate = '';
+        today.setHours(0, 0, 0, 0); // Reset time to start of day
 
-        latestVisits.forEach((lastVisitDateStr, location_name) => {
-          const lastVisitDate = new Date(lastVisitDateStr);
-          const expectedNextVisit = addMonths(lastVisitDate, 3);
-          const daysDiff = differenceInDays(expectedNextVisit, today);
+        // Filter future visits (not cancelled) and find the closest one
+        const futureVisits = allVisits
+          .filter((visit: any) => {
+            const visitDate = new Date(visit.visit_date);
+            visitDate.setHours(0, 0, 0, 0);
+            return visitDate >= today && visit.status !== 'cancelled';
+          })
+          .map((visit: any) => ({
+            ...visit,
+            visitDate: new Date(visit.visit_date)
+          }))
+          .sort((a, b) => a.visitDate.getTime() - b.visitDate.getTime());
 
-          if (daysDiff < minDaysLeft) {
-            minDaysLeft = daysDiff;
-            closestLocation = location_name;
-            expectedDate = expectedNextVisit.toISOString();
-          }
-        });
+        if (futureVisits.length > 0) {
+          const closestVisit = futureVisits[0];
+          const daysDiff = differenceInDays(closestVisit.visitDate, today);
 
-        if (closestLocation) {
           nextSutranVisit = {
-            days: minDaysLeft,
-            date: expectedDate,
-            location: closestLocation
+            days: daysDiff,
+            date: closestVisit.visit_date,
+            location: closestVisit.location_name || 'Sin sede'
           };
         }
       }
@@ -813,38 +810,38 @@ export default function Dashboard() {
 
       {/* Document Details Popup */}
       {showDocumentPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-none shadow-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-300">
+        <ModalOverlay className="bg-slate-900/40 backdrop-blur-sm">
+          <div
+            className="bg-white w-full h-full md:h-[90vh] max-w-full sm:max-w-md rounded-none shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Fixed header */}
-            <div className={`px-6 py-4 border-b flex-shrink-0 ${showDocumentPopup === 'soat' ? 'bg-red-50 border-red-200' :
-              showDocumentPopup === 'citv' ? 'bg-orange-50 border-orange-200' :
-                'bg-purple-50 border-purple-200'
-              }`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-none border ${showDocumentPopup === 'soat' ? 'bg-white border-red-200 text-red-600' :
-                    showDocumentPopup === 'citv' ? 'bg-white border-orange-200 text-orange-600' :
-                      'bg-white border-purple-200 text-purple-600'
-                    }`}>
-                    <AlertTriangle size={20} />
-                  </div>
-                  <div>
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#002855]">
-                      {showDocumentPopup === 'soat' ? 'SOAT' :
-                        showDocumentPopup === 'citv' ? 'Revisión Técnica' :
-                          'Póliza de Seguro'}
-                    </h3>
-                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-0.5">Estado de documentos vehiculares</p>
-                  </div>
+            <div className="bg-gradient-to-r from-blue-900 to-blue-900 px-5 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-6">
+                <div className={`w-9 h-9 bg-white/10 rounded-none flex items-center justify-center border border-white/20`}>
+                  <FileText size={18} className="text-white" />
                 </div>
-                <button
-                  onClick={() => setShowDocumentPopup(null)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X size={24} />
-                </button>
+                <div>
+                  <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">
+                    {showDocumentPopup === 'soat' ? 'SOAT' :
+                      showDocumentPopup === 'citv' ? 'Revisión Técnica' :
+                        'Póliza de Seguro'}
+                  </h2>
+                  <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Estado de documentos vehiculares</p>
+                </div>
               </div>
+              <button
+                onClick={() => setShowDocumentPopup(null)}
+                className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
+              >
+                <X size={24} />
+              </button>
             </div>
+
+            {/* Color indicator stripe */}
+            <div className={`h-1 w-full ${showDocumentPopup === 'soat' ? 'bg-red-500' :
+              showDocumentPopup === 'citv' ? 'bg-orange-500' : 'bg-purple-500'
+            }`} />
 
             {/* Scrollable body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -990,26 +987,26 @@ export default function Dashboard() {
                 })()
               )}
 
-              <div className="flex gap-3 pt-4 border-t border-slate-200">
+              <div className="sticky bottom-0 bg-white border-t px-4 py-3 flex items-center justify-between gap-3 z-10">
+                <button
+                  onClick={() => setShowDocumentPopup(null)}
+                  className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all"
+                >
+                  Cerrar
+                </button>
                 <button
                   onClick={() => {
                     navigate('/flota-vehicular');
                     setShowDocumentPopup(null);
                   }}
-                  className="flex-1 bg-[#002855] text-white px-4 py-2.5 rounded-none hover:bg-[#001f42] transition-colors font-black text-[10px] uppercase tracking-widest"
+                  className="px-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all shadow-lg"
                 >
                   Ver Flota Completa
-                </button>
-                <button
-                  onClick={() => setShowDocumentPopup(null)}
-                  className="flex-1 bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-none hover:bg-slate-200 transition-colors font-black text-[10px] uppercase tracking-widest"
-                >
-                  Cerrar
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   )

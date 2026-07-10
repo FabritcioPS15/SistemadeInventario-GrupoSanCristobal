@@ -19,6 +19,10 @@ export const INVENTORY_COLUMNS: InventoryColumn[] = [
 ];
 
 export const STATUS_MAP: Record<string, { label: string, color: string }> = {
+  Operativo: { label: 'Operativo', color: 'emerald' },
+  Inoperativo: { label: 'Inoperativo', color: 'slate' },
+  'En Reparación': { label: 'En Reparación', color: 'amber' },
+  Baja: { label: 'De Baja', color: 'rose' },
   active: { label: 'Activo', color: 'emerald' },
   inactive: { label: 'Inactivo', color: 'slate' },
   maintenance: { label: 'Mantenimiento', color: 'amber' },

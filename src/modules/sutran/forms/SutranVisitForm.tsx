@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { FileText, X, HelpCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { FileText, HelpCircle } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import type { SutranVisit, Location } from '../../../shared/services/supabase';
 import { notifySutranVisitScheduled } from '../../../shared/services/notifications';
-import { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 
 interface SutranVisitFormProps {
   visit?: SutranVisit;
@@ -220,63 +220,32 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
   };
 
   return (
-    <div className="fixed inset-0 bg-[#001529]/85 backdrop-blur-md flex items-start justify-start p-0 md:items-center md:justify-center md:p-8 z-[999] animate-in fade-in duration-300">
-      <div
-        className="bg-white absolute top-0 left-0 w-screen h-screen md:relative md:w-full md:h-[85vh] md:max-w-6xl md:mx-auto md:rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-white/10"
-      >
-        {/* Header Corporativo (Cuadrado) */}
-        <div className="bg-[#001529] px-6 py-4 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-blue-500/10 rounded-none flex items-center justify-center border border-blue-500/20">
-              <FileText size={24} className="text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">
-                {visit ? 'Editar Visita SUTRAN' : 'Nueva Visita SUTRAN'}
-              </h2>
-              <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-0.5">
-                Módulo de Gestión de Visitas SUTRAN
-              </p>
-            </div>
+    <BaseForm
+      title={visit ? 'Editar Visita SUTRAN' : 'Nueva Visita SUTRAN'}
+      subtitle="Módulo de Gestión de Visitas SUTRAN"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      error={errors.submit}
+      maxWidth="6xl"
+      icon={<FileText size={18} className="text-white" />}
+    >
+      {/* Help Section */}
+      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-start gap-3">
+          <HelpCircle size={20} className="text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="space-y-2">
+            <h4 className="font-semibold text-blue-900">Guía de Visitas SUTRAN</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• <strong>Fecha:</strong> Seleccione la fecha programada para la visita</li>
+              <li>• <strong>Inspector:</strong> Datos opcionales. Si ingresa nombre, incluya email y teléfono válidos</li>
+              <li>• <strong>Documentos:</strong> Agregue todos los documentos relevantes</li>
+              <li>• <strong>Hallazgos:</strong> Documente no conformidades y oportunidades de mejora</li>
+              <li>• <strong>Recomendaciones:</strong> Incluya acciones correctivas y plazos</li>
+            </ul>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-600"
-            disabled={loading}
-          >
-            <X size={24} />
-          </button>
         </div>
-
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col min-h-0 bg-gray-50/50">
-          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8">
-            {/* Help Section */}
-            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="flex items-start gap-3">
-                <HelpCircle size={20} className="text-blue-600 mt-0.5 flex-shrink-0" />
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-blue-900">Guía de Visitas SUTRAN</h4>
-                  <ul className="text-sm text-blue-800 space-y-1">
-                    <li>• <strong>Fecha:</strong> Seleccione la fecha programada para la visita</li>
-                    <li>• <strong>Inspector:</strong> Datos opcionales. Si ingresa nombre, incluya email y teléfono válidos</li>
-                    <li>• <strong>Documentos:</strong> Agregue todos los documentos relevantes</li>
-                    <li>• <strong>Hallazgos:</strong> Documente no conformidades y oportunidades de mejora</li>
-                    <li>• <strong>Recomendaciones:</strong> Incluya acciones correctivas y plazos</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {errors.submit && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
-                <AlertCircle size={20} className="text-red-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-semibold text-red-900">Error</h4>
-                  <p className="text-sm text-red-800">{errors.submit}</p>
-                </div>
-              </div>
-            )}
+      </div>
 
             {/* Section: Información de la Visita */}
             <FormSection title="Información de la Visita" color="blue">
@@ -439,29 +408,6 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
                 </FormField>
               </div>
             </FormSection>
-          </div>
-
-          {/* Submit Button */}
-          <div className="bg-white border-t border-gray-200 px-6 py-4 flex gap-3 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 text-sm font-bold text-gray-400 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="flex-1 py-3 text-sm font-bold text-white bg-[#001529] rounded-lg hover:bg-[#002855] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              disabled={loading}
-            >
-              {loading && <Loader2 size={16} className="animate-spin" />}
-              {visit ? 'Actualizar Visita' : 'Crear Visita'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+    </BaseForm>
   );
 }

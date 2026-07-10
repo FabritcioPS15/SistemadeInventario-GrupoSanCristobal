@@ -1,17 +1,24 @@
-// Modal para ver y gestionar detalles de un ticket
-// Muestra información del ticket, chat en tiempo real y gestión de estado
-// Diseñado para uso en vista de lista (no página completa)
+// =============================================================================
+// TicketDetailModal.tsx — Modal de detalle rápido de ticket
+// Funcionalidades:
+//   - Vista compacta del ticket (información + chat en pestañas)
+//   - Chat en tiempo real con envío de mensajes e imágenes
+//   - Gestión de estado del ticket (Pendiente → En Proceso → Resuelto → Cerrado)
+//   - Eliminación de ticket con limpieza de adjuntos
+//   - Diseñado para usarse desde listas (MyChatsPage, etc.) no desde la página completa
+// =============================================================================
+
 import { useState, useEffect, useRef } from 'react';
-import { X, Send, User, Clock, MessageSquare, Trash2, ShieldCheck, Image as ImageIcon, Loader2, Ticket } from 'lucide-react';
+import { X, Send, User, Clock, MessageSquare, Trash2, ShieldCheck, Image as ImageIcon, Loader2, Ticket, MessageCircle } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
-import { IoChatbubbles } from "react-icons/io5";
 import { useNotify } from '../../../shared/hooks/useNotify';
+import ModalOverlay from '../../../shared/components/ui/ModalOverlay';
 
 // Props del componente modal
 // ticket: Datos del ticket a mostrar
 // onClose: Función para cerrar el modal
-// onUpdate: Función para recargar la lista de tickets
+// onUpdate: Función para recargar la lista de tickets padre
 type TicketDetailModalProps = {
     ticket: any;
     onClose: () => void;
@@ -27,7 +34,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     const [sending, setSending] = useState(false);
     const commentsEndRef = useRef<HTMLDivElement>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
-    const [activeTab, setActiveTab] = useState<'details' | 'feed'>('feed');
+    const [activeTab, setActiveTab] = useState<'details' | 'feed'>('feed'); // Pestaña activa en mobile
     const [uploadingImage, setUploadingImage] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -212,8 +219,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     };
 
     // Elimina el ticket si tiene permisos
-    // Solo el creador (3 min) o staff pueden eliminar
-    // Limpia archivos adjuntos antes de borrar
+    // Solo el creador (3 min desde creación) o staff (super_admin, sistemas, gerencia, supervisores) pueden eliminar
+    // Primero limpia archivos adjuntos del storage, luego elimina el registro
     const handleDeleteTicket = async () => {
         const now = new Date();
         const createdDate = new Date(currentTicket.created_at);
@@ -256,7 +263,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     };
 
     // Actualiza el estado del ticket (solo el técnico asignado)
-    // Registra el cambio como comentario automático
+    // Al cambiar a "in_progress" asigna automáticamente al técnico y registra attended_at
+    // Cada cambio de estado se registra como un comentario automático en el feed
     const handleStatusUpdate = async (newStatus: string) => {
         const isAssignedTechnician = user?.id === currentTicket.assigned_to;
         
@@ -322,34 +330,34 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     const canManageStatus = user?.id === currentTicket.assigned_to;
 
     return (
-        <div className="fixed inset-0 bg-[#001529]/70 backdrop-blur-xl flex items-center justify-center z-4 p-2 sm:p-4 md:p-8 animate-in fade-in duration-300">
-            <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[3rem] shadow-2xl w-full h-full max-h-[95vh] sm:max-h-[85vh] md:max-h-[700px] max-w-5xl flex flex-col overflow-hidden border border-white/20 animate-in slide-in-from-bottom-8 duration-500">
+        <ModalOverlay className="bg-slate-900/40 backdrop-blur-sm">
+            <div className="bg-white rounded-none shadow-2xl w-full h-full max-h-[95vh] sm:max-h-[85vh] md:max-h-[700px] max-w-5xl flex flex-col overflow-hidden border border-slate-200 animate-in slide-in-from-bottom-8 duration-500">
 
                 {/* Header for mobile */}
-                <div className="flex md:hidden items-center justify-between p-4 border-b border-slate-100 bg-white">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                            <IoChatbubbles size={20} />
+                <div className="flex md:hidden bg-gradient-to-r from-blue-900 to-blue-900 px-4 py-3 items-center justify-between shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 bg-white/10 rounded-none flex items-center justify-center border border-white/20">
+                            <MessageCircle size={16} className="text-white" />
                         </div>
                         <div>
-                            <h3 className="text-xs font-black text-[#002855] tracking-tight">CANAL DE SEGUIMIENTO</h3>
-                            <p className="text-[7px] font-bold text-slate-400 uppercase tracking-[0.2em]">Interacción en tiempo real</p>
+                            <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] leading-tight">CANAL DE SEGUIMIENTO</h3>
+                            <p className="text-[7px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Interacción en tiempo real</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleDeleteTicket}
-                            className="w-6 h-6 rounded-lg bg-white border border-slate-100 text-slate-300 hover:text-rose-500 transition-all flex items-center justify-center hover:bg-rose-50"
+                            className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
                             title="Eliminar ticket"
                         >
-                            <Trash2 size={12} />
+                            <Trash2 size={14} />
                         </button>
                         <button
                             onClick={onClose}
-                            className="w-6 h-6 rounded-lg bg-white border border-slate-100 text-slate-300 hover:text-slate-600 transition-all flex items-center justify-center hover:bg-slate-50"
+                            className="p-1.5 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
                             title="Cerrar ventana"
                         >
-                            <X size={12} />
+                            <X size={16} />
                         </button>
                     </div>
                 </div>
@@ -481,30 +489,30 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                         activeTab === 'feed' ? 'flex' : 'hidden'
                     } md:flex flex-1 flex-col bg-white relative`}>
                         {/* Desktop Header - Hidden on mobile */}
-                        <div className="hidden md:flex p-6 sm:p-7 md:p-8 border-b border-slate-50 items-center justify-between shrink-0">
-                            <div className="flex items-center gap-4 sm:gap-5">
-                                <div className="w-12 sm:w-14 h-12 sm:h-14 rounded-[1.5rem] bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                    <IoChatbubbles className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <div className="hidden md:flex bg-gradient-to-r from-blue-900 to-blue-900 px-5 py-4 items-center justify-between shrink-0">
+                            <div className="flex items-center gap-6">
+                                <div className="w-9 h-9 bg-white/10 rounded-none flex items-center justify-center border border-white/20">
+                                    <MessageCircle size={18} className="text-white" />
                                 </div>
                                 <div>
-                                    <h3 className="text-xs sm:text-sm font-black text-[#002855] tracking-tight">CANAL DE SEGUIMIENTO</h3>
-                                    <p className="text-[7px] sm:text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Interacción directa en tiempo real</p>
+                                    <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">CANAL DE SEGUIMIENTO</h3>
+                                    <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Interacción directa en tiempo real</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                <button
-                                    onClick={onClose}
-                                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white border border-slate-100 text-slate-300 hover:text-slate-600 transition-all flex items-center justify-center hover:bg-slate-50"
-                                    title="Cerrar ventana"
-                                >
-                                    <X className="w-3 h-3 sm:w-4 sm:h-4" />
-                                </button>
+                            <div className="flex items-center gap-2">
                                 <button
                                     onClick={handleDeleteTicket}
-                                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-white border border-slate-100 text-slate-300 hover:text-rose-500 transition-all flex items-center justify-center hover:bg-rose-50"
+                                    className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
                                     title="Eliminar ticket"
                                 >
-                                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    <Trash2 size={20} />
+                                </button>
+                                <button
+                                    onClick={onClose}
+                                    className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
+                                    title="Cerrar ventana"
+                                >
+                                    <X size={24} />
                                 </button>
                             </div>
                         </div>
@@ -625,6 +633,6 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                     </div>
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 }

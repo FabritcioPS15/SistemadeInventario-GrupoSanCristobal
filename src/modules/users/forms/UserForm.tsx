@@ -96,7 +96,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
         { id: 'checklist-create', label: 'Crear Checklist', type: 'edit' }
       ]
     },
-    
+
     // Operativo
     {
       id: 'inventory',
@@ -171,7 +171,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
         { id: 'flota-edit', label: 'Editar Flota', type: 'edit' }
       ]
     },
-    
+
     // Administrativo
     {
       id: 'users',
@@ -253,7 +253,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
         { id: 'sent-edit', label: 'Editar Envíos', type: 'edit' }
       ]
     },
-    
+
     // Sistema
     {
       id: 'audit',
@@ -379,7 +379,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
   const handleMenuPermissionToggle = (menuId: string, permissionType: 'view' | 'edit', checked: boolean) => {
     const permissionId = `${menuId}-${permissionType}`;
     handlePermissionChange(permissionId, checked);
-    
+
     // Si se desmarca el permiso principal, desmarcar todos los submenús
     if (!checked && permissionType === 'view') {
       const menu = availablePermissions.find(p => p.id === menuId);
@@ -632,18 +632,17 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
       icon={<User size={24} className="text-blue-600" />}
     >
       {/* Section: Datos Principales */}
-      <FormSection 
-        title="Información de Identidad" 
+      <FormSection
+        title="Información de Identidad"
         color="blue"
         titleRight={
           <button
             type="button"
             onClick={() => setShowRoleInfo(!showRoleInfo)}
-            className={`p-1.5 rounded-lg border transition-colors ${
-              showRoleInfo 
-                ? 'bg-blue-50 border-blue-200 text-blue-600' 
+            className={`p-1.5 rounded-lg border transition-colors ${showRoleInfo
+                ? 'bg-blue-50 border-blue-200 text-blue-600'
                 : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-blue-600 hover:border-blue-200'
-            }`}
+              }`}
             title={showRoleInfo ? "Cerrar información de roles" : "Ver información de roles y accesos"}
           >
             <HelpCircle size={14} />
@@ -664,7 +663,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
                   <X size={14} />
                 </button>
               </div>
-              
+
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {['super_admin', 'gerencia', 'sistemas', 'supervisores', 'area_legal', 'area_contable', 'administradores', 'personalizado'].map((role) => {
                   const roleInfo = getRoleAccessInfo(role);
@@ -687,14 +686,14 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
             </div>
           </div>
         )}
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <FormField label="Nombre Completo" required error={errors.full_name}>
-            <FormInput 
-              type="text" 
-              name="full_name" 
-              value={formData.full_name} 
-              onChange={handleChange} 
+            <FormInput
+              type="text"
+              name="full_name"
+              value={formData.full_name}
+              onChange={handleChange}
               placeholder="Juan Pérez García"
               required
               error={errors.full_name}
@@ -706,10 +705,10 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
           </FormField>
 
           <FormField label="Nombre de Usuario" error={errors.username}>
-            <FormInput 
-              type="text" 
-              name="username" 
-              value={formData.username} 
+            <FormInput
+              type="text"
+              name="username"
+              value={formData.username}
               onChange={(e) => {
                 const val = e.target.value.toLowerCase().replace(/\s/g, '_');
                 setFormData(prev => ({ ...prev, username: val }));
@@ -721,11 +720,11 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
           </FormField>
 
           <FormField label="Email Corporativo" required error={errors.email}>
-            <FormInput 
-              type="email" 
-              name="email" 
-              value={formData.email} 
-              onChange={handleChange} 
+            <FormInput
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
               placeholder="juan@corporativo.com"
               required
               error={errors.email}
@@ -737,11 +736,11 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
           </FormField>
 
           <FormField label="DNI / Documento" error={errors.dni}>
-            <FormInput 
-              type="text" 
-              name="dni" 
-              value={formData.dni} 
-              onChange={handleChange} 
+            <FormInput
+              type="text"
+              name="dni"
+              value={formData.dni}
+              onChange={handleChange}
               placeholder="12345678"
               error={errors.dni}
               disabled={editUser?.role === 'super_admin'}
@@ -752,11 +751,11 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
           </FormField>
 
           <FormField label="Teléfono de Contacto" error={errors.phone}>
-            <FormInput 
-              type="tel" 
-              name="phone" 
-              value={formData.phone} 
-              onChange={handleChange} 
+            <FormInput
+              type="tel"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
               placeholder="+51 123 456 789"
               error={errors.phone}
               disabled={editUser?.role === 'super_admin'}
@@ -787,12 +786,12 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
               <option value="administradores">Administradores (Gestión)</option>
               <option value="personalizado">Personalizado (Permisos Específicos)</option>
             </FormSelect>
-            
+
             {/* Advertencia para Super Admin */}
             {formData.role === 'super_admin' && (
               <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <p className="text-sm text-amber-800 font-medium">
-                  ⚠️ <strong>Atención:</strong> El rol Super Administrador es exclusivo y único. 
+                  ⚠️ <strong>Atención:</strong> El rol Super Administrador es exclusivo y único.
                   Solo puede existir un usuario con este rol en todo el sistema.
                 </p>
               </div>
@@ -802,18 +801,8 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
             {editUser?.role === 'super_admin' && (
               <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-800 font-medium">
-                  🔒 <strong>Protegido:</strong> Este usuario tiene rol Super Administrador. 
+                  🔒 <strong>Protegido:</strong> Este usuario tiene rol Super Administrador.
                   No se puede modificar su rol ni sus datos de identificación.
-                </p>
-              </div>
-            )}
-
-            {/* Mensaje si Super Admin ya existe */}
-            {hasSuperAdmin && !editUser && (
-              <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-sm text-gray-600 font-medium">
-                  ℹ️ <strong>Información:</strong> Ya existe un Super Administrador en el sistema. 
-                  Este rol no está disponible para nuevos usuarios.
                 </p>
               </div>
             )}
@@ -921,14 +910,14 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
             <p className="text-sm text-gray-600">
               Selecciona los permisos específicos para este usuario. Los menús principales pueden expandirse para ver opciones detalladas:
             </p>
-            
+
             {/* Agrupar por categorías */}
             {['Principal', 'Operativo', 'Administrativo', 'Sistema'].map((category) => (
               <div key={category} className="space-y-4">
                 <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-2">
                   {category}
                 </h4>
-                
+
                 {availablePermissions
                   .filter((permission) => permission.category === category)
                   .map((permission) => (
@@ -942,15 +931,15 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
                               onClick={() => toggleMenu(permission.id)}
                               className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                             >
-                              <ChevronRight 
-                                size={16} 
+                              <ChevronRight
+                                size={16}
                                 className={`transition-transform ${expandedMenus.has(permission.id) ? 'rotate-90' : ''}`}
                               />
                             </button>
                           )}
                           <span className="font-medium text-gray-900">{permission.label}</span>
                         </div>
-                        
+
                         {/* Permisos de Ver/Editar */}
                         <div className="flex items-center gap-4">
                           <label className="flex items-center gap-2 cursor-pointer">
@@ -973,7 +962,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
                           </label>
                         </div>
                       </div>
-                      
+
                       {/* Submenús desplegables */}
                       {permission.hasSubmenu && expandedMenus.has(permission.id) && (
                         <div className="ml-6 space-y-2 border-l-2 border-gray-200 pl-4">

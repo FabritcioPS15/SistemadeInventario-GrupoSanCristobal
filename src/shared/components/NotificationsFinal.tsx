@@ -120,7 +120,7 @@ export default function NotificationsFinal() {
   const knownIdsRef = useRef<Set<string> | null>(null);
 
   // Roles que deben recibir notificaciones
-  const notificationRoles = ['super_admin', 'gerencia', 'sistemas', 'supervisores'];
+  const notificationRoles = ['super_admin', 'gerencia', 'sistemas', 'supervisores', 'administradores', 'area_legal', 'area_contable', 'personalizado'];
 
   // Solicitar permisos de notificación del navegador
   useEffect(() => {

@@ -138,7 +138,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       
       // Apply search filter
       if (searchTerm) {
-        query = query.or(`codigo_unico.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,serial_number.ilike.%${searchTerm}%`);
+        query = query.or(`codigo_unico.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,serial_number.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,item.ilike.%${searchTerm}%`);
       }
       
       // Apply category filter from URL
@@ -164,7 +164,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       
       // Apply status filter
       if (filterStatus) {
-        query = query.eq('status', filterStatus);
+        query = query.eq('estado_uso', filterStatus);
       }
 
       // Apply rubro filter (business_type de la empresa)
@@ -206,8 +206,19 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
 
       
       // Apply pagination and sort
+      let sortField = sortConfig?.key || 'created_at';
+      let sortAscending = sortConfig?.direction === 'asc';
+
+      if (sortField === 'category_id' || sortField === 'location_id') {
+        // These sort by UUID server-side; client mapping adds names
+      } else if (sortField === 'item' || sortField === 'descripcion') {
+        sortField = 'item';
+      } else if (sortField === 'brand' || sortField === 'model' || sortField === 'serial_number' || sortField === 'codigo_unico' || sortField === 'fecha_adquisicion') {
+        // Direct columns, sort server-side
+      }
+
       const { data, error, count } = await query
-        .order(sortConfig?.key || 'created_at', { ascending: sortConfig?.direction === 'asc' })
+        .order(sortField, { ascending: sortAscending, nullsFirst: false })
         .range(from, to);
       
       if (error) throw error;

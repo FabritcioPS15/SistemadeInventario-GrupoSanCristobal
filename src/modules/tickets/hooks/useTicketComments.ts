@@ -1,5 +1,14 @@
-// Hook personalizado para gestionar los comentarios de un ticket
-// Maneja la carga de datos del ticket, sus comentarios, y la interacción con ellos
+// =============================================================================
+// useTicketComments.ts — Hook para gestionar datos y comentarios de un ticket
+// Responsabilidades:
+//   - Carga el ticket completo con relaciones (solicitante, técnico, ubicación,
+//     asignaciones múltiples)
+//   - Busca ID de AnyDesk en los comentarios existentes (para mostrarlo en UI)
+//   - Carga todos los comentarios del ticket ordenados cronológicamente
+//   - Agrega nuevos comentarios a la base de datos
+//   - Auto-scroll al último comentario
+// =============================================================================
+
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../../shared/services/supabase';
 

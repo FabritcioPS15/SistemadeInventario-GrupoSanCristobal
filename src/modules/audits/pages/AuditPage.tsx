@@ -5,6 +5,7 @@ import { supabase, BranchAudit } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
 import AuditForm from '../forms/AuditForm';
 import HeaderSearch from '../../../app/layouts/HeaderSearch';
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import { useNotify } from '../../../shared/hooks/useNotify';
 
 type ViewType = 'history' | 'form';
@@ -19,7 +20,30 @@ export default function Audit() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [editingAudit, setEditingAudit] = useState<BranchAudit | undefined>();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = (auditsToSelect: BranchAudit[]) => {
+    if (selectedIds.length === auditsToSelect.length && auditsToSelect.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(auditsToSelect.map(a => a.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = await confirm(`¿Eliminar ${selectedIds.length} auditorías seleccionadas?`, 'Eliminación por Lote');
+    if (!confirmed) return;
+    const { error } = await supabase.from('branch_audits').delete().in('id', selectedIds);
+    if (error) return notifyError('Error al eliminar: ' + error.message);
+    await fetchAudits();
+    setSelectedIds([]);
+  };
 
   useEffect(() => {
     fetchAudits();
@@ -86,17 +110,19 @@ export default function Audit() {
             variant="light"
           />
 
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-none font-black text-[10px] tracking-widest text-[#002855] outline-none hover:border-blue-500 transition-all cursor-pointer"
-          >
-            <option value="">TODOS LOS ESTADOS</option>
-            <option value="excellent">EXCELENTE</option>
-            <option value="good">BUENO</option>
-            <option value="regular">REGULAR</option>
-            <option value="critical">CRÍTICO</option>
-          </select>
+          <FilterBar
+            filters={[
+              { key: 'status', placeholder: 'TODOS LOS ESTADOS', wrapperClassName: 'md:min-w-[200px]', options: [
+                { value: 'excellent', label: 'EXCELENTE' },
+                { value: 'good', label: 'BUENO' },
+                { value: 'regular', label: 'REGULAR' },
+                { value: 'critical', label: 'CRÍTICO' },
+              ]},
+            ]}
+            values={{ status: filterStatus }}
+            onChange={(key, value) => setFilterStatus(value as string)}
+            hideClearButton
+          />
         </div>
 
         <div className="flex items-center gap-4">
@@ -114,6 +140,16 @@ export default function Audit() {
               <List size={16} />
             </button>
           </div>
+
+          {canEdit() && selectedIds.length > 0 && view === 'history' && (
+            <button
+              onClick={handleBulkDelete}
+              className="px-4 py-2 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-all shadow-sm flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest"
+            >
+              <Trash2 size={14} />
+              Eliminar ({selectedIds.length})
+            </button>
+          )}
 
           {canEdit() && (
             <button
@@ -160,12 +196,22 @@ export default function Audit() {
                 {filteredAudits.map(audit => {
                   const statusCfg = getStatusConfig(audit.status);
                   return (
-                    <div key={audit.id} className="bg-white border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 relative group overflow-hidden flex flex-col">
+                    <div key={audit.id} className={`bg-white border hover:shadow-xl transition-all duration-300 relative group overflow-hidden flex flex-col ${selectedIds.includes(audit.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-200 hover:border-blue-200 shadow-sm'}`}>
+                      {canEdit() && (
+                        <div className="absolute top-4 right-4 z-20">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(audit.id)}
+                            onChange={() => toggleSelect(audit.id)}
+                            onClick={e => e.stopPropagation()}
+                            className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer shadow-sm"
+                          />
+                        </div>
+                      )}
                       <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rotate-45 -mr-16 -mt-16 group-hover:bg-blue-50 transition-colors" />
                       <div className="p-7 flex-1 flex flex-col">
                         <div className="flex items-start justify-between mb-8 relative z-10">
                           <span className={`px-3 py-1 border text-[9px] font-black uppercase tracking-widest ${statusCfg.color}`}>{statusCfg.label}</span>
-                          <span className="text-[9px] font-mono text-slate-300 font-bold uppercase tracking-widest">ID: {audit.id.slice(0, 8)}</span>
                         </div>
 
                         <div className="mb-8">
@@ -200,7 +246,17 @@ export default function Audit() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-white border-b border-slate-100">
-                      <th className="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Auditoría / Auditor</th>
+                      {canEdit() && (
+                        <th className="px-4 py-4 text-center w-12">
+                          <input
+                            type="checkbox"
+                            checked={filteredAudits.length > 0 && selectedIds.length === filteredAudits.length}
+                            onChange={() => toggleSelectAll(filteredAudits)}
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                          />
+                        </th>
+                      )}
+                      <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Auditoría / Auditor</th>
                       <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Ubicación</th>
                       <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha</th>
                       <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Score</th>
@@ -212,8 +268,19 @@ export default function Audit() {
                     {filteredAudits.map(audit => {
                       const statusCfg = getStatusConfig(audit.status);
                       return (
-                        <tr key={audit.id} className="hover:bg-blue-50/30 cursor-pointer transition-all duration-200 group border-b border-slate-50 last:border-0" onClick={() => handleEdit(audit)}>
-                          <td className="px-8 py-4">
+                        <tr key={audit.id} className={`cursor-pointer transition-all duration-200 group border-b border-slate-50 last:border-0 ${selectedIds.includes(audit.id) ? 'bg-blue-50/40' : 'hover:bg-blue-50/30'}`} onClick={() => handleEdit(audit)}>
+                          {canEdit() && (
+                            <td className="px-4 py-4 text-center w-12">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(audit.id)}
+                                onChange={() => toggleSelect(audit.id)}
+                                onClick={e => e.stopPropagation()}
+                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                              />
+                            </td>
+                          )}
+                          <td className="px-4 py-4">
                             <div className="flex flex-col">
                               <span className="text-[13px] font-black text-[#002855] uppercase tracking-tight group-hover:text-blue-600 transition-colors uppercase">{audit.id.slice(0, 8)}</span>
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 italic">{audit.auditor_name}</span>

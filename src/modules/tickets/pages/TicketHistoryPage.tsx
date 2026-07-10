@@ -1,8 +1,18 @@
+// =============================================================================
+// TicketHistoryPage.tsx — Historial de tickets archivados
+// Funcionalidades:
+//   - Lista todos los tickets con estado "archived"
+//   - Filtros por búsqueda, prioridad y rango de fechas
+//   - Exportación a PDF y Excel
+//   - Cálculo de tiempo de resolución (desde creación hasta cierre)
+// =============================================================================
+
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {  ShieldCheck, Search, Calendar, RefreshCw, Ticket as TicketIcon, Clock, User } from 'lucide-react';
 import { FaFilePdf } from "react-icons/fa6";
 import { RiFileExcel2Fill } from "react-icons/ri";
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import { supabase } from '../../../shared/services/supabase';
 import {
   Table,
@@ -37,6 +47,8 @@ interface Ticket {
     };
 }
 
+// Mapa de estilos visuales para cada nivel de prioridad
+// Se usa para colorear badges y etiquetas en la tabla
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string }> = {
     critical: { label: 'P1 - Crítica', color: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
     high: { label: 'P2 - Alta', color: 'text-orange-600 bg-orange-50', dot: 'bg-orange-500' },
@@ -51,14 +63,17 @@ export default function TicketHistory() {
     const [refreshing, setRefreshing] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterPriority, setFilterPriority] = useState('all');
-    const [filterDateRange, setFilterDateRange] = useState('all');
+    const [filterDateRange, setFilterDateRange] = useState('all'); // all, 7days, 30days, 90days, custom
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
+    // Carga inicial de tickets archivados al montar el componente
     useEffect(() => {
         fetchArchivedTickets();
     }, []);
 
+    // Obtiene todos los tickets con estado "archived" desde Supabase
+    // Incluye relaciones: solicitante, técnico asignado y ubicación
     const fetchArchivedTickets = async () => {
         try {
             const { data, error } = await supabase
@@ -133,15 +148,17 @@ export default function TicketHistory() {
         });
     }, [tickets, searchTerm, filterPriority, filterDateRange, startDate, endDate]);
 
+    // Calcula el tiempo transcurrido desde la creación hasta el cierre del ticket
+    // Devuelve formato legible: segundos, minutos u horas según la duración
     const getTimeToClose = (ticket: Ticket) => {
         const created = new Date(ticket.created_at);
         const closed = new Date(ticket.closed_at || ticket.updated_at);
         const diffMs = closed.getTime() - created.getTime();
 
-        if (diffMs < 60000) { // Less than 1 minute
+        if (diffMs < 60000) { // Menos de 1 minuto
             const seconds = Math.floor(diffMs / 1000);
             return `${seconds}s`;
-        } else if (diffMs < 3600000) { // Less than 1 hour
+        } else if (diffMs < 3600000) { // Menos de 1 hora
             const minutes = Math.floor(diffMs / (1000 * 60));
             const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
             return `${minutes}m ${seconds}s`;
@@ -266,35 +283,29 @@ export default function TicketHistory() {
 
                         {/* Filters & Actions */}
                         <div className="flex flex-wrap items-center gap-2">
-                            {/* Priority Filter */}
-                            <div className="relative">
-                                <select
-                                    value={filterPriority}
-                                    onChange={(e) => setFilterPriority(e.target.value)}
-                                    className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center transition-all outline-none"
-                                >
-                                    <option value="all">Todas las prioridades</option>
-                                    <option value="critical">P1 - Crítica</option>
-                                    <option value="high">P2 - Alta</option>
-                                    <option value="medium">P3 - Media</option>
-                                    <option value="low">P4 - Baja</option>
-                                </select>
-                            </div>
-
-                            {/* Date Filter */}
-                            <div className="relative">
-                                <select
-                                    value={filterDateRange}
-                                    onChange={(e) => setFilterDateRange(e.target.value)}
-                                    className="px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30 text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center transition-all outline-none"
-                                >
-                                    <option value="all">Todo el tiempo</option>
-                                    <option value="7days">Últimos 7 días</option>
-                                    <option value="30days">Últimos 30 días</option>
-                                    <option value="90days">Últimos 90 días</option>
-                                    <option value="custom">Rango Personalizado</option>
-                                </select>
-                            </div>
+                            <FilterBar
+                                filters={[
+                                    { key: 'priority', placeholder: 'Todas las prioridades', options: [
+                                        { value: 'critical', label: 'P1 - Crítica' },
+                                        { value: 'high', label: 'P2 - Alta' },
+                                        { value: 'medium', label: 'P3 - Media' },
+                                        { value: 'low', label: 'P4 - Baja' },
+                                    ]},
+                                    { key: 'dateRange', placeholder: 'Todo el tiempo', options: [
+                                        { value: 'all', label: 'Todo el tiempo' },
+                                        { value: '7days', label: 'Últimos 7 días' },
+                                        { value: '30days', label: 'Últimos 30 días' },
+                                        { value: '90days', label: 'Últimos 90 días' },
+                                        { value: 'custom', label: 'Rango Personalizado' },
+                                    ]},
+                                ]}
+                                values={{ priority: filterPriority, dateRange: filterDateRange }}
+                                onChange={(key, value) => {
+                                    if (key === 'priority') setFilterPriority(value as string);
+                                    else if (key === 'dateRange') setFilterDateRange(value as string);
+                                }}
+                                hideClearButton
+                            />
 
                             {/* Refrescar */}
                             <button

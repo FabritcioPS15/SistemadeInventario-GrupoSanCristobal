@@ -17,7 +17,7 @@ import DetailModal, {
   StandardModalFooter,
 } from '../../../shared/components/ui/DetailModal';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
-import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
 import {
@@ -60,7 +60,7 @@ export default function FlotaVehicular() {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'list' | 'form'>('list');
   const [editing, setEditing] = useState<Vehiculo | undefined>();
-  const [filterEstado, setFilterEstado] = useState<string>('todos');
+  const [filterEstado, setFilterEstado] = useState<string>('');
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [schools, setSchools] = useState<Location[]>([]);
@@ -72,6 +72,7 @@ export default function FlotaVehicular() {
   const [showVencimientoMenu, setShowVencimientoMenu] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [selectedVehiculo, setSelectedVehiculo] = useState<Vehiculo | undefined>();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const vencimientoMenuRef = useRef<HTMLDivElement>(null);
 
@@ -316,7 +317,7 @@ export default function FlotaVehicular() {
       const q = search.toLowerCase();
       const searchMatch = !search || v.placa.toLowerCase().includes(q) || v.marca.toLowerCase().includes(q) || v.modelo.toLowerCase().includes(q);
       const sedeMatch = selectedLocations.length === 0 || selectedLocations.length === schools.length || selectedLocations.includes(v.ubicacion_actual);
-      const estadoMatch = filterEstado === 'todos' || v.estado === filterEstado;
+      const estadoMatch = !filterEstado || filterEstado === 'todos' || v.estado === filterEstado;
       return searchMatch && sedeMatch && estadoMatch;
     });
   }, [vehiculos, search, selectedLocations, filterEstado, schools.length]);
@@ -432,8 +433,36 @@ export default function FlotaVehicular() {
       if (error) throw error;
       await fetchVehiculos();
       notifySuccess('Unidad eliminada correctamente');
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
     } catch (e) {
       notifyError('Error al eliminar la unidad');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = await confirm(`¿Está seguro de eliminar ${selectedIds.length} unidades seleccionadas?`, 'Eliminación por Lote');
+    if (!confirmed) return;
+    try {
+      const { error } = await supabase.from('vehiculos').delete().in('id', selectedIds);
+      if (error) throw error;
+      await fetchVehiculos();
+      notifySuccess('Unidades eliminadas correctamente');
+      setSelectedIds([]);
+    } catch (e) {
+      notifyError('Error al eliminar las unidades');
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = (items: Vehiculo[]) => {
+    if (selectedIds.length === items.length && items.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(items.map(i => i.id));
     }
   };
 
@@ -790,28 +819,22 @@ export default function FlotaVehicular() {
             </>
           }
         >
-          <FilterSelect
-            icon={MapPin}
-            iconClassName="text-rose-500"
-            value={selectedLocations[0] || ''}
-            onChange={e => { const v = e.target.value as string; setSelectedLocations(v ? [v] : []); setCurrentPage(1); }}
-            wrapperClassName="md:min-w-[220px]"
-          >
-            <option value="">TODAS LAS SEDES</option>
-            {schools.map(loc => (
-              <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-            ))}
-          </FilterSelect>
-
-          <FilterSelect
-            value={filterEstado}
-            onChange={e => { setFilterEstado(e.target.value as string); setCurrentPage(1); }}
-          >
-            <option value="todos">Todos los estados</option>
-            <option value="activa">Activa</option>
-            <option value="inactiva">Inactiva</option>
-            <option value="en_proceso">En Proceso</option>
-          </FilterSelect>
+          <FilterBar
+            filters={[
+              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: schools.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+              { key: 'estado', placeholder: 'TODOS LOS ESTADOS', options: [
+                { value: 'activa', label: 'Activa' },
+                { value: 'inactiva', label: 'Inactiva' },
+                { value: 'en_proceso', label: 'En Proceso' },
+              ]},
+            ]}
+            values={{ location: selectedLocations[0] || '', estado: filterEstado }}
+            onChange={(key, value) => {
+              if (key === 'location') setSelectedLocations(value ? [value as string] : []);
+              else if (key === 'estado') setFilterEstado(value as string);
+              setCurrentPage(1);
+            }}
+          />
 
           <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
@@ -826,6 +849,16 @@ export default function FlotaVehicular() {
           )}
 
           <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPdf} />
+
+          {canEdit() && selectedIds.length > 0 && viewMode === 'table' && (
+            <button
+              onClick={handleBulkDelete}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm"
+            >
+              <Trash2 size={14} />
+              Eliminar ({selectedIds.length})
+            </button>
+          )}
 
           {/* Reporte de Vencimientos */}
           <div className="relative w-full md:w-auto" ref={vencimientoMenuRef}>
@@ -913,6 +946,16 @@ export default function FlotaVehicular() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        {canEdit() && (
+                          <TableHead className="w-12 text-center">
+                            <input
+                              type="checkbox"
+                              checked={paginatedVehiculos.length > 0 && selectedIds.length === paginatedVehiculos.length}
+                              onChange={() => toggleSelectAll(paginatedVehiculos)}
+                              className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                            />
+                          </TableHead>
+                        )}
                         <TableHead sortable isSorted={sortConfig?.key === 'placa'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('placa')}>Unidad / Placa</TableHead>
                         <TableHead sortable isSorted={sortConfig?.key === 'estado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('estado')}>Estado</TableHead>
                         <TableHead sortable isSorted={sortConfig?.key === 'ubicacion_actual'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('ubicacion_actual')}>Sede de Asignación</TableHead>
@@ -926,8 +969,20 @@ export default function FlotaVehicular() {
                       {paginatedVehiculos.map((v) => (
                         <TableRow
                           key={v.id}
+                          className={`cursor-pointer transition-colors duration-150 group relative ${selectedIds.includes(v.id) ? 'bg-blue-50/40' : ''}`}
                           onClick={() => handleView(v)}
                         >
+                          {canEdit() && (
+                            <TableCell className="text-center w-12">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(v.id)}
+                                onChange={() => toggleSelect(v.id)}
+                                onClick={e => e.stopPropagation()}
+                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                              />
+                            </TableCell>
+                          )}
                           <TableCell className="font-bold">
                             <div className="flex items-center gap-4">
                               {renderPlacaBadge(v.placa)}
@@ -999,7 +1054,18 @@ export default function FlotaVehicular() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {paginatedVehiculos.map(v => (
-                    <div key={v.id} className="bg-white rounded-2xl shadow-sm border border-slate-200/80 hover:shadow-xl transition-all p-6 flex flex-col group overflow-hidden hover:-translate-y-0.5 duration-200">
+                    <div key={v.id} className={`bg-white rounded-2xl shadow-sm border transition-all p-6 flex flex-col group overflow-hidden hover:-translate-y-0.5 duration-200 relative ${selectedIds.includes(v.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-200/80 hover:shadow-xl'}`}>
+                      {canEdit() && (
+                        <div className="absolute top-4 right-4 z-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(v.id)}
+                            onChange={() => toggleSelect(v.id)}
+                            onClick={e => e.stopPropagation()}
+                            className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer shadow-sm"
+                          />
+                        </div>
+                      )}
                       <div className="flex justify-between items-center mb-5">
                         {renderPlacaBadge(v.placa)}
                         <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${statusColors[v.estado]}`}>

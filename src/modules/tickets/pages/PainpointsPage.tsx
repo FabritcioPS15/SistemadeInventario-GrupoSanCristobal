@@ -1,3 +1,13 @@
+// =============================================================================
+// PainpointsPage.tsx — Página de Puntos Críticos (Pain Points)
+// Funcionalidades:
+//   - Visualización de incidencias críticas en formato grid o lista
+//   - Mock data para demostración de UI
+//   - Vista corporativa de seguimiento de fallas
+//   NOTA: Actualmente usa datos mock. Integrar con base de datos cuando
+//   se defina el esquema de pain_points.
+// =============================================================================
+
 import { useState } from 'react';
 import { Zap, Plus, LayoutGrid, List, AlertTriangle, ArrowRight } from 'lucide-react';
 import { useHeaderVisible } from '../../../shared/hooks/useHeaderVisible';

@@ -80,52 +80,36 @@ export default function BaseForm({
 
       >
 
-        {/* Header Corporativo (Cuadrado) */}
-
-        <div className="bg-gradient-to-r from-blue-900 to-blue-900 px-5 py-4 flex items-center justify-between shrink-0">
-
-          <div className="flex items-center gap-6">
-
+        {/* Header Corporativo (Estilo Popup Cámaras) */}
+        <div className="bg-[#002855] px-3 py-3 sm:px-5 sm:py-4 md:px-6 md:py-5 flex items-start sm:items-center justify-between gap-2 sm:gap-3 shrink-0 relative">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
             {icon && (
-
-              <div className="w-9 h-9 bg-white/10 rounded-none flex items-center justify-center border border-white/20">
-
+              <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
                 {icon}
-
               </div>
-
             )}
-
-            <div>
-
-              <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">{title}</h2>
-
-              {subtitle && <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">{subtitle}</p>}
-
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">{title}</h2>
+              {subtitle && (
+                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                  <span className="line-clamp-2 sm:truncate">{subtitle}</span>
+                </p>
+              )}
             </div>
-
           </div>
-
-          <div className="flex items-center gap-2">
-
+          <div className="flex items-center gap-2 shrink-0">
             {headerActions}
-
             <button
-
+              type="button"
               onClick={onClose}
-
-              className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
-
+              className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1 rounded-none"
               disabled={loading}
-
+              aria-label="Cerrar detalle"
             >
-
-              <X size={24} />
-
+              <X size={22} />
             </button>
-
           </div>
-
         </div>
 
 

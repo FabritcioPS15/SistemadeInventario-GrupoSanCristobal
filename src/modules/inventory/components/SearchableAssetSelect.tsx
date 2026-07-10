@@ -75,14 +75,14 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
                 {getIcon(selectedAsset.asset_types?.name)}
               </span>
               <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight truncate">
-                {selectedAsset.brand && selectedAsset.model
-                  ? `${selectedAsset.brand} ${selectedAsset.model}`
-                  : (selectedAsset as any).descripcion ||
-                    (selectedAsset as any).item ||
-                    (selectedAsset as any).name ||
-                    selectedAsset.brand ||
-                    selectedAsset.model ||
-                    'Sin nombre'}
+                {(selectedAsset as any).item ||
+                  (selectedAsset as any).descripcion ||
+                  (selectedAsset as any).name ||
+                  (selectedAsset.brand && selectedAsset.model
+                    ? `${selectedAsset.brand} ${selectedAsset.model}`
+                    : selectedAsset.brand ||
+                      selectedAsset.model ||
+                      'Sin nombre')}
               </span>
               <span className="text-[9px] font-bold text-slate-400 uppercase">
                 {selectedAsset.locations?.name}
@@ -135,26 +135,26 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
                     <div className={`w-8 h-8 flex items-center justify-center ${value === asset.id ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                       {getIcon(asset.asset_types?.name)}
                     </div>
-                    <div>
-                      <h4 className={`text-[11px] font-black uppercase tracking-tight leading-none mb-1 ${value === asset.id ? 'text-blue-700' : 'text-slate-800'}`}>
-                        {asset.brand && asset.model
-                          ? `${asset.brand} ${asset.model}`
-                          : (asset as any).descripcion ||
-                            (asset as any).item ||
-                            (asset as any).name ||
-                            asset.brand ||
-                            asset.model ||
-                            'Sin nombre'}
+                    <div className="min-w-0 flex-1">
+                      <h4 className={`text-[11px] font-black uppercase tracking-tight leading-none mb-1 truncate ${value === asset.id ? 'text-blue-700' : 'text-slate-800'}`}>
+                        {(asset as any).item ||
+                          (asset as any).descripcion ||
+                          (asset as any).name ||
+                          (asset.brand && asset.model
+                            ? `${asset.brand} ${asset.model}`
+                            : asset.brand ||
+                              asset.model ||
+                              'Sin nombre')}
                       </h4>
-                      {((asset as any).descripcion || (asset as any).description) && (asset.brand || asset.model) && (
-                        <p className="text-[9px] text-slate-500 italic truncate max-w-[220px] mb-1">
-                          {(asset as any).descripcion || (asset as any).description}
+                      {((asset as any).item || (asset as any).descripcion || (asset as any).description) && (asset.brand || asset.model) && (
+                        <p className="text-[9px] text-slate-500 italic truncate mb-1">
+                          {asset.brand} {asset.model}
                         </p>
                       )}
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{asset.asset_types?.name}</span>
-                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                        <div className="flex items-center gap-1 text-[9px] font-bold text-rose-500 uppercase italic">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{asset.asset_types?.name}</span>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full shrink-0"></span>
+                        <div className="flex items-center gap-1 text-[9px] font-bold text-rose-500 uppercase italic truncate">
                           <MapPin size={10} />
                           {asset.locations?.name}
                         </div>

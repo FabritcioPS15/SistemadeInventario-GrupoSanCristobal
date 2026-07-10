@@ -1,16 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, Wrench, X, MapPin, ShieldCheck, Search } from 'lucide-react';
+import { Plus, Wrench, X, MapPin, ShieldCheck, Search, TrendingUp, DollarSign, Clock, AlertCircle, Edit, Trash2, ClipboardList, History } from 'lucide-react';
 import { supabase, Location } from '../../../shared/services/supabase';
 import MaintenanceForm from '../forms/MaintenanceForm';
+import ModalOverlay from '../../../shared/components/ui/ModalOverlay';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import Pagination from '../../../shared/components/ui/Pagination';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
-import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, } from '../../../shared/components/ui/Table';
-import { MaintenanceRecord, AssetWithMaintenanceHistory, InventoryFilter } from '../../../shared/types/inventory.types';
+import { MaintenanceRecord, AssetWithMaintenanceHistory } from '../../../shared/types/inventory.types';
 
 type MaintenanceProps = {
   categoryFilter?: string;
@@ -37,6 +38,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -60,7 +62,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
     try {
       let query = supabase
         .from('maintenance_records')
-        .select('*, assets(*, asset_types(*), locations(*)), locations!location_id(*)')
+        .select('*, assets!inner(id, codigo_unico, brand, model, descripcion, serial_number, asset_types(*), locations(*)), locations!location_id(*)')
         .order('created_at', { ascending: false });
 
       if (statusFilter) query = query.eq('status', statusFilter);
@@ -202,6 +204,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         assetHistory.asset.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         assetHistory.asset.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         assetHistory.asset.serial_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        assetHistory.asset.descripcion?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (assetHistory.asset as any).item?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         assetHistory.maintenanceRecords.some(r =>
           r.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           r.technician?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -223,8 +227,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
       const matchesType = !typeFilter || assetHistory.latestMaintenanceType === typeFilter;
       const matchesLocation = !locationFilter || assetHistory.asset.location_id === locationFilter;
       const matchesAsset = !assetFilter || assetHistory.asset.id === assetFilter;
+      const matchesMachineType = !machineTypeFilter || assetHistory.asset.asset_type_id === machineTypeFilter;
 
-      return matchesSearch && matchesCategory && matchesStatus && matchesType && matchesLocation && matchesAsset;
+      return matchesSearch && matchesCategory && matchesStatus && matchesType && matchesLocation && matchesAsset && matchesMachineType;
     });
 
     if (!sortConfig) return filtered;
@@ -235,8 +240,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
       switch (sortConfig.key) {
         case 'asset':
-          aValue = `${a.asset.brand || ''} ${a.asset.model || ''}`.trim();
-          bValue = `${b.asset.brand || ''} ${b.asset.model || ''}`.trim();
+          aValue = (a.asset as any).item || a.asset.descripcion || `${a.asset.brand || ''} ${a.asset.model || ''}`.trim();
+          bValue = (b.asset as any).item || b.asset.descripcion || `${b.asset.brand || ''} ${b.asset.model || ''}`.trim();
           break;
         case 'status':
           aValue = statusLabels[a.latestStatus as keyof typeof statusLabels];
@@ -266,44 +271,164 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
       const result = aValue < bValue ? -1 : 1;
       return sortConfig.direction === 'asc' ? result : -result;
     });
-  }, [assetsWithHistory, searchTerm, locationFilter, statusFilter, typeFilter, categoryFilter, sortConfig]);
+  }, [assetsWithHistory, searchTerm, locationFilter, statusFilter, typeFilter, categoryFilter, machineTypeFilter, assetFilter, sortConfig]);
 
   const totalPages = Math.ceil(sortedRecords.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = sortedRecords.slice(startIndex, startIndex + itemsPerPage);
 
-  const clearFilters = () => {
-    setStatusFilter('');
-    setTypeFilter('');
-    setLocationFilter('');
-    setMachineTypeFilter('');
+  const toggleSelectAll = () => {
+    if (selectedIds.length === paginatedData.length && paginatedData.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(paginatedData.map(a => a.asset.id));
+    }
   };
 
-  const hasActiveFilters = searchTerm || statusFilter || typeFilter || locationFilter || machineTypeFilter || categoryFilter;
-  const renderSortableHeader = (label: string, sortKey: string) => {
-    const isSorted = sortConfig?.key === sortKey;
-    return (
-      <button
-        onClick={() => handleSort(sortKey)}
-        className="flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors"
-      >
-        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">{label}</span>
-        {isSorted ? (
-          <span className="text-[#002855] text-[10px]">
-            {sortConfig.direction === 'asc' ? '▲' : '▼'}
-          </span>
-        ) : (
-          <span className="text-slate-300 text-[10px] opacity-50">▲▼</span>
-        )}
-      </button>
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const confirmed = await confirm(`¿Eliminar todos los mantenimientos de los ${selectedIds.length} activos seleccionados?`, 'Eliminación por Lote');
+    if (confirmed) {
+      try {
+        const recordsToDelete = assetsWithHistory
+          .filter(ah => selectedIds.includes(ah.asset.id))
+          .flatMap(ah => ah.maintenanceRecords.map(r => r.id));
+          
+        if (recordsToDelete.length === 0) return;
+
+        const { error } = await supabase.from('maintenance_records').delete().in('id', recordsToDelete);
+        if (error) throw error;
+        setSelectedIds([]);
+        await fetchData();
+        notifySuccess(`${recordsToDelete.length} registros eliminados correctamente`);
+      } catch (err: any) {
+        notifyError('Error: ' + err.message);
+      }
+    }
+  };
+
+
+  const hasActiveFilters = searchTerm || statusFilter || typeFilter || locationFilter || machineTypeFilter || categoryFilter || assetFilter;
+
+  // Calcular estadísticas de mantenimiento
+  const maintenanceStats = useMemo(() => {
+    const totalCost = maintenanceRecords.reduce((sum, r) => sum + (r.total_cost || 0), 0);
+    const totalHours = maintenanceRecords.reduce((sum, r) => sum + (r.work_hours || 0), 0);
+    const byType: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+    
+    maintenanceRecords.forEach(r => {
+      byType[r.maintenance_type] = (byType[r.maintenance_type] || 0) + 1;
+      byStatus[r.status] = (byStatus[r.status] || 0) + 1;
+    });
+
+    return {
+      totalRecords: maintenanceRecords.length,
+      totalCost,
+      totalHours,
+      averageCost: maintenanceRecords.length > 0 ? totalCost / maintenanceRecords.length : 0,
+      byType,
+      byStatus,
+      completedCount: byStatus.completed || 0,
+      pendingCount: byStatus.pending || 0,
+      inProgressCount: byStatus.in_progress || 0,
+    };
+  }, [maintenanceRecords]);
+
 
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
 
       <div className="p-6 space-y-6">
+        {/* Statistics Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Mantenimientos</span>
+              <Wrench size={16} className="text-blue-600" />
+            </div>
+            <p className="text-2xl font-black text-slate-800">{maintenanceStats.totalRecords}</p>
+            <p className="text-[10px] text-slate-500 mt-1">Registros en sistema</p>
+          </div>
 
+          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Costo Total</span>
+              <DollarSign size={16} className="text-emerald-600" />
+            </div>
+            <p className="text-2xl font-black text-slate-800">S/ {maintenanceStats.totalCost.toFixed(2)}</p>
+            <p className="text-[10px] text-slate-500 mt-1">Acumulado histórico</p>
+          </div>
+
+          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Costo Promedio</span>
+              <TrendingUp size={16} className="text-purple-600" />
+            </div>
+            <p className="text-2xl font-black text-slate-800">S/ {maintenanceStats.averageCost.toFixed(2)}</p>
+            <p className="text-[10px] text-slate-500 mt-1">Por mantenimiento</p>
+          </div>
+
+          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horas Totales</span>
+              <Clock size={16} className="text-amber-600" />
+            </div>
+            <p className="text-2xl font-black text-slate-800">{maintenanceStats.totalHours.toFixed(1)}</p>
+            <p className="text-[10px] text-slate-500 mt-1">Horas de trabajo</p>
+          </div>
+        </div>
+
+        {/* Status Breakdown */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertCircle size={16} className="text-amber-500" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pendientes</span>
+            </div>
+            <p className="text-xl font-black text-amber-600">{maintenanceStats.pendingCount}</p>
+            <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-amber-500 rounded-full transition-all" 
+                style={{ width: `${maintenanceStats.totalRecords > 0 ? (maintenanceStats.pendingCount / maintenanceStats.totalRecords) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={16} className="text-blue-500" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">En Progreso</span>
+            </div>
+            <p className="text-xl font-black text-blue-600">{maintenanceStats.inProgressCount}</p>
+            <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-blue-500 rounded-full transition-all" 
+                style={{ width: `${maintenanceStats.totalRecords > 0 ? (maintenanceStats.inProgressCount / maintenanceStats.totalRecords) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldCheck size={16} className="text-emerald-500" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Completados</span>
+            </div>
+            <p className="text-xl font-black text-emerald-600">{maintenanceStats.completedCount}</p>
+            <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-emerald-500 rounded-full transition-all" 
+                style={{ width: `${maintenanceStats.totalRecords > 0 ? (maintenanceStats.completedCount / maintenanceStats.totalRecords) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Action Bar */}
         <ActionToolbar
@@ -321,77 +446,56 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
             </>
           }
         >
-          <FilterSelect
-            icon={MapPin}
-            iconClassName="text-rose-500"
-            value={locationFilter}
-            onChange={(e) => { setLocationFilter(e.target.value as string); setCurrentPage(1); }}
-            wrapperClassName="md:min-w-[220px]"
-          >
-            <option value="">TODAS LAS SEDES</option>
-            {locations.map((loc) => (
-              <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-            ))}
-          </FilterSelect>
-
-          <FilterSelect
-            value={typeFilter}
-            onChange={(e) => { setTypeFilter(e.target.value as string); setCurrentPage(1); }}
-          >
-            <option value="">TODOS LOS TIPOS</option>
-            {Object.entries(typeLabels).map(([key, label]) => (
-              <option key={key} value={key}>{label.toUpperCase()}</option>
-            ))}
-          </FilterSelect>
-
-          <FilterSelect
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value as string); setCurrentPage(1); }}
-          >
-            <option value="">TODOS LOS ESTADOS</option>
-            {Object.entries(statusLabels).map(([key, label]) => (
-              <option key={key} value={key}>{label.toUpperCase()}</option>
-            ))}
-          </FilterSelect>
-
-          <FilterSelect
-            value={assetFilter}
-            onChange={(e) => { setAssetFilter(e.target.value); setCurrentPage(1); }}
-            wrapperClassName="md:max-w-[220px]"
-          >
-            <option value="">TODOS LOS ACTIVOS</option>
-            {assetsWithHistory.map((history) => (
-              <option key={history.asset.id} value={history.asset.id}>
-                {history.asset.codigo_unico ? `${history.asset.codigo_unico} - ` : ''}
-                {history.asset.brand || 'SIN MARCA'} {history.asset.model || ''}
-              </option>
-            ))}
-          </FilterSelect>
+          <FilterBar
+            filters={[
+              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+              { key: 'type', placeholder: 'TODOS LOS TIPOS', options: Object.entries(typeLabels).map(([key, label]) => ({ value: key, label: label.toUpperCase() })) },
+              { key: 'status', placeholder: 'TODOS LOS ESTADOS', options: Object.entries(statusLabels).map(([key, label]) => ({ value: key, label: label.toUpperCase() })) },
+              { key: 'asset', placeholder: 'TODOS', wrapperClassName: 'md:max-w-[220px]', options: assetsWithHistory.map(h => ({ value: h.asset.id, label: `${(h.asset as any).item || h.asset.descripcion || h.asset.brand || 'SIN NOMBRE'} ${h.asset.model ? `(${h.asset.model})` : ''}` })) },
+            ]}
+            values={{ location: locationFilter, type: typeFilter, status: statusFilter, asset: assetFilter }}
+            onChange={(key, value) => {
+              if (key === 'location') setLocationFilter(value as string);
+              else if (key === 'type') setTypeFilter(value as string);
+              else if (key === 'status') setStatusFilter(value as string);
+              else if (key === 'asset') setAssetFilter(value as string);
+              setCurrentPage(1);
+            }}
+            onClearAll={() => {
+              setStatusFilter('');
+              setTypeFilter('');
+              setLocationFilter('');
+              setMachineTypeFilter('');
+              setCurrentPage(1);
+            }}
+          />
 
           <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
           {canEdit() && (
-            <button
-              onClick={() => {
-                setEditingRecord(undefined);
-                setShowForm(true);
-              }}
-              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-            >
-              <Plus size={14} />
-              Nuevo Mantenimiento
-            </button>
-          )}
-
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="w-full md:w-auto flex items-center justify-center p-3 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200"
-              title="Limpiar Filtros"
-            >
-              <X size={18} className="md:block hidden" />
-              <span className="md:hidden text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><X size={14} /> Limpiar Filtros</span>
-            </button>
+            <div className="flex gap-2">
+              {selectedIds.length > 0 && (
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-none hover:bg-rose-100 transition-colors border border-rose-200"
+                >
+                  <Trash2 size={16} />
+                  <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">
+                    Eliminar ({selectedIds.length})
+                  </span>
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setEditingRecord(undefined);
+                  setShowForm(true);
+                }}
+                className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+              >
+                <Plus size={14} />
+                Nuevo Mantenimiento
+              </button>
+            </div>
           )}
         </ActionToolbar>
 
@@ -424,7 +528,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-tight truncate">
-                          {assetHistory.asset.brand} {assetHistory.asset.model}
+                          {(assetHistory.asset as any).item || assetHistory.asset.descripcion || assetHistory.asset.brand} {assetHistory.asset.model}
                         </h3>
                         <span className={`inline-block px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest border mt-1 ${typeColors[assetHistory.latestMaintenanceType]}`}>
                           {typeLabels[assetHistory.latestMaintenanceType]}
@@ -466,6 +570,16 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      {canEdit() && (
+                        <TableHead className="w-12 text-center px-4 py-4">
+                          <input
+                            type="checkbox"
+                            checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length}
+                            onChange={toggleSelectAll}
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                          />
+                        </TableHead>
+                      )}
                       <TableHead sortable isSorted={sortConfig?.key === 'asset'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('asset')}>
                         Activo / Código
                       </TableHead>
@@ -492,14 +606,25 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         key={assetHistory.asset.id}
                         onClick={() => handleViewAssetHistory(assetHistory)}
                       >
+                        {canEdit() && (
+                          <TableCell className="w-12 text-center px-4 py-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(assetHistory.asset.id)}
+                              onChange={() => toggleSelect(assetHistory.asset.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className="font-bold">
                           <div className="flex items-center gap-4">
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100 text-slate-400 group-hover:bg-[#002855] group-hover:text-white transition-all shadow-sm">
                               <Wrench size={16} />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{assetHistory.asset.brand}</span>
-                              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{assetHistory.asset.model} <span className="text-[9px] text-blue-600 font-mono">{assetHistory.totalRecords} mantenimiento(s)</span></span>
+                              <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{(assetHistory.asset as any).item || assetHistory.asset.descripcion || assetHistory.asset.brand}</span>
+                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{assetHistory.asset.model} <span className="text-[9px] text-blue-600 font-mono">{assetHistory.totalRecords} mantenimiento(s)</span></span>
                             </div>
                           </div>
                         </TableCell>
@@ -511,7 +636,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         <TableCell>
                           <div className="flex items-center gap-1.5 text-slate-700">
                             <MapPin size={13} className="text-rose-500 shrink-0" />
-                            <span className="text-[12px] font-bold uppercase truncate max-w-xs block leading-none">{assetHistory.asset.locations?.name || 'Sede N/A'}</span>
+                            <span className="text-[11px] font-bold uppercase truncate max-w-xs block leading-none">{assetHistory.asset.locations?.name || 'Sede N/A'}</span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -520,10 +645,28 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <span className="text-[12px] font-black text-slate-800 uppercase leading-none">{assetHistory.maintenanceRecords[0]?.technician || 'S.A.'}</span>
+                          <span className="text-[11px] font-bold text-slate-700 uppercase leading-none">{assetHistory.maintenanceRecords[0]?.technician || 'S.A.'}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            {canEdit() && (
+                              <>
+                                <button
+                                  onClick={() => handleEditRecord(assetHistory.maintenanceRecords[0])}
+                                  className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                  title="Editar"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteRecord(assetHistory.maintenanceRecords[0])}
+                                  className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -559,7 +702,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                   <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
                     <div>
                       <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">
-                        {viewingRecord?.assets?.brand} {viewingRecord?.assets?.model}
+                        {(viewingRecord?.assets as any)?.item || viewingRecord?.assets?.descripcion || viewingRecord?.assets?.brand} {viewingRecord?.assets?.model}
                       </h3>
                       <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest leading-none">
                         {viewingRecord?.assets?.asset_types?.name}

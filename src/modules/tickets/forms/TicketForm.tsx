@@ -1,5 +1,14 @@
-// Formulario para crear nuevos tickets de soporte técnico
-// Incluye sugerencias de problemas frecuentes y auto-asignación de sede
+// =============================================================================
+// TicketForm.tsx — Formulario de creación de nuevos tickets
+// Funcionalidades:
+//   - Campos: título, descripción, prioridad, categoría, sede, AnyDesk
+//   - Auto-sugerencia de problemas frecuentes al escribir el título
+//   - Auto-asignación de la sede del usuario actual
+//   - Validación de campos obligatorios antes de enviar
+//   - Al crear: inserta ticket, guarda AnyDesk como comentario si aplica,
+//     auto-asigna al creador via ticket_assignments, y notifica a los roles
+// =============================================================================
+
 import { useState, useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
@@ -17,6 +26,7 @@ type TicketFormProps = {
 
 // Lista de problemas frecuentes para sugerencias automáticas
 // Ayuda a los usuarios a reportar incidencias comunes rápidamente
+// Cada sugerencia incluye: título, categoría, prioridad y descripción predefinida
 const FREQUENT_ISSUES = [
   { title: 'Impresora no enciende / no imprime', category: 'sistemas', priority: 'critical', description: 'La impresora de la sede no responde a los comandos de impresión o está apagada.' },
   { title: 'Olvidé mi contraseña de acceso del MTC / Correo', category: 'sistemas', priority: 'high', description: 'Requiero un reset de contraseña para ingresar al sistema.' },
@@ -121,8 +131,13 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
   };
 
   // Valida y envía el formulario para crear un nuevo ticket
-  // Crea el ticket, agrega el AnyDesk como comentario si existe,
-  // auto-asigna al creador y envía notificaciones
+  // Flujo completo:
+  // 1. Validación de campos requeridos (título, descripción, ubicación)
+  // 2. Inserta el ticket en la tabla 'tickets' con estado 'open'
+  // 3. Si se proporcionó AnyDesk, lo guarda como comentario inicial
+  //    (el hook useTicketComments lo detecta y lo muestra en el detalle)
+  // 4. Auto-asigna al creador via ticket_assignments
+  // 5. Envía notificación a los roles correspondientes
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 

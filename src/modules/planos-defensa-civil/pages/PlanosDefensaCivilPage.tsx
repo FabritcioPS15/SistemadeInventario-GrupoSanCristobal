@@ -6,7 +6,7 @@ import Pagination from '../../../shared/components/ui/Pagination';
 import { supabase, Location } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
-import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
 import LoadingSpinner from '../../../shared/components/ui/LoadingSpinner';
@@ -221,20 +221,18 @@ export default function PlanosDefensaCivil() {
               </>
             }
           >
-            <FilterSelect
-              icon={MapPin}
-              iconClassName="text-rose-500"
-              value={selectedLocations[0] || ''}
-              onChange={e => { setSelectedLocations(e.target.value ? [e.target.value] : []); setCurrentPage(1); }}
-              wrapperClassName="md:min-w-[220px]"
-            >
-              <option value="">Todas las sedes</option>
-              {locations.map(loc => (
-                <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-              ))}
-            </FilterSelect>
+  <FilterBar
+    filters={[
+      { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+    ]}
+    values={{ location: selectedLocations[0] || '' }}
+    onChange={(key, value) => {
+      setSelectedLocations(value ? [value as string] : []);
+      setCurrentPage(1);
+    }}
+  />
 
-            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+  <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
             {canEdit() && (
               <PrimaryButton icon={Plus} onClick={() => alert('Función para crear nuevo plano')}>

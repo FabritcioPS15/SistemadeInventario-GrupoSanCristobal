@@ -185,7 +185,7 @@ export default function FilterSelect({
   };
 
   return (
-    <div ref={rootRef} className={`relative w-full md:w-[150px] ${wrapperClassName}`}>
+    <div ref={rootRef} className={`relative w-full md:w-[180px] ${wrapperClassName}`}>
       <button
         ref={buttonRef}
         id={id}
@@ -199,8 +199,8 @@ export default function FilterSelect({
         {...rest}
         className={`
           group relative flex w-full items-center gap-2
-          px-2.5 py-1.5 bg-white border transition-all duration-150
-          min-w-[105px] md:min-w-[120px] max-w-full shadow-[0_1px_2px_rgba(0,0,0,0.04)]
+          px-3.5 py-2.5 bg-white border transition-all duration-150
+          min-w-[130px] md:min-w-[155px] max-w-full shadow-[0_1px_2px_rgba(0,0,0,0.04)]
           focus:outline-none focus-visible:ring-2 focus-visible:ring-[#002855]/15
           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-slate-200
           ${open ? 'border-[#002855]/50 bg-slate-50/80' : 'border-slate-200 hover:border-[#002855]/35 hover:bg-slate-50/80'}
@@ -212,7 +212,7 @@ export default function FilterSelect({
             }`}
         />
 
-        {Icon && <Icon size={13} className={`shrink-0 ${iconClassName}`} />}
+        {Icon && <Icon size={15} className={`shrink-0 ${iconClassName}`} />}
 
         <span className={`flex-1 text-left text-[12px] font-black text-[#002855] uppercase tracking-[0.08em] truncate ${className}`}>
           {triggerLabel}

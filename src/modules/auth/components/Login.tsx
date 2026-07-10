@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, AlertCircle, User, Lock, ArrowRight, UserPlus, X } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, User, Lock, ArrowRight, UserPlus } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 
 export default function Login() {
   const mountedRef = useRef(true);
@@ -303,174 +304,93 @@ export default function Login() {
 
       {/* Registration Request Modal */}
       {showRegistrationModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
-              <h3 className="text-xl font-bold text-slate-800">Solicitar Registro de Usuario</h3>
-              <button
-                onClick={() => {
-                  if (mountedRef.current) {
-                    setShowRegistrationModal(false);
-                  }
-                }}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X size={24} />
-              </button>
+        <BaseForm
+          title="Solicitar Registro de Usuario"
+          subtitle="Complete los datos para solicitar un nuevo usuario"
+          onClose={() => { if (mountedRef.current) setShowRegistrationModal(false); }}
+          onSubmit={handleRegistrationSubmit}
+          loading={registrationLoading}
+          maxWidth="md"
+          icon={<UserPlus size={18} className="text-white" />}
+        >
+          <FormSection title="Datos del Solicitante">
+            <div className="grid grid-cols-1 gap-4">
+              <FormField label="Nombre Completo" required>
+                <FormInput
+                  type="text"
+                  required
+                  value={registrationForm.full_name}
+                  onChange={(e) => { if (mountedRef.current) setRegistrationForm({ ...registrationForm, full_name: e.target.value }); }}
+                  placeholder="Juan Pérez"
+                />
+              </FormField>
+
+              <FormField label="Nombre de Usuario">
+                <FormInput
+                  type="text"
+                  value={registrationForm.username}
+                  onChange={(e) => { if (mountedRef.current) setRegistrationForm({ ...registrationForm, username: e.target.value.toLowerCase().replace(/\s/g, '_') }); }}
+                  placeholder="ej: juan_perez"
+                />
+              </FormField>
+
+              <FormField label="Email" required>
+                <FormInput
+                  type="email"
+                  required
+                  value={registrationForm.email}
+                  onChange={(e) => { if (mountedRef.current) setRegistrationForm({ ...registrationForm, email: e.target.value }); }}
+                  placeholder="email@ejemplo.com"
+                />
+              </FormField>
+
+              <FormField label="DNI" required>
+                <FormInput
+                  type="text"
+                  required
+                  value={registrationForm.dni}
+                  onChange={(e) => { if (mountedRef.current) setRegistrationForm({ ...registrationForm, dni: e.target.value }); }}
+                  placeholder="12345678"
+                />
+              </FormField>
+
+              <FormField label="Teléfono">
+                <FormInput
+                  type="tel"
+                  value={registrationForm.phone}
+                  onChange={(e) => { if (mountedRef.current) setRegistrationForm({ ...registrationForm, phone: e.target.value }); }}
+                  placeholder="987654321"
+                />
+              </FormField>
+
+              <FormField label="Rol Solicitado" required>
+                <FormSelect
+                  required
+                  value={registrationForm.requested_role}
+                  onChange={(e) => { if (mountedRef.current) setRegistrationForm({ ...registrationForm, requested_role: e.target.value }); }}
+                >
+                  <option value="">Seleccionar rol</option>
+                  <option value="administradores">Administrador</option>
+                  <option value="supervisores">Supervisor</option>
+                  <option value="area_legal">Área Legal</option>
+                  <option value="area_contable">Área Contable</option>
+                  <option value="sistemas">Sistemas</option>
+                  <option value="gerencia">Gerencia</option>
+                  <option value="personalizado">Personalizado</option>
+                </FormSelect>
+              </FormField>
+
+              <FormField label="Notas Adicionales">
+                <FormTextarea
+                  value={registrationForm.notes}
+                  onChange={(e) => { if (mountedRef.current) setRegistrationForm({ ...registrationForm, notes: e.target.value }); }}
+                  placeholder="Información adicional (opcional)"
+                  rows={3}
+                />
+              </FormField>
             </div>
-
-            {/* Content */}
-            <form onSubmit={handleRegistrationSubmit} className="p-6 space-y-4 overflow-y-auto flex-1">
-              <div className="space-y-4">
-                <div className="group">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                    Nombre Completo
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={registrationForm.full_name}
-                    onChange={(e) => {
-                      if (mountedRef.current) {
-                        setRegistrationForm({ ...registrationForm, full_name: e.target.value });
-                      }
-                    }}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
-                    placeholder="Juan Pérez"
-                  />
-                </div>
-
-                <div className="group">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                    Nombre de Usuario
-                  </label>
-                  <input
-                    type="text"
-                    value={registrationForm.username}
-                    onChange={(e) => {
-                      if (mountedRef.current) {
-                        setRegistrationForm({ ...registrationForm, username: e.target.value.toLowerCase().replace(/\s/g, '_') });
-                      }
-                    }}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
-                    placeholder="ej: juan_perez"
-                  />
-                </div>
-
-                <div className="group">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={registrationForm.email}
-                    onChange={(e) => {
-                      if (mountedRef.current) {
-                        setRegistrationForm({ ...registrationForm, email: e.target.value });
-                      }
-                    }}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
-                    placeholder="email@ejemplo.com"
-                  />
-                </div>
-
-                <div className="group">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                    DNI
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={registrationForm.dni}
-                    onChange={(e) => {
-                      if (mountedRef.current) {
-                        setRegistrationForm({ ...registrationForm, dni: e.target.value });
-                      }
-                    }}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
-                    placeholder="12345678"
-                  />
-                </div>
-
-                <div className="group">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                    Teléfono
-                  </label>
-                  <input
-                    type="tel"
-                    value={registrationForm.phone}
-                    onChange={(e) => {
-                      if (mountedRef.current) {
-                        setRegistrationForm({ ...registrationForm, phone: e.target.value });
-                      }
-                    }}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
-                    placeholder="987654321"
-                  />
-                </div>
-
-                <div className="group">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                    Rol Solicitado
-                  </label>
-                  <select
-                    required
-                    value={registrationForm.requested_role}
-                    onChange={(e) => {
-                      if (mountedRef.current) {
-                        setRegistrationForm({ ...registrationForm, requested_role: e.target.value });
-                      }
-                    }}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700"
-                  >
-                    <option value="">Seleccionar rol</option>
-                    <option value="administradores">Administrador</option>
-                    <option value="supervisores">Supervisor</option>
-                    <option value="area_legal">Área Legal</option>
-                    <option value="area_contable">Área Contable</option>
-                    <option value="sistemas">Sistemas</option>
-                    <option value="gerencia">Gerencia</option>
-                    <option value="personalizado">Personalizado</option>
-                  </select>
-                </div>
-
-                <div className="group">
-                  <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 group-focus-within:text-blue-600 transition-colors">
-                    Notas Adicionales
-                  </label>
-                  <textarea
-                    value={registrationForm.notes}
-                    onChange={(e) => {
-                      if (mountedRef.current) {
-                        setRegistrationForm({ ...registrationForm, notes: e.target.value });
-                      }
-                    }}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all font-medium text-slate-700 resize-none"
-                    placeholder="Información adicional (opcional)"
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={registrationLoading}
-                className="w-full bg-[#002855] text-white py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-[#003d80] active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100 shadow-xl shadow-blue-900/10 flex items-center justify-center gap-3"
-              >
-                {registrationLoading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    Enviar Solicitud
-                    <UserPlus size={18} />
-                  </>
-                )}
-              </button>
-            </form>
-          </div>
-        </div>
+          </FormSection>
+        </BaseForm>
       )}
     </div>
   );

@@ -1,10 +1,10 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
-import { X, FileSpreadsheet, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { X, FileSpreadsheet, AlertCircle, CheckCircle, Loader2, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import ExcelJS from 'exceljs';
 import { supabase, AssetType, Location, Category, Subcategory } from '../services/supabase';
 import { useNotify } from '../hooks/useNotify';
 import { generateAndDownloadTemplate } from '../utils/excelTemplate';
+import ModalOverlay from './ui/ModalOverlay';
 
 type ExcelImportModalProps = {
     isOpen: boolean;
@@ -454,6 +454,15 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
 
     if (!isOpen) return null;
 
+    const handleDownloadClick = async () => {
+        try {
+            await generateAndDownloadTemplate();
+        } catch (error) {
+            console.error('Error generando plantilla interactiva:', error);
+            notifyError('Ocurrió un error generando la plantilla interactiva.');
+        }
+    };
+
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragging(true);
@@ -663,7 +672,6 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
 
                     // Detección de subcategoría (Manual vs Eléctrica)
                     const isElectric = ['ELECTRICO', 'ELECTRICA', 'BATERIA', 'VOLTIOS', 'WATTS', 'MOTOR', 'CABLE', 'ENCHUFE', 'TALADRO', 'ESMERIL', 'SOLDADORA', 'COMPRESORA'].some(term => descRaw.includes(term) || typeRaw.includes(term));
-
                     if (isElectric) {
                         finalSubcatId = electricaSubcatId || finalSubcatId;
                     } else {
@@ -700,40 +708,43 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
         }
     };
 
-    const handleDownloadTemplate = async () => {
-        try {
-            await generateAndDownloadTemplate();
-        } catch (error) {
-            console.error('Error generando plantilla interactiva:', error);
-            notifyError('Ocurrió un error generando la plantilla interactiva.');
-        }
-    };
-
     return (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+        <ModalOverlay className="bg-slate-900/40 backdrop-blur-sm">
+            <div
+                className="bg-white w-full h-full md:h-[90vh] max-w-full sm:max-w-4xl rounded-none shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200"
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Header */}
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 rounded-t-xl">
-                    <div>
-                        <h3 className="text-xl font-bold text-slate-800">Importar Inventario desde Excel</h3>
-                        <p className="text-sm text-slate-500">Mapear manualmente las hojas a las sedes</p>
+                <div className="bg-gradient-to-r from-blue-900 to-blue-900 px-5 py-4 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-6">
+                        <div className="w-9 h-9 bg-white/10 rounded-none flex items-center justify-center border border-white/20">
+                            <Upload size={18} className="text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">Importar Inventario desde Excel</h2>
+                            <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Mapear manualmente las hojas a las sedes</p>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
                         <button
-                            onClick={handleDownloadTemplate}
-                            className="text-xs font-bold bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-colors uppercase tracking-widest flex items-center gap-1"
-                            title="Descargar una plantilla con las columnas recomendadas"
+                            onClick={handleDownloadClick}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-none transition-all"
+                            title="Descargar plantilla con columnas recomendadas"
                         >
-                            <FileSpreadsheet size={16} /> Descargar Plantilla
+                            <FileSpreadsheet size={14} />
+                            Plantilla
                         </button>
-                        <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+                        <button
+                            onClick={onClose}
+                            className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
+                        >
                             <X size={24} />
                         </button>
                     </div>
                 </div>
 
                 {/* Content */}
-                <div className="p-6 overflow-y-auto flex-1 bg-slate-50/50">
+                <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 bg-gray-50/50">
                     {!file ? (
                         <div
                             className={`border-2 border-dashed rounded-xl p-12 flex flex-col items-center justify-center text-center transition-all cursor-pointer bg-white ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-slate-400 hover:bg-slate-50'
@@ -931,44 +942,30 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-slate-100 bg-white rounded-b-xl flex justify-between items-center">
-                    <div className="text-xs text-slate-400 font-medium">
+                <div className="sticky bottom-0 bg-white border-t px-4 py-3 flex items-center justify-between gap-3 z-10">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                         {preview ? `${preview.validRecords} registros válidos de ${preview.totalRecords} totales` : 'Esperando archivo...'}
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 text-slate-600 hover:text-slate-900 font-medium text-sm transition-colors"
                             disabled={importing}
+                            className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all disabled:opacity-50"
                         >
                             Cancelar
                         </button>
                         <button
                             onClick={handleImport}
                             disabled={!file || !preview || preview.validRecords === 0 || importing}
-                            className={`
-                                flex items-center gap-2 px-6 py-2 rounded-lg text-white font-medium text-sm shadow-sm transition-all
-                                ${!file || !preview || preview.validRecords === 0 || importing
-                                    ? 'bg-slate-400 cursor-not-allowed'
-                                    : 'bg-slate-800 hover:bg-slate-900 shadow-md hover:shadow-lg'
-                                }
-                            `}
+                            className="px-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg disabled:cursor-not-allowed"
                         >
-                            {importing ? (
-                                <>
-                                    <Loader2 size={16} className="animate-spin" />
-                                    Importando...
-                                </>
-                            ) : (
-                                <>
-                                    Importar {preview?.validRecords || 0} Registros
-                                </>
-                            )}
+                            {importing && <Loader2 size={14} className="animate-spin" />}
+                            {importing ? 'Importando...' : `Importar ${preview?.validRecords || 0} Registros`}
                         </button>
                     </div>
                 </div>
             </div>
-        </div>
+        </ModalOverlay>
     );
 };
 

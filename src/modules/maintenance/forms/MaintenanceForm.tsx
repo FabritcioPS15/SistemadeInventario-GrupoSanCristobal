@@ -1,17 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Wrench, Plus, Trash2 } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 import { supabase, AssetWithDetails } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 import SearchableAssetSelect from '../../inventory/components/SearchableAssetSelect';
-
-type PartUsed = {
-  id?: string;
-  name: string;
-  quantity: number;
-  unit: string;
-  unit_price: number;
-  total_cost: number;
-};
+import { PartUsed } from '../../../shared/types/inventory.types';
 
 type MaintenanceRecord = {
   id: string;
@@ -29,6 +21,8 @@ type MaintenanceRecord = {
   solution_applied?: string;
   work_hours?: number;
   parts_used?: PartUsed[];
+  total_cost?: number;
+  warranty_claim?: boolean;
 };
 
 type MaintenanceFormProps = {
@@ -40,10 +34,8 @@ type MaintenanceFormProps = {
 
 export default function MaintenanceForm({ onClose, onSave, editMaintenance, assetId }: MaintenanceFormProps) {
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
-  const [spareParts, setSpareParts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [partsUsed, setPartsUsed] = useState<PartUsed[]>(editMaintenance?.parts_used || []);
 
   const [formData, setFormData] = useState({
     asset_id: editMaintenance?.asset_id || assetId || '',
@@ -57,22 +49,12 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
     failure_cause: editMaintenance?.failure_cause || '',
     solution_applied: editMaintenance?.solution_applied || '',
     work_hours: editMaintenance?.work_hours?.toString() || '',
+    warranty_claim: editMaintenance?.warranty_claim || false,
   });
 
   useEffect(() => {
     fetchAssets();
-    fetchSpareParts();
   }, []);
-
-  const fetchSpareParts = async () => {
-    try {
-      const { data, error } = await supabase.from('spare_parts').select('*').order('name');
-      // Si la tabla no existe (404) simplemente dejamos la lista vacía
-      if (!error && data) setSpareParts(data);
-    } catch {
-      // Tabla spare_parts no disponible, continuar sin repuestos
-    }
-  };
 
   const fetchAssets = async () => {
     const { data } = await supabase
@@ -87,44 +69,9 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
     if (data) setAssets(data as AssetWithDetails[]);
   };
 
-  const addPart = () => {
-    const newPart: PartUsed = {
-      name: '',
-      quantity: 1,
-      unit: 'unidad',
-      unit_price: 0,
-      total_cost: 0,
-    };
-    setPartsUsed([...partsUsed, newPart]);
-  };
-
-  const updatePart = (index: number, field: keyof PartUsed, value: string | number) => {
-    const updatedParts = [...partsUsed];
-    updatedParts[index] = { ...updatedParts[index], [field]: value };
-    
-    if (field === 'name') {
-      const sp = spareParts.find(s => s.name === value);
-      if (sp) {
-        updatedParts[index].unit = sp.unit;
-        updatedParts[index].unit_price = sp.unit_price;
-        updatedParts[index].id = sp.id;
-      }
-    }
-
-    // Recalculate total cost
-    if (field === 'quantity' || field === 'unit_price' || field === 'name') {
-      updatedParts[index].total_cost = updatedParts[index].quantity * updatedParts[index].unit_price;
-    }
-    
-    setPartsUsed(updatedParts);
-  };
-
-  const removePart = (index: number) => {
-    setPartsUsed(partsUsed.filter((_, i) => i !== index));
-  };
-
   const calculateTotalCost = () => {
-    return partsUsed.reduce((total, part) => total + part.total_cost, 0);
+    const workHoursCost = (parseFloat(formData.work_hours) || 0) * 50; // Tarifa por hora: S/ 50
+    return workHoursCost;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -179,7 +126,8 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
       failure_cause: formData.failure_cause.trim() || null,
       solution_applied: formData.solution_applied.trim() || null,
       work_hours: formData.work_hours ? parseFloat(formData.work_hours) : null,
-      parts_used: partsUsed.length > 0 ? partsUsed : null,
+      total_cost: calculateTotalCost(),
+      warranty_claim: formData.warranty_claim,
       updated_at: new Date().toISOString(),
     };
 
@@ -206,19 +154,6 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
           return;
         }
         
-        // Descontar inventario de repuestos si es creación
-        if (partsUsed.length > 0) {
-          for (const p of partsUsed) {
-            if (p.id) {
-              const sp = spareParts.find(s => s.id === p.id);
-              if (sp) {
-                await supabase.from('spare_parts').update({
-                  quantity: Math.max(0, sp.quantity - p.quantity)
-                }).eq('id', sp.id);
-              }
-            }
-          }
-        }
       }
 
       setLoading(false);
@@ -340,6 +275,19 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
               error={errors.work_hours}
             />
           </FormField>
+
+          <FormField label="Reclamo de Garantía">
+            <div className="flex items-center gap-3 mt-2">
+              <input
+                type="checkbox"
+                name="warranty_claim"
+                checked={formData.warranty_claim}
+                onChange={(e) => setFormData(prev => ({ ...prev, warranty_claim: e.target.checked }))}
+                className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              />
+              <label className="text-sm text-gray-700">Activar reclamo de garantía</label>
+            </div>
+          </FormField>
         </div>
       </FormSection>
 
@@ -382,115 +330,6 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
             </FormField>
           </>
         )}
-      </FormSection>
-
-      {/* Section: Repuestos Utilizados */}
-      <FormSection title="Repuestos Utilizados" color="amber">
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h4 className="text-sm font-medium text-gray-700">
-              Lista de repuestos utilizados en el mantenimiento
-            </h4>
-            <button
-              type="button"
-              onClick={addPart}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus size={16} />
-              Agregar Repuesto
-            </button>
-          </div>
-
-          {partsUsed.length === 0 ? (
-            <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-              <p className="text-gray-500">No se han agregado repuestos</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {partsUsed.map((part, index) => (
-                <div key={index} className="bg-white border rounded-lg p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                    <FormField label="Repuesto">
-                      <FormSelect
-                        name="name"
-                        value={part.name}
-                        onChange={(e) => updatePart(index, 'name', e.target.value)}
-                      >
-                        <option value="">Seleccionar repuesto</option>
-                        {spareParts.map(sp => (
-                          <option key={sp.id} value={sp.name}>{sp.name} - Stock: {sp.quantity}</option>
-                        ))}
-                      </FormSelect>
-                    </FormField>
-
-                    <FormField label="Cantidad">
-                      <FormInput
-                        type="number"
-                        min="1"
-                        value={part.quantity}
-                        onChange={(e) => updatePart(index, 'quantity', parseInt(e.target.value) || 1)}
-                      />
-                    </FormField>
-
-                    <FormField label="Unidad">
-                      <FormSelect
-                        value={part.unit}
-                        onChange={(e) => updatePart(index, 'unit', e.target.value)}
-                      >
-                        <option value="unidad">Unidad</option>
-                        <option value="metro">Metro</option>
-                        <option value="kg">Kilogramo</option>
-                        <option value="litro">Litro</option>
-                        <option value="par">Par</option>
-                      </FormSelect>
-                    </FormField>
-
-                    <FormField label="Precio Unitario">
-                      <FormInput
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={part.unit_price}
-                        onChange={(e) => updatePart(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                      />
-                    </FormField>
-
-                    <FormField label="Costo Total">
-                      <FormInput
-                        type="number"
-                        step="0.01"
-                        value={part.total_cost}
-                        readOnly
-                        className="bg-gray-100"
-                      />
-                    </FormField>
-
-                    <div className="flex items-end">
-                      <button
-                        type="button"
-                        onClick={() => removePart(index)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {partsUsed.length > 0 && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="font-medium text-blue-900">Costo Total de Repuestos:</span>
-                <span className="text-xl font-bold text-blue-900">
-                  S/. {calculateTotalCost().toFixed(2)}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
       </FormSection>
 
       {/* Section: Notas */}

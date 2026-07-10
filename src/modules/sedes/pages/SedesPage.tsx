@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Trash2, MapPin, X, Building, ChevronUp, ChevronDown, Search, Plus, Filter } from 'lucide-react';
-import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -35,12 +35,13 @@ const typeLabels: Record<string, string> = {
   circuito: 'Circuito',
 };
 
+// Uniform corporate palette — same base color for all types
 const typeColors: Record<string, string> = {
-  revision: 'bg-blue-50 text-blue-700 border-blue-200',
-  policlinico: 'bg-green-50 text-green-700 border-green-200',
-  escuela_conductores: 'bg-purple-50 text-purple-700 border-purple-200',
-  central: 'bg-orange-50 text-orange-700 border-orange-200',
-  circuito: 'bg-red-50 text-red-700 border-red-200',
+  revision:            'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
+  policlinico:         'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
+  escuela_conductores: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
+  central:             'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
+  circuito:            'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
 };
 
 export default function Sedes() {
@@ -253,18 +254,16 @@ export default function Sedes() {
               </>
             }
           >
-            <FilterSelect
-              icon={Filter}
-              iconClassName="text-rose-500"
-              value={selectedTypes.length === 1 ? selectedTypes[0] : ''}
-              onChange={e => { const v = e.target.value as string; setSelectedTypes(v ? [v] : []); setCurrentPage(1); }}
-              wrapperClassName="md:min-w-[220px]"
-            >
-              <option value="">TODOS LOS TIPOS</option>
-              {typeEntries.map(type => (
-                <option key={type} value={type}>{typeLabels[type]}</option>
-              ))}
-            </FilterSelect>
+            <FilterBar
+              filters={[
+                { key: 'type', placeholder: 'TODOS LOS TIPOS', icon: Filter, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: typeEntries.map(type => ({ value: type, label: typeLabels[type] })) },
+              ]}
+              values={{ type: selectedTypes.length === 1 ? selectedTypes[0] : '' }}
+              onChange={(key, value) => {
+                setSelectedTypes(value ? [value as string] : []);
+                setCurrentPage(1);
+              }}
+            />
 
             <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
@@ -287,7 +286,7 @@ export default function Sedes() {
                 return (
                   <div
                     key={loc.id}
-                    onClick={() => canEdit() && toggleSelect(loc.id)}
+                    onClick={() => { setSelectedLocation(loc); setShowDetails(true); }}
                     className={`bg-white rounded-none shadow-sm border transition-all duration-300 flex flex-col group overflow-hidden relative cursor-pointer hover:bg-slate-50/80 hover:border-blue-200/50 hover:shadow-md ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-100'}`}
                   >
                     {canEdit() && (
@@ -304,7 +303,7 @@ export default function Sedes() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-tight truncate leading-tight group-hover:text-blue-700 transition-colors">{loc.name}</h3>
-                          <span className={`inline-block px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest border mt-1 ${typeColors[loc.type] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                          <span className={`inline-block px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest border rounded-none mt-1 ${typeColors[loc.type] || 'bg-[#002855]/8 text-[#002855] border-[#002855]/20'}`}>
                             {typeLabels[loc.type] || loc.type}
                           </span>
                         </div>
@@ -444,7 +443,7 @@ export default function Sedes() {
                             <tr
                               key={loc.id}
                               className={`hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20 ${selectedIds.includes(loc.id) ? 'bg-blue-50/40' : ''}`}
-                              onClick={() => { setSelectedLocation(loc); setShowDetails(true); if (canEdit()) toggleSelect(loc.id); }}
+                              onClick={() => { setSelectedLocation(loc); setShowDetails(true); }}
                             >
                               <td className="px-6 py-4 text-left w-12">
                                 <input type="checkbox" checked={selectedIds.includes(loc.id)} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
@@ -461,7 +460,7 @@ export default function Sedes() {
                                 </div>
                               </td>
                               <td className="px-4 py-4 text-left">
-                                <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${typeColors[loc.type] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                                <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-none ${typeColors[loc.type] || 'bg-[#002855]/8 text-[#002855] border-[#002855]/20'}`}>
                                   {typeLabels[loc.type] || loc.type}
                                 </span>
                               </td>
@@ -469,7 +468,7 @@ export default function Sedes() {
                                 <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block leading-none">{loc.address || '—'}</span>
                               </td>
                               <td className="px-4 py-4 text-left">
-                                <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-full ${camCount > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-50 text-slate-500 border border-slate-200'}`}>
+                                <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-none ${camCount > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                                   {camCount} Instaladas
                                 </span>
                               </td>

@@ -1,3 +1,15 @@
+// =============================================================================
+// TicketDetailPage.tsx — Página de detalle de un ticket individual
+// Funcionalidades:
+//   - Visualización completa del ticket (título, descripción, AnyDesk, estado)
+//   - Chat en tiempo real con editor de texto enriquecido (negrita, cursiva, etc.)
+//   - Gestión de estados: Atender, Resolver, Cerrar, Finalizar (archivar)
+//   - Panel de participantes con presencia en tiempo real
+//   - Reapertura de tickets por el creador (ventana de 10 min)
+//   - Contacto WhatsApp para tickets de alta prioridad
+//   - Auto-asignación al creador vía ticket_assignments
+// =============================================================================
+
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Send, User, AlertCircle, MessageSquare, Copy, ArrowLeft, Lock, Smile, Bold, Italic, List, Image as ImageIcon, Loader2, Clock, Activity, CheckCircle2, XCircle, Underline, Strikethrough, Monitor, Eye, Briefcase, Terminal } from 'lucide-react';
@@ -16,19 +28,19 @@ export default function TicketDetail() {
     const { user } = useAuth();
     const { success: notifySuccess, error: notifyError, info: notifyInfo, warning: notifyWarning, confirm } = useNotify();
     
-    // UI-only state
+    // Estado local de UI (no persistido en DB)
     const [newComment, setNewComment] = useState('');
     const [sending, setSending] = useState(false);
     const [copiedItem, setCopiedItem] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showListMenu, setShowListMenu] = useState(false);
     const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
-    const [activeFormats, setActiveFormats] = useState<string[]>([]);
+    const [activeFormats, setActiveFormats] = useState<string[]>([]); // Formatos activos del editor (bold, italic, etc.)
     const [mobileTab, setMobileTab] = useState<'details' | 'chat' | 'people'>('chat');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [statusUpdating, setStatusUpdating] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
-    const editorRef = useRef<HTMLDivElement>(null);
+    const editorRef = useRef<HTMLDivElement>(null); // Referencia al editor contentEditable
 
     // Use hooks for data and realtime
     const {
@@ -58,6 +70,9 @@ export default function TicketDetail() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [showListMenu]);
 
+    // Sube una imagen al storage (bucket 'chat-attachments') y la inserta como comentario
+    // Usa formato markdown ![imagen](url) para que sea renderizada en el chat
+    // Acepta tanto selección manual como pegado directo desde el portapapeles
     const uploadFile = async (file: File) => {
         if (!ticketId) return;
         try {
@@ -72,6 +87,7 @@ export default function TicketDetail() {
 
             if (uploadError) throw uploadError;
 
+            // Obtiene la URL pública del archivo subido
             const { data: { publicUrl } } = supabase.storage
                 .from('chat-attachments')
                 .getPublicUrl(filePath);
@@ -121,6 +137,10 @@ export default function TicketDetail() {
         }
     };
 
+    // Envía un comentario al ticket:
+    // 1. Convierte el HTML del editor contentEditable a Markdown
+    // 2. Llama a addComment() del hook useTicketComments
+    // 3. Limpia el editor después del envío exitoso
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newComment.trim() || sending) return;
@@ -176,6 +196,9 @@ export default function TicketDetail() {
     };
 
 
+    // Convierte HTML (desde contentEditable) a Markdown simple
+    // Soporta: negrita (**), cursiva (_), subrayado (__), tachado (~~),
+    // listas con viñetas (•), listas numeradas (1.), saltos de línea
     const htmlToMarkdown = (html: string) => {
         let text = html
             // Listas
@@ -204,7 +227,10 @@ export default function TicketDetail() {
         return text.trim();
     };
 
-    // Función mejorada para renderizar markdown
+    // Convierte Markdown a HTML seguro para renderizar en el chat
+    // Soporta: negrita, cursiva, subrayado, tachado, destacado (==),
+    // código inline/bloque, citas (>), encabezados (#), listas,
+    // checklists, imágenes, y saltos de línea
     const renderMarkdown = (text: string) => {
         return text
             // Formatos de texto
@@ -243,6 +269,10 @@ export default function TicketDetail() {
     };
 
 
+    // Elimina el ticket con validaciones de seguridad:
+    // - Staff (super_admin, sistemas, gerencia, supervisores) pueden eliminar siempre
+    // - El creador puede eliminar solo dentro de los primeros 3 minutos
+    // - Primero limpia archivos adjuntos del storage, luego elimina el registro
     const handleDeleteTicket = async () => {
         const now = new Date();
         const createdDate = new Date(ticket.created_at);
@@ -288,6 +318,12 @@ export default function TicketDetail() {
         }
     };
 
+    // Cambia el estado del ticket y registra timestamps:
+    // - in_progress: asigna al técnico que atiende + attended_at
+    // - resolved: marca resolved_at
+    // - closed: marca closed_at
+    // Cada cambio envía notificaciones a los roles correspondientes
+    // y registra un comentario automático en el feed del ticket
     const handleStatusUpdate = async (newStatus: string) => {
 
         if (!canManageStatus) {
@@ -344,6 +380,7 @@ export default function TicketDetail() {
                 notifyInfo(`Estado cambiado a: ${getStatusLabel(newStatus)}`, 'Estado actualizado');
             }
 
+            // Registro automático del cambio de estado en el feed
             await supabase.from('ticket_comments').insert([{
                 ticket_id: ticketId,
                 user_id: user?.id,
@@ -390,6 +427,12 @@ export default function TicketDetail() {
 
     const canManageStatus = user?.role === 'super_admin' || user?.role === 'sistemas' || user?.role === 'gerencia' || user?.role === 'supervisores' || user?.role === 'administradores' || user?.role === 'personalizado';
 
+    // Asigna el ticket al usuario actual como técnico responsable:
+    // 1. Cambia estado a 'in_progress'
+    // 2. Asigna el ticket al usuario (assigned_to = user.id)
+    // 3. Registra attended_at (marca de tiempo de primera atención)
+    // 4. Envía notificación a los interesados
+    // 5. Agrega comentario automático al feed
     const handleAttendTicket = async () => {
         if (!canAttendTicket || statusUpdating) {
             return;
@@ -441,6 +484,12 @@ export default function TicketDetail() {
         }
     };
 
+    // Permite que personal técnico se una al ticket como colaborador
+    // Diferencias con handleAttendTicket:
+    //   - No cambia el estado del ticket (solo se "une" al chat)
+    //   - No se convierte en técnico responsable (assigned_to no cambia)
+    //   - Se registra en ticket_assignments (soporte multi-colaborador)
+    // Límite máximo: 4 personas por ticket
     const handleJoinTicket = async () => {
 
         if (!canManageStatus || !ticket) {
@@ -516,6 +565,11 @@ export default function TicketDetail() {
         return result;
     };
 
+    // Finaliza y archiva manualmente un ticket (acción irreversible desde UI)
+    // - Cambia estado a 'archived' (diferente a 'closed' que es automático)
+    // - Cierra el ticket y redirige al dashboard
+    // - Los tickets archivados solo se ven en el historial
+    // También se activa automáticamente: Resuelto→Cerrado (3min) y Cerrado→Archivado (10min)
     const handleFinalizeTicket = async () => {
         if (!canManageStatus || statusUpdating) {
             return;

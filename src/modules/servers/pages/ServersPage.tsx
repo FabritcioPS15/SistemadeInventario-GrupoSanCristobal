@@ -19,7 +19,7 @@ import DetailModal, {
 } from '../../../shared/components/ui/DetailModal';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
-import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
 import LoadingSpinner from '../../../shared/components/ui/LoadingSpinner';
@@ -314,20 +314,18 @@ export default function Servers() {
             </>
           }
         >
-          <FilterSelect
-            icon={MapPin}
-            iconClassName="text-rose-500"
-            value={selectedLocations[0] || ''}
-            onChange={e => { const v = e.target.value as string; setSelectedLocations(v ? [v] : []); setCurrentPage(1); }}
-            wrapperClassName="md:min-w-[220px]"
-          >
-            <option value="">TODAS LAS SEDES</option>
-            {locations.map(loc => (
-              <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-            ))}
-          </FilterSelect>
+  <FilterBar
+    filters={[
+      { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+    ]}
+    values={{ location: selectedLocations[0] || '' }}
+    onChange={(key, value) => {
+      setSelectedLocations(value ? [value as string] : []);
+      setCurrentPage(1);
+    }}
+  />
 
-          <ViewToggle viewMode={viewMode} onChange={v => setViewMode(v)} />
+  <ViewToggle viewMode={viewMode} onChange={v => setViewMode(v)} />
 
           {canEdit() && (
             <PrimaryButton onClick={openCreate}>
@@ -353,7 +351,7 @@ export default function Servers() {
               return (
                 <div
                   key={srv.id}
-                  onClick={() => canEdit() && toggleSelect(srv.id)}
+                  onClick={() => { setSelectedServer(srv); setShowDetails(true); }}
                   className={`bg-white rounded-none shadow-sm border transition-all duration-300 flex flex-col group overflow-hidden relative cursor-pointer hover:bg-slate-50/80 hover:border-blue-200/50 hover:shadow-md ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-100'}`}
                 >
                   {canEdit() && (
@@ -537,7 +535,7 @@ export default function Servers() {
               </div>
 
               {/* Vista Desktop Table */}
-              <div className="hidden md:block">
+              <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -569,9 +567,9 @@ export default function Servers() {
                       <TableRow
                         key={srv.id}
                         className={selectedIds.includes(srv.id) ? 'bg-blue-50/50' : ''}
-                        onClick={() => { setSelectedServer(srv); setShowDetails(true); if (canEdit()) toggleSelect(srv.id); }}
+                        onClick={() => { setSelectedServer(srv); setShowDetails(true); }}
                       >
-                        <TableCell className="w-12">
+                        <TableCell className="w-12" noTruncate>
                           <input
                             type="checkbox"
                             checked={selectedIds.includes(srv.id)}
@@ -580,27 +578,27 @@ export default function Servers() {
                             className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell noTruncate>
                           <div className="flex items-center justify-start gap-3">
                             <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
                               <ServerIcon size={14} />
                             </div>
                             <div className="flex flex-col items-start">
                               <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">{srv.name}</span>
-                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1 md:hidden">{srv.locations?.name || 'VIRTUAL'}</span>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 md:hidden">{srv.locations?.name || 'VIRTUAL'}</span>
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell noTruncate>
                           <div className="flex flex-col items-start">
-                            <span className="text-[13px] font-extrabold text-slate-600 uppercase tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
+                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Sede Física</span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell noTruncate>
                           <div className="flex flex-col items-start group/cell">
                             <div className="flex items-center justify-start gap-2">
-                              <span className={`text-[13px] font-mono font-black ${hasIp ? 'text-[#002855]' : 'text-slate-300'}`}>{srv.ip_address || '—'}</span>
+                              <span className={`text-[11px] font-mono font-black ${hasIp ? 'text-[#002855]' : 'text-slate-300'}`}>{srv.ip_address || '—'}</span>
                               {hasIp && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.ip_address!, 'IP'); }}
@@ -614,10 +612,10 @@ export default function Servers() {
                             <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Red Interna</span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell noTruncate>
                           <div className="flex flex-col items-start group/cell">
                             <div className="flex items-center justify-start gap-2">
-                              <span className={`text-[14px] font-mono font-black ${hasAnydesk ? 'text-red-600' : 'text-slate-300'}`}>{srv.anydesk_id || '—'}</span>
+                              <span className={`text-[11px] font-mono font-black ${hasAnydesk ? 'text-red-600' : 'text-slate-300'}`}>{srv.anydesk_id || '—'}</span>
                               {hasAnydesk && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.anydesk_id!, 'AnyDesk ID'); }}
@@ -631,11 +629,12 @@ export default function Servers() {
                             <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">ID Remoto</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="text-center" noTruncate>
                           <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-1 group-hover:translate-x-0">
                             <RowActions
                               canEdit={canEdit()}
                               onEdit={(e) => { e.stopPropagation(); openEdit(srv); }}
+                              onDelete={(e) => { e.stopPropagation(); del(srv); }}
                             />
                           </div>
                         </TableCell>

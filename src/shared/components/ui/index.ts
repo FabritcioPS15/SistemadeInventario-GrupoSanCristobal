@@ -12,6 +12,7 @@ export { default as DetailModal } from './DetailModal';
 export { default as EmptyState } from './EmptyState';
 export { default as ExportButtons } from './ExportButtons';
 export * from './Table';
+export { default as FilterBar } from './FilterBar';
 export { default as FilterSelect } from './FilterSelect';
 export { default as LoadingSpinner } from './LoadingSpinner';
 export { default as ModalOverlay } from './ModalOverlay';

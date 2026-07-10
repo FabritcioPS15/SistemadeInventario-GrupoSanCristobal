@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Edit, Trash2, MapPin, Upload, Package, Layers, LayoutGrid, List, BarChart3, FileSpreadsheet, } from 'lucide-react';
+import { Edit, Trash2, MapPin, Upload, Package, Layers, LayoutGrid, List, BarChart3, FileSpreadsheet, Circle, Plus } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -7,18 +7,18 @@ import { useNotify } from '../../../shared/hooks/useNotify';
 import { supabase, AssetWithDetails } from '../../../shared/services/supabase';
 import AssetForm from '../forms/AssetForm';
 import AssetDetails from '../components/AssetDetails';
+import DecoupleModal from '../components/DecoupleModal';
 import ExcelImportModal from '../../../shared/components/ExcelImportModal';
 import { generateAndDownloadTemplate } from '../../../shared/utils/excelTemplate';
 import Pagination from '../../../shared/components/ui/Pagination';
 import { useAuth } from '../../../app/providers/AuthContext';
 import SearchBar from '../../../shared/components/ui/SearchBar';
-import StatusBadge from '../../../shared/components/ui/StatusBadge';
 import { useInventory } from '../hooks/useInventory';
 import { STATUS_MAP, PATH_CATEGORY_MAP, SUBCATEGORY_SLUG_MAP } from '../constants/inventory.constants';
 import InventoryDashboard from '../components/InventoryDashboard';
 import { InventoryFilter } from '../../../shared/types/inventory.types';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
-import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import FilterBar from '../../../shared/components/ui/FilterBar';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
 import {
   Table,
@@ -30,24 +30,40 @@ import {
 } from '../../../shared/components/ui/Table';
 
 type InventoryProps = {
-  categoryFilter?: string; // e.g., 'inventory-computo-ti'
-  subcategoryFilter?: string; // e.g., 'cpu'
+  categoryFilter?: string;
+  subcategoryFilter?: string;
 };
 
 export default function Inventory({ categoryFilter, subcategoryFilter }: InventoryProps) {
   const { success: notifySuccess, error: notifyError, confirm } = useNotify();
-  const { canEdit } = useAuth();
+  const { canEdit, user } = useAuth();
 
   // UI-only state
   const [showAssetForm, setShowAssetForm] = useState(false);
   const [showAssetDetails, setShowAssetDetails] = useState(false);
+  const [showDecoupleModal, setShowDecoupleModal] = useState(false);
+  const [decoupleAssetData, setDecoupleAssetData] = useState<AssetWithDetails | undefined>();
   const [selectedAsset, setSelectedAsset] = useState<AssetWithDetails | undefined>();
   const [editingAsset, setEditingAsset] = useState<AssetWithDetails | undefined>();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [showDashboard, setShowDashboard] = useState(false);
-  const [multiEnterpriseFilters] = useState<InventoryFilter>({});
+
+  // Determinar los filtros de empresa/sede según el rol y accesos del usuario
+  const multiEnterpriseFilters: InventoryFilter = (() => {
+    // Super admin y gerencia ven todo
+    if (user?.role === 'super_admin' || user?.role === 'gerencia') {
+      return {};
+    }
+    // Otros roles solo ven sus sedes asignadas
+    if (user?.location_ids && user.location_ids.length > 0) {
+      return {
+        location_id: user.location_ids[0] // Usar la primera sede para el dashboard
+      };
+    }
+    return {};
+  })();
 
   // Use hook for inventory logic
   const {
@@ -60,6 +76,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     searchTerm,
     selectedLocations,
     filterRubro,
+    filterStatus,
     currentPage,
     itemsPerPage,
     totalPages,
@@ -67,6 +84,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     setSearchTerm,
     setSelectedLocations,
     setFilterRubro,
+    setFilterStatus,
     setCurrentPage,
     setItemsPerPage,
     refresh,
@@ -132,6 +150,14 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     }
   };
 
+  const handleDecoupleAsset = (asset: AssetWithDetails) => {
+    const cantidad = parseInt(asset.cantidad?.toString() || '1');
+    if (cantidad < 2) return;
+
+    setDecoupleAssetData(asset);
+    setShowDecoupleModal(true);
+  };
+
 
   const handleExportExcel = async () => {
     try {
@@ -149,7 +175,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         { header: 'ÁREA', key: 'area', width: 20 },
         { header: 'ESTADO', key: 'status', width: 15 },
         { header: 'FECHA ADQUISICIÓN', key: 'purchase_date', width: 20 },
-        { header: 'NOTAS', key: 'notes', width: 40 }
+        { header: 'NOTAS', key: 'notes', width: 20 }
       ];
 
       // Use current page assets for export
@@ -216,38 +242,41 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
           label="Activos"
           searchComponent={
             <SearchBar
-              placeholder="BUSCAR POR CÓDIGO, MARCA, SERIE O MODELO..."
+              placeholder="BUSCAR POR CÓDIGO, NOMBRE, MARCA, SERIE O MODELO..."
               value={searchTerm}
               onChange={(value) => { setSearchTerm(value); setCurrentPage(1); }}
             />
           }
         >
-          <FilterSelect
-            icon={MapPin}
-            iconClassName="text-rose-500"
-            value={selectedLocations[0] || ''}
-            onChange={e => { setSelectedLocations(e.target.value ? [e.target.value as string] : []); setCurrentPage(1); }}
-            wrapperClassName="md:min-w-[220px]"
-          >
-            <option value="">TODAS LAS SEDES</option>
-            {locations.map((loc) => (
-              <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
-            ))}
-          </FilterSelect>
+          <FilterBar
+            filters={[
+              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', multiple: true, options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+              {
+                key: 'status', placeholder: 'TODOS LOS ESTADOS', icon: Circle, iconClassName: 'text-emerald-500', wrapperClassName: 'md:min-w-[170px]', options: [
+                  { value: 'Operativo', label: 'OPERATIVO' },
+                  { value: 'Inoperativo', label: 'INOPERATIVO' },
+                  { value: 'En Reparación', label: 'EN REPARACIÓN' },
+                  { value: 'Baja', label: 'DE BAJA' },
+                ]
+              },
+            ]}
+            values={{ location: selectedLocations, status: filterStatus }}
+            onChange={(key, value) => {
+              if (key === 'location') setSelectedLocations(value as string[]);
+              else if (key === 'status') setFilterStatus(value as string);
+              setCurrentPage(1);
+            }}
+          />
 
-          <FilterSelect
-            icon={Layers}
-            iconClassName="text-blue-600"
-            value={filterRubro}
-            onChange={e => { setFilterRubro(e.target.value as string); setCurrentPage(1); }}
-            wrapperClassName="md:min-w-[170px]"
-          >
-            <option value="">TODOS LOS RUBROS</option>
-            <option value="revisiones_tecnicas">CTIV</option>
-            <option value="escuela_conductores">ESCON</option>
-            <option value="polclinico">ECSAL</option>
-            <option value="oficinas_administrativas">CIRCUITOS</option>
-          </FilterSelect>
+          {canEdit() && (
+            <button
+              onClick={() => setShowAssetForm(true)}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+            >
+              <Plus size={14} />
+              Agregar Activo
+            </button>
+          )}
 
           <div className="flex bg-slate-100 p-1 border border-slate-200 w-full md:w-auto justify-center">
             <button
@@ -350,12 +379,12 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         }}
                       />
                     </TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'brand'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('brand')}>Activo</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'item'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('item')}>Activo</TableHead>
                     <TableHead sortable isSorted={sortConfig?.key === 'category_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('category_id')}>Categoría</TableHead>
                     <TableHead sortable isSorted={sortConfig?.key === 'location_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location_id')}>Sede</TableHead>
                     <TableHead sortable isSorted={sortConfig?.key === 'cantidad'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('cantidad')}>Cantidad</TableHead>
                     <TableHead sortable isSorted={sortConfig?.key === 'valor_estimado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('valor_estimado')}>Costo</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'status'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('status')}>Estado Operativo</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'condicion'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('condicion')}>Condición</TableHead>
                     <TableHead className="text-center">Acción</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -409,34 +438,45 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{asset.categories?.name}</span>
+                            <span className="text-[11px] font-bold text-slate-700 uppercase leading-none">{asset.categories?.name}</span>
                             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.subcategories?.name}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{asset.locations?.name || 'No asignada'}</span>
+                            <span className="text-[11px] font-bold text-slate-700 uppercase leading-none">{asset.locations?.name || 'No asignada'}</span>
                             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.areas?.name || 'Sin área'}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-[13px] font-black text-[#002855] leading-none">{asset.cantidad || 1}</span>
+                            <span className="text-[11px] font-bold text-slate-700 leading-none">{asset.cantidad || 1}</span>
                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">{asset.unidad_medida || 'UNIDAD(ES)'}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-[13px] font-black text-slate-800 leading-none">
+                          <span className="text-[11px] font-bold text-slate-700 leading-none">
                             {asset.valor_estimado != null ? `S/ ${Number(asset.valor_estimado).toFixed(2)}` : '—'}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <StatusBadge status={asset.status} statusMap={STATUS_MAP} size="md" />
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wider bg-slate-100 text-slate-700 w-max border border-slate-200 uppercase">
+                            {asset.condicion || 'N/A'}
+                          </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
                             {canEdit() && (
                               <>
+                                {(asset.cantidad || 1) > 1 && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleDecoupleAsset(asset); }}
+                                    className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+                                    title="Desacoplar Activos"
+                                  >
+                                    <Layers size={14} />
+                                  </button>
+                                )}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setShowAssetForm(true); }}
                                   className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
@@ -478,7 +518,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {inventory.map((asset: any) => {
-                const status = STATUS_MAP[asset.status] || { label: asset.status, color: 'slate' };
+                const status = STATUS_MAP[asset.estado_uso] || { label: asset.estado_uso || 'Desconocido', color: 'slate' };
                 return (
                   <div
                     key={asset.id}
@@ -503,9 +543,9 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                             CÓD: {asset.codigo_unico || 'N/A'}
                           </span>
                         </div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${asset.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          asset.status === 'inactive' ? 'bg-slate-50 text-slate-700 border-slate-200' :
-                            asset.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          asset.estado_uso === 'Inoperativo' ? 'bg-slate-50 text-slate-700 border-slate-200' :
+                            asset.estado_uso === 'En Reparación' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                               'bg-rose-50 text-rose-700 border-rose-200'
                           }`}>
                           {status.label}
@@ -573,8 +613,26 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
       {showAssetDetails && selectedAsset && (
         <AssetDetails
           asset={selectedAsset}
-          onClose={() => setShowAssetDetails(false)}
+          onClose={() => {
+            setShowAssetDetails(false);
+            setSelectedAsset(undefined);
+          }}
           onEdit={() => { setShowAssetDetails(false); setEditingAsset(selectedAsset); setShowAssetForm(true); }}
+        />
+      )}
+
+      {showDecoupleModal && decoupleAssetData && (
+        <DecoupleModal
+          asset={decoupleAssetData}
+          onClose={() => {
+            setShowDecoupleModal(false);
+            setDecoupleAssetData(undefined);
+          }}
+          onConfirm={() => {
+            setShowDecoupleModal(false);
+            setDecoupleAssetData(undefined);
+            refresh();
+          }}
         />
       )}
 

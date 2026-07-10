@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, List, LayoutGrid } from 'lucide-react';
-import { RiFileExcel2Fill } from "react-icons/ri";
-import { FaFilePdf } from "react-icons/fa6";
+import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, List } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -54,6 +52,8 @@ export default function MTCAccesos() {
   const [accessTypeFilter, setAccessTypeFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
 
   useEffect(() => {
     fetchAccesos();
@@ -98,8 +98,46 @@ export default function MTCAccesos() {
         }
       } catch (err) {
         console.error('❌ Error inesperado al eliminar acceso MTC:', err);
-        notifyError('Error inesperado al eliminar el acceso MTC');
+        notifyError(`Error inesperado: ${err instanceof Error ? err.message : 'Desconocido'}`);
       }
+    }
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    const confirmed = await confirm(`¿Estás seguro de que quieres eliminar los ${ids.length} accesos seleccionados?`, 'Eliminar Accesos MTC');
+    if (confirmed) {
+      try {
+        const { error } = await supabase
+          .from('mtc_accesos')
+          .delete()
+          .in('id', ids);
+
+        if (error) {
+          console.error('❌ Error al eliminar accesos MTC en lote:', error);
+          notifyError(`Error al eliminar los accesos: ${error.message}`);
+        } else {
+          await fetchAccesos();
+          setSelectedIds([]);
+          notifySuccess(`${ids.length} accesos eliminados correctamente`);
+        }
+      } catch (err) {
+        console.error('❌ Error inesperado al eliminar accesos en lote:', err);
+        notifyError(`Error inesperado: ${err instanceof Error ? err.message : 'Desconocido'}`);
+      }
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = (accesosList: MTCAcceso[]) => {
+    if (selectedIds.length === accesosList.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(accesosList.map(a => a.id));
     }
   };
 
@@ -165,7 +203,7 @@ export default function MTCAccesos() {
     try {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Accesos MTC');
-      
+
       worksheet.columns = [
         { header: 'Nombre', key: 'name', width: 30 },
         { header: 'URL', key: 'url', width: 40 },
@@ -173,14 +211,14 @@ export default function MTCAccesos() {
         { header: 'Tipo', key: 'access_type', width: 15 },
         { header: 'Notas', key: 'notes', width: 30 }
       ];
-      
+
       worksheet.getRow(1).font = { bold: true, size: 12 };
       worksheet.getRow(1).fill = {
         type: 'pattern',
         pattern: 'solid',
         fgColor: { argb: 'FFE0E0E0' }
       };
-      
+
       filteredAccesos.forEach(acceso => {
         worksheet.addRow({
           name: acceso.name || '',
@@ -190,7 +228,7 @@ export default function MTCAccesos() {
           notes: acceso.notes || ''
         });
       });
-      
+
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
@@ -215,7 +253,7 @@ export default function MTCAccesos() {
         acceso.access_type || '',
         acceso.notes || 'Sin notas'
       ]);
-      
+
       autoTable(doc, {
         head: [['Nombre', 'URL', 'Usuario', 'Tipo', 'Notas']],
         body: tableData,
@@ -223,7 +261,7 @@ export default function MTCAccesos() {
         styles: { fontSize: 8 },
         headStyles: { fillColor: [0, 40, 85] }
       });
-      
+
       doc.save(`accesos_mtc_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error('Error exportando PDF:', error);
@@ -262,31 +300,41 @@ export default function MTCAccesos() {
             </>
           }
         >
-            <FilterSelect
-              value={accessTypeFilter}
-              onChange={e => { setAccessTypeFilter(e.target.value); setCurrentPage(1); }}
+          <FilterSelect
+            value={accessTypeFilter}
+            onChange={e => { setAccessTypeFilter(e.target.value as string); setCurrentPage(1); }}
+          >
+            <option value="">TODOS LOS TIPOS</option>
+            <option value="web">WEB SERVICES</option>
+            <option value="api">APIS & ENDPOINTS</option>
+            <option value="database">BASES DE DATOS</option>
+            <option value="ssh">TERMINAL SSH</option>
+            <option value="ftp">SERVIDORES FTP</option>
+          </FilterSelect>
+
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+
+          {canEdit() && (
+            <button
+              onClick={() => setView(view === 'form' ? 'list' : 'form')}
+              className={`w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${view === 'form' ? 'bg-slate-800 text-white' : 'bg-[#002855] text-white hover:bg-blue-800'}`}
             >
-              <option value="">TODOS LOS TIPOS</option>
-              <option value="web">WEB SERVICES</option>
-              <option value="api">APIS & ENDPOINTS</option>
-              <option value="database">BASES DE DATOS</option>
-              <option value="ssh">TERMINAL SSH</option>
-              <option value="ftp">SERVIDORES FTP</option>
-            </FilterSelect>
+              {view === 'form' ? <List size={14} /> : <Plus size={14} />}
+              {view === 'form' ? 'Ver Lista' : 'Nuevo Acceso'}
+            </button>
+          )}
 
-            <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+          <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
 
-            {canEdit() && (
-              <button
-                onClick={() => setView(view === 'form' ? 'list' : 'form')}
-                className={`w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${view === 'form' ? 'bg-slate-800 text-white' : 'bg-[#002855] text-white hover:bg-blue-800'}`}
-              >
-                {view === 'form' ? <List size={14} /> : <Plus size={14} />}
-                {view === 'form' ? 'Ver Lista' : 'Nuevo Acceso'}
-              </button>
-            )}
-
-            <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
+          {canEdit() && selectedIds.length > 0 && viewMode === 'table' && (
+            <button
+              onClick={() => handleBulkDelete(selectedIds)}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-widest"
+            >
+              <Trash2 size={14} />
+              Eliminar ({selectedIds.length})
+            </button>
+          )}
         </ActionToolbar>
 
         {view === 'form' ? (
@@ -400,8 +448,19 @@ export default function MTCAccesos() {
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {paginatedAccesos.map(acceso => (
-                    <div key={acceso.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:border-slate-300 transition-all duration-300 flex flex-col group overflow-hidden">
-                      <div className="p-6 flex-1">
+                    <div key={acceso.id} className={`bg-white rounded-2xl shadow-sm border transition-all duration-300 flex flex-col group overflow-hidden ${selectedIds.includes(acceso.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-gray-100 hover:shadow-xl hover:border-slate-300'}`}>
+                      <div className="p-6 flex-1 relative">
+                        {canEdit() && (
+                          <div className="absolute top-4 right-4 z-10">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(acceso.id)}
+                              onChange={() => toggleSelect(acceso.id)}
+                              onClick={e => e.stopPropagation()}
+                              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer shadow-sm"
+                            />
+                          </div>
+                        )}
                         <div className="flex items-start justify-between mb-6">
                           <div className="flex-1">
                             <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors uppercase tracking-tight mb-2">{acceso.name}</h3>

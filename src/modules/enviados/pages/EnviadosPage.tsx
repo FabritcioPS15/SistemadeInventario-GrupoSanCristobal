@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Edit, Trash2, MapPin, Package, Truck, X, Calendar, Plus, LayoutGrid, List, Search } from 'lucide-react';
+import { Edit, Trash2, MapPin, Package, Truck, X, Calendar, Plus, LayoutGrid, List, Search, Send } from 'lucide-react';
 import { useHeaderVisible } from '../../../shared/hooks/useHeaderVisible';
 import { supabase, AssetWithDetails, Location } from '../../../shared/services/supabase';
+import ModalOverlay from '../../../shared/components/ui/ModalOverlay';
 import ShipmentForm from '../forms/ShipmentForm';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
@@ -460,31 +461,31 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
 
       {/* Modal Detalle */}
       {viewingShipment && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-none shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
+        <ModalOverlay className="bg-slate-900/40 backdrop-blur-sm">
+          <div
+            className="bg-white w-full h-full md:h-[90vh] max-w-full sm:max-w-2xl rounded-none shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header */}
-            <div className={`px-8 py-6 flex items-center justify-between border-b border-gray-100 ${statusColors[viewingShipment.status]?.split(' ')[0] || 'bg-gray-50'} bg-opacity-30`}>
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-white shadow-sm border border-gray-100">
-                  {(() => {
-                    const Icon = getStatusIcon(viewingShipment.status);
-                    return <Icon className={statusColors[viewingShipment.status]?.split(' ')[1] || 'text-gray-500'} size={24} />;
-                  })()}
+            <div className="bg-gradient-to-r from-blue-900 to-blue-900 px-5 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-6">
+                <div className="w-9 h-9 bg-white/10 rounded-none flex items-center justify-center border border-white/20">
+                  <Send size={18} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-[#002855] uppercase tracking-tight">Ficha de Envío</h2>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{statusLabels[viewingShipment.status]}</p>
+                  <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">Ficha de Envío</h2>
+                  <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">{statusLabels[viewingShipment.status]}</p>
                 </div>
               </div>
               <button
                 onClick={() => setViewingShipment(undefined)}
-                className="p-2 hover:bg-white/50 rounded-none transition-colors text-gray-400 hover:text-gray-600"
+                className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all"
               >
                 <X size={24} />
               </button>
             </div>
 
-            <div className="p-8 overflow-y-auto space-y-8">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3">
               {/* Activo e Información General */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
@@ -585,27 +586,29 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 bg-gray-50 border-t border-gray-100 flex gap-3">
-              <button
-                onClick={() => setViewingShipment(undefined)}
-                className="flex-1 px-4 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest bg-white border border-gray-200 rounded-none hover:bg-gray-50 transition-all active:scale-95 shadow-sm"
-              >
-                Cerrar
-              </button>
-              {canEdit() && (
+            <div className="sticky bottom-0 bg-white border-t px-4 py-3 flex items-center justify-between gap-3 z-10">
+              <div className="flex items-center gap-3 ml-auto">
                 <button
-                  onClick={() => {
-                    setViewingShipment(undefined);
-                    handleEditShipment(viewingShipment);
-                  }}
-                  className="flex-1 px-4 py-3 text-[10px] font-black text-white uppercase tracking-widest bg-[#002855] rounded-none hover:bg-blue-800 transition-all active:scale-95 shadow-lg shadow-blue-100"
+                  onClick={() => setViewingShipment(undefined)}
+                  className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all"
                 >
-                  Editar Envío
+                  Cerrar
                 </button>
-              )}
+                {canEdit() && (
+                  <button
+                    onClick={() => {
+                      setViewingShipment(undefined);
+                      handleEditShipment(viewingShipment);
+                    }}
+                    className="px-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all shadow-lg"
+                  >
+                    Editar Envío
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </ModalOverlay>
       )}
     </div>
   );

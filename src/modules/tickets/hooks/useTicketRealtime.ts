@@ -1,6 +1,14 @@
-// Hook personalizado para gestionar actualizaciones en tiempo real de tickets
-// Utiliza Supabase Realtime para escuchar cambios en tickets y comentarios
-// También maneja la presencia de usuarios en el ticket
+// =============================================================================
+// useTicketRealtime.ts — Hook para tiempo real con Supabase Realtime
+// Suscripciones que maneja:
+//   1. Canal "ticket-status-{id}": escucha UPDATE en la tabla 'tickets'
+//      (cambios de estado, asignaciones, etc.)
+//   2. Canal "comments-feed-{id}": escucha INSERT en 'ticket_comments'
+//      (nuevos mensajes en el chat)
+//   3. Canal "presence-ticket-{id}": rastrea qué usuarios están online
+//      en el ticket actual (basado en el channel de presencia de Supabase)
+// =============================================================================
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../shared/services/supabase';
 

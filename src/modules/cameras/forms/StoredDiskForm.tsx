@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { X, HardDrive, Save } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { HardDrive } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
-import ModalOverlay from '../../../shared/components/ui/ModalOverlay';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 
 interface StoredDiskFormProps {
   onClose: () => void;
@@ -48,12 +48,14 @@ export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredD
     if (data) setCameras(data);
   }
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.camera_id) {
-      alert('Por favor seleccione una cámara de origen');
-      return;
-    }
+    if (!formData.camera_id) return;
 
     setLoading(true);
     try {
@@ -88,176 +90,78 @@ export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredD
       onClose();
     } catch (error: any) {
       console.error('Error saving disk:', error);
-      alert(`Error al guardar: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ModalOverlay className="bg-slate-900/60 backdrop-blur-sm">
-      <div
-        className="bg-white shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] sm:max-h-[min(90vh,calc(100dvh-3.5rem-2rem))]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="bg-[#002855] px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3 text-white">
-            <HardDrive size={20} />
-            <span className="font-black uppercase tracking-widest text-sm">
-              {editDisk ? 'Editar Disco Almacenado' : 'Nuevo Disco Almacenado'}
-            </span>
-          </div>
-          <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
-            <X size={20} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Cámara de Origen <span className="text-rose-500">*</span>
-              </label>
-              <select
-                required
-                value={formData.camera_id}
-                onChange={e => setFormData(prev => ({ ...prev, camera_id: e.target.value }))}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              >
+    <BaseForm
+      title={editDisk ? 'Editar Disco Almacenado' : 'Nuevo Disco Almacenado'}
+      subtitle="Gestión de discos de almacenamiento en cámaras"
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      loading={loading}
+      maxWidth="2xl"
+      icon={<HardDrive size={18} className="text-white" />}
+    >
+      <FormSection title="Información del Disco" icon={<HardDrive size={15} />}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <FormField label="Cámara de Origen" required>
+              <FormSelect name="camera_id" value={formData.camera_id} onChange={handleChange} required>
                 <option value="">Seleccione una cámara...</option>
                 {cameras.map(cam => (
                   <option key={cam.id} value={cam.id}>{cam.name}</option>
                 ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Marca
-              </label>
-              <input
-                type="text"
-                value={formData.brand}
-                onChange={e => setFormData(prev => ({ ...prev, brand: e.target.value }))}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="Ej: Western Digital, Seagate..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Número de Serie
-              </label>
-              <input
-                type="text"
-                value={formData.serial_number}
-                onChange={e => setFormData(prev => ({ ...prev, serial_number: e.target.value }))}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="S/N..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Tipo de Disco
-              </label>
-              <select
-                value={formData.disk_type}
-                onChange={e => setFormData(prev => ({ ...prev, disk_type: e.target.value as any }))}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              >
-                <option value="HDD">HDD (Mecánico)</option>
-                <option value="SSD">SSD (Sólido)</option>
-                <option value="NVMe">NVMe</option>
-                <option value="Other">Otro</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Capacidad Total (GB)
-              </label>
-              <input
-                type="number"
-                required
-                value={formData.total_capacity_gb}
-                onChange={e => setFormData(prev => ({ ...prev, total_capacity_gb: e.target.value }))}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="Ej: 1000"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Espacio Usado (GB)
-              </label>
-              <input
-                type="number"
-                required
-                value={formData.used_space_gb}
-                onChange={e => setFormData(prev => ({ ...prev, used_space_gb: e.target.value }))}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="Ej: 800"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Grabación Desde
-              </label>
-              <input
-                type="date"
-                value={formData.stored_from}
-                onChange={e => setFormData(prev => ({ ...prev, stored_from: e.target.value }))}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Grabación Hasta
-              </label>
-              <input
-                type="date"
-                value={formData.stored_to}
-                onChange={e => setFormData(prev => ({ ...prev, stored_to: e.target.value }))}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Notas / Observaciones
-              </label>
-              <textarea
-                value={formData.notes}
-                onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                rows={3}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
-                placeholder="Detalles sobre el contenido del disco..."
-              />
-            </div>
+              </FormSelect>
+            </FormField>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-8 py-2 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-900 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50"
-            >
-              <Save size={14} />
-              {loading ? 'Guardando...' : editDisk ? 'Actualizar Disco' : 'Guardar Disco'}
-            </button>
+          <FormField label="Marca">
+            <FormInput name="brand" value={formData.brand} onChange={handleChange} placeholder="Ej: Western Digital, Seagate..." />
+          </FormField>
+
+          <FormField label="Número de Serie">
+            <FormInput name="serial_number" value={formData.serial_number} onChange={handleChange} placeholder="S/N..." />
+          </FormField>
+
+          <FormField label="Tipo de Disco">
+            <FormSelect name="disk_type" value={formData.disk_type} onChange={handleChange}>
+              <option value="HDD">HDD (Mecánico)</option>
+              <option value="SSD">SSD (Sólido)</option>
+              <option value="NVMe">NVMe</option>
+              <option value="Other">Otro</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Número de Disco">
+            <FormInput type="number" name="disk_number" value={formData.disk_number} onChange={handleChange} min="1" />
+          </FormField>
+
+          <FormField label="Capacidad Total (GB)" required>
+            <FormInput type="number" name="total_capacity_gb" value={formData.total_capacity_gb} onChange={handleChange} required placeholder="Ej: 1000" />
+          </FormField>
+
+          <FormField label="Espacio Usado (GB)" required>
+            <FormInput type="number" name="used_space_gb" value={formData.used_space_gb} onChange={handleChange} required placeholder="Ej: 800" />
+          </FormField>
+
+          <FormField label="Grabación Desde">
+            <FormInput type="date" name="stored_from" value={formData.stored_from} onChange={handleChange} />
+          </FormField>
+
+          <FormField label="Grabación Hasta">
+            <FormInput type="date" name="stored_to" value={formData.stored_to} onChange={handleChange} />
+          </FormField>
+
+          <div className="md:col-span-2">
+            <FormField label="Notas / Observaciones">
+              <FormTextarea name="notes" value={formData.notes} onChange={handleChange} rows={3} placeholder="Detalles sobre el contenido del disco..." />
+            </FormField>
           </div>
-        </form>
-      </div>
-    </ModalOverlay>
+        </div>
+      </FormSection>
+    </BaseForm>
   );
 }

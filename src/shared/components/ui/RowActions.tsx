@@ -30,7 +30,7 @@ export default function RowActions({ onEdit, onDelete, canEdit = true, className
       {onEdit && (
         <button
           onClick={onEdit}
-          className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+          className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-none border border-slate-200 transition-all shadow-sm"
           title="Editar"
           type="button"
         >
@@ -40,7 +40,7 @@ export default function RowActions({ onEdit, onDelete, canEdit = true, className
       {onDelete && (
         <button
           onClick={onDelete}
-          className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
+          className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-200 transition-all shadow-sm"
           title="Eliminar"
           type="button"
         >

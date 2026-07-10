@@ -567,60 +567,51 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
 
 
-    // Fetch Sutran notifications
-
+    // Fetch Sutran notifications via Realtime
     useEffect(() => {
+        const toLocalDateStr = (d: Date) =>
+            `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
         const fetchNotifications = async () => {
-
             try {
-
                 const today = new Date();
-
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(today.getDate() - 30);
                 const thirtyDaysFromNow = new Date();
-
                 thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-
-
                 const { data } = await supabase
-
                     .from('sutran_visits')
-
                     .select('*')
-
-                    .eq('status', 'pending')
-
-                    .gte('visit_date', today.toISOString().split('T')[0])
-
-                    .lte('visit_date', thirtyDaysFromNow.toISOString().split('T')[0])
-
-                    .order('visit_date', { ascending: false });
-
-
+                    .in('status', ['pending', 'in_progress'])
+                    .gte('visit_date', toLocalDateStr(thirtyDaysAgo))
+                    .lte('visit_date', toLocalDateStr(thirtyDaysFromNow))
+                    .order('visit_date', { ascending: true });
 
                 if (data) {
-
                     setSutranNotifications(data as SutranVisit[]);
-
                 }
-
             } catch (error) {
-
                 console.error('Error fetching notifications:', error);
-
             }
-
         };
-
-
 
         fetchNotifications();
 
-        const interval = setInterval(fetchNotifications, 60000);
+        const channel = supabase
+            .channel('sutran-visits-changes')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'sutran_visits'
+            }, () => {
+                fetchNotifications();
+            })
+            .subscribe();
 
-        return () => clearInterval(interval);
-
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
 
@@ -717,23 +708,18 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
 
     const getDaysRemaining = (dateString: string) => {
-
         const today = new Date();
-
         today.setHours(0, 0, 0, 0);
 
         const targetDate = new Date(dateString);
-
         targetDate.setHours(0, 0, 0, 0);
 
         const diffDays = Math.ceil((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
         if (diffDays === 0) return 'Hoy';
-
         if (diffDays === 1) return 'Mañana';
-
-        return `en ${diffDays} días`;
-
+        if (diffDays > 1) return `en ${diffDays} días`;
+        return `Vencida (hace ${Math.abs(diffDays)} días)`;
     };
 
 
