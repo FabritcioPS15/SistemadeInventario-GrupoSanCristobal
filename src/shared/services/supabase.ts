@@ -1,3 +1,14 @@
+/**
+ * Servicio central de Supabase.
+ * Exporta el cliente `supabase` y TODOS los tipos (compartidos) del sistema.
+ *
+ * ⚠️ REGLA: Cualquier tabla nueva de Supabase debe tener su tipo aquí.
+ * ⚠️ REGLA: No pongas interfaces específicas de un módulo aquí (ponlas en su
+ *            propio archivo .types.ts dentro del módulo).
+ *
+ * @see src/shared/types/ — tipos cross-module adicionales
+ */
+
 import { createClient } from '@supabase/supabase-js';
 
 

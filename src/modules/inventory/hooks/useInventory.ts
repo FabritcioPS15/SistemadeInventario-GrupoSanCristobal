@@ -21,7 +21,7 @@ export interface UseInventoryReturn {
   filterCategory: string;
   selectedLocations: string[];
   showLocationDropdown: boolean;
-  filterStatus: string;
+  filterStatus: string[];
   filterRubro: string;
   dropdownRef: React.RefObject<HTMLDivElement>;
   
@@ -38,7 +38,7 @@ export interface UseInventoryReturn {
   setFilterCategory: (value: string) => void;
   setSelectedLocations: (value: string[]) => void;
   setShowLocationDropdown: (value: boolean) => void;
-  setFilterStatus: (value: string) => void;
+  setFilterStatus: (value: string[]) => void;
   setFilterRubro: (value: string) => void;
   setCurrentPage: (value: number) => void;
   setItemsPerPage: (value: number) => void;
@@ -74,7 +74,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
   const [filterCategory, setFilterCategory] = useState('');
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterRubro, setFilterRubro] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   
@@ -163,8 +163,8 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       }
       
       // Apply status filter
-      if (filterStatus) {
-        query = query.eq('estado_uso', filterStatus);
+      if (filterStatus.length > 0) {
+        query = query.in('estado_uso', filterStatus);
       }
 
       // Apply rubro filter (business_type de la empresa)

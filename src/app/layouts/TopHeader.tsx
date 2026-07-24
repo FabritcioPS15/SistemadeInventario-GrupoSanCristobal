@@ -768,7 +768,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                     <div className="w-2 h-2 bg-green-400 rounded-full" />
 
-                                    <span className="text-[11px] font-black uppercase tracking-widest">SISTEMA GSC</span>
+                                    <span className="text-[12px] font-black tracking-widest">Sistema GSC</span>
 
                                 </button>
 
@@ -777,35 +777,18 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
 
                             <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
-
-
-
                             {/* Ticket Icon for Ticket Routes */}
-
                             {isTicketsRoute && (
-
                                 <>
-
                                     <div className="flex items-center gap-1.5 shrink-0">
-
                                         <button
-
                                             onClick={() => navigate('/tickets')}
-
                                             className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md shadow-sm hover:bg-blue-200 transition-all"
-
-                                            title="Navegar a Tickets"
-
-                                        >
-
+                                            title="Navegar a Tickets">
                                             <Ticket size={14} />
-
-                                            <span className="text-[11px] font-black uppercase tracking-widest">TICKETS</span>
-
+                                            <span className="text-[12px] font-black tracking-widest">Tickets</span>
                                         </button>
-
                                     </div>
-
                                     <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
 
                                 </>
@@ -828,7 +811,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                                 onClick={() => navigate(`/${pathnames[0]}`)}
 
-                                                className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
+                                                className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-black text-slate-700 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
 
                                                 title={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
 
@@ -846,7 +829,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                                 onClick={() => navigate(`/${pathnames[0]}`)}
 
-                                                className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
 
                                                 title={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
 
@@ -892,7 +875,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                                                 onClick={() => navigate(fullPath)}
 
-                                                                className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[180px] sm:max-w-[250px]"
+                                                                className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-black text-slate-700 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[180px] sm:max-w-[250px]"
 
                                                                 title={`Navegar a ${label}`}
 
@@ -914,7 +897,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                                                     onClick={() => navigate(fullPath)}
 
-                                                                    className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[100px] sm:max-w-[150px] group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                                    className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[100px] sm:max-w-[150px] group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
 
                                                                     title={`Navegar a ${label}`}
 
@@ -945,35 +928,18 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                             ) : (
 
                                 /* Dashboard como módulo actual cuando no hay pathnames */
-
                                 <button
-
                                     onClick={() => navigate('/')}
-
-                                    className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 uppercase tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
-
+                                    className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
                                     title="Navegar al Dashboard"
-
                                 >
-
-                                    <span>DASHBOARD</span>
-
+                                    <span>Dashboard</span>
                                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" aria-hidden="true" />
-
                                 </button>
-
                             )}
-
                         </>
-
                     )}
-
                 </nav>
-
-
-
-
-
             </div>
 
 
@@ -990,13 +956,13 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                             onClick={() => setShowActions(v => !v)}
 
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'}`}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'}`}
 
                         >
 
                             <Plus size={13} />
 
-                            Acciones
+                            ACCIONES
 
                             <ChevronDown size={13} className={`transition-transform duration-200 ${showActions ? 'rotate-180' : ''}`} />
 
@@ -1060,7 +1026,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                             onClick={() => { action.action(); setShowActions(false); }}
 
-                                            className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/30"
+                                            className="w-full flex items-center gap-3 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[12px] font-black tracking-widest transition-all active:scale-95 shadow-lg shadow-blue-900/30"
 
                                         >
 
@@ -1265,7 +1231,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                         <div className="space-y-2">
 
-                                            <h5 className="font-bold text-xs text-gray-700 uppercase tracking-widest">Temas cubiertos:</h5>
+                                            <h5 className="font-bold text-xs text-gray-700 tracking-widest">Temas cubiertos:</h5>
 
                                             <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
 
@@ -1299,11 +1265,11 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                     {/* User Info - Estilo Moderno */}
                     <div className="hidden lg:flex flex-col items-end gap-0.5 mr-4 leading-tight">
-                        <span className="text-[11px] font-black text-slate-800 uppercase tracking-tight">
+                        <span className="text-[11px] font-black text-slate-800 tracking-tight">
                             {user?.full_name}
                         </span>
                         {userLocation && (
-                            <span className="text-[9px] font-bold text-blue-600/70 uppercase tracking-widest flex items-center gap-1">
+                            <span className="text-[9px] font-bold text-blue-600/70 tracking-widest flex items-center gap-1">
                                 <MapPin size={8} /> {userLocation}
                             </span>
                         )}
@@ -1362,7 +1328,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                             <h4 className="font-bold text-sm truncate">{user?.full_name}</h4>
 
-                                            <p className="text-[10px] opacity-80 truncate uppercase tracking-widest">{user?.role}</p>
+                                            <p className="text-[10px] opacity-80 truncate tracking-widest">{user?.role}</p>
 
                                         </div>
 
@@ -1374,7 +1340,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                 <div className="p-4 space-y-4">
 
-                                    <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-widest">Mi Perfil</h3>
+                                    <h3 className="text-[12px] font-black text-[#002855] tracking-widest">Mi Perfil</h3>
 
 
 
@@ -1382,7 +1348,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                         <div>
 
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">Nombre Completo</label>
+                                            <label className="text-[12px] font-bold text-gray-400 tracking-wider mb-1 block">Nombre Completo</label>
 
                                             <div className="relative">
 
@@ -1410,7 +1376,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                         <div>
 
-                                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 block">URL Foto de Perfil</label>
+                                            <label className="text-[10px] font-bold text-gray-400 tracking-wider mb-1 block">URL Foto de Perfil</label>
 
                                             <div className="relative">
 
@@ -1442,7 +1408,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                             disabled={isSaving}
 
-                                            className="w-full bg-[#002855] text-white py-2.5 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-[#003d80] transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-900/10 disabled:opacity-50"
+                                            className="w-full bg-[#002855] text-white py-2.5 rounded-lg text-xs font-black tracking-widest hover:bg-[#003d80] transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-900/10 disabled:opacity-50"
 
                                         >
 

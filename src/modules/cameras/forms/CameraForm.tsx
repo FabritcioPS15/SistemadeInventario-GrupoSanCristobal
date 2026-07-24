@@ -1,7 +1,21 @@
+/**
+ * Formulario de Cámaras — ejemplo de uso de MultiStepForm.
+ *
+ * PATRÓN A SEGUIR para nuevos módulos con multi-step:
+ * 1. Definir steps en el array al llamar <MultiStepForm steps={…}>
+ * 2. Pasar children en el MISMO orden que steps
+ * 3. handleSubmit se ejecuta al presionar "Guardar" (último paso)
+ * 4. La validación nativa (required) funciona paso a paso automáticamente
+ *
+ * VER TAMBIÉN: ServerForm, TicketForm, MaintenanceForm (un solo paso → BaseForm)
+ */
+
 import { useState, useEffect } from 'react';
-import { Camera, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+import { GiCctvCamera } from 'react-icons/gi';
 import { supabase, Location, Camera as CameraType } from '../../../shared/services/supabase';
-import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
+import { FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 import CameraDiskManager from '../components/CameraDiskManager';
 
 type CameraFormProps = {
@@ -85,9 +99,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
     return !isNaN(portNum) && portNum >= 1 && portNum <= 65535;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
@@ -217,17 +229,26 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
   };
 
   return (
-    <BaseForm
+    <MultiStepForm
       title={editCamera ? 'Editar Cámara' : 'Nueva Cámara'}
       subtitle="Módulo de Gestión de Cámaras"
       onClose={onClose}
       onSubmit={handleSubmit}
       loading={loading || loadingDisks}
       error={errors.submit}
-      icon={<Camera size={24} className="text-blue-600" />}
+      icon={<GiCctvCamera size={20} />}
+      steps={[
+        { title: 'General', description: 'Información básica de la cámara' },
+        { title: 'Red y Acceso', description: 'Configuración de red y credenciales' },
+        { title: 'Almacenamiento', description: 'Discos y notas adicionales' },
+      ]}
     >
-      {/* Section: Información Principal */}
-      <FormSection title="Información de la Cámara" color="blue">
+      {/* Step 1: Información General */}
+      <div className="space-y-4">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-wider">Información General</h3>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Nombre de la Cámara" required error={errors.name}>
             <FormInput
@@ -240,208 +261,104 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
               error={errors.name}
             />
           </FormField>
-
           <FormField label="Ubicación" error={errors.location_id}>
-            <FormSelect
-              name="location_id"
-              value={formData.location_id}
-              onChange={handleChange}
-              error={errors.location_id}
-            >
+            <FormSelect name="location_id" value={formData.location_id} onChange={handleChange} error={errors.location_id}>
               <option value="">Sin ubicación específica</option>
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.name}
-                </option>
-              ))}
+              {locations.map((loc) => (<option key={loc.id} value={loc.id}>{loc.name}</option>))}
             </FormSelect>
           </FormField>
-
           <FormField label="Estado" required error={errors.status}>
-            <FormSelect
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              required
-              error={errors.status}
-            >
+            <FormSelect name="status" value={formData.status} onChange={handleChange} required error={errors.status}>
               <option value="active">Activa</option>
               <option value="inactive">Inactiva</option>
               <option value="maintenance">En Mantenimiento</option>
             </FormSelect>
           </FormField>
-
           <FormField label="Marca" error={errors.brand}>
-            <FormInput
-              type="text"
-              name="brand"
-              value={formData.brand}
-              onChange={handleChange}
-              placeholder="Ej: Hikvision, Dahua, Axis"
-              error={errors.brand}
-            />
+            <FormInput type="text" name="brand" value={formData.brand} onChange={handleChange} placeholder="Ej: Hikvision, Dahua, Axis" error={errors.brand} />
           </FormField>
-
           <FormField label="Modelo" error={errors.model}>
-            <FormInput
-              type="text"
-              name="model"
-              value={formData.model}
-              onChange={handleChange}
-              placeholder="Ej: DS-2CD2043G0-I, IPC-HFW4431R-Z"
-              error={errors.model}
-            />
+            <FormInput type="text" name="model" value={formData.model} onChange={handleChange} placeholder="Ej: DS-2CD2043G0-I, IPC-HFW4431R-Z" error={errors.model} />
           </FormField>
-
           <FormField label="Tipo de Acceso" required error={errors.access_type}>
-            <FormSelect
-              name="access_type"
-              value={formData.access_type}
-              onChange={handleChange}
-              required
-              error={errors.access_type}
-            >
+            <FormSelect name="access_type" value={formData.access_type} onChange={handleChange} required error={errors.access_type}>
               <option value="url">URL Directa</option>
               <option value="ivms">IVMS 4200</option>
               <option value="esviz">ESVIZ</option>
             </FormSelect>
           </FormField>
-
           <FormField label="Inicio de Grabación" error={errors.recording_start_date}>
-            <FormInput
-              type="date"
-              name="recording_start_date"
-              value={formData.recording_start_date}
-              onChange={handleChange}
-              error={errors.recording_start_date}
-            />
+            <FormInput type="date" name="recording_start_date" value={formData.recording_start_date} onChange={handleChange} error={errors.recording_start_date} />
             <p className="text-[10px] text-blue-500 font-bold mt-1 uppercase">Fecha cuando empezó el registro</p>
           </FormField>
         </div>
-      </FormSection>
+      </div>
 
-      {/* Section: Configuración de Red */}
-      <FormSection title="Configuración de Red" color="emerald">
+      {/* Step 2: Red y Acceso */}
+      <div className="space-y-4">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-wider">Red y Acceso</h3>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Dirección IP" error={errors.ip_address}>
-            <FormInput
-              type="text"
-              name="ip_address"
-              value={formData.ip_address}
-              onChange={handleChange}
-              placeholder="192.168.1.100"
-              error={errors.ip_address}
-            />
+            <FormInput type="text" name="ip_address" value={formData.ip_address} onChange={handleChange} placeholder="192.168.1.100" error={errors.ip_address} />
           </FormField>
-
           <FormField label="Puerto" error={errors.port}>
-            <FormInput
-              type="number"
-              name="port"
-              value={formData.port}
-              onChange={handleChange}
-              placeholder="554"
-              error={errors.port}
-            />
+            <FormInput type="number" name="port" value={formData.port} onChange={handleChange} placeholder="554" error={errors.port} />
           </FormField>
-
           <FormField label="URL de Acceso" error={errors.url}>
-            <FormInput
-              type="url"
-              name="url"
-              value={formData.url}
-              onChange={handleChange}
-              placeholder="rtsp://192.168.1.100:554/stream"
-              error={errors.url}
-            />
+            <FormInput type="url" name="url" value={formData.url} onChange={handleChange} placeholder="rtsp://192.168.1.100:554/stream" error={errors.url} />
           </FormField>
         </div>
-      </FormSection>
 
-      {/* Section: Credenciales */}
-      <FormSection title="Credenciales de Acceso" color="amber">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2 mt-6">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-wider">Credenciales</h3>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Usuario" error={errors.username}>
-            <FormInput
-              type="text"
-              name="username"
-              value={formData.username}
-              onChange={handleChange}
-              placeholder="admin"
-              error={errors.username}
-            />
+            <FormInput type="text" name="username" value={formData.username} onChange={handleChange} placeholder="admin" error={errors.username} />
           </FormField>
-
           <FormField label="Contraseña" error={errors.password}>
             <div className="relative">
-              <FormInput
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Contraseña de la cámara"
-                error={errors.password}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
+              <FormInput type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} placeholder="Contraseña de la cámara" error={errors.password} className="pr-10" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
           </FormField>
-
           {formData.access_type !== 'url' && (
             <FormField label="Código de Autenticación" required error={errors.auth_code}>
               <div className="relative">
-                <FormInput
-                  type={showAuthCode ? 'text' : 'password'}
-                  name="auth_code"
-                  value={formData.auth_code}
-                  onChange={handleChange}
-                  placeholder="Código para IVMS/ESVIZ"
-                  required
-                  error={errors.auth_code}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowAuthCode(!showAuthCode)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
+                <FormInput type={showAuthCode ? 'text' : 'password'} name="auth_code" value={formData.auth_code} onChange={handleChange} placeholder="Código para IVMS/ESVIZ" required error={errors.auth_code} className="pr-10" />
+                <button type="button" onClick={() => setShowAuthCode(!showAuthCode)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showAuthCode ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </FormField>
           )}
         </div>
-      </FormSection>
+      </div>
 
-      {/* Section: Información Adicional */}
-      <FormSection title="Información Adicional" color="purple">
-        <FormField label="Notas y Observaciones" error={errors.notes}>
-          <FormTextarea
-            name="notes"
-            value={formData.notes}
-            onChange={handleChange}
-            placeholder="Detalles adicionales sobre la cámara, configuraciones especiales, etc..."
-            rows={4}
-            error={errors.notes}
-          />
-        </FormField>
-      </FormSection>
-
-      {/* Section: Discos de Almacenamiento - INTEGRADO TOTALMENTE */}
-      <FormSection title="Discos Duros (DVR/NVR)" color="indigo">
-        <div className="bg-slate-50/50 p-4 border border-slate-200">
-          <CameraDiskManager 
-            disks={disks} 
-            onChange={setDisks} 
-          />
+      {/* Step 3: Almacenamiento */}
+      <div className="space-y-4">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-wider">Notas</h3>
         </div>
-      </FormSection>
-    </BaseForm>
+        <FormField label="Notas y Observaciones" error={errors.notes}>
+          <FormTextarea name="notes" value={formData.notes} onChange={handleChange} placeholder="Detalles adicionales sobre la cámara, configuraciones especiales, etc..." rows={4} error={errors.notes} />
+        </FormField>
+
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-wider">Discos Duros (DVR/NVR)</h3>
+        </div>
+        <div className="bg-slate-50 p-4 border border-slate-200">
+          <CameraDiskManager disks={disks} onChange={setDisks} />
+        </div>
+      </div>
+    </MultiStepForm>
   );
 }

@@ -1,3 +1,19 @@
+/**
+ * Sidebar de navegación.
+ *
+ * CÓMO AGREGAR UNA NUEVA SECCIÓN/MENÚ:
+ * 1. Agrega el item en el array `sections` (línea ~120)
+ * 2. Agrega la ruta en App.tsx con <Route>
+ * 3. Asigna el permiso correspondiente en Supabase (tabla user_permissions)
+ *
+ * ESTRUCTURA:
+ * - sections → items → (submenu)
+ * - Cada item tiene: id (permiso), label, icon, path, hasSubmenu, submenu[]
+ * - Los permisos se validan con hasPermission(item.id)
+ *
+ * TIP: Íconos de lucide-react. Si no existe, usa react-icons/gi.
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
@@ -17,7 +33,10 @@ import {
   Send,
   FileText,
   Award,
-  Map
+  Map,
+  FileCheck,
+  BarChart3,
+  DollarSign
 } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
 import { Trash2 } from 'lucide-react';
@@ -56,10 +75,10 @@ interface SidebarProps {
 export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onCloseMobile }: SidebarProps) {
   // State for dynamic checklist items allowing deletion
   const [checklistItems, setChecklistItems] = useState<SubmenuItem[]>([
+    { id: 'checklist-all', label: 'Ver Todo', path: '/checklist/all' },
     { id: 'checklist-escon', label: 'ESCON', path: '/checklist/escon' },
     { id: 'checklist-ecsal', label: 'ECSAL', path: '/checklist/ecsal' },
     { id: 'checklist-citv', label: 'CITV', path: '/checklist/citv' },
-    { id: 'checklist-interactive', label: 'Checklist Interactivo', path: '/checklist-interactive' },
   ]);
 
   const handleDeleteChecklistItem = (id: string) => {
@@ -139,10 +158,10 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
           path: '/checklist',
           hasSubmenu: true,
           submenu: [
+            { id: 'checklist-all', label: 'Ver Todo', path: '/checklist/all' },
             { id: 'checklist-escon', label: 'ESCON', path: '/checklist/escon' },
             { id: 'checklist-ecsal', label: 'ECSAL', path: '/checklist/ecsal' },
             { id: 'checklist-citv', label: 'CITV', path: '/checklist/citv' },
-            { id: 'checklist-interactive', label: 'Checklist Interactivo', path: '/checklist-interactive' },
           ]
         },
       ]
@@ -172,6 +191,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
           path: '/cameras',
           hasSubmenu: true,
           submenu: [
+            { id: 'cameras-all', label: 'Ver Todo', path: '/cameras/all' },
             { id: 'cameras-revision', label: 'Revisión', path: '/cameras/revision' },
             { id: 'cameras-escuela', label: 'Escuela', path: '/cameras/escuela' },
             { id: 'cameras-policlinico', label: 'Policlínico', path: '/cameras/policlinico' },
@@ -181,6 +201,8 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
         },
         { id: 'maintenance', label: 'Mantenimiento', icon: Wrench, path: '/maintenance' },
         { id: 'flota-vehicular', label: 'Flota Vehicular', icon: Car, path: '/flota-vehicular' },
+        { id: 'requests', label: 'Solicitudes', icon: FileCheck, path: '/requests' },
+        { id: 'quotations', label: 'Cotizaciones', icon: DollarSign, path: '/quotations' },
       ]
     },
     {
@@ -210,6 +232,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
     {
       title: 'Sistema',
       items: [
+        { id: 'reports', label: 'Reportes', icon: BarChart3, path: '/reports' },
         { id: 'audit', label: 'Auditoría', icon: FileText, path: '/audit' },
       ]
     }
@@ -345,7 +368,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
                             style={{ top: adjustedTop }}
                           >
                             <div className="px-4 py-2 border-b border-white/5 mb-2">
-                              <span className="text-[11px] font-black text-blue-400 uppercase tracking-widest">{item.label}</span>
+                              <span className="text-[12px] font-black text-blue-400 tracking-widest">{item.label}</span>
                             </div>
                             <div className="px-2 space-y-1">
                               {item.id === 'checklist' ? (
@@ -422,7 +445,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
         </div>
 
         <div className="p-4 bg-black/30 border-t border-white/5 shrink-0 flex flex-col gap-4">
-          <button onClick={logout} className={`w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all uppercase tracking-[2px] ${collapsed ? 'px-0' : 'px-4'}`}>
+          <button onClick={logout} className={`w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all tracking-[2px] ${collapsed ? 'px-0' : 'px-4'}`}>
             <LogOut size={16} /> {!collapsed && 'Salir'}
           </button>
         </div>

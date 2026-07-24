@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 // MyChatsPage.tsx — Página "Mis Chats" del usuario actual
 // Funcionalidades:
 //   - Muestra tickets creados por el usuario y tickets que atiende
@@ -13,6 +13,7 @@ import { useAuth } from '../../../app/providers/AuthContext';
 import { supabase } from '../../../shared/services/supabase';
 import { MessageSquare } from 'lucide-react';
 import TicketDetailModal from '../components/TicketDetailModal';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../shared/components/ui/Table';
 
 // Mapa de estilos visuales para las prioridades en badges
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string }> = {
@@ -168,62 +169,57 @@ export default function MyChats() {
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-2 h-6 bg-blue-500 rounded-full" />
-                        <h2 className="text-sm font-black text-[#002855] uppercase tracking-[0.2em]">Mis Tickets Creados</h2>
+                        <h2 className="text-sm font-black text-[#002855] tracking-[0.2em]">Mis Tickets Creados</h2>
                         <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black">{myCreatedTickets.length}</span>
                     </div>
-                    <div className="bg-white rounded-[2rem] shadow-[0_10px_40px_rgba(0,0,0,0.03)] border border-slate-50 overflow-hidden">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/60">
-                                    <th className="px-7 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">ID</th>
-                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Incidente</th>
-                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Estado</th>
-                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Asignado a</th>
-                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Prioridad</th>
-                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha</th>
+                    <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <tr>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>Incidente</TableHead>
+                                    <TableHead className="text-center">Estado</TableHead>
+                                    <TableHead>Asignado a</TableHead>
+                                    <TableHead>Prioridad</TableHead>
+                                    <TableHead>Fecha</TableHead>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
+                            </TableHeader>
+                            <TableBody>
                                 {myCreatedTickets.map(t => {
                                     const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                     return (
-                                        <tr key={t.id} onClick={() => setSelectedTicket(t)} className="hover:bg-blue-50/10 cursor-pointer transition-all group">
-                                            <td className="px-7 py-5"><span className="text-[11px] font-black text-[#002855]">#TK-{t.id.slice(0, 6).toUpperCase()}</span></td>
-                                            <td className="px-5 py-5">
-                                                <p className="text-[12px] font-black text-slate-700 uppercase line-clamp-1">{t.title}</p>
-                                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{t.locations?.name || 'Central'}</p>
-                                            </td>
-                                            <td className="px-5 py-5 text-center">
-                                                <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase inline-flex items-center gap-1.5 ${t.status === 'open' ? 'text-orange-600 bg-orange-50 border border-orange-100' :
-                                                    t.status === 'in_progress' ? 'text-blue-600 bg-blue-50 border border-blue-100' :
-                                                        t.status === 'resolved' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' :
-                                                            'text-slate-500 bg-slate-100'
-                                                    }`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'
-                                                        }`} />
+                                        <TableRow key={t.id} onClick={() => setSelectedTicket(t)} className="cursor-pointer">
+                                            <TableCell><span className="text-[11px] font-black text-[#002855]">#TK-{t.id.slice(0, 6).toUpperCase()}</span></TableCell>
+                                            <TableCell>
+                                                <p className="text-[13px] font-black text-[#002855] leading-tight line-clamp-1">{t.title}</p>
+                                                <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{t.locations?.name || 'Central'}</p>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <span className={`px-2 py-1 text-[10px] font-black tracking-wider inline-flex items-center gap-1.5 ${t.status === 'open' ? 'text-orange-600 bg-orange-50 border border-orange-100' : t.status === 'in_progress' ? 'text-blue-600 bg-blue-50 border border-blue-100' : t.status === 'resolved' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                                                     {getStatusLabel(t.status)}
                                                 </span>
-                                            </td>
-                                            <td className="px-5 py-5">
+                                            </TableCell>
+                                            <TableCell>
                                                 {t.attendant ? (
                                                     <div className="flex items-center gap-2">
-                                                        <div className="w-7 h-7 rounded-xl bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase overflow-hidden">{t.attendant?.avatar_url ? <img src={t.attendant.avatar_url} className="w-full h-full object-cover" alt="" /> : t.attendant?.full_name?.charAt(0)}</div>
-                                                        <span className="text-[11px] font-bold text-slate-600 uppercase">{t.attendant.full_name?.split(' ')[0]}</span>
+                                                        <div className="w-7 h-7 rounded-none bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 overflow-hidden">{t.attendant?.avatar_url ? <img src={t.attendant.avatar_url} className="w-full h-full object-cover" alt="" /> : t.attendant?.full_name?.charAt(0)}</div>
+                                                        <span className="text-[11px] font-semibold text-slate-700">{t.attendant.full_name?.split(' ')[0]}</span>
                                                     </div>
-                                                ) : <span className="text-[10px] text-slate-300 font-black uppercase">Sin asignar</span>}
-                                            </td>
-                                            <td className="px-5 py-5">
-                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl ${prio.color}`}>
+                                                ) : <span className="text-[10px] text-slate-300 font-black">Sin asignar</span>}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-none ${prio.color}`}>
                                                     <div className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
-                                                    <span className="text-[10px] font-black uppercase">{prio.label}</span>
+                                                    <span className="text-[10px] font-black tracking-wider">{prio.label}</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-5 py-5 text-[10px] font-bold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                                        </tr>
+                                            </TableCell>
+                                            <TableCell><span className="text-[10px] font-bold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</span></TableCell>
+                                        </TableRow>
                                     );
                                 })}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     </div>
                 </div>
             )}
@@ -233,60 +229,55 @@ export default function MyChats() {
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-2 h-6 bg-indigo-500 rounded-full" />
-                        <h2 className="text-sm font-black text-[#002855] uppercase tracking-[0.2em]">Tickets que Atiendo</h2>
+                        <h2 className="text-sm font-black text-[#002855] tracking-[0.2em]">Tickets que Atiendo</h2>
                         <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg text-[10px] font-black">{myAttendedTickets.length}</span>
                     </div>
-                    <div className="bg-white rounded-[2rem] shadow-[0_10px_40px_rgba(0,0,0,0.03)] border border-slate-50 overflow-hidden">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/60">
-                                    <th className="px-7 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">ID</th>
-                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Incidente</th>
-                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Estado</th>
-                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Solicitante</th>
-                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Prioridad</th>
-                                    <th className="px-5 py-5 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha</th>
+                    <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <tr>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>Incidente</TableHead>
+                                    <TableHead className="text-center">Estado</TableHead>
+                                    <TableHead>Solicitante</TableHead>
+                                    <TableHead>Prioridad</TableHead>
+                                    <TableHead>Fecha</TableHead>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
+                            </TableHeader>
+                            <TableBody>
                                 {myAttendedTickets.map(t => {
                                     const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                     return (
-                                        <tr key={t.id} onClick={() => setSelectedTicket(t)} className="hover:bg-indigo-50/10 cursor-pointer transition-all group">
-                                            <td className="px-7 py-5"><span className="text-[11px] font-black text-[#002855]">#TK-{t.id.slice(0, 6).toUpperCase()}</span></td>
-                                            <td className="px-5 py-5">
-                                                <p className="text-[12px] font-black text-slate-700 uppercase line-clamp-1">{t.title}</p>
-                                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{t.locations?.name || 'Central'}</p>
-                                            </td>
-                                            <td className="px-5 py-5 text-center">
-                                                <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase inline-flex items-center gap-1.5 ${t.status === 'open' ? 'text-orange-600 bg-orange-50 border border-orange-100' :
-                                                    t.status === 'in_progress' ? 'text-blue-600 bg-blue-50 border border-blue-100' :
-                                                        t.status === 'resolved' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' :
-                                                            'text-slate-500 bg-slate-100'
-                                                    }`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'
-                                                        }`} />
+                                        <TableRow key={t.id} onClick={() => setSelectedTicket(t)} className="cursor-pointer">
+                                            <TableCell><span className="text-[11px] font-black text-[#002855]">#TK-{t.id.slice(0, 6).toUpperCase()}</span></TableCell>
+                                            <TableCell>
+                                                <p className="text-[13px] font-black text-[#002855] leading-tight line-clamp-1">{t.title}</p>
+                                                <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{t.locations?.name || 'Central'}</p>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <span className={`px-2 py-1 text-[10px] font-black tracking-wider inline-flex items-center gap-1.5 ${t.status === 'open' ? 'text-orange-600 bg-orange-50 border border-orange-100' : t.status === 'in_progress' ? 'text-blue-600 bg-blue-50 border border-blue-100' : t.status === 'resolved' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'}`}>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                                                     {getStatusLabel(t.status)}
                                                 </span>
-                                            </td>
-                                            <td className="px-5 py-5">
+                                            </TableCell>
+                                            <TableCell>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-7 h-7 rounded-xl bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase overflow-hidden">{t.requester?.avatar_url ? <img src={t.requester.avatar_url} className="w-full h-full object-cover" alt="" /> : t.requester?.full_name?.charAt(0)}</div>
-                                                    <span className="text-[11px] font-bold text-slate-600 uppercase">{t.requester?.full_name?.split(' ')[0]}</span>
+                                                    <div className="w-7 h-7 rounded-none bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 overflow-hidden">{t.requester?.avatar_url ? <img src={t.requester.avatar_url} className="w-full h-full object-cover" alt="" /> : t.requester?.full_name?.charAt(0)}</div>
+                                                    <span className="text-[11px] font-semibold text-slate-700">{t.requester?.full_name?.split(' ')[0]}</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-5 py-5">
-                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl ${prio.color}`}>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-none ${prio.color}`}>
                                                     <div className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
-                                                    <span className="text-[10px] font-black uppercase">{prio.label}</span>
+                                                    <span className="text-[10px] font-black tracking-wider">{prio.label}</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-5 py-5 text-[10px] font-bold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                                        </tr>
+                                            </TableCell>
+                                            <TableCell><span className="text-[10px] font-bold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</span></TableCell>
+                                        </TableRow>
                                     );
                                 })}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     </div>
                 </div>
             )}

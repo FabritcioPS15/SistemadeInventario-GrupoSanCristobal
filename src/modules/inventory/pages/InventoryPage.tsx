@@ -1,10 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Edit, Trash2, MapPin, Upload, Package, Layers, LayoutGrid, List, BarChart3, FileSpreadsheet, Circle, Plus } from 'lucide-react';
-import ExcelJS from 'exceljs';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import { supabase, AssetWithDetails } from '../../../shared/services/supabase';
+import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
 import AssetForm from '../forms/AssetForm';
 import AssetDetails from '../components/AssetDetails';
 import DecoupleModal from '../components/DecoupleModal';
@@ -75,7 +73,6 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     totalCount,
     searchTerm,
     selectedLocations,
-    filterRubro,
     filterStatus,
     currentPage,
     itemsPerPage,
@@ -83,7 +80,6 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     sortConfig,
     setSearchTerm,
     setSelectedLocations,
-    setFilterRubro,
     setFilterStatus,
     setCurrentPage,
     setItemsPerPage,
@@ -161,73 +157,75 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
 
   const handleExportExcel = async () => {
     try {
-      const workbook = new ExcelJS.Workbook();
-      const ws = workbook.addWorksheet('Inventario');
+      const itemsToExport = selectedIds.size > 0 
+        ? inventory.filter((a: any) => selectedIds.has(a.id))
+        : inventory;
 
-      ws.columns = [
-        { header: 'CÓDIGO', key: 'code', width: 15 },
-        { header: 'CATEGORÍA', key: 'category', width: 25 },
-        { header: 'SUBCATEGORÍA', key: 'subcategory', width: 25 },
-        { header: 'MARCA', key: 'brand', width: 15 },
-        { header: 'MODELO', key: 'model', width: 20 },
-        { header: 'SERIE', key: 'serial', width: 20 },
-        { header: 'SEDE', key: 'location', width: 25 },
-        { header: 'ÁREA', key: 'area', width: 20 },
-        { header: 'ESTADO', key: 'status', width: 15 },
-        { header: 'FECHA ADQUISICIÓN', key: 'purchase_date', width: 20 },
-        { header: 'NOTAS', key: 'notes', width: 20 }
-      ];
+      const data = itemsToExport.map((a: any) => ({
+        code: a.codigo_unico,
+        category: a.categories?.name || '—',
+        subcategory: a.subcategories?.name || '—',
+        brand: a.brand || '—',
+        model: a.model || '—',
+        serial: a.serial_number || '—',
+        location: a.locations?.name || '—',
+        area: a.areas?.name || '—',
+        status: a.status || '—',
+        purchase_date: a.fecha_adquisicion ? new Date(String(a.fecha_adquisicion).includes('T') ? String(a.fecha_adquisicion) : `${a.fecha_adquisicion}T12:00:00`).toLocaleDateString() : '—',
+        notes: a.notes || '—'
+      }));
 
-      // Use current page assets for export
-      inventory.forEach((a: any) => {
-        ws.addRow({
-          code: a.codigo_unico,
-          category: a.categories?.name,
-          subcategory: a.subcategories?.name,
-          brand: a.brand,
-          model: a.model,
-          serial: a.serial_number,
-          location: a.locations?.name,
-          area: a.areas?.name,
-          status: a.status,
-          purchase_date: a.fecha_adquisicion ? new Date(String(a.fecha_adquisicion).includes('T') ? String(a.fecha_adquisicion) : `${a.fecha_adquisicion}T12:00:00`).toLocaleDateString() : '—',
-          notes: a.notes || '—'
-        });
+      await generateExcel({
+        title: 'Reporte de Inventario de Activos',
+        filename: `Inventario_${new Date().toISOString().split('T')[0]}`,
+        columns: [
+          { header: 'CÓDIGO', key: 'code', width: 15 },
+          { header: 'CATEGORÍA', key: 'category', width: 25 },
+          { header: 'SUBCATEGORÍA', key: 'subcategory', width: 25 },
+          { header: 'MARCA', key: 'brand', width: 15 },
+          { header: 'MODELO', key: 'model', width: 20 },
+          { header: 'SERIE', key: 'serial', width: 20 },
+          { header: 'UBICACIÓN', key: 'location', width: 25 },
+          { header: 'ÁREA', key: 'area', width: 20 },
+          { header: 'ESTADO', key: 'status', width: 15 },
+          { header: 'FECHA ADQ.', key: 'purchase_date', width: 15 },
+          { header: 'NOTAS', key: 'notes', width: 30 }
+        ],
+        data
       });
-
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Inventario_${new Date().toISOString().split('T')[0]}.xlsx`;
-      link.click();
     } catch (e) {
       console.error(e);
+      notifyError('Error al exportar a Excel', 'Error de exportación');
     }
   };
 
   const handleExportPdf = () => {
-    const doc = new jsPDF();
-    // Use current page assets for export
-    const tableData = inventory.map((a: any) => [
-      a.codigo_unico || '',
-      a.categories?.name || '',
-      `${a.brand || ''} ${a.model || ''}`.trim(),
-      a.serial_number || '',
-      a.locations?.name || '',
-      a.status
-    ]);
+    const itemsToExport = selectedIds.size > 0 
+      ? inventory.filter((a: any) => selectedIds.has(a.id))
+      : inventory;
 
-    autoTable(doc, {
-      head: [['Código', 'Categoría', 'Marca/Modelo', 'Serie', 'Sede', 'Estado']],
-      body: tableData,
-      theme: 'grid',
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [0, 40, 85] }
+    const data = itemsToExport.map((a: any) => ({
+      code: a.codigo_unico || '—',
+      category: a.categories?.name || '—',
+      marca_modelo: `${a.brand || ''} ${a.model || ''}`.trim() || '—',
+      serial: a.serial_number || '—',
+      location: a.locations?.name || '—',
+      status: a.status || '—'
+    }));
+
+    generatePDF({
+      title: 'Reporte de Inventario de Activos',
+      filename: `Inventario_${new Date().toISOString().split('T')[0]}`,
+      columns: [
+        { header: 'Código', key: 'code' },
+        { header: 'Categoría', key: 'category' },
+        { header: 'Marca/Modelo', key: 'marca_modelo' },
+        { header: 'Serie', key: 'serial' },
+        { header: 'Ubicación', key: 'location' },
+        { header: 'Estado', key: 'status' }
+      ],
+      data
     });
-
-    doc.save(`Inventario_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   // Map moved to top of file
@@ -250,7 +248,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', multiple: true, options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', multiple: true, options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
               {
                 key: 'status', placeholder: 'TODOS LOS ESTADOS', icon: Circle, iconClassName: 'text-emerald-500', wrapperClassName: 'md:min-w-[170px]', options: [
                   { value: 'Operativo', label: 'OPERATIVO' },
@@ -263,7 +261,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
             values={{ location: selectedLocations, status: filterStatus }}
             onChange={(key, value) => {
               if (key === 'location') setSelectedLocations(value as string[]);
-              else if (key === 'status') setFilterStatus(value as string);
+              else if (key === 'status') setFilterStatus(value as string[]);
               setCurrentPage(1);
             }}
           />
@@ -381,7 +379,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                     </TableHead>
                     <TableHead sortable isSorted={sortConfig?.key === 'item'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('item')}>Activo</TableHead>
                     <TableHead sortable isSorted={sortConfig?.key === 'category_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('category_id')}>Categoría</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'location_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location_id')}>Sede</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'location_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location_id')}>Ubicación</TableHead>
                     <TableHead sortable isSorted={sortConfig?.key === 'cantidad'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('cantidad')}>Cantidad</TableHead>
                     <TableHead sortable isSorted={sortConfig?.key === 'valor_estimado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('valor_estimado')}>Costo</TableHead>
                     <TableHead sortable isSorted={sortConfig?.key === 'condicion'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('condicion')}>Condición</TableHead>
@@ -421,11 +419,11 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         </TableCell>
                         <TableCell className="font-bold">
                           <div className="flex flex-col">
-                            <span className="text-[13px] font-black text-slate-800 uppercase leading-none">
+                            <span className="text-[13px] font-black text-slate-800 leading-none">
                               {asset.item || asset.descripcion || 'Sin descripción'}
                             </span>
                             {(asset.brand || asset.model) && (
-                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">
+                              <span className="text-[10px] font-semibold text-slate-400 tracking-wider mt-1.5">
                                 {asset.brand} {asset.model}
                               </span>
                             )}
@@ -438,29 +436,29 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-[11px] font-bold text-slate-700 uppercase leading-none">{asset.categories?.name}</span>
-                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.subcategories?.name}</span>
+                            <span className="text-[12px] font-bold text-slate-700 leading-none">{asset.categories?.name}</span>
+                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1.5">{asset.subcategories?.name}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-[11px] font-bold text-slate-700 uppercase leading-none">{asset.locations?.name || 'No asignada'}</span>
-                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1.5">{asset.areas?.name || 'Sin área'}</span>
+                            <span className="text-[12px] font-bold text-slate-700 leading-none">{asset.locations?.name || 'No asignada'}</span>
+                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1.5">{asset.areas?.name || 'Sin área'}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-[11px] font-bold text-slate-700 leading-none">{asset.cantidad || 1}</span>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-1">{asset.unidad_medida || 'UNIDAD(ES)'}</span>
+                            <span className="text-[12px] font-semibold text-slate-700 leading-none">{asset.cantidad || 1}</span>
+                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1">{asset.unidad_medida || 'UNIDAD(ES)'}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-[11px] font-bold text-slate-700 leading-none">
+                          <span className="text-[12px] font-bold text-slate-700 leading-none">
                             {asset.valor_estimado != null ? `S/ ${Number(asset.valor_estimado).toFixed(2)}` : '—'}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold tracking-wider bg-slate-100 text-slate-700 w-max border border-slate-200 uppercase">
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black tracking-wider border bg-slate-100 text-slate-700 border-slate-200 uppercase rounded-none">
                             {asset.condicion || 'N/A'}
                           </div>
                         </TableCell>
@@ -539,34 +537,34 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                               setSelectedIds(newSelected);
                             }}
                           />
-                          <span className="text-[10px] font-black text-[#002855] bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-full font-mono">
+                          <span className="text-[10px] font-black text-[#002855] bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-none font-mono">
                             CÓD: {asset.codigo_unico || 'N/A'}
                           </span>
                         </div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          asset.estado_uso === 'Inoperativo' ? 'bg-slate-50 text-slate-700 border-slate-200' :
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black tracking-wider border rounded-none ${
+                            asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            asset.estado_uso === 'Inoperativo' ? 'bg-slate-50 text-slate-700 border-slate-200' :
                             asset.estado_uso === 'En Reparación' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                              'bg-rose-50 text-rose-700 border-rose-200'
-                          }`}>
-                          {status.label}
-                        </span>
+                            'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                            {status.label}
+                          </span>
                       </div>
 
                       <div>
-                        <h3 className="text-[14px] font-black text-slate-800 uppercase leading-none truncate">{asset.brand}</h3>
-                        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{asset.model}</p>
+                        <h3 className="text-[14px] font-black text-slate-800 leading-none truncate">{asset.brand}</h3>
+                        <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{asset.model}</p>
                       </div>
 
                       <div className="space-y-3 mt-5">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700">
                           <Layers size={14} className="text-blue-500 shrink-0" />
                           <span className="truncate">{asset.categories?.name}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700">
                           <MapPin size={14} className="text-rose-500 shrink-0" />
                           <span className="truncate">{asset.locations?.name || 'No asignada'}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700">
                           <Package size={14} className="text-emerald-500 shrink-0" />
                           <span>{asset.cantidad || 1} {asset.unidad_medida || 'UNIDADES'}</span>
                         </div>

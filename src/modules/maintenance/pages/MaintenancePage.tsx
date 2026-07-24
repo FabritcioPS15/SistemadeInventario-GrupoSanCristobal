@@ -1,16 +1,24 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, Wrench, X, MapPin, ShieldCheck, Search, TrendingUp, DollarSign, Clock, AlertCircle, Edit, Trash2, ClipboardList, History } from 'lucide-react';
+import { Plus, Wrench, X, MapPin, ShieldCheck, Search, TrendingUp, DollarSign, Clock, AlertCircle, Edit, Trash2 } from 'lucide-react';
 import { supabase, Location } from '../../../shared/services/supabase';
 import MaintenanceForm from '../forms/MaintenanceForm';
-import ModalOverlay from '../../../shared/components/ui/ModalOverlay';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import Pagination from '../../../shared/components/ui/Pagination';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, } from '../../../shared/components/ui/Table';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableCellPrimary, TableCellSecondary, TableCellBadge, TableActionButton } from '../../../shared/components/ui/Table';
+import DetailModal, {
+  DetailModalHeader,
+  DetailModalBody,
+  StandardModalFooter,
+  DetailModalGrid,
+  DetailModalSection,
+  DetailModalCard,
+  DetailModalRow,
+} from '../../../shared/components/ui/DetailModal';
 import { MaintenanceRecord, AssetWithMaintenanceHistory } from '../../../shared/types/inventory.types';
 
 type MaintenanceProps = {
@@ -30,10 +38,10 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const locationState = useLocation();
   const [searchTerm, setSearchTerm] = useState(locationState.state?.searchTerm || '');
   const [assetFilter, setAssetFilter] = useState(locationState.state?.assetFilter || '');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
-  const [machineTypeFilter, setMachineTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [locationFilter, setLocationFilter] = useState<string[]>([]);
+  const [machineTypeFilter, setMachineTypeFilter] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -50,7 +58,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
   useEffect(() => {
     fetchData();
-  }, [statusFilter, typeFilter, machineTypeFilter]);
+  }, [statusFilter.join(','), typeFilter.join(','), machineTypeFilter.join(',')]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -65,9 +73,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         .select('*, assets!inner(id, codigo_unico, brand, model, descripcion, serial_number, asset_types(*), locations(*)), locations!location_id(*)')
         .order('created_at', { ascending: false });
 
-      if (statusFilter) query = query.eq('status', statusFilter);
-      if (typeFilter) query = query.eq('maintenance_type', typeFilter);
-      if (machineTypeFilter) query = query.eq('assets.asset_type_id', machineTypeFilter);
+      if (statusFilter.length > 0) query = query.in('status', statusFilter);
+      if (typeFilter.length > 0) query = query.in('maintenance_type', typeFilter);
+      if (machineTypeFilter.length > 0) query = query.in('assets.asset_type_id', machineTypeFilter);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -223,11 +231,11 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         }
       }
 
-      const matchesStatus = !statusFilter || assetHistory.latestStatus === statusFilter;
-      const matchesType = !typeFilter || assetHistory.latestMaintenanceType === typeFilter;
-      const matchesLocation = !locationFilter || assetHistory.asset.location_id === locationFilter;
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(assetHistory.latestStatus);
+      const matchesType = typeFilter.length === 0 || typeFilter.includes(assetHistory.latestMaintenanceType);
+      const matchesLocation = locationFilter.length === 0 || locationFilter.includes(assetHistory.asset.location_id ?? '');
       const matchesAsset = !assetFilter || assetHistory.asset.id === assetFilter;
-      const matchesMachineType = !machineTypeFilter || assetHistory.asset.asset_type_id === machineTypeFilter;
+      const matchesMachineType = machineTypeFilter.length === 0 || machineTypeFilter.includes(assetHistory.asset.asset_type_id ?? '');
 
       return matchesSearch && matchesCategory && matchesStatus && matchesType && matchesLocation && matchesAsset && matchesMachineType;
     });
@@ -286,7 +294,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedIds(prev => 
+    setSelectedIds(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
   };
@@ -299,7 +307,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         const recordsToDelete = assetsWithHistory
           .filter(ah => selectedIds.includes(ah.asset.id))
           .flatMap(ah => ah.maintenanceRecords.map(r => r.id));
-          
+
         if (recordsToDelete.length === 0) return;
 
         const { error } = await supabase.from('maintenance_records').delete().in('id', recordsToDelete);
@@ -314,7 +322,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   };
 
 
-  const hasActiveFilters = searchTerm || statusFilter || typeFilter || locationFilter || machineTypeFilter || categoryFilter || assetFilter;
+  const hasActiveFilters = searchTerm || statusFilter.length > 0 || typeFilter.length > 0 || locationFilter.length > 0 || machineTypeFilter.length > 0 || categoryFilter || assetFilter;
 
   // Calcular estadísticas de mantenimiento
   const maintenanceStats = useMemo(() => {
@@ -322,7 +330,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
     const totalHours = maintenanceRecords.reduce((sum, r) => sum + (r.work_hours || 0), 0);
     const byType: Record<string, number> = {};
     const byStatus: Record<string, number> = {};
-    
+
     maintenanceRecords.forEach(r => {
       byType[r.maintenance_type] = (byType[r.maintenance_type] || 0) + 1;
       byStatus[r.status] = (byStatus[r.status] || 0) + 1;
@@ -350,7 +358,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Mantenimientos</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Mantenimientos</span>
               <Wrench size={16} className="text-blue-600" />
             </div>
             <p className="text-2xl font-black text-slate-800">{maintenanceStats.totalRecords}</p>
@@ -359,7 +367,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
           <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Costo Total</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Costo Total</span>
               <DollarSign size={16} className="text-emerald-600" />
             </div>
             <p className="text-2xl font-black text-slate-800">S/ {maintenanceStats.totalCost.toFixed(2)}</p>
@@ -368,7 +376,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
           <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Costo Promedio</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Costo Promedio</span>
               <TrendingUp size={16} className="text-purple-600" />
             </div>
             <p className="text-2xl font-black text-slate-800">S/ {maintenanceStats.averageCost.toFixed(2)}</p>
@@ -377,7 +385,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
           <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horas Totales</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Horas Totales</span>
               <Clock size={16} className="text-amber-600" />
             </div>
             <p className="text-2xl font-black text-slate-800">{maintenanceStats.totalHours.toFixed(1)}</p>
@@ -390,12 +398,12 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
           <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <AlertCircle size={16} className="text-amber-500" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pendientes</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Pendientes</span>
             </div>
             <p className="text-xl font-black text-amber-600">{maintenanceStats.pendingCount}</p>
             <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-amber-500 rounded-full transition-all" 
+              <div
+                className="h-full bg-amber-500 rounded-full transition-all"
                 style={{ width: `${maintenanceStats.totalRecords > 0 ? (maintenanceStats.pendingCount / maintenanceStats.totalRecords) * 100 : 0}%` }}
               />
             </div>
@@ -404,12 +412,12 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
           <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <Clock size={16} className="text-blue-500" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">En Progreso</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">En Progreso</span>
             </div>
             <p className="text-xl font-black text-blue-600">{maintenanceStats.inProgressCount}</p>
             <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-500 rounded-full transition-all" 
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all"
                 style={{ width: `${maintenanceStats.totalRecords > 0 ? (maintenanceStats.inProgressCount / maintenanceStats.totalRecords) * 100 : 0}%` }}
               />
             </div>
@@ -418,12 +426,12 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
           <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <ShieldCheck size={16} className="text-emerald-500" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Completados</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Completados</span>
             </div>
             <p className="text-xl font-black text-emerald-600">{maintenanceStats.completedCount}</p>
             <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-emerald-500 rounded-full transition-all" 
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all"
                 style={{ width: `${maintenanceStats.totalRecords > 0 ? (maintenanceStats.completedCount / maintenanceStats.totalRecords) * 100 : 0}%` }}
               />
             </div>
@@ -441,31 +449,31 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 placeholder="Buscar por equipo, técnico o tarea..."
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
-              { key: 'type', placeholder: 'TODOS LOS TIPOS', options: Object.entries(typeLabels).map(([key, label]) => ({ value: key, label: label.toUpperCase() })) },
-              { key: 'status', placeholder: 'TODOS LOS ESTADOS', options: Object.entries(statusLabels).map(([key, label]) => ({ value: key, label: label.toUpperCase() })) },
+              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              { key: 'type', placeholder: 'TODOS LOS TIPOS', options: Object.entries(typeLabels).map(([key, label]) => ({ value: key, label })) },
+              { key: 'status', placeholder: 'TODOS LOS ESTADOS', options: Object.entries(statusLabels).map(([key, label]) => ({ value: key, label })) },
               { key: 'asset', placeholder: 'TODOS', wrapperClassName: 'md:max-w-[220px]', options: assetsWithHistory.map(h => ({ value: h.asset.id, label: `${(h.asset as any).item || h.asset.descripcion || h.asset.brand || 'SIN NOMBRE'} ${h.asset.model ? `(${h.asset.model})` : ''}` })) },
             ]}
             values={{ location: locationFilter, type: typeFilter, status: statusFilter, asset: assetFilter }}
             onChange={(key, value) => {
-              if (key === 'location') setLocationFilter(value as string);
-              else if (key === 'type') setTypeFilter(value as string);
-              else if (key === 'status') setStatusFilter(value as string);
+              if (key === 'location') setLocationFilter(value as string[]);
+              else if (key === 'type') setTypeFilter(value as string[]);
+              else if (key === 'status') setStatusFilter(value as string[]);
               else if (key === 'asset') setAssetFilter(value as string);
               setCurrentPage(1);
             }}
             onClearAll={() => {
-              setStatusFilter('');
-              setTypeFilter('');
-              setLocationFilter('');
-              setMachineTypeFilter('');
+              setStatusFilter([]);
+              setTypeFilter([]);
+              setLocationFilter([]);
+              setMachineTypeFilter([]);
               setCurrentPage(1);
             }}
           />
@@ -527,22 +535,23 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         <Wrench size={16} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-tight truncate">
-                          {(assetHistory.asset as any).item || assetHistory.asset.descripcion || assetHistory.asset.brand} {assetHistory.asset.model}
+                        <h3 className="text-[13px] font-black text-[#002855] uppercase tracking-tight truncate">
+                          {assetHistory.asset.descripcion || `${assetHistory.asset.brand} ${assetHistory.asset.model}` || 'Activo'}
                         </h3>
-                        <span className={`inline-block px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest border mt-1 ${typeColors[assetHistory.latestMaintenanceType]}`}>
+                        <span className="text-[10px] font-mono font-black text-blue-600">{assetHistory.asset.codigo_unico}</span>
+                        <span className={`inline-block px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider border mt-1 ${typeColors[assetHistory.latestMaintenanceType]}`}>
                           {typeLabels[assetHistory.latestMaintenanceType]}
                         </span>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <div className="p-2 border bg-slate-50 border-slate-100">
-                        <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Mantenimientos</label>
-                        <p className="text-[9px] font-mono font-black text-blue-600">{assetHistory.totalRecords} registro(s)</p>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">Mantenimientos</label>
+                        <p className="text-[11px] font-mono font-black text-blue-600">{assetHistory.totalRecords} registro(s)</p>
                       </div>
                       <div className="p-2 border bg-slate-50 border-slate-100">
-                        <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Estado Actual</label>
-                        <span className={`inline-flex items-center px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider border rounded ${statusColors[assetHistory.latestStatus]}`}>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">Estado Actual</label>
+                        <span className={`inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border rounded ${statusColors[assetHistory.latestStatus]}`}>
                           {statusLabels[assetHistory.latestStatus]}
                         </span>
                       </div>
@@ -554,7 +563,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               ))}
             </div>
           ) : (
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
+            <div className="bg-white border border-slate-200 shadow-sm overflow-hidden flex flex-col rounded-none">
               <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
                 <Pagination
                   currentPage={currentPage}
@@ -587,7 +596,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         Tipo
                       </TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'location'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location')}>
-                        Sede
+                        Ubicación
                       </TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'status'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('status')}>
                         Estado
@@ -618,53 +627,50 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                           </TableCell>
                         )}
                         <TableCell className="font-bold">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100 text-slate-400 group-hover:bg-[#002855] group-hover:text-white transition-all shadow-sm">
-                              <Wrench size={16} />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{(assetHistory.asset as any).item || assetHistory.asset.descripcion || assetHistory.asset.brand}</span>
-                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{assetHistory.asset.model} <span className="text-[9px] text-blue-600 font-mono">{assetHistory.totalRecords} mantenimiento(s)</span></span>
-                            </div>
+                          <div className="flex flex-col">
+                            <TableCellPrimary>
+                              {assetHistory.asset.descripcion || `${assetHistory.asset.brand} ${assetHistory.asset.model}` || 'Activo'}
+                            </TableCellPrimary>
+                            <TableCellSecondary>
+                              <span className="font-mono text-blue-600">{assetHistory.asset.codigo_unico}</span>
+                              <span className="ml-2">{assetHistory.totalRecords} mantenimiento(s)</span>
+                            </TableCellSecondary>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${typeColors[assetHistory.latestMaintenanceType] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                          <TableCellBadge className={typeColors[assetHistory.latestMaintenanceType] || 'bg-gray-50 text-gray-700 border-gray-200'}>
                             {typeLabels[assetHistory.latestMaintenanceType]}
-                          </span>
+                          </TableCellBadge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5 text-slate-700">
                             <MapPin size={13} className="text-rose-500 shrink-0" />
-                            <span className="text-[11px] font-bold uppercase truncate max-w-xs block leading-none">{assetHistory.asset.locations?.name || 'Sede N/A'}</span>
+                            <TableCellSecondary>{assetHistory.asset.locations?.name || 'Ubicación N/A'}</TableCellSecondary>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${statusColors[assetHistory.latestStatus] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                          <TableCellBadge className={statusColors[assetHistory.latestStatus] || 'bg-gray-50 text-gray-700 border-gray-200'}>
                             {statusLabels[assetHistory.latestStatus]}
-                          </span>
+                          </TableCellBadge>
                         </TableCell>
                         <TableCell>
-                          <span className="text-[11px] font-bold text-slate-700 uppercase leading-none">{assetHistory.maintenanceRecords[0]?.technician || 'S.A.'}</span>
+                          <TableCellSecondary>{assetHistory.maintenanceRecords[0]?.technician || 'S.A.'}</TableCellSecondary>
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                             {canEdit() && (
                               <>
-                                <button
+                                <TableActionButton
+                                  icon={<Edit size={14} />}
                                   onClick={() => handleEditRecord(assetHistory.maintenanceRecords[0])}
-                                  className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                                   title="Editar"
-                                >
-                                  <Edit size={14} />
-                                </button>
-                                <button
+                                />
+                                <TableActionButton
+                                  icon={<Trash2 size={14} />}
                                   onClick={() => handleDeleteRecord(assetHistory.maintenanceRecords[0])}
-                                  className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                   title="Eliminar"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
+                                  variant="danger"
+                                />
                               </>
                             )}
                           </div>
@@ -686,251 +692,303 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
         {
           viewingRecord && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-hidden flex flex-col scale-in-center">
-                <div className="bg-slate-900 px-5 py-3 flex items-center justify-between text-white">
-                  <div className="flex items-center gap-3">
-                    <Wrench size={20} className="text-blue-400" />
-                    <h2 className="text-sm font-black uppercase tracking-widest italic">Informe Técnico Detallado</h2>
+            <DetailModal maxWidth="5xl" onClose={() => setViewingRecord(undefined)} closeOnBackdrop>
+              <DetailModalHeader>
+                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+                <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                    <Wrench size={20} className="sm:size-24" />
                   </div>
-                  <button onClick={() => setViewingRecord(undefined)} className="p-1.5 hover:bg-rose-600 rounded-lg transition-colors">
-                    <X size={18} />
-                  </button>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight truncate">
+                      {(viewingRecord?.assets as any)?.descripcion || (viewingRecord?.assets as any)?.brand || 'Activo'} {(viewingRecord?.assets as any)?.model}
+                      <br />
+                      <span className="text-[10px] font-mono font-black text-blue-200">{(viewingRecord?.assets as any)?.codigo_unico}</span>
+                    </h2>
+                    <p className="text-[10px] sm:text-xs text-emerald-200 font-semibold mt-0.5 truncate">
+                      {viewingRecord?.assets?.asset_types?.name} • {typeLabels[viewingRecord?.maintenance_type || 'preventive']}
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setViewingRecord(undefined)}
+                  className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all"
+                >
+                  <X size={22} />
+                </button>
+              </DetailModalHeader>
 
-                <div className="p-5 flex-1 overflow-y-auto space-y-5 bg-slate-50/30">
-                  <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                    <div>
-                      <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">
-                        {(viewingRecord?.assets as any)?.item || viewingRecord?.assets?.descripcion || viewingRecord?.assets?.brand} {viewingRecord?.assets?.model}
-                      </h3>
-                      <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest leading-none">
-                        {viewingRecord?.assets?.asset_types?.name}
-                      </p>
+              <DetailModalBody>
+                <DetailModalGrid layout="stack-until-xl">
+
+                  <DetailModalSection title="Información General">
+                    <div className="space-y-2.5 sm:space-y-3">
+                      <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                        <DetailModalRow label="Estado">
+                          <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${statusColors[viewingRecord?.status || 'pending']}`}>
+                            {statusLabels[viewingRecord?.status || 'pending']}
+                          </span>
+                        </DetailModalRow>
+                        <DetailModalRow label="Tipo de Mantenimiento">
+                          <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${typeColors[viewingRecord?.maintenance_type || 'preventive']}`}>
+                            {typeLabels[viewingRecord?.maintenance_type || 'preventive']}
+                          </span>
+                        </DetailModalRow>
+                        <DetailModalRow label="Fecha de Completado">
+                          <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
+                            {viewingRecord?.completed_date ? new Date(String(viewingRecord.completed_date as any).includes('T') ? String(viewingRecord.completed_date as any) : `${viewingRecord.completed_date as any}T12:00:00`).toLocaleDateString('es-PE') : 'Pendiente'}
+                          </span>
+                        </DetailModalRow>
+                      </DetailModalCard>
+
+                      <DetailModalCard className="space-y-2.5 sm:space-y-3">
+                        <DetailModalRow label="Técnico">
+                          <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">
+                            {viewingRecord?.technician || 'No especificado'}
+                          </span>
+                        </DetailModalRow>
+                        <DetailModalRow label="Horas de Trabajo">
+                          <span className="text-[10px] sm:text-[11px] font-black text-blue-600">
+                            {viewingRecord?.work_hours || 0} h
+                          </span>
+                        </DetailModalRow>
+                        <DetailModalRow label="Costo Total">
+                          <span className="text-[10px] sm:text-[11px] font-black text-emerald-600 font-mono">
+                            S/ {viewingRecord?.total_cost?.toFixed(2) || '0.00'}
+                          </span>
+                        </DetailModalRow>
+                      </DetailModalCard>
                     </div>
-                    <div className="flex gap-1.5">
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${viewingRecord?.status ? statusColors[viewingRecord.status] : ''}`}>{viewingRecord?.status ? statusLabels[viewingRecord.status] : ''}</span>
-                      <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${viewingRecord?.maintenance_type ? typeColors[viewingRecord.maintenance_type] : ''}`}>{viewingRecord?.maintenance_type ? typeLabels[viewingRecord.maintenance_type] : ''}</span>
-                    </div>
-                  </div>
+                  </DetailModalSection>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-3">
-                      <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-50 pb-1">Diagnóstico & Solución</h4>
-                      <div className="space-y-2">
-                        <div>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase">Falla / Motivo</p>
-                          <p className="text-xs font-semibold text-slate-700">{viewingRecord?.description}</p>
-                        </div>
-                        {viewingRecord?.failure_cause && (
-                          <div>
-                            <p className="text-[9px] font-bold text-rose-400 uppercase italic">Causa Raíz</p>
-                            <p className="text-xs font-semibold text-slate-800 border-l-2 border-rose-200 pl-2">{viewingRecord?.failure_cause}</p>
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-[9px] font-bold text-emerald-500 uppercase">Acción Realizada</p>
-                          <p className="text-xs font-medium text-slate-600 italic leading-relaxed">{viewingRecord?.solution_applied || 'Sin registro.'}</p>
-                        </div>
-                      </div>
-                    </div>
+                  <DetailModalSection title="Diagnóstico y Solución">
+                    <DetailModalCard>
+                      <DetailModalRow label="Falla / Motivo">
+                        <span className="text-[10px] sm:text-[11px] font-semibold text-slate-700">
+                          {viewingRecord?.description}
+                        </span>
+                      </DetailModalRow>
+                      {viewingRecord?.failure_cause && (
+                        <DetailModalRow label="Causa Raíz">
+                          <span className="text-[10px] sm:text-[11px] font-semibold text-rose-700">
+                            {viewingRecord?.failure_cause}
+                          </span>
+                        </DetailModalRow>
+                      )}
+                      <DetailModalRow label="Acción Realizada">
+                        <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 italic leading-relaxed">
+                          {viewingRecord?.solution_applied || 'Sin registro'}
+                        </span>
+                      </DetailModalRow>
+                    </DetailModalCard>
+                  </DetailModalSection>
 
-                    <div className="space-y-4">
-                      <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm space-y-2">
-                        <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Ejecución</h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <p className="text-[8px] font-bold text-slate-400">TÉCNICO</p>
-                            <p className="text-[10px] font-black text-slate-700 truncate">{viewingRecord?.technician || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <p className="text-[8px] font-bold text-slate-400">ESFUERZO</p>
-                            <p className="text-[10px] font-black text-blue-600">{viewingRecord?.work_hours || 0} h</p>
-                          </div>
-                          <div>
-                            <p className="text-[8px] font-bold text-slate-400">FECHA</p>
-                            <p className="text-[10px] font-bold text-slate-700">{viewingRecord?.completed_date ? new Date(String(viewingRecord.completed_date as any).includes('T') ? String(viewingRecord.completed_date as any) : `${viewingRecord.completed_date as any}T12:00:00`).toLocaleDateString() : 'Pend.'}</p>
-                          </div>
-                          <div>
-                            <p className="text-[8px] font-bold text-slate-400">COSTO</p>
-                            <p className="text-[10px] font-black text-emerald-600 font-mono">S/ {viewingRecord?.total_cost?.toFixed(2) || '0.00'}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className={`p-4 rounded-xl border flex items-center gap-3 ${viewingRecord?.warranty_claim ? 'bg-indigo-50 border-indigo-100 shadow-sm' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
-                        <ShieldCheck size={18} className={viewingRecord?.warranty_claim ? 'text-indigo-600' : 'text-slate-300'} />
+                  <DetailModalSection title="Garantía">
+                    <DetailModalCard>
+                      <div className={`flex items-center gap-3 p-3 rounded-lg border ${viewingRecord?.warranty_claim ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50 border-slate-200'}`}>
+                        <ShieldCheck size={20} className={viewingRecord?.warranty_claim ? 'text-indigo-600' : 'text-slate-400'} />
                         <div>
-                          <p className="text-[8px] font-black text-slate-400 uppercase">Garantía</p>
-                          <p className={`text-[10px] font-black ${viewingRecord?.warranty_claim ? 'text-indigo-800' : 'text-slate-400'}`}>
+                          <p className="text-[10px] font-black text-slate-400 uppercase">Estado de Garantía</p>
+                          <p className={`text-[11px] font-black ${viewingRecord?.warranty_claim ? 'text-indigo-800' : 'text-slate-500'}`}>
                             {viewingRecord?.warranty_claim ? 'RECLAMO ACTIVO' : 'SIN RECLAMO'}
                           </p>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    </DetailModalCard>
+                  </DetailModalSection>
 
                   {viewingRecord?.parts_used && Array.isArray(viewingRecord?.parts_used) && (viewingRecord?.parts_used as any[]).length > 0 && (
-                    <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
-                      <div className="bg-slate-50 px-4 py-2 border-b border-slate-100 flex justify-between items-center">
-                        <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Repuestos Utilizados</h4>
-                        <span className="text-[8px] font-bold text-slate-500">{(viewingRecord?.parts_used as any[]).length} items</span>
-                      </div>
-                      <div className="p-4 space-y-2">
-                        {(viewingRecord?.parts_used as any[]).map((part: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center text-xs border-b border-slate-50 pb-2 last:border-0">
-                            <span className="font-semibold text-slate-700">{part.name}</span>
-                            <span className="font-mono text-slate-500">{part.quantity} {part.unit} × S/ {part.unit_price?.toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <DetailModalSection title="Repuestos Utilizados">
+                      <DetailModalCard>
+                        <div className="space-y-2">
+                          {(viewingRecord?.parts_used as any[]).map((part: any, idx: number) => (
+                            <div key={idx} className="flex justify-between items-center text-xs border-b border-slate-100 pb-2 last:border-0">
+                              <span className="font-semibold text-slate-700">{part.name}</span>
+                              <span className="font-mono text-slate-500">{part.quantity} {part.unit} × S/ {part.unit_price?.toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </DetailModalCard>
+                    </DetailModalSection>
                   )}
 
                   {viewingRecord?.notes && (
-                    <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                      <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Notas</h4>
-                      <p className="text-xs text-slate-600 leading-relaxed">{viewingRecord.notes}</p>
-                    </div>
+                    <DetailModalSection title="Notas Adicionales">
+                      <DetailModalCard>
+                        <p className="text-[10px] sm:text-[11px] text-slate-700 leading-relaxed whitespace-pre-wrap">
+                          {viewingRecord.notes}
+                        </p>
+                      </DetailModalCard>
+                    </DetailModalSection>
                   )}
-                </div>
-              </div>
-            </div>
+
+                </DetailModalGrid>
+              </DetailModalBody>
+
+              <StandardModalFooter
+                onClose={() => setViewingRecord(undefined)}
+                onEdit={canEdit() ? () => { setViewingRecord(undefined); handleEditRecord(viewingRecord); } : undefined}
+                editLabel="Editar"
+              />
+            </DetailModal>
           )
         }
 
         {
           viewingAssetHistory && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] overflow-hidden flex flex-col scale-in-center">
-                <div className="bg-slate-900 px-5 py-3 flex items-center justify-between text-white">
-                  <div className="flex items-center gap-3">
-                    <Wrench size={20} className="text-blue-400" />
-                    <h2 className="text-sm font-black uppercase tracking-widest italic">Historial de Mantenimientos</h2>
+            <DetailModal maxWidth="5xl" onClose={() => setViewingAssetHistory(undefined)} closeOnBackdrop>
+              <DetailModalHeader>
+                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+                <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
+                  <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
+                    <Wrench size={20} className="sm:size-24" />
                   </div>
-                  <button onClick={() => setViewingAssetHistory(undefined)} className="p-1.5 hover:bg-rose-600 rounded-lg transition-colors">
-                    <X size={18} />
-                  </button>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight truncate">
+                      {viewingAssetHistory?.asset.descripcion || `${viewingAssetHistory?.asset.brand} ${viewingAssetHistory?.asset.model}` || 'Activo'}
+                    </h2>
+                    <p className="text-[10px] font-black font-mono text-blue-200">{viewingAssetHistory?.asset.codigo_unico}</p>
+                    <p className="text-[10px] sm:text-xs text-blue-200 font-semibold mt-0.5 truncate">
+                      {viewingAssetHistory?.asset.asset_types?.name} • {viewingAssetHistory?.totalRecords} mantenimiento(s)
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setViewingAssetHistory(undefined)}
+                  className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all"
+                >
+                  <X size={22} />
+                </button>
+              </DetailModalHeader>
 
-                <div className="p-5 flex-1 overflow-y-auto space-y-5 bg-slate-50/30">
-                  <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">
+              <DetailModalBody>
+                <DetailModalGrid layout="stack-until-xl">
+
+                  <DetailModalSection title="Información del Activo">
+                    <DetailModalCard>
+                      <DetailModalRow label="Marca / Modelo">
+                        <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
                           {viewingAssetHistory?.asset.brand} {viewingAssetHistory?.asset.model}
-                        </h3>
-                        <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest leading-none">
-                          {viewingAssetHistory?.asset.asset_types?.name} • {viewingAssetHistory?.totalRecords} mantenimiento(s)
-                        </p>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider border ${statusColors[viewingAssetHistory?.latestStatus || 'pending']}`}>
+                        </span>
+                      </DetailModalRow>
+                      <DetailModalRow label="Número de Serie">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-600">
+                          {viewingAssetHistory?.asset.serial_number || 'N/A'}
+                        </span>
+                      </DetailModalRow>
+                      <DetailModalRow label="Código Único">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-600">
+                          {viewingAssetHistory?.asset.codigo_unico || 'N/A'}
+                        </span>
+                      </DetailModalRow>
+                      <DetailModalRow label="Ubicación">
+                        <div className="flex items-center gap-2">
+                          <MapPin size={14} className="text-rose-500" />
+                          <span className="text-[10px] sm:text-[11px] font-bold text-slate-600">
+                            {viewingAssetHistory?.asset.locations?.name || 'N/A'}
+                          </span>
+                        </div>
+                      </DetailModalRow>
+                      <DetailModalRow label="Estado Actual">
+                        <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${statusColors[viewingAssetHistory?.latestStatus || 'pending']}`}>
                           {statusLabels[viewingAssetHistory?.latestStatus || 'pending']}
                         </span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-[9px]">
-                      <div className="bg-slate-50 p-2 rounded">
-                        <p className="font-bold text-slate-400 uppercase">Serie</p>
-                        <p className="font-black text-slate-700">{viewingAssetHistory?.asset.serial_number || 'N/A'}</p>
-                      </div>
-                      <div className="bg-slate-50 p-2 rounded">
-                        <p className="font-bold text-slate-400 uppercase">Sede</p>
-                        <p className="font-black text-slate-700">{viewingAssetHistory?.asset.locations?.name || 'N/A'}</p>
-                      </div>
-                      <div className="bg-slate-50 p-2 rounded">
-                        <p className="font-bold text-slate-400 uppercase">Código</p>
-                        <p className="font-black text-slate-700">{viewingAssetHistory?.asset.codigo_unico || 'N/A'}</p>
-                      </div>
-                    </div>
-                  </div>
+                      </DetailModalRow>
+                    </DetailModalCard>
+                  </DetailModalSection>
 
-                  <div className="space-y-3">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-2">Registros de Mantenimiento</h4>
-                    {viewingAssetHistory?.maintenanceRecords
-                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                      .map((record) => (
-                        <div key={record.id} className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                          <div className="bg-slate-50 px-4 py-2 border-b border-slate-100 flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${typeColors[record.maintenance_type]}`}>
-                                {typeLabels[record.maintenance_type]}
+                  <DetailModalSection title="Historial de Mantenimientos">
+                    <div className="space-y-3">
+                      {viewingAssetHistory?.maintenanceRecords
+                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                        .map((record) => (
+                          <DetailModalCard key={record.id}>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex gap-2">
+                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${typeColors[record.maintenance_type]}`}>
+                                  {typeLabels[record.maintenance_type]}
+                                </span>
+                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${statusColors[record.status]}`}>
+                                  {statusLabels[record.status]}
+                                </span>
+                              </div>
+                              <span className="text-[8px] font-mono text-slate-400">
+                                {new Date(String(record.created_at).includes('T') ? String(record.created_at) : `${record.created_at}T12:00:00`).toLocaleDateString('es-PE')}
                               </span>
-                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${statusColors[record.status]}`}>
-                                {statusLabels[record.status]}
-                              </span>
                             </div>
-                            <span className="text-[8px] font-mono text-slate-400">
-                              {new Date(String(record.created_at).includes('T') ? String(record.created_at) : `${record.created_at}T12:00:00`).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="p-4 space-y-3">
-                            <div>
-                              <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Descripción</p>
-                              <p className="text-xs font-semibold text-slate-700">{record.description}</p>
-                            </div>
-                            {record.failure_cause && (
-                              <div>
-                                <p className="text-[9px] font-bold text-rose-400 uppercase italic mb-1">Causa Raíz</p>
-                                <p className="text-xs font-semibold text-slate-800 border-l-2 border-rose-200 pl-2">{record.failure_cause}</p>
+                            <div className="space-y-2">
+                              <DetailModalRow label="Descripción">
+                                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-700">
+                                  {record.description}
+                                </span>
+                              </DetailModalRow>
+                              {record.failure_cause && (
+                                <DetailModalRow label="Causa Raíz">
+                                  <span className="text-[10px] sm:text-[11px] font-semibold text-rose-700">
+                                    {record.failure_cause}
+                                  </span>
+                                </DetailModalRow>
+                              )}
+                              {record.solution_applied && (
+                                <DetailModalRow label="Solución Aplicada">
+                                  <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 italic leading-relaxed">
+                                    {record.solution_applied}
+                                  </span>
+                                </DetailModalRow>
+                              )}
+                              <div className="grid grid-cols-4 gap-2 text-[9px]">
+                                <div>
+                                  <p className="font-bold text-slate-400 uppercase">Técnico</p>
+                                  <p className="font-black text-slate-700">{record.technician || 'N/A'}</p>
+                                </div>
+                                <div>
+                                  <p className="font-bold text-slate-400 uppercase">Horas</p>
+                                  <p className="font-black text-blue-600">{record.work_hours || 0} h</p>
+                                </div>
+                                <div>
+                                  <p className="font-bold text-slate-400 uppercase">Completado</p>
+                                  <p className="font-black text-slate-700">{record.completed_date ? new Date(String(record.completed_date).includes('T') ? String(record.completed_date) : `${record.completed_date}T12:00:00`).toLocaleDateString('es-PE') : 'Pend.'}</p>
+                                </div>
+                                <div>
+                                  <p className="font-bold text-slate-400 uppercase">Costo</p>
+                                  <p className="font-black text-emerald-600 font-mono">S/ {record.total_cost?.toFixed(2) || '0.00'}</p>
+                                </div>
                               </div>
-                            )}
-                            {record.solution_applied && (
-                              <div>
-                                <p className="text-[9px] font-bold text-emerald-500 uppercase mb-1">Solución Aplicada</p>
-                                <p className="text-xs font-medium text-slate-600 italic leading-relaxed">{record.solution_applied}</p>
                               </div>
-                            )}
-                            <div className="grid grid-cols-4 gap-2 text-[9px]">
-                              <div>
-                                <p className="font-bold text-slate-400 uppercase">Técnico</p>
-                                <p className="font-black text-slate-700">{record.technician || 'N/A'}</p>
-                              </div>
-                              <div>
-                                <p className="font-bold text-slate-400 uppercase">Horas</p>
-                                <p className="font-black text-blue-600">{record.work_hours || 0} h</p>
-                              </div>
-                              <div>
-                                <p className="font-bold text-slate-400 uppercase">Completado</p>
-                                <p className="font-black text-slate-700">{record.completed_date ? new Date(String(record.completed_date).includes('T') ? String(record.completed_date) : `${record.completed_date}T12:00:00`).toLocaleDateString() : 'Pend.'}</p>
-                              </div>
-                              <div>
-                                <p className="font-bold text-slate-400 uppercase">Costo</p>
-                                <p className="font-black text-emerald-600 font-mono">S/ {record.total_cost?.toFixed(2) || '0.00'}</p>
-                              </div>
-                            </div>
-                            {canEdit() && (
-                              <div className="flex gap-2 pt-2 border-t border-slate-100">
-                                <button
-                                  onClick={() => {
-                                    setViewingAssetHistory(undefined);
-                                    handleEditRecord(record);
-                                  }}
-                                  className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-all"
-                                >
-                                  Editar
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    handleDeleteRecord(record);
-                                    setViewingAssetHistory(undefined);
-                                  }}
-                                  className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-all"
-                                >
-                                  Eliminar
-                                </button>
-                              </div>
-                            )}
-                          </div>
+                              {canEdit() && (
+                                <div className="flex gap-2 pt-2 border-t border-slate-100">
+                                  <button
+                                    onClick={() => {
+                                      setViewingAssetHistory(undefined);
+                                      handleEditRecord(record);
+                                    }}
+                                    className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-all"
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      handleDeleteRecord(record);
+                                      setViewingAssetHistory(undefined);
+                                    }}
+                                    className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-all"
+                                  >
+                                    Eliminar
+                                  </button>
+                                </div>
+                              )}
+                            </DetailModalCard>
+                          ))}
                         </div>
-                      ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        }
+                      </DetailModalSection>
+                    </DetailModalGrid>
+                  </DetailModalBody>
+                  <StandardModalFooter
+                    onClose={() => setViewingAssetHistory(undefined)}
+                  />
+                </DetailModal>
+              )
+            }
       </div>
     </div>
   );

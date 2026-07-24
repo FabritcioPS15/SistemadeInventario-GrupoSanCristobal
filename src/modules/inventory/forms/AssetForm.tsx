@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, ClipboardList, Tag, Boxes, FileText, Cpu, Printer, History } from 'lucide-react';
+import { Package, ClipboardList, Tag, Boxes, FileText, Cpu, Printer } from 'lucide-react';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import { supabase, Category, Location, AssetWithDetails } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect } from '../../../shared/components/forms/BaseForm';
@@ -305,14 +305,7 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
   /* ── Header action buttons (passed to BaseForm) ── */
   const headerActions = (
     <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => {/* historial placeholder */ }}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-all"
-      >
-        <History size={13} />
-        Historial
-      </button>
+
     </div>
   );
 
@@ -333,8 +326,7 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
       {/* ══════════════════════════════════════
           SECCIÓN 1 – Información General
           ══════════════════════════════════════ */}
-      <FormSection title="Información General" icon={<ClipboardList size={15} />}>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <FormSection title="Información General" icon={<ClipboardList size={15} />} columns={3}>
 
           {/* Código único */}
           <FormField label="Código único">
@@ -359,14 +351,12 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
             </FormSelect>
           </FormField>
 
-        </div>
       </FormSection>
 
       {/* ══════════════════════════════════════
           SECCIÓN 2 – Detalles del Equipo
           ══════════════════════════════════════ */}
-      <FormSection title="Detalles del Equipo" icon={<Tag size={15} />}>
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <FormSection title="Detalles del Equipo" icon={<Tag size={15} />} columns={4}>
 
           <FormField label="Marca">
             <FormInput name="brand" value={formData.brand} onChange={handleChange} placeholder="Ej: HIKVISION" />
@@ -384,14 +374,12 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
             <FormInput name="color" value={formData.color} onChange={handleChange} placeholder="Ej: NEGRO" />
           </FormField>
 
-        </div>
       </FormSection>
 
       {/* ══════════════════════════════════════
           SECCIÓN 3 – Inventario
           ══════════════════════════════════════ */}
-      <FormSection title="Inventario" icon={<Boxes size={15} />}>
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <FormSection title="Inventario" icon={<Boxes size={15} />} columns={4}>
 
           <FormField label="Cantidad" required>
             <FormInput type="number" name="cantidad" value={formData.cantidad} onChange={handleChange} min="1" />
@@ -419,20 +407,18 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
             <FormInput type="number" name="valor_estimado" value={formData.valor_estimado} onChange={handleChange} step="0.01" placeholder="Ej. 1200.00" />
           </FormField>
 
-        </div>
       </FormSection>
 
       {/* ══════════════════════════════════════
           SECCIÓN 4 – Información Administrativa
           ══════════════════════════════════════ */}
-      <FormSection title="Información Administrativa" icon={<FileText size={15} />}>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <FormSection title="Información Administrativa" icon={<FileText size={15} />} columns={3}>
 
           <FormField label="Año de adquisición">
-            <FormInput 
-              type="number" 
-              name="fecha_adquisicion" 
-              value={formData.fecha_adquisicion ? new Date(formData.fecha_adquisicion).getFullYear() : ''} 
+            <FormInput
+              type="number"
+              name="fecha_adquisicion"
+              value={formData.fecha_adquisicion ? new Date(formData.fecha_adquisicion).getFullYear() : ''}
               onChange={(e) => {
                 const year = e.target.value;
                 handleChange({
@@ -454,7 +440,7 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
               {locations.map(loc => <option key={loc.id} value={loc.id}>{loc.name}</option>)}
             </FormSelect>
           </FormField>
-        </div>
+
       </FormSection>
 
       {/* ══════════════════════════════════════

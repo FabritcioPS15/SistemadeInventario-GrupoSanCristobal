@@ -1,3 +1,30 @@
+/**
+ * Punto de entrada de la aplicación.
+ *
+ * ESTRUCTURA DE RUTAS (Routes ≈ línea 348):
+ *   /                     → Dashboard
+ *   /inventory/*          → Inventario (con submenú por categoría)
+ *   /cameras/*            → Cámaras (con submenu por ubicación)
+ *   /maintenance/*        → Mantenimiento
+ *   /checklist/*          → Checklist
+ *   /tickets/*            → Mesa de Ayuda
+ *   /requests             → Solicitudes
+ *   /quotations           → Cotizaciones
+ *   /reports              → Reportes
+ *   /users, /locations, /sutran, /mtc, /servers, /flota-vehicular, etc.
+ *
+ * CÓMO AGREGAR UN NUEVO MÓDULO:
+ * 1. Crear módulo en src/modules/<nombre>/
+ * 2. Importar la Page aquí
+ * 3. Agregar <Route> con <ProtectedRoute permission="...">
+ * 4. Agregar item en Sidebar.tsx
+ * 5. Agregar permiso en tabla user_permissions de Supabase
+ *
+ * PROTECTED ROUTE: controla acceso por permisos.
+ * Si no hay permiso → muestra "Acceso Denegado".
+ * Si no hay sesión → redirige a /login.
+ */
+
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 
@@ -41,6 +68,8 @@ import Servers from './modules/servers/pages/ServersPage';
 
 import FlotaVehicular from './modules/vehicles/pages/FlotaVehicularPage';
 
+import Requests from './modules/requests/pages/RequestsPage';
+
 import SpareParts from './modules/spare-parts/pages/SparePartsPage';
 
 import TitulosHabilitantes from './modules/titulos-habilitantes/pages/TitulosHabilitantesPage';
@@ -58,6 +87,8 @@ import PasswordSetup from './modules/auth/components/PasswordSetup';
 import Checklist from './modules/checklist/pages/ChecklistPage';
 
 import ChecklistInteractive from './modules/checklist/pages/ChecklistInteractivePage';
+import Reports from './modules/reports/pages/ReportsPage';
+import Quotations from './modules/quotations/pages/QuotationsPage';
 
 import ChecklistDetail from './modules/checklist/pages/ChecklistDetailPage';
 
@@ -389,7 +420,7 @@ function AppContent() {
             <Route path="/checklist" element={<ProtectedRoute permission="checklist"><Checklist /></ProtectedRoute>} />
             <Route path="/checklist/:type" element={<ProtectedRoute><ChecklistWrapper /></ProtectedRoute>} />
             <Route path="/checklist/:type/:id" element={<ProtectedRoute><ChecklistDetail /></ProtectedRoute>} />
-            <Route path="/checklist-interactive" element={<ProtectedRoute permission="checklist-interactive"><ChecklistInteractive /></ProtectedRoute>} />
+
 
             {/* Vacaciones */}
             <Route path="/vacations" element={<ProtectedRoute permission="vacations"><Vacations /></ProtectedRoute>} />
@@ -405,6 +436,7 @@ function AppContent() {
             <Route path="/users" element={<ProtectedRoute permission="users"><Users /></ProtectedRoute>} />
             <Route path="/servers" element={<ProtectedRoute permission="servers"><Servers /></ProtectedRoute>} />
             <Route path="/flota-vehicular" element={<ProtectedRoute permission="flota-vehicular"><FlotaVehicular /></ProtectedRoute>} />
+            <Route path="/requests" element={<ProtectedRoute permission="requests"><Requests /></ProtectedRoute>} />
             <Route path="/spare-parts" element={<ProtectedRoute permission="spare-parts"><SpareParts /></ProtectedRoute>} />
             <Route path="/titulos-habilitantes" element={<ProtectedRoute permission="titulos-habilitantes"><TitulosHabilitantes /></ProtectedRoute>} />
             <Route path="/planos-defensa-civil" element={<ProtectedRoute permission="planos-defensa-civil"><PlanosDefensaCivil /></ProtectedRoute>} />
@@ -421,6 +453,8 @@ function AppContent() {
             <Route path="/ticket/:ticketId" element={<ProtectedRoute permission="tickets"><TicketDetail /></ProtectedRoute>} />
 
             <Route path="/painpoint" element={<ProtectedRoute permission="painpoint"><Painpoints /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute permission="reports"><Reports /></ProtectedRoute>} />
+            <Route path="/quotations" element={<ProtectedRoute permission="quotations"><Quotations /></ProtectedRoute>} />
 
 
             {/* Fallback */}

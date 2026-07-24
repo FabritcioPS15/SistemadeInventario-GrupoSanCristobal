@@ -86,6 +86,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
       category: 'Principal',
       hasSubmenu: true,
       submenu: [
+        { id: 'checklist-all', label: 'Ver Todo' },
         { id: 'checklist-escon', label: 'ESCON' },
         { id: 'checklist-ecsal', label: 'ECSAL' },
         { id: 'checklist-citv', label: 'CITV' }
@@ -135,10 +136,12 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
       category: 'Operativo',
       hasSubmenu: true,
       submenu: [
+        { id: 'cameras-all', label: 'Ver Todo' },
         { id: 'cameras-revision', label: 'Revisión' },
         { id: 'cameras-escuela', label: 'Escuela' },
         { id: 'cameras-policlinico', label: 'Policlínico' },
-        { id: 'cameras-circuito', label: 'Circuito' }
+        { id: 'cameras-circuito', label: 'Circuito' },
+        { id: 'cameras-disks', label: 'Discos Extraídos' }
       ],
       permissions: [
         { id: 'cameras-view', label: 'Ver Cámaras', type: 'view' },

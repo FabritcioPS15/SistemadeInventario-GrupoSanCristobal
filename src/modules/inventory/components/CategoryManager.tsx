@@ -214,10 +214,10 @@ export default function CategoryManager({
   return (
     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
       <div className="bg-slate-900 px-5 py-4 flex items-center justify-between">
-        <h2 className="text-sm font-black uppercase tracking-widest text-white">Gestión de Categorías</h2>
+        <h2 className="text-sm font-black tracking-widest text-white">Gestión de Categorías</h2>
         <button
           onClick={handleAddCategory}
-          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-[10px] font-black tracking-wider rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Plus size={14} />
           Nueva Categoría
@@ -254,7 +254,7 @@ export default function CategoryManager({
                   </button>
                   <Icon size={18} className="text-slate-600" />
                   <div>
-                    <span className="text-[12px] font-black text-slate-800 uppercase">{category.name}</span>
+                    <span className="text-[12px] font-black text-slate-800">{category.name}</span>
                     <span className="text-[10px] text-slate-400 ml-2">({categorySubcategories.length} subcategorías)</span>
                   </div>
                 </div>

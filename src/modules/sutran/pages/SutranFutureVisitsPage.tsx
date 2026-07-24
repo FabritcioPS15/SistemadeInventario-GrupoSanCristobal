@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, AlertTriangle, RefreshCw, Search } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../shared/components/ui/Table';
 
 interface FutureVisit {
   id: string;
@@ -197,14 +198,14 @@ export default function SutranFutureVisits() {
               placeholder="Buscar por sede..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+              className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center gap-6 px-4 mr-4 border-r border-slate-100 hidden lg:flex">
               <div className="flex flex-col">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Presupuesto 90d</span>
+                <span className="text-[12px] font-black text-[#002855] tracking-[0.2em] leading-none mb-1">Presupuesto 90d</span>
                 <span className="text-sm font-black text-[#002855]">S/ {totalEstimatedCost.toLocaleString()}</span>
               </div>
             </div>
@@ -244,71 +245,68 @@ export default function SutranFutureVisits() {
         ) : (
           <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-500">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse border-spacing-0">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Próxima Visita</span></th>
-                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Sede</span></th>
-                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Última Visita</span></th>
-                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tipo</span></th>
-                    <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Referencia</span></th>
-                    <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Plazo</span></th>
+              <Table>
+                <TableHeader>
+                  <tr>
+                    <TableHead>Próxima Visita</TableHead>
+                    <TableHead>Sede</TableHead>
+                    <TableHead>Última Visita</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Referencia</TableHead>
+                    <TableHead className="text-center">Plazo</TableHead>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
+                </TableHeader>
+                <TableBody>
                   {filteredVisits.map((visit) => (
-                    <tr key={visit.id} onClick={() => navigate('/sutran')} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0">
-                      <td className="px-6 py-5 font-bold text-left">
+                    <TableRow key={visit.id} onClick={() => navigate('/sutran')} className="cursor-pointer">
+                      <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
+                          <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover/row:bg-blue-600 group-hover/row:text-white group-hover/row:shadow-md">
                             <Calendar size={14} />
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-blue-600 transition-colors">
+                            <span className="text-[13px] font-black text-[#002855] leading-tight group-hover/row:text-blue-600 transition-colors">
                               {new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Estimada</span>
+                            <span className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">Estimada</span>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-4 py-5 text-left">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <MapPin size={12} className="text-rose-500" />
-                          <span className="text-sm font-extrabold text-[#002855] uppercase">{visit.location_name}</span>
+                          <span className="text-sm font-bold text-[#002855] uppercase">{visit.location_name}</span>
                         </div>
-                      </td>
-                      <td className="px-4 py-5 text-left">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex flex-col">
                           <span className="text-[11px] font-black text-slate-600 uppercase tracking-tight">
                             {visit.last_visit_date ? new Date(String(visit.last_visit_date).includes('T') ? String(visit.last_visit_date) : `${visit.last_visit_date}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Sin registros'}
                           </span>
                           <span className="text-[9px] font-bold text-slate-400 uppercase">Fecha Real</span>
                         </div>
-                      </td>
-                      <td className="px-4 py-5 text-left">
-                        <span className={`inline-block px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border w-fit ${getTypeColor(visit.visit_type)}`}>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-block px-2 py-0.5 text-[10px] font-black tracking-wider border w-fit ${getTypeColor(visit.visit_type)}`}>
                           {getVisitTypeLabel(visit.visit_type)}
                         </span>
-                      </td>
-                      <td className="px-4 py-5 text-left">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <AlertTriangle size={12} className="text-amber-500" />
                           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[200px]">{visit.observations}</span>
                         </div>
-                      </td>
-                      <td className="px-6 py-5 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${getDaysRemaining(visit.visit_date).includes('hace')
-                            ? 'border-rose-200 bg-rose-50 text-rose-700'
-                            : 'border-amber-200 bg-amber-50 text-amber-700'
-                          }`}>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-black tracking-wider border ${getDaysRemaining(visit.visit_date).includes('hace') ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
                           <Clock size={10} />
                           {getDaysRemaining(visit.visit_date)}
                         </span>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}

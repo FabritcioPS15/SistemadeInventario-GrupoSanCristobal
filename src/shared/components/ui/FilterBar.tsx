@@ -39,22 +39,27 @@ export default function FilterBar({
 
   return (
     <>
-      {filters.map(f => (
-        <FilterSelect
-          key={f.key}
-          icon={f.icon}
-          iconClassName={f.iconClassName}
-          value={values[f.key] ?? (f.multiple ? [] : '')}
-          onChange={(e) => onChange(f.key, e.target.value)}
-          wrapperClassName={f.wrapperClassName}
-          multiple={f.multiple}
-        >
-          <option value="">{f.placeholder}</option>
-          {f.options.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </FilterSelect>
-      ))}
+      {filters.map(f => {
+        // Por defecto todos los filtros son multi-select (multiple=true)
+        // a menos que se pase explícitamente multiple=false
+        const isMultiple = f.multiple !== false;
+        return (
+          <FilterSelect
+            key={f.key}
+            icon={f.icon}
+            iconClassName={f.iconClassName}
+            value={values[f.key] ?? (isMultiple ? [] : '')}
+            onChange={(e) => onChange(f.key, e.target.value)}
+            wrapperClassName={f.wrapperClassName}
+            multiple={isMultiple}
+          >
+            <option value="">{f.placeholder}</option>
+            {f.options.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </FilterSelect>
+        );
+      })}
       {!hideClearButton && hasActiveFilters && onClearAll && (
         <button
           onClick={onClearAll}
@@ -62,7 +67,7 @@ export default function FilterBar({
           title="Limpiar Filtros"
         >
           <X size={18} className="md:block hidden" />
-          <span className="md:hidden text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><X size={14} /> Limpiar Filtros</span>
+          <span className="md:hidden text-[10px] font-black tracking-widest flex items-center gap-2"><X size={14} /> Limpiar Filtros</span>
         </button>
       )}
     </>

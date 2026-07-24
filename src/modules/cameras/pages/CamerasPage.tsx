@@ -31,6 +31,11 @@ import {
   TableHead,
   TableBody,
   TableCell,
+  TableCellIcon,
+  TableCellPrimary,
+  TableCellSecondary,
+  TableCellBadge,
+  TableActionButton
 } from '../../../shared/components/ui/Table';
 
 type Camera = CameraType;
@@ -51,7 +56,7 @@ export default function Cameras({ subview }: CamerasProps) {
   const [expandedStorage, setExpandedStorage] = useState<Set<string>>(new Set());
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterStorage, setFilterStorage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
@@ -217,7 +222,7 @@ export default function Cameras({ subview }: CamerasProps) {
     if (t === 'url') return 'URL';
     if (t === 'ivms') return 'IVMS';
     if (t === 'esviz') return 'ESVIZ';
-    return t.toUpperCase();
+    return t;
   };
 
   // Función para obtener el tipo de ubicación basado en el subview
@@ -263,7 +268,7 @@ export default function Cameras({ subview }: CamerasProps) {
           if (!cameraLocationId || !selectedLocations.includes(cameraLocationId)) return false;
         }
 
-        if (filterStatus && c.status !== filterStatus) return false;
+        if (filterStatus.length > 0 && !filterStatus.includes(c.status ?? '')) return false;
 
         if (filterStorage) {
           const hasCriticalDisk = c.camera_disks?.some(d => {
@@ -360,7 +365,7 @@ export default function Cameras({ subview }: CamerasProps) {
 
         autoTable(doc, {
           startY: 30,
-          head: [['Disco', 'Serie', 'Marca', 'Cámara Origen', 'Sede', 'Periodo Grabación', 'Capacidad', 'Notas']],
+          head: [['Disco', 'Serie', 'Marca', 'Cámara Origen', 'Ubicación', 'Periodo Grabación', 'Capacidad', 'Notas']],
           body: tableData,
           theme: 'striped',
           headStyles: { fillColor: [190, 18, 60], textColor: 255, fontSize: 10 },
@@ -413,7 +418,7 @@ export default function Cameras({ subview }: CamerasProps) {
         { header: 'Serie', key: 'serial', width: 20 },
         { header: 'Marca', key: 'brand', width: 20 },
         { header: 'Cámara Origen', key: 'camera_name', width: 25 },
-        { header: 'Sede', key: 'location_name', width: 25 },
+        { header: 'Ubicación', key: 'location_name', width: 25 },
         { header: 'Grabación Desde', key: 'from', width: 15 },
         { header: 'Grabación Hasta', key: 'to', width: 15 },
         { header: 'Capacidad Total (GB)', key: 'total', width: 15 },
@@ -442,7 +447,7 @@ export default function Cameras({ subview }: CamerasProps) {
     } else {
       worksheet.columns = [
         { header: 'Nombre', key: 'name', width: 25 },
-        { header: 'Sede', key: 'location', width: 25 },
+        { header: 'Ubicación', key: 'location', width: 25 },
         { header: 'Inicio Grabación', key: 'recording_start', width: 20 },
         { header: 'Marca', key: 'brand', width: 15 },
         { header: 'Modelo', key: 'model', width: 20 },
@@ -519,14 +524,14 @@ export default function Cameras({ subview }: CamerasProps) {
                 placeholder="Buscar cámara por nombre, IP, marca..."
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', multiple: true, options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', multiple: true, options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
               ...(subview !== 'cameras-disks' ? [{
                 key: 'status', placeholder: 'TODOS LOS ESTADOS', options: [
                   { value: 'active', label: 'ACTIVO' },
@@ -538,14 +543,14 @@ export default function Cameras({ subview }: CamerasProps) {
             values={{ location: selectedLocations, status: filterStatus }}
             onChange={(key, value) => {
               if (key === 'location') setSelectedLocations(value as string[]);
-              else if (key === 'status') setFilterStatus(value as string);
+              else if (key === 'status') setFilterStatus(value as string[]);
               setCurrentPage(1);
             }}
           />
 
           {subview !== 'cameras-disks' && (
             <div className="w-full md:w-auto flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 border border-slate-200 hover:border-[#002855]/30">
-              <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest flex items-center gap-1">
+              <span className="text-[10px] font-black text-[#002855] tracking-widest flex items-center gap-1">
                 <Star size={12} />
                 Crítico:
               </span>
@@ -604,7 +609,7 @@ export default function Cameras({ subview }: CamerasProps) {
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {paginatedData.map((cam) => (
-                <div key={cam.id} className={`group bg-white rounded-xl shadow-sm border hover:shadow-lg transition-all duration-200 overflow-hidden flex flex-col relative ${selectedIds.includes(cam.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-gray-200 hover:border-blue-300'}`}>
+                <div key={cam.id} className={`group bg-white rounded-none shadow-sm border hover:shadow-lg transition-all duration-200 overflow-hidden flex flex-col relative ${selectedIds.includes(cam.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-gray-200 hover:border-blue-300'}`}>
                   {canEdit() && !subview && (
                     <div className="absolute top-4 right-4 z-10">
                       <input
@@ -622,7 +627,7 @@ export default function Cameras({ subview }: CamerasProps) {
                       <div className="flex items-center gap-3">
                         <div className={`${cam.status === 'active' ? 'bg-green-500 text-white' :
                           cam.status === 'maintenance' ? 'bg-yellow-500 text-white' :
-                            'bg-gray-400 text-white'} rounded-lg p-2.5 shadow-sm`}>
+                            'bg-gray-400 text-white'} rounded-none p-2.5 shadow-sm`}>
                           <GiCctvCamera size={20} />
                         </div>
                         <div className="flex-1">
@@ -632,14 +637,14 @@ export default function Cameras({ subview }: CamerasProps) {
                               <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-200 text-gray-700 shadow-sm border border-gray-300">{cam.display_count}</span>
                             )}
                             {cam.access_type && (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-bold shadow-sm bg-gray-100 text-gray-600 border border-gray-200">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border rounded-none bg-gray-100 text-gray-600 border-gray-200">
                                 {humanAccess(cam.access_type)}
                               </span>
                             )}
                           </div>
                           {(cam as any).locations && (
-                            <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium hidden sm:block">
-                              <MapPin size={14} className="text-red-500" />
+                            <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-700 hidden sm:block">
+                              <MapPin size={14} className="text-rose-500 inline" />
                               <span>{(cam as any).locations.name}</span>
                             </div>
                           )}
@@ -647,11 +652,13 @@ export default function Cameras({ subview }: CamerasProps) {
                       </div>
                       {/* Status badge */}
                       <div className="flex flex-col items-end gap-2">
-                        <span className={`px-3 py-1.5 text-xs rounded-full font-bold shadow-sm ${cam.status === 'active' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                          cam.status === 'maintenance' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                            'bg-slate-100 text-slate-800 border border-slate-200'
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-black uppercase border tracking-widest rounded-none shadow-sm ${
+                          cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          cam.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-slate-100 text-slate-600 border-slate-200'
                           }`}>
-                          {cam.status === 'active' ? '✓ Activo' : cam.status === 'maintenance' ? '⚠ Mantenimiento' : 'Inactivo'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${cam.status === 'active' ? 'bg-emerald-500' : cam.status === 'maintenance' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                          {cam.status === 'active' ? 'Activo' : cam.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
                         </span>
                       </div>
                     </div>
@@ -660,7 +667,7 @@ export default function Cameras({ subview }: CamerasProps) {
                   {/* Body con mejor espaciado y diseño */}
                   <div className="px-5 pb-4 space-y-4">
                     {/* Información técnica compacta */}
-                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                    <div className="bg-gray-50 rounded-none p-3 border border-gray-100">
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         {(cam.brand || cam.model) && (
                           <div className="flex items-center gap-2">
@@ -681,7 +688,7 @@ export default function Cameras({ subview }: CamerasProps) {
                     {/* Credenciales y acceso */}
                     <div className="space-y-3">
                       {cam.url && (
-                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div className="bg-gray-50 rounded-none p-3 border border-gray-200">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-gray-600 text-xs font-bold">URL:</span>
@@ -689,7 +696,7 @@ export default function Cameras({ subview }: CamerasProps) {
                             </div>
                             <button
                               onClick={() => window.open(cam.url, '_blank', 'noopener')}
-                              className="px-3 py-1.5 text-xs bg-gray-800 text-white rounded-lg hover:bg-black transition-colors font-medium shadow-sm"
+                              className="px-3 py-1.5 text-xs bg-gray-800 text-white rounded-none hover:bg-black transition-colors font-medium shadow-sm"
                               title="Abrir URL"
                             >
                               Abrir
@@ -699,29 +706,29 @@ export default function Cameras({ subview }: CamerasProps) {
                       )}
 
                       <div className="grid grid-cols-1 gap-2">
-                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center justify-between bg-gray-50 rounded-none p-3 border border-gray-200">
                           <div className="flex items-center gap-2">
                             <span className="text-gray-600 text-xs font-medium">Usuario:</span>
                             <span className="font-mono text-xs text-gray-800 break-all flex-1">{cam.username || '—'}</span>
                           </div>
                           {cam.username && (
-                            <button onClick={() => copyToClipboard(cam.username)} className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors" title="Copiar">
+                            <button onClick={() => copyToClipboard(cam.username)} className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded-none transition-colors" title="Copiar">
                               <Copy size={12} />
                             </button>
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center justify-between bg-gray-50 rounded-none p-3 border border-gray-200">
                           <div className="flex items-center gap-2">
                             <span className="text-gray-600 text-xs font-medium">Contraseña:</span>
                             <span className="font-mono text-xs text-gray-800 break-all flex-1">{visiblePasswords.has(cam.id) ? (cam.password || '—') : (cam.password ? '••••••••' : '—')}</span>
                           </div>
                           {cam.password && (
                             <div className="flex gap-1">
-                              <button onClick={() => togglePasswordVisible(cam.id)} className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors" title={visiblePasswords.has(cam.id) ? 'Ocultar' : 'Mostrar'}>
+                              <button onClick={() => togglePasswordVisible(cam.id)} className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded-none transition-colors" title={visiblePasswords.has(cam.id) ? 'Ocultar' : 'Mostrar'}>
                                 {visiblePasswords.has(cam.id) ? <EyeOff size={12} /> : <Eye size={12} />}
                               </button>
-                              <button onClick={() => copyToClipboard(cam.password)} className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors" title="Copiar">
+                              <button onClick={() => copyToClipboard(cam.password)} className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded-none transition-colors" title="Copiar">
                                 <Copy size={12} />
                               </button>
                             </div>
@@ -730,12 +737,12 @@ export default function Cameras({ subview }: CamerasProps) {
                       </div>
 
                       {cam.auth_code && (
-                        <div className="flex items-center justify-between bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                        <div className="flex items-center justify-between bg-yellow-50 rounded-none p-3 border border-yellow-200">
                           <div className="flex items-center gap-2">
                             <span className="text-yellow-700 text-xs font-medium">Código:</span>
                             <span className="font-mono text-xs text-yellow-800 break-all flex-1">{cam.auth_code}</span>
                           </div>
-                          <button onClick={() => copyToClipboard(cam.auth_code)} className="p-1.5 bg-yellow-200 hover:bg-yellow-300 rounded-lg transition-colors" title="Copiar">
+                          <button onClick={() => copyToClipboard(cam.auth_code)} className="p-1.5 bg-yellow-200 hover:bg-yellow-300 rounded-none transition-colors" title="Copiar">
                             <Copy size={12} />
                           </button>
                         </div>
@@ -743,7 +750,7 @@ export default function Cameras({ subview }: CamerasProps) {
                     </div>
 
                     {/* Almacenamiento mejorado */}
-                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div className="bg-gray-50 rounded-none p-3 border border-gray-200">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-bold text-gray-700">💾 Almacenamiento</span>
                         {(cam.camera_disks && cam.camera_disks.length > 0) && (
@@ -811,7 +818,7 @@ export default function Cameras({ subview }: CamerasProps) {
                           const percent = total > 0 ? Math.min(100, Math.max(0, Math.round((used / total) * 100))) : 0;
                           const remaining = Math.max(0, total - used);
                           return (
-                            <div key={d.id} className="bg-white border border-gray-200 rounded-lg p-3">
+                            <div key={d.id} className="bg-white border border-gray-200 rounded-none p-3">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="text-sm font-bold text-gray-700">Disco #{d.disk_number} • {d.disk_type || 'Sin tipo'}</div>
                                 <span className={`px-2 py-0.5 text-xs rounded-full font-bold ${d.status === 'active' ? 'bg-green-100 text-green-800' :
@@ -842,13 +849,13 @@ export default function Cameras({ subview }: CamerasProps) {
                         <>
                           <button
                             onClick={() => openEdit(cam)}
-                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors font-medium border border-gray-200"
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-600 rounded-none hover:bg-gray-200 transition-colors font-medium border border-gray-200"
                           >
                             <Edit size={16} /> Editar
                           </button>
                           <button
                             onClick={() => del(cam)}
-                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-400 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors font-medium border border-gray-200"
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm bg-gray-100 text-gray-400 rounded-none hover:bg-red-50 hover:text-red-600 transition-colors font-medium border border-gray-200"
                           >
                             <Trash2 size={16} /> Eliminar
                           </button>
@@ -888,75 +895,65 @@ export default function Cameras({ subview }: CamerasProps) {
                   </TableHeader>
                   <TableBody>
                     {paginatedDisks.map((disk) => (
-                      <TableRow key={disk.id}>
+                      <TableRow key={disk.id} className="group/row">
                         <TableCell className="font-bold">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm bg-rose-50 text-rose-600 border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-colors">
-                              <HardDrive size={18} />
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">Disco #{disk.disk_number}</span>
-                              <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest mt-1">S/N: {disk.serial_number || 'S/N DESCONOCIDA'}</span>
-                            </div>
+                          <div className="flex flex-col">
+                            <TableCellPrimary>Disco #{disk.disk_number}</TableCellPrimary>
+                            <span className="text-[10px] font-mono font-bold text-slate-400 tracking-widest mt-1">S/N: {disk.serial_number || 'S/N DESCONOCIDA'}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-[11px] font-black text-slate-500 uppercase tracking-tighter">{disk.brand || '—'}</span>
+                          <TableCellPrimary className="text-slate-500">{disk.brand || '—'}</TableCellPrimary>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-[11px] font-bold text-slate-600 uppercase">{disk.camera_name || '—'}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{disk.location_name || 'SEDE N/A'}</span>
+                            <TableCellPrimary className="text-slate-600">{disk.camera_name || '—'}</TableCellPrimary>
+                            <TableCellSecondary>{disk.location_name || 'UBICACIÓN N/A'}</TableCellSecondary>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded text-[10px] font-black text-blue-600 uppercase">
+                            <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded-none text-[10px] font-black text-blue-600 tracking-wider">
                               {disk.stored_from ? new Date(String(disk.stored_from).includes('T') ? String(disk.stored_from) : `${disk.stored_from}T12:00:00`).toLocaleDateString() : 'INICIO N/A'}
                             </div>
                             <span className="text-slate-300">—</span>
-                            <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded text-[10px] font-black text-blue-600 uppercase">
+                            <div className="px-2 py-1 bg-blue-50 border border-blue-100 rounded-none text-[10px] font-black text-blue-600 tracking-wider">
                               {disk.stored_to ? new Date(String(disk.stored_to).includes('T') ? String(disk.stored_to) : `${disk.stored_to}T12:00:00`).toLocaleDateString() : 'FIN N/A'}
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col gap-1">
-                            <span className="text-[11px] font-black text-[#002855]">{disk.used_space_gb}/{disk.total_capacity_gb} GB</span>
-                            <div className="w-24 bg-slate-100 h-1 rounded-full overflow-hidden">
+                            <TableCellPrimary>{disk.used_space_gb}/{disk.total_capacity_gb} GB</TableCellPrimary>
+                            <div className="w-24 bg-slate-100 h-1 rounded-none overflow-hidden">
                               <div className="bg-rose-500 h-full" style={{ width: `${Math.min(100, Math.round((Number(disk.used_space_gb) / Number(disk.total_capacity_gb)) * 100))}%` }} />
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border bg-rose-50 text-rose-700 border-rose-100">
-                            ALMACENADO
-                          </span>
+                          <TableCellBadge className="bg-rose-50 text-rose-700 border-rose-100">ALMACENADO</TableCellBadge>
                         </TableCell>
                         <TableCell>
-                          <span className="text-[11px] font-medium text-slate-500 italic max-w-xs block truncate">{disk.notes || 'Sin observaciones'}</span>
+                          <span className="text-[12px] font-medium text-slate-500 italic max-w-xs block truncate">{disk.notes || 'Sin observaciones'}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
                             {canEdit() && (
                               <>
-                                <button
+                                <TableActionButton
+                                  icon={<Edit size={14} />}
                                   onClick={() => {
                                     setEditingDisk(disk);
                                     setShowStoredDiskForm(true);
                                   }}
-                                  className="p-1.5 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded transition-colors"
                                   title="Editar Disco"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                                <button
+                                />
+                                <TableActionButton
+                                  icon={<Trash2 size={14} />}
                                   onClick={() => handleDeleteDisk(disk.id)}
-                                  className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded transition-colors"
                                   title="Eliminar Disco"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                                  variant="danger"
+                                />
                               </>
                             )}
                           </div>
@@ -965,7 +962,7 @@ export default function Cameras({ subview }: CamerasProps) {
                     ))}
                     {paginatedDisks.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-slate-400 font-bold uppercase text-[10px] tracking-widest py-10">
+                        <TableCell colSpan={7} className="text-center text-slate-400 font-bold text-[10px] tracking-widest py-10">
                           No se encontraron discos extraídos almacenados
                         </TableCell>
                       </TableRow>
@@ -975,7 +972,8 @@ export default function Cameras({ subview }: CamerasProps) {
               </div>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+          <>
+            <div className="hidden md:flex bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex-col">
               <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
                 <Pagination
                   currentPage={currentPage}
@@ -1002,7 +1000,7 @@ export default function Cameras({ subview }: CamerasProps) {
                         </TableHead>
                       )}
                       <TableHead sortable isSorted={sortConfig?.key === 'name'} sortDirection={sortConfig?.direction} onClick={() => handleSort('name')}>Cámara</TableHead>
-                      <TableHead sortable isSorted={sortConfig?.key === 'location'} sortDirection={sortConfig?.direction} onClick={() => handleSort('location')}>Sede</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'location'} sortDirection={sortConfig?.direction} onClick={() => handleSort('location')}>Ubicación</TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'recording_start_date'} sortDirection={sortConfig?.direction} onClick={() => handleSort('recording_start_date')}>Inicio Grabación</TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'status'} sortDirection={sortConfig?.direction} onClick={() => handleSort('status')}>Estado</TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'disks'} sortDirection={sortConfig?.direction} onClick={() => handleSort('disks')}>Almacenamiento</TableHead>
@@ -1011,9 +1009,9 @@ export default function Cameras({ subview }: CamerasProps) {
                   </TableHeader>
                   <TableBody>
                     {paginatedData.map((cam) => (
-                      <TableRow 
-                        key={cam.id} 
-                        className={`cursor-pointer transition-colors duration-150 group relative ${selectedIds.includes(cam.id) ? 'bg-blue-50/40' : ''}`}
+                      <TableRow
+                        key={cam.id}
+                        className={`cursor-pointer transition-colors duration-150 group/row relative ${selectedIds.includes(cam.id) ? 'bg-blue-50/40' : ''}`}
                         onClick={() => handleView(cam)}
                       >
                         {canEdit() && !subview && (
@@ -1023,40 +1021,35 @@ export default function Cameras({ subview }: CamerasProps) {
                               checked={selectedIds.includes(cam.id)}
                               onChange={() => toggleSelect(cam.id)}
                               onClick={e => e.stopPropagation()}
-                              className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                              className="w-3.5 h-3.5 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
                             />
                           </TableCell>
                         )}
-                        <TableCell className="font-bold" noTruncate>
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white">
-                              <GiCctvCamera size={18} />
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-[13px] font-black text-[#002855] uppercase leading-tight truncate max-w-[350px]">{cam.name}</span>
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 truncate max-w-[350px]">{cam.brand || ''} {cam.model || ''}</span>
-                            </div>
+                        <TableCell className="font-bold noTruncate">
+                          <div className="flex flex-col min-w-0">
+                            <TableCellPrimary className="truncate max-w-[350px]">{cam.name}</TableCellPrimary>
+                            <TableCellSecondary className="truncate max-w-[350px]">{cam.brand || ''} {cam.model || ''}</TableCellSecondary>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <span className="text-[11px] font-bold text-slate-600 truncate max-w-xs block">{(cam as any).locations?.name || 'Sede N/A'}</span>
+                          <TableCellPrimary className="text-slate-700 truncate max-w-xs block">{(cam as any).locations?.name || 'Ubicación N/A'}</TableCellPrimary>
                         </TableCell>
                         <TableCell>
-                          <span className="text-[11px] font-bold text-[#002855] uppercase">
+                          <TableCellPrimary>
                             {cam.recording_start_date ? new Date(String(cam.recording_start_date + 'T00:00:00').includes('T') ? String(cam.recording_start_date + 'T00:00:00') : `${cam.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                          </span>
+                          </TableCellPrimary>
                         </TableCell>
                         <TableCell>
-                          <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                          <TableCellBadge className={cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}>
                             {cam.status === 'active' ? 'ACTIVO' : cam.status === 'maintenance' ? 'MANTENIMIENTO' : 'INACTIVO'}
-                          </span>
+                          </TableCellBadge>
                         </TableCell>
                         <TableCell>
                           {cam.camera_disks && cam.camera_disks.length > 0 ? (
                             <div className="flex flex-col gap-1 min-w-[120px]">
                               {(() => {
                                 const activeDisks = cam.camera_disks!.filter(d => d.status !== 'extracted');
-                                if (activeDisks.length === 0) return <span className="text-[10px] font-bold text-slate-400">SIN DISCOS ACTIVOS</span>;
+                                if (activeDisks.length === 0) return <TableCellSecondary>SIN DISCOS ACTIVOS</TableCellSecondary>;
 
                                 const totals = activeDisks.reduce(
                                   (acc, d) => {
@@ -1079,7 +1072,7 @@ export default function Cameras({ subview }: CamerasProps) {
                                       <span>{totals.used}/{totals.total}GB</span>
                                       <span>{percent}%</span>
                                     </div>
-                                    <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden border border-slate-200">
+                                    <div className="w-full bg-slate-100 h-1.5 rounded-none overflow-hidden border border-slate-200">
                                       <div
                                         className={`h-full ${percent > 75 ? 'bg-rose-500' : percent > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`}
                                         style={{ width: `${percent}%` }}
@@ -1090,19 +1083,24 @@ export default function Cameras({ subview }: CamerasProps) {
                               })()}
                             </div>
                           ) : (
-                            <span className="text-[10px] font-bold text-slate-400">SIN DISCOS</span>
+                            <TableCellSecondary>SIN DISCOS</TableCellSecondary>
                           )}
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
                             {canEdit() && (
                               <>
-                                <button onClick={e => { e.stopPropagation(); openEdit(cam); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Editar">
-                                  <Edit size={14} />
-                                </button>
-                                <button onClick={e => { e.stopPropagation(); del(cam); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Eliminar">
-                                  <Trash2 size={14} />
-                                </button>
+                                <TableActionButton
+                                  icon={<Edit size={14} />}
+                                  onClick={e => { e.stopPropagation(); openEdit(cam); }}
+                                  title="Editar"
+                                />
+                                <TableActionButton
+                                  icon={<Trash2 size={14} />}
+                                  onClick={e => { e.stopPropagation(); del(cam); }}
+                                  title="Eliminar"
+                                  variant="danger"
+                                />
                               </>
                             )}
                           </div>
@@ -1113,6 +1111,49 @@ export default function Cameras({ subview }: CamerasProps) {
                 </Table>
               </div>
             </div>
+
+          {/* Mobile card view */}
+          <div className="md:hidden space-y-3 mt-4">
+            {paginatedData.map((cam) => (
+              <div key={cam.id} className="bg-white border border-slate-200" onClick={() => handleView(cam)}>
+                <div className="p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-black text-[#002855] uppercase truncate">{cam.name}</p>
+                      <p className="text-[9px] font-bold text-slate-400 truncate">{cam.brand || ''} {cam.model || ''}</p>
+                    </div>
+                    <span className={`shrink-0 px-2 py-0.5 text-[8px] font-black tracking-widest border ${cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                      {cam.status === 'active' ? 'ACTIVO' : cam.status === 'maintenance' ? 'MANTENIMIENTO' : 'INACTIVO'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 mt-1.5">
+                    <MapPin size={11} className="text-rose-500 shrink-0" />
+                    <span className="text-[9px] font-bold text-slate-500 truncate">{(cam as any).locations?.name || 'Ubicación N/A'}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                    <span className="text-[8px] font-bold text-slate-400">
+                      {cam.recording_start_date ? new Date(String(cam.recording_start_date + 'T00:00:00').includes('T') ? String(cam.recording_start_date + 'T00:00:00') : `${cam.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) : '—'}
+                    </span>
+                    <span className="text-[8px] font-bold text-slate-400">
+                      {cam.camera_disks?.length || 0} disco(s)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="md:hidden mt-3">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredCameras.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setItemsPerPage}
+            />
+          </div>
+          </>
           )
         }
 
@@ -1126,12 +1167,12 @@ export default function Cameras({ subview }: CamerasProps) {
                     <GiCctvCamera size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                    <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
                       {selectedCamera.name}
                     </h2>
-                    <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                    <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                       <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
-                      <span className="line-clamp-2 sm:truncate">{(selectedCamera as any).locations?.name || 'SEDE INTEGRAL'}</span>
+                      <span className="line-clamp-2 sm:truncate">{(selectedCamera as any).locations?.name || 'UBICACIÓN INTEGRAL'}</span>
                     </p>
                   </div>
                 </div>
@@ -1151,30 +1192,30 @@ export default function Cameras({ subview }: CamerasProps) {
                     <div className="space-y-2.5 sm:space-y-3">
                       <DetailModalCard className="space-y-2.5 sm:space-y-3">
                         <DetailModalRow label="Estado Operativo">
-                          <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border ${selectedCamera.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                          <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${selectedCamera.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                             selectedCamera.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-500 border-slate-200'
                             }`}>
                             {selectedCamera.status === 'active' ? 'Activo' : selectedCamera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
                           </span>
                         </DetailModalRow>
                         <DetailModalRow label="Marca / Modelo">
-                          <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase break-words">
+                          <span className="text-[10px] sm:text-[12px] font-black text-[#002855] uppercase break-words">
                             {selectedCamera.brand || 'GENÉRICA'} {selectedCamera.model || ''}
                           </span>
                         </DetailModalRow>
                         <DetailModalRow label="Flujos de Video">
-                          <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">{selectedCamera.display_count || '0'} CÁMARAS</span>
+                          <span className="text-[10px] sm:text-[12px] font-black text-[#002855]">{selectedCamera.display_count || '0'} CÁMARAS</span>
                         </DetailModalRow>
                       </DetailModalCard>
 
                       <DetailModalCard className="space-y-2.5 sm:space-y-3">
                         <DetailModalRow label="Registro de Alta">
-                          <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
+                          <span className="text-[10px] sm:text-[12px] font-black text-slate-600">
                             {new Date(String(selectedCamera.created_at).includes('T') ? String(selectedCamera.created_at) : `${selectedCamera.created_at}T12:00:00`).toLocaleDateString()}
                           </span>
                         </DetailModalRow>
                         <DetailModalRow label="Último Cambio">
-                          <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
+                          <span className="text-[10px] sm:text-[12px] font-black text-slate-600">
                             {new Date(String(selectedCamera.updated_at).includes('T') ? String(selectedCamera.updated_at) : `${selectedCamera.updated_at}T12:00:00`).toLocaleDateString()}
                           </span>
                         </DetailModalRow>
@@ -1192,7 +1233,7 @@ export default function Cameras({ subview }: CamerasProps) {
 
                       <div className="space-y-2.5 sm:space-y-3 mt-3 sm:mt-4 pt-3 border-t border-slate-200/80">
                         <div className="bg-white border border-slate-200 p-2.5 sm:p-3 rounded-sm">
-                          <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase block mb-1.5">Dirección IPv4</span>
+                          <span className="text-[8px] sm:text-[9px] font-black text-slate-400 block mb-1.5">Dirección IPv4</span>
                           <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
                             <span className="font-mono text-[11px] sm:text-xs font-black text-blue-600 break-all">{selectedCamera.ip_address || '0.0.0.0'}</span>
                             <span className="font-mono text-[9px] sm:text-[10px] font-bold text-slate-400 shrink-0">PORT: {selectedCamera.port || '—'}</span>
@@ -1200,7 +1241,7 @@ export default function Cameras({ subview }: CamerasProps) {
                         </div>
 
                         <div className="bg-white border border-slate-200 p-2.5 sm:p-3 rounded-sm">
-                          <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase block mb-1.5">Usuario GS</span>
+                          <span className="text-[8px] sm:text-[9px] font-black text-slate-400 block mb-1.5">Usuario GS</span>
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-[10px] sm:text-[11px] font-black text-[#002855] truncate">{selectedCamera.username || '—'}</span>
                             <button type="button" onClick={() => copyToClipboard(selectedCamera.username)} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors shrink-0" aria-label="Copiar usuario">
@@ -1210,7 +1251,7 @@ export default function Cameras({ subview }: CamerasProps) {
                         </div>
 
                         <div className="bg-white border border-slate-200 p-2.5 sm:p-3 rounded-sm">
-                          <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase block mb-1.5">Credenciales</span>
+                          <span className="text-[8px] sm:text-[9px] font-black text-slate-400 block mb-1.5">Credenciales</span>
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="font-mono text-[10px] sm:text-xs font-bold text-slate-600 tracking-wide break-all">
                               {visiblePasswords.has(selectedCamera.id) ? (selectedCamera.password || '—') : (selectedCamera.password ? '••••••••' : '—')}
@@ -1229,8 +1270,8 @@ export default function Cameras({ subview }: CamerasProps) {
                         {selectedCamera.auth_code && (
                           <div className="bg-blue-50 border border-blue-100 p-2.5 sm:p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div className="min-w-0">
-                              <span className="block text-[8px] font-black text-blue-400 uppercase tracking-widest">Código de verificación</span>
-                              <span className="font-mono text-xs sm:text-sm font-black text-blue-700 uppercase break-all">{selectedCamera.auth_code}</span>
+                              <span className="block text-[8px] font-black text-blue-400 tracking-widest">Código de verificación</span>
+                              <span className="font-mono text-xs sm:text-sm font-black text-blue-700 break-all">{selectedCamera.auth_code}</span>
                             </div>
                             <button type="button" onClick={() => copyToClipboard(selectedCamera.auth_code)} className="w-full sm:w-auto p-2.5 min-h-[44px] flex items-center justify-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest">
                               <Copy size={14} /> Copiar
@@ -1279,7 +1320,7 @@ export default function Cameras({ subview }: CamerasProps) {
                                 <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-blue-600/10 rounded-full blur-3xl" />
                                 <div className="relative z-10">
                                   <div className="flex justify-between items-end mb-3 sm:mb-4 gap-2">
-                                    <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wide sm:tracking-[0.2em] text-blue-400">Capacidad Global</span>
+                                    <span className="text-[8px] sm:text-[9px] font-black tracking-wide sm:tracking-[0.2em] text-blue-400">Capacidad Global</span>
                                     <span className="text-lg sm:text-[20px] font-black tracking-tighter">{percent}%</span>
                                   </div>
                                   <div className="w-full bg-white/10 h-1.5 sm:h-2 rounded-none mb-2 sm:mb-3">
@@ -1306,7 +1347,7 @@ export default function Cameras({ subview }: CamerasProps) {
                                 <div key={d.id} className="p-2.5 sm:p-3 bg-white border border-slate-200">
                                   <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                                     <div className="min-w-0">
-                                      <span className="text-[9px] sm:text-[10px] font-black text-[#002855] uppercase tracking-wide">Disco #{d.disk_number}</span>
+                                      <span className="text-[9px] sm:text-[10px] font-black text-[#002855] tracking-wide">Disco #{d.disk_number}</span>
                                       {d.serial_number && <span className="block text-[8px] font-bold text-slate-400 uppercase truncate">S/N: {d.serial_number}</span>}
                                     </div>
                                     <span className={`text-[7px] sm:text-[8px] font-black px-1.5 sm:px-2 py-0.5 border shrink-0 ${d.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
@@ -1323,7 +1364,7 @@ export default function Cameras({ subview }: CamerasProps) {
                                     <span className="shrink-0">{used}/{total} GB</span>
                                   </div>
                                   {(d.stored_from || d.stored_to) && (
-                                    <div className="text-[7px] sm:text-[8px] font-black text-blue-600 uppercase border-t border-slate-50 pt-1.5 mt-1.5 leading-relaxed">
+                                    <div className="text-[7px] sm:text-[8px] font-black text-blue-600 border-t border-slate-50 pt-1.5 mt-1.5 leading-relaxed">
                                       Grabación: {d.stored_from ? new Date(String(d.stored_from + 'T00:00:00').includes('T') ? String(d.stored_from + 'T00:00:00') : `${d.stored_from + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—'} — {d.stored_to ? new Date(String(d.stored_to + 'T00:00:00').includes('T') ? String(d.stored_to + 'T00:00:00') : `${d.stored_to + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—'}
                                     </div>
                                   )}
@@ -1334,13 +1375,13 @@ export default function Cameras({ subview }: CamerasProps) {
                         </div>
                       ) : (
                         <div className="p-6 sm:p-8 border-2 border-dashed border-slate-200 text-center">
-                          <span className="text-[9px] sm:text-[10px] font-black text-slate-300 uppercase tracking-widest">Sin registro de almacenamiento</span>
+                          <span className="text-[9px] sm:text-[10px] font-black text-slate-300 tracking-widest">Sin registro de almacenamiento</span>
                         </div>
                       )}
 
                       {selectedCamera.notes && (
                         <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100">
-                          <span className="text-[8px] sm:text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                          <span className="text-[8px] sm:text-[9px] font-black text-amber-600 tracking-widest mb-1.5 flex items-center gap-1">
                             <Star size={10} /> Notas Técnicas
                           </span>
                           <p className="text-[10px] sm:text-[11px] font-medium text-amber-900 leading-relaxed">
@@ -1383,8 +1424,8 @@ export default function Cameras({ subview }: CamerasProps) {
                 <div className="w-16 h-16 bg-blue-50 text-blue-600 flex items-center justify-center mb-6 shadow-inner">
                   <Video size={32} />
                 </div>
-                <h3 className="text-[20px] font-black text-[#002855] uppercase tracking-tight mb-2">Protocolo de Monitoreo</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">SISTEMA INTEGRAL DE VIDEOVIGILANCIA GS</p>
+                <h3 className="text-[20px] font-black text-[#002855] tracking-tight mb-2">Protocolo de Monitoreo</h3>
+                <p className="text-[10px] font-bold text-slate-400 tracking-[0.2em] mb-4">SISTEMA INTEGRAL DE VIDEOVIGILANCIA GS</p>
                 <div className="w-12 h-1 bg-blue-600 rounded-none mb-6" />
               </div>
 
@@ -1392,21 +1433,21 @@ export default function Cameras({ subview }: CamerasProps) {
                 <div className="flex gap-4 p-4 bg-slate-50 border border-slate-100">
                   <div className="w-8 h-8 shrink-0 bg-white border border-slate-200 flex items-center justify-center text-[12px] font-black text-blue-600 italic">01</div>
                   <div>
-                    <h4 className="text-[11px] font-black text-[#002855] uppercase tracking-widest mb-1">Verificación de IP</h4>
-                    <p className="text-[11px] text-slate-500 font-medium">Asegúrese de estar conectado a la red local de la sede para acceder a las cámaras por IP directa.</p>
+                    <h4 className="text-[11px] font-black text-[#002855] tracking-widest mb-1">Verificación de IP</h4>
+                    <p className="text-[11px] text-slate-500 font-medium">Asegúrese de estar conectado a la red local de la ubicación para acceder a las cámaras por IP directa.</p>
                   </div>
                 </div>
                 <div className="flex gap-4 p-4 bg-slate-50 border border-slate-100">
                   <div className="w-8 h-8 shrink-0 bg-white border border-slate-200 flex items-center justify-center text-[12px] font-black text-blue-600 italic">02</div>
                   <div>
-                    <h4 className="text-[11px] font-black text-[#002855] uppercase tracking-widest mb-1">Acceso IVMS/ESVIZ</h4>
+                    <h4 className="text-[11px] font-black text-[#002855] tracking-widest mb-1">Acceso IVMS/ESVIZ</h4>
                     <p className="text-[11px] text-slate-500 font-medium">Utilice los códigos de verificación proporcionados para los equipos con tecnología cloud P2P.</p>
                   </div>
                 </div>
                 <div className="flex gap-4 p-4 bg-slate-50 border border-slate-100">
                   <div className="w-8 h-8 shrink-0 bg-white border border-slate-200 flex items-center justify-center text-[12px] font-black text-blue-600 italic">03</div>
                   <div>
-                    <h4 className="text-[11px] font-black text-[#002855] uppercase tracking-widest mb-1">Reporte de Fallas</h4>
+                    <h4 className="text-[11px] font-black text-[#002855] tracking-widest mb-1">Reporte de Fallas</h4>
                     <p className="text-[11px] text-slate-500 font-medium">Cualquier inconsistencia en el almacenamiento debe ser reportada inmediatamente en la sección de mantenimiento.</p>
                   </div>
                 </div>

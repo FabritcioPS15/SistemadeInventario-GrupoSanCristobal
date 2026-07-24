@@ -523,7 +523,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Package className="text-[#002855]" size={20} />
-                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Inventario General</span>
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[12px]">Inventario General</span>
                 </div>
                 <ArrowRight size={18} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
@@ -546,7 +546,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CheckSquare className="text-[#002855]" size={20} />
-                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Mesa de ayuda</span>
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[12px]">Mesa de ayuda</span>
                 </div>
                 <ArrowRight size={18} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
@@ -577,7 +577,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Camera className="text-[#002855]" size={20} />
-                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Accesos a cámaras de videovigilancia</span>
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[12px]">Accesos a cámaras de videovigilancia</span>
                 </div>
                 <ArrowRight size={18} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
@@ -617,7 +617,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Truck className="text-[#002855]" size={18} />
-                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[11px]">Flota presentada para escuelas</span>
+                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[12px]">Flota presentada para escuelas</span>
                 </div>
                 <ArrowRight size={16} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
@@ -704,7 +704,7 @@ export default function Dashboard() {
                   <AlertTriangle className={stats.nextSutranVisit.days <= 5 ? 'text-red-600' : 'text-orange-600'} size={20} />
                 </div>
                 <div>
-                  <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#002855]">Próxima Visita SUTRAN</h3>
+                  <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#002855]">Próxima Visita SUTRAN</h3>
                   <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Sede: {stats.nextSutranVisit.location}</p>
                 </div>
               </div>
@@ -725,7 +725,7 @@ export default function Dashboard() {
         {/* Notificaciones Importantes */}
         {stats.recentNotifications && stats.recentNotifications.length > 0 && (
           <div className="bg-white shadow-sm border border-slate-200 rounded-none p-4">
-            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#002855] mb-3">Notificaciones Importantes</h3>
+            <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#002855] mb-3">Notificaciones Importantes</h3>
             <div className="space-y-3">
               {stats.recentNotifications.map((notif: any) => (
                 <div key={notif.id} className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-100">
@@ -962,7 +962,7 @@ export default function Dashboard() {
                                 <MapPin size={10} />
                                 <span>{getSchoolName(vehicle.location)}</span>
                               </div>
-                              <div className={`text-[11px] font-black ${documentFilter === 'expired' ? 'text-red-600' :
+                              <div className={`text-[12px] font-black ${documentFilter === 'expired' ? 'text-red-600' :
                                 Math.abs(vehicle.days) <= 7 ? 'text-orange-600' : 'text-yellow-600'
                                 }`}>
                                 {documentFilter === 'expired'

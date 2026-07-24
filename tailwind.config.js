@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        'sans': ['Sansation', 'sans-serif'],
+        'sans': ['"Plus Jakarta Sans"', 'sans-serif'],
       },
     },
   },

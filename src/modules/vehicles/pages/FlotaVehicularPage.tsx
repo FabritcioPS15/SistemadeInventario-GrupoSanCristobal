@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, MapPin, X, Car, List, Search, ChevronDown, AlertTriangle, ArrowUpDown, Calendar, CheckCircle2 } from 'lucide-react';
+﻿import { useEffect, useState, useMemo, useRef } from 'react';
+import { Plus, Edit, Trash2, MapPin, X, Car, List, Search, ChevronDown, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -60,9 +60,8 @@ export default function FlotaVehicular() {
   const [search, setSearch] = useState('');
   const [view, setView] = useState<'list' | 'form'>('list');
   const [editing, setEditing] = useState<Vehiculo | undefined>();
-  const [filterEstado, setFilterEstado] = useState<string>('');
+  const [filterEstado, setFilterEstado] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [schools, setSchools] = useState<Location[]>([]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -73,14 +72,10 @@ export default function FlotaVehicular() {
   const [showDetails, setShowDetails] = useState(false);
   const [selectedVehiculo, setSelectedVehiculo] = useState<Vehiculo | undefined>();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const vencimientoMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowLocationDropdown(false);
-      }
       if (vencimientoMenuRef.current && !vencimientoMenuRef.current.contains(event.target as Node)) {
         setShowVencimientoMenu(false);
       }
@@ -177,7 +172,7 @@ export default function FlotaVehicular() {
       ws.columns = [
         { header: 'PLACA', key: 'placa', width: 14 },
         { header: 'MARCA / MODELO', key: 'vehiculo', width: 25 },
-        { header: 'SEDE', key: 'sede', width: 28 },
+        { header: 'UBICACIÓN', key: 'sede', width: 28 },
         { header: 'CITV VENCE', key: 'citv', width: 16 },
         { header: 'CITV ESTADO', key: 'citv_estado', width: 20 },
         { header: 'SOAT VENCE', key: 'soat', width: 16 },
@@ -286,7 +281,7 @@ export default function FlotaVehicular() {
 
       autoTable(doc, {
         startY: 30,
-        head: [['Placa', 'Vehículo', 'Sede', 'CITV Vence', 'CITV Estado', 'SOAT Vence', 'SOAT Estado', 'Póliza Vence', 'Póliza Estado']],
+        head: [['Placa', 'Vehículo', 'Ubicación', 'CITV Vence', 'CITV Estado', 'SOAT Vence', 'SOAT Estado', 'Póliza Vence', 'Póliza Estado']],
         body: tableData,
         theme: 'grid',
         headStyles: { fillColor: [0, 40, 85], textColor: 255, fontSize: 8, fontStyle: 'bold' },
@@ -317,7 +312,7 @@ export default function FlotaVehicular() {
       const q = search.toLowerCase();
       const searchMatch = !search || v.placa.toLowerCase().includes(q) || v.marca.toLowerCase().includes(q) || v.modelo.toLowerCase().includes(q);
       const sedeMatch = selectedLocations.length === 0 || selectedLocations.length === schools.length || selectedLocations.includes(v.ubicacion_actual);
-      const estadoMatch = !filterEstado || filterEstado === 'todos' || v.estado === filterEstado;
+      const estadoMatch = filterEstado.length === 0 || filterEstado.includes(v.estado);
       return searchMatch && sedeMatch && estadoMatch;
     });
   }, [vehiculos, search, selectedLocations, filterEstado, schools.length]);
@@ -353,7 +348,7 @@ export default function FlotaVehicular() {
     if (daysLeft <= 0) {
       return (
         <div className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-sm">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-sm">
             <AlertTriangle size={11} className="text-rose-500 shrink-0" />
             Vencido ({Math.abs(daysLeft)}d)
           </span>
@@ -365,7 +360,7 @@ export default function FlotaVehicular() {
     if (daysLeft <= 30) {
       return (
         <div className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
             <AlertTriangle size={11} className="text-amber-500 shrink-0" />
             Vence {daysLeft}d
           </span>
@@ -376,7 +371,7 @@ export default function FlotaVehicular() {
 
     return (
       <div className="flex flex-col items-start gap-1">
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm">
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm">
           <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
           Vigente ({daysLeft}d)
         </span>
@@ -389,31 +384,13 @@ export default function FlotaVehicular() {
     return (
       <div className="inline-flex flex-col items-center bg-white border-2 border-slate-800 rounded-md shadow-sm overflow-hidden min-w-[90px]">
         <div className="w-full h-1.5 bg-[#002855]" />
-        <span className="px-2 py-0.5 font-mono text-[14px] font-black text-slate-800 tracking-wider uppercase leading-none my-1">
+        <span className="px-2 py-0.5 font-mono text-[14px] font-black text-slate-800 tracking-wider leading-none my-1">
           {placa}
         </span>
       </div>
     );
   };
 
-  const renderSortableHeader = (label: string, sortKey: string) => {
-    const isSorted = sortConfig?.key === sortKey;
-    const isAsc = sortConfig?.direction === 'asc';
-
-    return (
-      <div
-        onClick={() => handleSort(sortKey)}
-        className="group/header inline-flex items-center gap-2 cursor-pointer select-none text-[11px] font-black text-[#002855] uppercase tracking-[0.15em] hover:text-blue-700 transition-colors"
-      >
-        <span>{label}</span>
-        <ArrowUpDown
-          size={13}
-          className={`text-slate-300 group-hover/header:text-blue-500 transition-all ${isSorted ? (isAsc ? 'rotate-180 text-blue-600' : 'text-blue-600') : ''
-            }`}
-        />
-      </div>
-    );
-  };
 
   const handleView = (v: Vehiculo) => {
     setSelectedVehiculo(v);
@@ -507,7 +484,7 @@ export default function FlotaVehicular() {
         { header: 'COLOR', key: 'color', width: 12 },
         { header: 'AÑO', key: 'año', width: 9 },
         { header: 'ESTADO', key: 'estado', width: 14 },
-        { header: 'SEDE / UBICACIÓN', key: 'sede', width: 28 },
+        { header: 'UBICACIÓN', key: 'sede', width: 28 },
         { header: 'CITV VENCE', key: 'citv', width: 15 },
         { header: 'SOAT VENCE', key: 'soat', width: 15 },
         { header: 'PÓLIZA VENCE', key: 'poliza', width: 15 },
@@ -674,7 +651,7 @@ export default function FlotaVehicular() {
       doc.setFontSize(8.5);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 116, 139); // Slate-500
-      doc.text(`Generado por: Sistema de Inventario GSC | Fecha: ${new Date().toLocaleString('es-PE')} | Ordenado por Sede`, 14, 32);
+      doc.text(`Generado por: Sistema de Inventario GSC | Fecha: ${new Date().toLocaleString('es-PE')} | Ordenado por Ubicación`, 14, 32);
 
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(15, 23, 42);
@@ -699,7 +676,7 @@ export default function FlotaVehicular() {
       // 3. Renderizar la tabla con estilos avanzados
       autoTable(doc, {
         startY: 36,
-        head: [['Placa', 'Vehículo (Datos Generales)', 'Estado', 'Sede / Ubicación', 'CITV Vence', 'SOAT Vence', 'Póliza Vence', 'Contrato Vence', 'Últ. Mant.']],
+        head: [['Placa', 'Vehículo (Datos Generales)', 'Estado', 'Ubicación', 'CITV Vence', 'SOAT Vence', 'Póliza Vence', 'Contrato Vence', 'Últ. Mant.']],
         body: tableData,
         theme: 'grid',
         headStyles: {
@@ -814,24 +791,26 @@ export default function FlotaVehicular() {
                 placeholder="BUSCAR POR PLACA, MARCA O MODELO..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
               />
             </>
           }
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: schools.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
-              { key: 'estado', placeholder: 'TODOS LOS ESTADOS', options: [
-                { value: 'activa', label: 'Activa' },
-                { value: 'inactiva', label: 'Inactiva' },
-                { value: 'en_proceso', label: 'En Proceso' },
-              ]},
+              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: schools.map(loc => ({ value: loc.id, label: loc.name })) },
+              {
+                key: 'estado', placeholder: 'TODOS LOS ESTADOS', options: [
+                  { value: 'activa', label: 'Activa' },
+                  { value: 'inactiva', label: 'Inactiva' },
+                  { value: 'en_proceso', label: 'En Proceso' },
+                ]
+              },
             ]}
-            values={{ location: selectedLocations[0] || '', estado: filterEstado }}
+            values={{ location: selectedLocations, estado: filterEstado }}
             onChange={(key, value) => {
-              if (key === 'location') setSelectedLocations(value ? [value as string] : []);
-              else if (key === 'estado') setFilterEstado(value as string);
+              if (key === 'location') setSelectedLocations(value as string[]);
+              else if (key === 'estado') setFilterEstado(value as string[]);
               setCurrentPage(1);
             }}
           />
@@ -886,7 +865,7 @@ export default function FlotaVehicular() {
             {showVencimientoMenu && (
               <div className="absolute right-0 md:left-auto left-0 top-full mt-2 bg-white border border-slate-200 shadow-2xl z-50 w-full md:min-w-[230px]">
                 <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Descargar Reporte</p>
+                  <p className="text-[10px] font-black text-slate-500 tracking-widest">Descargar Reporte</p>
                   <p className="text-[9px] text-slate-400 mt-0.5">CITV / SOAT / Póliza vencidos o próximos a vencer (30 días)</p>
                 </div>
                 <button
@@ -912,7 +891,7 @@ export default function FlotaVehicular() {
           <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-8">
               <div className="mb-8 border-b border-gray-100 pb-6">
-                <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
                   {editing ? 'Actualización de Unidad' : 'Registro de Nueva Unidad'}
                 </h3>
                 <p className="text-sm text-slate-500 mt-1 font-medium italic">Gestione los detalles técnicos y administrativos de la flota vehicular.</p>
@@ -958,7 +937,7 @@ export default function FlotaVehicular() {
                         )}
                         <TableHead sortable isSorted={sortConfig?.key === 'placa'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('placa')}>Unidad / Placa</TableHead>
                         <TableHead sortable isSorted={sortConfig?.key === 'estado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('estado')}>Estado</TableHead>
-                        <TableHead sortable isSorted={sortConfig?.key === 'ubicacion_actual'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('ubicacion_actual')}>Sede de Asignación</TableHead>
+                        <TableHead sortable isSorted={sortConfig?.key === 'ubicacion_actual'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('ubicacion_actual')}>Ubicación</TableHead>
                         <TableHead sortable isSorted={sortConfig?.key === 'citv_vencimiento'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('citv_vencimiento')}>CITV (Vence)</TableHead>
                         <TableHead sortable isSorted={sortConfig?.key === 'soat_vencimiento'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('soat_vencimiento')}>SOAT (Vence)</TableHead>
                         <TableHead sortable isSorted={sortConfig?.key === 'poliza_vencimiento'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('poliza_vencimiento')}>Póliza (Vence)</TableHead>
@@ -987,20 +966,21 @@ export default function FlotaVehicular() {
                             <div className="flex items-center gap-4">
                               {renderPlacaBadge(v.placa)}
                               <div className="flex flex-col">
-                                <span className="text-[13px] font-black text-slate-800 uppercase leading-none">{v.marca}</span>
-                                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{v.modelo} {v.año ? `(${v.año})` : ''}</span>
+                                <span className="text-[13px] font-black text-slate-800 leading-none">{v.marca}</span>
+                                <span className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{v.modelo} {v.año ? `(${v.año})` : ''}</span>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${statusColors[v.estado]}`}>
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-black tracking-wider border rounded-none ${statusColors[v.estado]}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${v.estado === 'en_proceso' ? 'bg-blue-500' : v.estado === 'activa' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                               {v.estado === 'en_proceso' ? 'En Proceso' : v.estado === 'activa' ? 'Activa' : 'Inactiva'}
                             </span>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1.5 text-slate-700">
                               <MapPin size={14} className="text-rose-500 shrink-0" />
-                              <span className="text-[12px] font-bold uppercase truncate max-w-xs block">{getEscuelaNombre(v.ubicacion_actual)}</span>
+                              <span className="text-[12px] font-bold truncate max-w-xs block">{getEscuelaNombre(v.ubicacion_actual)}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -1068,32 +1048,33 @@ export default function FlotaVehicular() {
                       )}
                       <div className="flex justify-between items-center mb-5">
                         {renderPlacaBadge(v.placa)}
-                        <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-full ${statusColors[v.estado]}`}>
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-black tracking-wider border rounded-none ${statusColors[v.estado]}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${v.estado === 'en_proceso' ? 'bg-blue-500' : v.estado === 'activa' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                           {v.estado === 'en_proceso' ? 'En Proceso' : v.estado === 'activa' ? 'Activa' : 'Inactiva'}
                         </span>
                       </div>
 
                       <div className="mb-4">
-                        <h4 className="text-[14px] font-black text-slate-800 uppercase leading-none">{v.marca}</h4>
-                        <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{v.modelo} {v.año ? `(${v.año})` : ''}</p>
+                        <h4 className="text-[14px] font-black text-slate-800 leading-none">{v.marca}</h4>
+                        <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{v.modelo} {v.año ? `(${v.año})` : ''}</p>
                       </div>
 
                       <div className="space-y-4 mb-6">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
                           <MapPin size={14} className="text-rose-500 shrink-0" />
                           <span className="truncate">{getEscuelaNombre(v.ubicacion_actual)}</span>
                         </div>
                         <div className="grid grid-cols-3 gap-2">
                           <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-1">
-                            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">CITV</label>
+                            <label className="text-[8px] font-black text-slate-400 tracking-widest block">CITV</label>
                             {renderDocumentStatus(v.citv_vencimiento)}
                           </div>
                           <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-1">
-                            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">SOAT</label>
+                            <label className="text-[8px] font-black text-slate-400 tracking-widest block">SOAT</label>
                             {renderDocumentStatus(v.soat_vencimiento)}
                           </div>
                           <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-1">
-                            <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">PÓLIZA</label>
+                            <label className="text-[8px] font-black text-slate-400 tracking-widest block">PÓLIZA</label>
                             {renderDocumentStatus(v.poliza_vencimiento)}
                           </div>
                         </div>
@@ -1130,12 +1111,12 @@ export default function FlotaVehicular() {
           return (
             <div className={`border ${borderColor} bg-white overflow-hidden`}>
               <div className={`${headerBg} px-3 py-2 flex items-center justify-between border-b ${borderColor}`}>
-                <span className="text-[9px] sm:text-[10px] font-black text-[#002855] uppercase tracking-widest">{title}</span>
+                <span className="text-[9px] sm:text-[10px] font-black text-[#002855] tracking-widest">{title}</span>
                 {daysLeft !== null && renderDocumentStatus(vencimiento)}
               </div>
               <div className="px-3 py-2.5">
                 <div>
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1">Vencimiento</span>
+                  <span className="text-[8px] font-black text-slate-400 tracking-widest block mb-1">Vencimiento</span>
                   <span className="text-[10px] sm:text-[11px] font-black text-slate-700">{fmtLocal(vencimiento) || '—'}</span>
                 </div>
               </div>
@@ -1151,10 +1132,10 @@ export default function FlotaVehicular() {
                   <Car size={20} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                  <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
                     {selectedVehiculo.marca} {selectedVehiculo.modelo} {selectedVehiculo.año ? `(${selectedVehiculo.año})` : ''}
                   </h2>
-                  <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                  <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                     <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
                     <span className="line-clamp-2 sm:truncate">{getEscuelaNombre(selectedVehiculo.ubicacion_actual)}</span>
                   </p>
@@ -1176,18 +1157,19 @@ export default function FlotaVehicular() {
               {/* Quick info strip */}
               <div className="grid grid-cols-3 gap-px bg-slate-200 border-b border-slate-200">
                 <div className="bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Estado</span>
-                  <span className={`inline-block px-2.5 py-0.5 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border rounded-full ${statusColors[selectedVehiculo.estado]}`}>
+                  <span className="text-[8px] font-black text-slate-400 tracking-widest mb-1">Estado</span>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[8px] sm:text-[9px] font-black tracking-widest border rounded-none ${statusColors[selectedVehiculo.estado]}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${selectedVehiculo.estado === 'en_proceso' ? 'bg-blue-500' : selectedVehiculo.estado === 'activa' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                     {selectedVehiculo.estado === 'en_proceso' ? 'En Proceso' : selectedVehiculo.estado === 'activa' ? 'Activa' : 'Inactiva'}
                   </span>
                 </div>
                 <div className="bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Marca / Modelo</span>
-                  <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase leading-tight">{selectedVehiculo.marca} {selectedVehiculo.modelo}</span>
+                  <span className="text-[8px] font-black text-slate-400 tracking-widest mb-1">Marca / Modelo</span>
+                  <span className="text-[10px] sm:text-[11px] font-black text-[#002855] leading-tight">{selectedVehiculo.marca} {selectedVehiculo.modelo}</span>
                 </div>
                 <div className="bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Color / Año</span>
-                  <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">{selectedVehiculo.color || '—'} / {selectedVehiculo.año || '—'}</span>
+                  <span className="text-[8px] font-black text-slate-400 tracking-widest mb-1">Color / Año</span>
+                  <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">{selectedVehiculo.color || '—'} / {selectedVehiculo.año || '—'}</span>
                 </div>
               </div>
 
@@ -1195,7 +1177,7 @@ export default function FlotaVehicular() {
               <div className="p-4 sm:p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Calendar size={14} className="text-[#002855]" />
-                  <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Documentación Vehicular</span>
+                  <span className="text-[10px] sm:text-[11px] font-black text-[#002855] tracking-[0.15em]">Documentación Vehicular</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1207,7 +1189,7 @@ export default function FlotaVehicular() {
 
                 {selectedVehiculo.notas && (
                   <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100 mt-2">
-                    <span className="text-[8px] sm:text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                    <span className="text-[8px] sm:text-[9px] font-black text-amber-600 tracking-widest mb-1.5 flex items-center gap-1.5">
                       📝 Notas / Observaciones
                     </span>
                     <p className="text-[10px] sm:text-[11px] font-medium text-amber-900 leading-relaxed">

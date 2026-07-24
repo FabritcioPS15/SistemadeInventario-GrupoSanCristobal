@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, HelpCircle } from 'lucide-react';
+import { FileText} from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import type { SutranVisit, Location } from '../../../shared/services/supabase';
 import { notifySutranVisitScheduled } from '../../../shared/services/notifications';
@@ -230,22 +230,6 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
       maxWidth="6xl"
       icon={<FileText size={18} className="text-white" />}
     >
-      {/* Help Section */}
-      <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-start gap-3">
-          <HelpCircle size={20} className="text-blue-600 mt-0.5 flex-shrink-0" />
-          <div className="space-y-2">
-            <h4 className="font-semibold text-blue-900">Guía de Visitas SUTRAN</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>Fecha:</strong> Seleccione la fecha programada para la visita</li>
-              <li>• <strong>Inspector:</strong> Datos opcionales. Si ingresa nombre, incluya email y teléfono válidos</li>
-              <li>• <strong>Documentos:</strong> Agregue todos los documentos relevantes</li>
-              <li>• <strong>Hallazgos:</strong> Documente no conformidades y oportunidades de mejora</li>
-              <li>• <strong>Recomendaciones:</strong> Incluya acciones correctivas y plazos</li>
-            </ul>
-          </div>
-        </div>
-      </div>
 
             {/* Section: Información de la Visita */}
             <FormSection title="Información de la Visita" color="blue">

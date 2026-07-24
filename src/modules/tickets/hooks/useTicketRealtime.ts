@@ -38,8 +38,8 @@ export function useTicketRealtime({
   onTicketUpdate, 
   onCommentsUpdate 
 }: UseTicketRealtimeProps): UseTicketRealtimeReturn {
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set()); // Set de IDs de usuarios online en el ticket
+  const [isSubscribed, setIsSubscribed] = useState(false); // Indicador de suscripción activa a canales de realtime
 
   // Suscribe a cambios en tiempo real del ticket y sus comentarios
   // - Escucha actualizaciones del ticket (cambios de estado, asignaciones)
@@ -48,36 +48,42 @@ export function useTicketRealtime({
   useEffect(() => {
     if (!ticketId) return;
 
+  // Suscripción 1: Escucha actualizaciones del ticket (cambios de estado, asignaciones)
+    // Cuando el ticket cambia en la DB, ejecuta el callback onTicketUpdate
     const ticketSubscription = supabase
       .channel(`ticket-status-${ticketId}`)
       .on('postgres_changes', {
-        event: 'UPDATE',
+        event: 'UPDATE', // Solo actualizaciones, no inserciones
         schema: 'public',
         table: 'tickets',
-        filter: `id=eq.${ticketId}`
+        filter: `id=eq.${ticketId}` // Solo este ticket específico
       }, async () => {
         if (onTicketUpdate) {
-          await onTicketUpdate();
+          await onTicketUpdate(); // Recargar datos del ticket
         }
       })
       .subscribe();
 
+    // Suscripción 2: Escucha inserciones de nuevos comentarios
+    // Cuando alguien agrega un comentario, ejecuta el callback onCommentsUpdate
     const commentsSubscription = supabase
       .channel(`comments-feed-${ticketId}`)
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: 'INSERT', // Solo inserciones, no actualizaciones
         schema: 'public',
         table: 'ticket_comments',
-        filter: `ticket_id=eq.${ticketId}`
+        filter: `ticket_id=eq.${ticketId}` // Solo comentarios de este ticket
       }, () => {
         if (onCommentsUpdate) {
-          onCommentsUpdate();
+          onCommentsUpdate(); // Recargar lista de comentarios
         }
       })
       .subscribe();
 
     setIsSubscribed(true);
 
+    // Limpieza: cancelar suscripciones al desmontar el componente
+    // Esto evita memory leaks y conexiones abiertas innecesarias
     return () => {
       supabase.removeChannel(ticketSubscription);
       supabase.removeChannel(commentsSubscription);
@@ -85,30 +91,37 @@ export function useTicketRealtime({
     };
   }, [ticketId, onTicketUpdate, onCommentsUpdate]);
 
-  // Rastrea la presencia de usuarios en el ticket
-// Muestra quién está viendo el ticket en tiempo real
-// Usa el canal de presencia de Supabase
+  // Rastrea la presencia de usuarios en el ticket usando Supabase Presence
+  // Muestra quién está viendo el ticket en tiempo real
+  // Cada usuario se une al canal con su ID como clave de presencia
   useEffect(() => {
     if (!ticketId || !user) return;
 
+    // Crea el canal de presencia con el ID del usuario como clave
+    // Esto permite identificar quién está online
     const presenceChannel = supabase.channel(`presence-ticket-${ticketId}`, {
       config: { presence: { key: user.id } }
     });
 
+    // Evento 'sync': se dispara cuando el estado de presencia se sincroniza
+    // Extrae los IDs de todos los usuarios online y actualiza el estado
     presenceChannel
       .on('presence', { event: 'sync' }, () => {
         const state = presenceChannel.presenceState();
         const onlineIds = new Set(Object.keys(state));
         setOnlineUsers(onlineIds);
       })
+      // Suscribe al canal y rastrea la presencia del usuario actual
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
+          // Registra al usuario como presente con timestamp
           await presenceChannel.track({
             online_at: new Date().toISOString(),
           });
         }
       });
 
+    // Limpieza: cancelar el canal de presencia al desmontar
     return () => {
       supabase.removeChannel(presenceChannel);
     };

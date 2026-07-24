@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+﻿import { useEffect, useState, useCallback } from 'react';
 import { Edit, Trash2, MapPin, X, Copy, ChevronDown, Search } from 'lucide-react';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 import { SiAnydesk } from "react-icons/si";
@@ -306,21 +306,21 @@ export default function Servers() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Buscar servidor, IP, ID o sede..."
+                placeholder="Buscar servidor, IP, ID o ubicación..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); resetPagination(); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
         >
   <FilterBar
     filters={[
-      { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+      { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
     ]}
-    values={{ location: selectedLocations[0] || '' }}
+    values={{ location: selectedLocations }}
     onChange={(key, value) => {
-      setSelectedLocations(value ? [value as string] : []);
+      if (key === 'location') setSelectedLocations(value as string[]);
       setCurrentPage(1);
     }}
   />
@@ -373,8 +373,8 @@ export default function Servers() {
                         <ServerIcon size={16} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-tight truncate leading-tight group-hover:text-blue-700 transition-colors">{srv.name}</h3>
-                        <div className="flex items-center gap-1.5 text-[8px] font-bold text-slate-400 mt-0.5 uppercase">
+                        <h3 className="text-[13px] font-black text-[#002855] tracking-tight truncate leading-tight group-hover:text-blue-700 transition-colors">{srv.name}</h3>
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-400 mt-0.5">
                           <MapPin size={9} className="text-rose-500" /> {srv.locations?.name || 'VIRTUAL'}
                         </div>
                       </div>
@@ -382,12 +382,12 @@ export default function Servers() {
 
                     <div className="space-y-2">
                       <div className={`p-2 rounded-none border transition-all ${hasIp ? 'bg-emerald-50/20 border-emerald-100/50' : 'bg-slate-50 border-slate-100'}`}>
-                        <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-0.5 ml-1">LAN</label>
-                        <p className={`text-[9px] font-mono font-black ${hasIp ? 'text-emerald-700' : 'text-slate-400'}`}>{srv.ip_address || '—'}</p>
+                        <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-0.5 ml-1">LAN</label>
+                        <p className={`text-[11px] font-mono font-black ${hasIp ? 'text-emerald-700' : 'text-slate-400'}`}>{srv.ip_address || '—'}</p>
                       </div>
                       <div className={`p-2 rounded-none border transition-all ${hasAnydesk ? 'bg-blue-50/20 border-blue-100/50' : 'bg-slate-50 border-slate-100'}`}>
-                        <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-0.5 ml-1">AnyDesk</label>
-                        <p className={`text-[9px] font-mono font-black ${hasAnydesk ? 'text-blue-700' : 'text-slate-400'}`}>{srv.anydesk_id || '—'}</p>
+                        <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-0.5 ml-1">AnyDesk</label>
+                        <p className={`text-[11px] font-mono font-black ${hasAnydesk ? 'text-blue-700' : 'text-slate-400'}`}>{srv.anydesk_id || '—'}</p>
                       </div>
                     </div>
                   </div>
@@ -395,7 +395,7 @@ export default function Servers() {
                   <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex gap-2 z-10">
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedServer(srv); setShowDetails(true); }}
-                      className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 rounded-none hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
+                      className="flex-1 py-1.5 text-[10px] font-black tracking-wider text-slate-600 bg-white border border-slate-200 rounded-none hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
                     >
                       Ficha
                     </button>
@@ -426,12 +426,12 @@ export default function Servers() {
               >
                 {selectedIds.length > 0 && canEdit() && (
                   <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-2 duration-300">
-                    <span className="hidden xl:block text-[10px] font-black text-rose-600 uppercase tracking-widest">
+                    <span className="hidden xl:block text-[10px] font-black text-rose-600 tracking-wider">
                       {selectedIds.length} marcados
                     </span>
                     <button
                       onClick={handleBulkDelete}
-                      className="flex items-center gap-2 px-3 py-2 bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest rounded-md hover:bg-rose-600 transition-all shadow-sm active:scale-95"
+                      className="flex items-center gap-2 px-3 py-2 bg-rose-500 text-white text-[10px] font-black uppercase tracking-wider rounded-md hover:bg-rose-600 transition-all shadow-sm active:scale-95"
                       title="Eliminar seleccionados"
                     >
                       <Trash2 size={14} />
@@ -470,8 +470,8 @@ export default function Servers() {
                               <ServerIcon size={18} />
                             </div>
                             <div className="flex flex-col">
-                              <span className="text-sm font-black text-[#002855] uppercase leading-tight">{srv.name}</span>
-                              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-0.5">{srv.locations?.name || 'VIRTUAL'}</span>
+                              <span className="text-sm font-black text-[#002855] leading-tight">{srv.name}</span>
+                              <span className="text-[10px] font-semibold text-slate-400 tracking-wider mt-0.5">{srv.locations?.name || 'VIRTUAL'}</span>
                             </div>
                           </div>
                         </div>
@@ -486,7 +486,7 @@ export default function Servers() {
                         <div className="px-5 pb-5 space-y-5 border-t border-slate-50/50 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                           <div className="grid grid-cols-2 gap-3">
                             <div className={`p-4 rounded-none border ${hasIp ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-slate-50 border-slate-100'}`}>
-                              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Red Interna</label>
+                              <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-1.5">Red Interna</label>
                               <div className="flex items-center justify-between">
                                 <span className={`text-[11px] font-mono font-black ${hasIp ? 'text-[#002855]' : 'text-slate-300'}`}>{srv.ip_address || '—'}</span>
                                 {hasIp && (
@@ -500,7 +500,7 @@ export default function Servers() {
                               </div>
                             </div>
                             <div className={`p-4 rounded-none border ${hasAnydesk ? 'bg-blue-50/30 border-blue-100/50' : 'bg-slate-50 border-slate-100'}`}>
-                              <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">ID Remoto</label>
+                              <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-1.5">ID Remoto</label>
                               <div className="flex items-center justify-between">
                                 <span className={`text-[11px] font-mono font-black ${hasAnydesk ? 'text-red-600' : 'text-slate-300'}`}>{srv.anydesk_id || '—'}</span>
                                 {hasAnydesk && (
@@ -584,15 +584,18 @@ export default function Servers() {
                               <ServerIcon size={14} />
                             </div>
                             <div className="flex flex-col items-start">
-                              <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">{srv.name}</span>
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 md:hidden">{srv.locations?.name || 'VIRTUAL'}</span>
+                              <span className="text-[13px] font-black text-[#002855] leading-tight">{srv.name}</span>
+                              <span className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1 md:hidden">{srv.locations?.name || 'VIRTUAL'}</span>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell noTruncate>
                           <div className="flex flex-col items-start">
-                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Sede Física</span>
+                            <div className="flex items-center gap-1.5">
+                              <MapPin size={14} className="text-rose-500 shrink-0" />
+                              <span className="text-[12px] font-bold text-slate-700 tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
+                            </div>
+                            <span className="text-[11px] font-semibold text-slate-400 mt-1">Ubicación Física</span>
                           </div>
                         </TableCell>
                         <TableCell noTruncate>
@@ -609,7 +612,7 @@ export default function Servers() {
                                 </button>
                               )}
                             </div>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">Red Interna</span>
+                            <span className="text-[10px] font-bold text-slate-400 mt-1">Red Interna</span>
                           </div>
                         </TableCell>
                         <TableCell noTruncate>
@@ -626,7 +629,7 @@ export default function Servers() {
                                 </button>
                               )}
                             </div>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">ID Remoto</span>
+                            <span className="text-[10px] font-bold text-slate-400 mt-1">ID Remoto</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-center" noTruncate>
@@ -657,18 +660,18 @@ export default function Servers() {
                 <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-[9px] font-black">
                   {selectedIds.length}
                 </div>
-                <span className="text-[8px] font-black uppercase tracking-widest opacity-80">Marcados</span>
+                <span className="text-[8px] font-black tracking-widest opacity-80">Marcados</span>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleBulkDelete}
-                  className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-100 transition-colors"
+                  className="flex items-center gap-1.5 text-[8px] font-black tracking-widest text-rose-400 hover:text-rose-100 transition-colors"
                 >
                   <Trash2 size={12} /> Eliminar lote
                 </button>
                 <button
                   onClick={() => setSelectedIds([])}
-                  className="text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors"
+                  className="text-[8px] font-black tracking-widest text-slate-400 hover:text-white transition-colors"
                 >
                   Cerrar
                 </button>
@@ -699,10 +702,10 @@ export default function Servers() {
                   <ServerIcon size={20} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                  <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
                     {selectedServer.name}
                   </h2>
-                  <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                  <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                     <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
                     <span className="line-clamp-2 sm:truncate">{selectedServer.locations?.name || 'N/A'}</span>
                   </p>
@@ -777,7 +780,7 @@ export default function Servers() {
                       {selectedServer.windows_credentials.map((cred: any, i: number) => (
                         <DetailModalCard key={i}>
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest">{cred.description || 'ACCESO'}</span>
+                            <span className="text-[8px] font-black text-blue-600 tracking-widest">{cred.description || 'ACCESO'}</span>
                           </div>
                           <DetailModalRow label="Usuario">
                             <div className="flex items-center justify-between gap-2 min-w-0">

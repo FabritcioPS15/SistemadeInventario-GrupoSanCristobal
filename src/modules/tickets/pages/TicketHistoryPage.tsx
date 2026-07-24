@@ -24,6 +24,8 @@ import {
 } from '../../../shared/components/ui/Table';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
+
 
 interface Ticket {
     id: string;
@@ -58,14 +60,15 @@ const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: strin
 
 export default function TicketHistory() {
     const navigate = useNavigate();
-    const [tickets, setTickets] = useState<Ticket[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterPriority, setFilterPriority] = useState('all');
-    const [filterDateRange, setFilterDateRange] = useState('all'); // all, 7days, 30days, 90days, custom
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    // Estado local para filtros y carga de datos
+    const [tickets, setTickets] = useState<Ticket[]>([]); // Lista de tickets archivados
+    const [loading, setLoading] = useState(true); // Indicador de carga
+    const [refreshing, setRefreshing] = useState(false); // Indicador de refresco manual
+    const [searchTerm, setSearchTerm] = useState(''); // Término de búsqueda en título/solicitante/ubicación
+    const [filterPriority, setFilterPriority] = useState<string[]>([]); // Filtro por prioridad (array de valores)
+    const [filterDateRange, setFilterDateRange] = useState<string[]>([]); // Rango de fechas predefinido (all, 7days, 30days, 90days, custom)
+    const [startDate, setStartDate] = useState(''); // Fecha inicio del rango custom (YYYY-MM-DD)
+    const [endDate, setEndDate] = useState(''); // Fecha fin del rango custom (YYYY-MM-DD)
 
     // Carga inicial de tickets archivados al montar el componente
     useEffect(() => {
@@ -100,6 +103,11 @@ export default function TicketHistory() {
         }
     };
 
+    // Filtra los tickets archivados según múltiples criterios:
+    // - Búsqueda: título, solicitante o ubicación (case-insensitive)
+    // - Prioridad: filtra por array de prioridades seleccionadas
+    // - Rango de fechas: predefinido (7/30/90 días) o custom (start/end)
+    // Usa closed_at para filtrar por fecha, o created_at si no hay closed_at
     const filteredTickets = useMemo(() => {
         return tickets.filter(ticket => {
             // Search filter
@@ -109,16 +117,18 @@ export default function TicketHistory() {
                 ticket.locations?.name?.toLowerCase().includes(searchTerm.toLowerCase());
 
             // Priority filter
-            const priorityMatch = filterPriority === 'all' || ticket.priority === filterPriority;
+            const priorityMatch = filterPriority.length === 0 || filterPriority.includes(ticket.priority);
 
             // Date range filter
             let dateMatch = true;
             // For history, we usually care about when it was closed
             const ticketDate = new Date(ticket.closed_at || ticket.created_at);
             const now = new Date();
+            
+            const currentRange = filterDateRange.length > 0 ? filterDateRange[0] : 'all';
 
-            if (filterDateRange !== 'all') {
-                if (filterDateRange === 'custom') {
+            if (currentRange !== 'all') {
+                if (currentRange === 'custom') {
                     if (startDate) {
                         const [y, m, d] = startDate.split('-').map(Number);
                         const start = new Date(y, m - 1, d, 0, 0, 0);
@@ -130,7 +140,7 @@ export default function TicketHistory() {
                         if (ticketDate > end) dateMatch = false;
                     }
                 } else {
-                    switch (filterDateRange) {
+                    switch (currentRange) {
                         case '7days':
                             dateMatch = (now.getTime() - ticketDate.getTime()) <= 7 * 24 * 60 * 60 * 1000;
                             break;
@@ -169,79 +179,92 @@ export default function TicketHistory() {
         }
     };
 
+    // Refresca manualmente la lista de tickets archivados
+    // Útil cuando se sabe que hubo cambios en la base de datos
     const handleRefresh = async () => {
         setRefreshing(true);
         await fetchArchivedTickets();
         setRefreshing(false);
     };
 
+
+
+    // Genera un reporte PDF con el historial de tickets filtrados
+    // Incluye: N°, ID, título, solicitante, técnico, ubicación, prioridad, fechas y tiempo de cierre
+    // Usa la utilidad compartida generatePDF para crear el documento
     const generateHistoryPDF = () => {
-        const doc = new jsPDF();
-
-        // Title & Header
-        doc.setFontSize(20);
-        doc.setTextColor(0, 40, 85);
-        doc.text('Historial de Tickets', 14, 22);
-
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Generado el: ${new Date().toLocaleDateString()} a las ${new Date().toLocaleTimeString()}`, 14, 30);
-
-        if (filterDateRange === 'custom' && (startDate || endDate)) {
-            doc.text(`Rango: ${startDate || 'Inicio'} hasta ${endDate || 'Hoy'}`, 14, 37);
-        } else if (filterDateRange !== 'all') {
-            doc.text(`Periodo: ${filterDateRange}`, 14, 37);
-        }
-
-        doc.text(`Total de tickets en este reporte: ${filteredTickets.length}`, 14, 44);
-
-        // Tickets Table
-        const tableBody = filteredTickets.slice(0, 100).map(t => [
-            `TK-${t.id.slice(0, 6).toUpperCase()}`,
-            t.title,
-            t.requester?.full_name || 'N/A',
-            t.attendant?.full_name || 'Sin asignar',
-            PRIORITY_STYLES[t.priority]?.label || t.priority,
-            new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString(),
-            t.closed_at ? new Date(String(t.closed_at).includes('T') ? String(t.closed_at) : `${t.closed_at}T12:00:00`).toLocaleDateString() : 'N/A',
-            getTimeToClose(t)
-        ]);
-
-        autoTable(doc, {
-            startY: 50,
-            head: [['ID', 'Título', 'Solicitante', 'Atendido por', 'Prioridad', 'Fecha Creación', 'Fecha Cierre', 'Tiempo Cierre']],
-            body: tableBody,
-            headStyles: { fillColor: [0, 40, 85] },
-            alternateRowStyles: { fillColor: [240, 245, 250] },
-            margin: { top: 50 },
-            styles: { fontSize: 8, cellPadding: 2 }
-        });
-
-        doc.save(`Historial_Tickets_${new Date().toISOString().split('T')[0]}.pdf`);
-    };
-
-    const generateHistoryExcel = () => {
-        const data = filteredTickets.map(t => ({
-            'ID': `TK-${t.id.slice(0, 6).toUpperCase()}`,
-            'Incidente': t.title,
-            'Descripción': t.description || '',
-            'Estado': 'Archivado',
-            'Prioridad': PRIORITY_STYLES[t.priority]?.label || t.priority,
-            'Solicitante': t.requester?.full_name || 'N/A',
-            'Sede': t.locations?.name || 'N/A',
-            'Atendido Por': t.attendant?.full_name || 'Sin asignar',
-            'Fecha Creación': new Date(t.created_at).toLocaleString(),
-            'Fecha Cierre': t.closed_at ? new Date(t.closed_at).toLocaleString() : 'N/A',
-            'Tiempo de Cierre': getTimeToClose(t)
+        const data = filteredTickets.map((t, i) => ({
+            nro: i + 1,
+            id: `TK-${t.id.slice(0, 6).toUpperCase()}`,
+            title: t.title,
+            requester: t.requester?.full_name || 'N/A',
+            attendant: t.attendant?.full_name || 'Sin asignar',
+            ubicacion: t.locations?.name || 'N/A',
+            priority: PRIORITY_STYLES[t.priority]?.label || t.priority,
+            created_at: new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString(),
+            closed_at: t.closed_at ? new Date(String(t.closed_at).includes('T') ? String(t.closed_at) : `${t.closed_at}T12:00:00`).toLocaleDateString() : 'N/A',
+            time_to_close: getTimeToClose(t)
         }));
 
-        import('xlsx').then(XLSX => {
-            const ws = XLSX.utils.json_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Historial Tickets");
-            XLSX.writeFile(wb, `Historial_Tickets_${new Date().toISOString().split('T')[0]}.xlsx`);
+        generatePDF({
+            title: 'Historial de Tickets Archivados',
+            filename: `Historial_Tickets_${new Date().toISOString().split('T')[0]}`,
+            columns: [
+                { header: 'N°', key: 'nro' },
+                { header: 'ID', key: 'id' },
+                { header: 'Título / Incidente', key: 'title' },
+                { header: 'Solicitante', key: 'requester' },
+                { header: 'Atendido Por', key: 'attendant' },
+                { header: 'Ubicación', key: 'ubicacion' },
+                { header: 'Prioridad', key: 'priority' },
+                { header: 'Fecha Creación', key: 'created_at' },
+                { header: 'Fecha Cierre', key: 'closed_at' },
+                { header: 'Tiempo de Cierre', key: 'time_to_close' },
+            ],
+            data
         });
     };
+
+    // Genera un reporte Excel con el historial de tickets filtrados
+    // Incluye más detalles que el PDF: descripción completa, todas las fechas en formato local
+    // Usa la utilidad compartida generateExcel para crear el archivo
+    const generateHistoryExcel = async () => {
+        const data = filteredTickets.map((t, i) => ({
+            nro: i + 1,
+            id: `TK-${t.id.slice(0, 6).toUpperCase()}`,
+            title: t.title,
+            description: t.description || '',
+            requester: t.requester?.full_name || 'N/A',
+            attendant: t.attendant?.full_name || 'Sin asignar',
+            ubicacion: t.locations?.name || 'N/A',
+            priority: PRIORITY_STYLES[t.priority]?.label || t.priority,
+            status: 'Archivado',
+            created_at: new Date(t.created_at).toLocaleString(),
+            closed_at: t.closed_at ? new Date(t.closed_at).toLocaleString() : 'N/A',
+            time_to_close: getTimeToClose(t)
+        }));
+
+        await generateExcel({
+            title: 'Historial de Tickets Archivados',
+            filename: `Historial_Tickets_${new Date().toISOString().split('T')[0]}`,
+            columns: [
+                { header: 'N°', key: 'nro', width: 6 },
+                { header: 'ID', key: 'id', width: 16 },
+                { header: 'Título / Incidente', key: 'title', width: 40 },
+                { header: 'Descripción', key: 'description', width: 50 },
+                { header: 'Solicitante', key: 'requester', width: 25 },
+                { header: 'Atendido Por', key: 'attendant', width: 25 },
+                { header: 'Ubicación', key: 'ubicacion', width: 20 },
+                { header: 'Prioridad', key: 'priority', width: 15 },
+                { header: 'Estado', key: 'status', width: 15 },
+                { header: 'Fecha Creación', key: 'created_at', width: 22 },
+                { header: 'Fecha Cierre', key: 'closed_at', width: 22 },
+                { header: 'Tiempo de Cierre', key: 'time_to_close', width: 22 },
+            ],
+            data
+        });
+    };
+
 
 
 
@@ -274,10 +297,10 @@ export default function TicketHistory() {
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
                             <input
                                 type="text"
-                                placeholder="BUSCAR POR TÍTULO, SOLICITANTE O SEDE..."
+                                placeholder="BUSCAR POR TÍTULO, SOLICITANTE O UBICACIÓN..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+                                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
                             />
                         </div>
 
@@ -292,7 +315,6 @@ export default function TicketHistory() {
                                         { value: 'low', label: 'P4 - Baja' },
                                     ]},
                                     { key: 'dateRange', placeholder: 'Todo el tiempo', options: [
-                                        { value: 'all', label: 'Todo el tiempo' },
                                         { value: '7days', label: 'Últimos 7 días' },
                                         { value: '30days', label: 'Últimos 30 días' },
                                         { value: '90days', label: 'Últimos 90 días' },
@@ -301,8 +323,8 @@ export default function TicketHistory() {
                                 ]}
                                 values={{ priority: filterPriority, dateRange: filterDateRange }}
                                 onChange={(key, value) => {
-                                    if (key === 'priority') setFilterPriority(value as string);
-                                    else if (key === 'dateRange') setFilterDateRange(value as string);
+                                    if (key === 'priority') setFilterPriority(value as string[]);
+                                    else if (key === 'dateRange') setFilterDateRange(value as string[]);
                                 }}
                                 hideClearButton
                             />
@@ -337,7 +359,7 @@ export default function TicketHistory() {
                         </div>
                     </div>
 
-                    {filterDateRange === 'custom' && (
+                    {filterDateRange.includes('custom') && (
                         <div className="flex items-center gap-3 animate-in slide-in-from-left-2 duration-300">
                             <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Desde</span>
@@ -367,7 +389,7 @@ export default function TicketHistory() {
                             </div>
                             <h3 className="text-xl font-bold text-[#002855] uppercase tracking-widest mb-2">No se encontraron tickets</h3>
                             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                                {searchTerm || filterPriority !== 'all' || filterDateRange !== 'all'
+                                {searchTerm || filterPriority.length > 0 || filterDateRange.length > 0
                                     ? 'Intenta ajustar los filtros de búsqueda'
                                     : 'Los tickets cerrados aparecerán aquí después de 10 minutos'
                                 }

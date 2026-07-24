@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Trash2, Edit, List, ClipboardCheck, LayoutGrid, X, User, Calendar, Plus } from 'lucide-react';
 import { useHeaderVisible } from '../../../shared/hooks/useHeaderVisible';
 import { supabase, BranchAudit } from '../../../shared/services/supabase';
@@ -7,6 +7,7 @@ import AuditForm from '../forms/AuditForm';
 import HeaderSearch from '../../../app/layouts/HeaderSearch';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../shared/components/ui/Table';
 
 type ViewType = 'history' | 'form';
 
@@ -18,7 +19,7 @@ export default function Audit() {
   const [audits, setAudits] = useState<BranchAudit[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [editingAudit, setEditingAudit] = useState<BranchAudit | undefined>();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
@@ -69,7 +70,7 @@ export default function Audit() {
   const filteredAudits = audits.filter(audit => {
     const locName = audit.locations?.name || '';
     const mSearch = locName.toLowerCase().includes(searchTerm.toLowerCase()) || audit.auditor_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const mStatus = !filterStatus || audit.status === filterStatus;
+    const mStatus = filterStatus.length === 0 || filterStatus.includes(audit.status);
     return mSearch && mStatus;
   });
 
@@ -79,7 +80,7 @@ export default function Audit() {
       case 'good': return { label: 'BUENO', color: 'bg-blue-50 text-blue-800 border-blue-100' };
       case 'regular': return { label: 'REGULAR', color: 'bg-amber-50 text-amber-800 border-amber-200' };
       case 'critical': return { label: 'CRÍTICO', color: 'bg-rose-50 text-rose-800 border-rose-200' };
-      default: return { label: status.toUpperCase(), color: 'bg-slate-50 text-slate-800 border-slate-200' };
+      default: return { label: status, color: 'bg-slate-50 text-slate-800 border-slate-200' };
     }
   };
 
@@ -120,7 +121,7 @@ export default function Audit() {
               ]},
             ]}
             values={{ status: filterStatus }}
-            onChange={(key, value) => setFilterStatus(value as string)}
+            onChange={(key, value) => setFilterStatus(value as string[])}
             hideClearButton
           />
         </div>
@@ -189,7 +190,7 @@ export default function Audit() {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-32">
                 <div className="w-12 h-12 border-4 border-slate-100 border-t-[#002855] animate-spin mb-4"></div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sincronizando Archivos...</p>
+                <p className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Sincronizando Archivos...</p>
               </div>
             ) : viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
@@ -211,7 +212,7 @@ export default function Audit() {
                       <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rotate-45 -mr-16 -mt-16 group-hover:bg-blue-50 transition-colors" />
                       <div className="p-7 flex-1 flex flex-col">
                         <div className="flex items-start justify-between mb-8 relative z-10">
-                          <span className={`px-3 py-1 border text-[9px] font-black uppercase tracking-widest ${statusCfg.color}`}>{statusCfg.label}</span>
+                          <span className={`px-3 py-1 border text-[10px] font-black tracking-wider ${statusCfg.color}`}>{statusCfg.label}</span>
                         </div>
 
                         <div className="mb-8">
@@ -223,7 +224,7 @@ export default function Audit() {
 
                         <div className="bg-slate-50 p-5 border border-slate-100 flex items-center justify-between mb-8">
                           <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">SCORE DE CALIDAD</span>
+                            <span className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-1">SCORE DE CALIDAD</span>
                             <div className="flex items-center gap-1">
                               <Calendar size={10} className="text-slate-400" />
                               <span className="text-[9px] font-bold text-slate-400 uppercase">{formatDate(audit.audit_date)}</span>
@@ -243,34 +244,34 @@ export default function Audit() {
               </div>
             ) : (
               <div className="bg-white border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-white border-b border-slate-100">
+                <Table>
+                  <TableHeader>
+                    <tr>
                       {canEdit() && (
-                        <th className="px-4 py-4 text-center w-12">
+                        <TableHead className="text-center w-12">
                           <input
                             type="checkbox"
                             checked={filteredAudits.length > 0 && selectedIds.length === filteredAudits.length}
                             onChange={() => toggleSelectAll(filteredAudits)}
                             className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
                           />
-                        </th>
+                        </TableHead>
                       )}
-                      <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Auditoría / Auditor</th>
-                      <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Ubicación</th>
-                      <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Fecha</th>
-                      <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Score</th>
-                      <th className="px-4 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Estado</th>
-                      <th className="px-8 py-4 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
+                      <TableHead>Auditoría / Auditor</TableHead>
+                      <TableHead>Ubicación</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead className="text-center">Score</TableHead>
+                      <TableHead className="text-center">Estado</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  </TableHeader>
+                  <TableBody>
                     {filteredAudits.map(audit => {
                       const statusCfg = getStatusConfig(audit.status);
                       return (
-                        <tr key={audit.id} className={`cursor-pointer transition-all duration-200 group border-b border-slate-50 last:border-0 ${selectedIds.includes(audit.id) ? 'bg-blue-50/40' : 'hover:bg-blue-50/30'}`} onClick={() => handleEdit(audit)}>
+                        <TableRow key={audit.id} className={`cursor-pointer ${selectedIds.includes(audit.id) ? 'bg-blue-50/40' : ''}`} onClick={() => handleEdit(audit)}>
                           {canEdit() && (
-                            <td className="px-4 py-4 text-center w-12">
+                            <TableCell className="text-center w-12">
                               <input
                                 type="checkbox"
                                 checked={selectedIds.includes(audit.id)}
@@ -278,42 +279,38 @@ export default function Audit() {
                                 onClick={e => e.stopPropagation()}
                                 className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
                               />
-                            </td>
+                            </TableCell>
                           )}
-                          <td className="px-4 py-4">
+                          <TableCell>
                             <div className="flex flex-col">
-                              <span className="text-[13px] font-black text-[#002855] uppercase tracking-tight group-hover:text-blue-600 transition-colors uppercase">{audit.id.slice(0, 8)}</span>
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 italic">{audit.auditor_name}</span>
+                              <span className="text-[12px] font-black text-[#002855] uppercase tracking-tight group-hover/row:text-blue-600 transition-colors">{audit.id.slice(0, 8)}</span>
+                              <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1 italic">{audit.auditor_name}</span>
                             </div>
-                          </td>
-                          <td className="px-4 py-4 font-black text-[11px] text-[#002855] uppercase tracking-widest">
-                            {audit.locations?.name || 'N/A'}
-                          </td>
-                          <td className="px-4 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                            {formatDate(audit.audit_date)}
-                          </td>
-                          <td className="px-4 py-4 text-center">
+                          </TableCell>
+                          <TableCell><span className="font-black text-[12px] text-[#002855] uppercase tracking-widest">{audit.locations?.name || 'N/A'}</span></TableCell>
+                          <TableCell><span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">{formatDate(audit.audit_date)}</span></TableCell>
+                          <TableCell className="text-center">
                             <div className="flex flex-col items-center">
                               <span className={`text-[16px] font-black ${audit.score >= 90 ? 'text-emerald-600' : audit.score >= 70 ? 'text-[#002855]' : 'text-rose-600'}`}>{audit.score}%</span>
                               <div className="w-16 h-1 bg-slate-100 mt-1">
-                                <div className={`h-full bg-blue-500`} style={{ width: `${audit.score}%` }} />
+                                <div className="h-full bg-blue-500" style={{ width: `${audit.score}%` }} />
                               </div>
                             </div>
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            <span className={`px-4 py-1.5 text-[9px] font-black uppercase tracking-widest border ${statusCfg.color}`}>{statusCfg.label}</span>
-                          </td>
-                          <td className="px-8 py-4 text-right">
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={`px-4 py-1.5 text-[10px] font-black tracking-wider border ${statusCfg.color}`}>{statusCfg.label}</span>
+                          </TableCell>
+                          <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button onClick={(e) => { e.stopPropagation(); handleEdit(audit); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
-                              <button onClick={(e) => { e.stopPropagation(); handleDelete(audit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Trash2 size={14} /></button>
+                              <button onClick={(e) => { e.stopPropagation(); handleEdit(audit); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-none border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDelete(audit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-200 transition-all shadow-sm"><Trash2 size={14} /></button>
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>

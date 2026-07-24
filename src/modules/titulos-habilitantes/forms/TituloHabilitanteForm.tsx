@@ -367,7 +367,7 @@ export default function TituloHabilitanteForm({
                   >
                     <option value="">Seleccione una sede</option>
                     {locations.map(loc => (
-                      <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+                      <option key={loc.id} value={loc.id}>{loc.name}</option>
                     ))}
                   </FormSelect>
                 </FormField>

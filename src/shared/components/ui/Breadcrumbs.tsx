@@ -39,7 +39,7 @@ export default function Breadcrumbs() {
                 className="flex items-center gap-1.5 text-slate-400 hover:text-blue-600 transition-colors shrink-0"
             >
                 <Home size={14} />
-                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:block">Inicio</span>
+                            <span className="text-[10px] font-black tracking-widest hidden sm:block">Inicio</span>
             </Link>
 
             {pathnames.length > 0 && <ChevronRight size={12} className="text-slate-300 shrink-0" />}
@@ -52,13 +52,13 @@ export default function Breadcrumbs() {
                 return (
                     <div key={to} className="flex items-center gap-2 shrink-0">
                         {last ? (
-                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
+                            <span className="text-[10px] font-black text-blue-600 tracking-widest bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
                                 {label}
                             </span>
                         ) : (
                             <Link
                                 to={to}
-                                className="text-[10px] font-black text-slate-400 hover:text-blue-600 uppercase tracking-widest transition-colors"
+                                className="text-[10px] font-black text-slate-400 hover:text-blue-600 tracking-widest transition-colors"
                             >
                                 {label}
                             </Link>

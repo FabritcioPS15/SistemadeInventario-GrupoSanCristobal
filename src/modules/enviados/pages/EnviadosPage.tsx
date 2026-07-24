@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { Edit, Trash2, MapPin, Package, Truck, X, Calendar, Plus, LayoutGrid, List, Search, Send } from 'lucide-react';
 import { useHeaderVisible } from '../../../shared/hooks/useHeaderVisible';
 import { supabase, AssetWithDetails, Location } from '../../../shared/services/supabase';
@@ -7,6 +7,7 @@ import ShipmentForm from '../forms/ShipmentForm';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import Pagination from '../../../shared/components/ui/Pagination';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../shared/components/ui/Table';
 
 type Shipment = {
   id: string;
@@ -212,7 +213,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                     placeholder="Buscar por activo, guía, transportista..."
                     value={searchTerm}
                     onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                    className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                    className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
                   />
                 </div>
 
@@ -227,7 +228,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                     >
                       <option value="">TODOS LOS DESTINOS</option>
                       {locations.map(loc => (
-                        <option key={loc.id} value={loc.id}>{loc.name.toUpperCase()}</option>
+                        <option key={loc.id} value={loc.id}>{loc.name}</option>
                       ))}
                     </select>
                   </div>
@@ -352,7 +353,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                               </div>
                             )}
                           </div>
-                          <button onClick={() => handleViewShipment(shipment)} className="flex items-center gap-2 px-3 py-2 bg-white text-[#002855] border border-slate-200 text-[9px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">DETALLES</button>
+                          <button onClick={() => handleViewShipment(shipment)} className="flex items-center gap-2 px-3 py-2 bg-white text-[#002855] border border-slate-200 text-[10px] font-black tracking-wider hover:bg-slate-50 transition-all shadow-sm">DETALLES</button>
                         </div>
                       </div>
                     ))}
@@ -361,7 +362,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
               ) : (
                 <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
                   {/* Pagination Header */}
-                  <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
+                  <div className="bg-slate-50 border-b border-slate-200 relative z-20">
                     <Pagination
                       currentPage={currentPage}
                       totalPages={totalPages}
@@ -372,34 +373,31 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                     />
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse border-spacing-0">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="px-6 py-5"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Activo</span></th>
-                          <th className="px-4 py-5"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Ruta</span></th>
-                          <th className="px-4 py-5"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
-                          <th className="px-4 py-5"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Logística</span></th>
-                          <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
+                    <Table>
+                      <TableHeader>
+                        <tr>
+                          <TableHead>Activo</TableHead>
+                          <TableHead>Ruta</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Logística</TableHead>
+                          <TableHead className="text-center">Acciones</TableHead>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      </TableHeader>
+                      <TableBody>
                         {paginatedShipments.map((shipment) => (
-                          <tr key={shipment.id} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group border-b border-slate-50 last:border-0" onClick={() => handleViewShipment(shipment)}>
-                            <td className="px-6 py-5">
+                          <TableRow key={shipment.id} className="cursor-pointer" onClick={() => handleViewShipment(shipment)}>
+                            <TableCell>
                               <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 flex items-center justify-center shadow-sm transition-all duration-300 ${statusColors[shipment.status]?.split(' ')[0] || 'bg-slate-100'} group-hover:bg-[#002855] group-hover:text-white`}>
-                                  {(() => {
-                                    const Icon = getStatusIcon(shipment.status);
-                                    return <Icon size={18} />;
-                                  })()}
+                                <div className={`w-9 h-9 flex items-center justify-center shadow-sm transition-all duration-300 ${statusColors[shipment.status]?.split(' ')[0] || 'bg-slate-100'} group-hover/row:bg-[#002855] group-hover/row:text-white`}>
+                                  {(() => { const Icon = getStatusIcon(shipment.status); return <Icon size={18} />; })()}
                                 </div>
                                 <div className="flex flex-col">
-                                  <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{shipment.assets?.brand} {shipment.assets?.model}</span>
-                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{shipment.assets?.asset_types?.name}</span>
+                                  <span className="text-[13px] font-black text-[#002855] leading-tight">{shipment.assets?.brand} {shipment.assets?.model}</span>
+                                  <span className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{shipment.assets?.asset_types?.name}</span>
                                 </div>
                               </div>
-                            </td>
-                            <td className="px-4 py-4">
+                            </TableCell>
+                            <TableCell>
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-2">
                                   <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
@@ -412,32 +410,32 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                                   <span className="text-[11px] font-black text-blue-900 uppercase truncate">{shipment.to_location?.name}</span>
                                 </div>
                               </div>
-                            </td>
-                            <td className="px-4 py-4">
+                            </TableCell>
+                            <TableCell>
                               <span className={`inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-black uppercase tracking-widest border ${statusColors[shipment.status]}`}>
                                 {statusLabels[shipment.status]}
                               </span>
-                            </td>
-                            <td className="px-4 py-4">
+                            </TableCell>
+                            <TableCell>
                               <div className="flex flex-col">
                                 <span className="text-[13px] font-black text-slate-600 uppercase tabular-nums">{new Date(String(shipment.shipment_date).includes('T') ? String(shipment.shipment_date) : `${shipment.shipment_date}T12:00:00`).toLocaleDateString()}</span>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{shipment.tracking_number || 'Sin Guía'}</span>
+                                <span className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{shipment.tracking_number || 'Sin Guía'}</span>
                               </div>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
                                 {canEdit() && (
                                   <>
-                                    <button onClick={(e) => { e.stopPropagation(); handleEditShipment(shipment); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Editar"><Edit size={14} /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteShipment(shipment); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Eliminar"><Trash2 size={14} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleEditShipment(shipment); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-none border border-slate-200 transition-all shadow-sm" title="Editar"><Edit size={14} /></button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteShipment(shipment); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-200 transition-all shadow-sm" title="Eliminar"><Trash2 size={14} /></button>
                                   </>
                                 )}
                               </div>
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               )}
@@ -447,7 +445,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
               <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                 <div>
                   <h3 className="text-[15px] font-black text-[#002855] uppercase tracking-tight">Registro de Envío</h3>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Ingresa los datos logísticos del transporte</p>
+                  <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mt-1">Ingresa los datos logísticos del transporte</p>
                 </div>
                 <button onClick={handleCloseForm} className="p-2 hover:bg-slate-100 rounded-none transition-colors"><X size={20} className="text-slate-400" /></button>
               </div>
@@ -494,7 +492,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Activo Trasladado</h3>
                   </div>
                   <div className="bg-slate-50 p-6 rounded-none border border-gray-100 font-sans">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Marca y Modelo</p>
+                    <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-2">Marca y Modelo</p>
                     <p className="text-lg font-black text-[#002855] uppercase">{viewingShipment.assets?.brand} {viewingShipment.assets?.model}</p>
                     <div className="mt-4 flex items-center gap-2 font-bold text-[10px] uppercase text-slate-500">
                       <Package size={14} />
@@ -534,7 +532,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                         <MapPin size={20} className="text-slate-400" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Punto de Origen</p>
+                        <p className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Punto de Origen</p>
                         <p className="text-sm font-black text-slate-700 uppercase">{viewingShipment.from_location?.name || 'STOCK CENTRAL'}</p>
                       </div>
                     </div>
@@ -554,19 +552,19 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
               {/* Información del Transportista */}
               <div className="bg-slate-50 p-6 rounded-none border border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-6 font-sans">
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Guía / Tracking</p>
+                  <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-1">Guía / Tracking</p>
                   <p className="text-xs font-bold text-slate-900 uppercase">{viewingShipment.tracking_number || "NO ASIGNADO"}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Empresa Carrier</p>
+                  <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-1">Empresa Carrier</p>
                   <p className="text-xs font-bold text-slate-900 uppercase">{viewingShipment.carrier || "RECURSO PROPIO"}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Enviado Por</p>
+                  <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-1">Enviado Por</p>
                   <p className="text-xs font-bold text-slate-900 uppercase">{viewingShipment.shipped_by || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Recibido Por</p>
+                  <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-1">Recibido Por</p>
                   <p className="text-xs font-bold text-slate-900 uppercase">{viewingShipment.received_by || "PENDIENTE"}</p>
                 </div>
               </div>

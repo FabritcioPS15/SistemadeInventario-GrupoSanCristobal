@@ -1,9 +1,11 @@
 import { ReactNode } from 'react';
 import ModalOverlay from './ModalOverlay';
 
-type MaxWidth = 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '7xl';
+type MaxWidth = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '7xl';
 
 const maxWidthClass: Record<MaxWidth, string> = {
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-md',
   lg: 'sm:max-w-lg',
   xl: 'sm:max-w-xl',
   '2xl': 'sm:max-w-2xl',
@@ -33,7 +35,7 @@ export default function DetailModal({
   return (
     <ModalOverlay onClose={onClose} closeOnBackdrop={closeOnBackdrop}>
       <div
-        className={`bg-white border-0 sm:border border-slate-200 shadow-2xl w-full min-w-0 ${maxWidthClass[maxWidth]} h-full sm:h-auto sm:max-h-[min(92vh,calc(100dvh-3.5rem-1.5rem))] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 mx-auto sm:rounded-sm`}
+        className={`bg-white border border-slate-200 shadow-2xl w-full min-w-0 ${maxWidthClass[maxWidth]} sm:max-h-[min(92vh,calc(100dvh-3.5rem-1.5rem))] max-h-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 mx-auto sm:rounded-sm`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}
@@ -106,7 +108,7 @@ export function DetailModalSection({
     <section className="space-y-3 sm:space-y-4 min-w-0">
       <div className="border-b border-slate-100 pb-1.5 sm:pb-2 flex items-center gap-2">
         <div className="w-1 h-3.5 sm:h-4 bg-blue-600 shrink-0" />
-        <h3 className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase tracking-wide sm:tracking-widest">
+        <h3 className="text-[10px] sm:text-[12px] font-black text-[#002855] uppercase tracking-wide sm:tracking-widest">
           {title}
         </h3>
       </div>

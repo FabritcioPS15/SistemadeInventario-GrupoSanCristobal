@@ -8,8 +8,23 @@
     <meta http-equiv="Content-Language" content="es" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Sansation:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <title>Sistema IT - Gestión y Control</title>
+    <!--
+      ╔══════════════════════════════════════════════════════╗
+      ║  DEPLOY a cPanel:                                    ║
+      ║  1. npm run build → genera dist/                    ║
+      ║  2. Subir dist/ a /public_html/ en cPanel           ║
+      ║  3. dist/.htaccess ya incluye SPA routing           ║
+      ║  4. Configurar dominio en Supabase Auth > Settings   ║
+      ╚══════════════════════════════════════════════════════╝
+      ──────────────────────────────────────────────────────
+      VARIABLES DE ENTORNO (archivo .env en la raíz):
+        VITE_SUPABASE_URL=
+        VITE_SUPABASE_ANON_KEY=
+        VITE_API_URL=          (opcional — backend futuro)
+        VITE_DATABASE_MODE=    (opcional — "supabase" default)
+    -->
   </head>
   <body>
     <div id="root"></div>

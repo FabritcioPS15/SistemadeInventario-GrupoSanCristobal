@@ -26,17 +26,17 @@ type TicketDetailModalProps = {
 };
 
 export default function TicketDetailModal({ ticket: initialTicket, onClose, onUpdate }: TicketDetailModalProps) {
-    const { user } = useAuth();
-    const { error: notifyError, warning: notifyWarning, confirm } = useNotify();
-    const [currentTicket, setCurrentTicket] = useState<any>(initialTicket);
-    const [comments, setComments] = useState<any[]>([]);
-    const [newComment, setNewComment] = useState('');
-    const [sending, setSending] = useState(false);
-    const commentsEndRef = useRef<HTMLDivElement>(null);
-    const [statusUpdating, setStatusUpdating] = useState(false);
-    const [activeTab, setActiveTab] = useState<'details' | 'feed'>('feed'); // Pestaña activa en mobile
-    const [uploadingImage, setUploadingImage] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { user } = useAuth(); // Usuario actual autenticado
+    const { error: notifyError, warning: notifyWarning, confirm } = useNotify(); // Sistema de notificaciones
+    const [currentTicket, setCurrentTicket] = useState<any>(initialTicket); // Datos del ticket (se actualiza en tiempo real)
+    const [comments, setComments] = useState<any[]>([]); // Lista de comentarios del ticket
+    const [newComment, setNewComment] = useState(''); // Texto del nuevo comentario en edición
+    const [sending, setSending] = useState(false); // Indicador de envío en progreso
+    const commentsEndRef = useRef<HTMLDivElement>(null); // Referencia al final de la lista para auto-scroll
+    const [statusUpdating, setStatusUpdating] = useState(false); // Indicador de actualización de estado
+    const [activeTab, setActiveTab] = useState<'details' | 'feed'>('feed'); // Pestaña activa en móvil (detalles o chat)
+    const [uploadingImage, setUploadingImage] = useState(false); // Indicador de subida de imagen
+    const fileInputRef = useRef<HTMLInputElement>(null); // Referencia al input de archivos
 
     // Actualiza el ticket cuando cambia el prop inicialTicket
     useEffect(() => {
@@ -44,8 +44,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     }, [initialTicket]);
 
     // Carga comentarios y suscribe a actualizaciones en tiempo real
-    // - Escucha cambios en el ticket (estado, asignaciones)
-    // - Escucha nuevos comentarios
+    // Suscripción 1: Escucha cambios en el ticket (estado, asignaciones)
+    // Suscripción 2: Escucha nuevos comentarios y los agrega al estado local
     useEffect(() => {
         fetchComments();
 
@@ -138,7 +138,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     };
 
     // Sube una imagen al storage de Supabase y la agrega como comentario
-    // Usa formato markdown para mostrar la imagen en el chat
+    // Usa formato markdown ![imagen](url) para mostrar la imagen en el chat
+    // La imagen se guarda en la ruta: ticket_{id}/nombre_archivo
     const uploadFile = async (file: File) => {
         if (!currentTicket) return;
         try {
@@ -192,6 +193,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     };
 
     // Envía un nuevo comentario al ticket
+    // Inserta el comentario en la base de datos y recarga la lista
     const handleSendComment = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newComment.trim()) return;
@@ -221,6 +223,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     // Elimina el ticket si tiene permisos
     // Solo el creador (3 min desde creación) o staff (super_admin, sistemas, gerencia, supervisores) pueden eliminar
     // Primero limpia archivos adjuntos del storage, luego elimina el registro
+    // Esto evita dejar archivos huérfanos en el storage
     const handleDeleteTicket = async () => {
         const now = new Date();
         const createdDate = new Date(currentTicket.created_at);
@@ -265,6 +268,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
     // Actualiza el estado del ticket (solo el técnico asignado)
     // Al cambiar a "in_progress" asigna automáticamente al técnico y registra attended_at
     // Cada cambio de estado se registra como un comentario automático en el feed
+    // Esto mantiene un historial de cambios visible para todos los participantes
     const handleStatusUpdate = async (newStatus: string) => {
         const isAssignedTechnician = user?.id === currentTicket.assigned_to;
         
@@ -284,7 +288,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
             await supabase.from('ticket_comments').insert([{
                 ticket_id: currentTicket.id,
                 user_id: user?.id,
-                content: `Cambió el estado a: **${getStatusLabel(newStatus).toUpperCase()}**`,
+                content: `Cambió el estado a: **${getStatusLabel(newStatus)}**`,
             }]);
 
             fetchComments();
@@ -296,7 +300,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
-    // Funciones auxiliares para mostrar etiquetas y estilos
+    // Funciones auxiliares para mostrar etiquetas legibles y estilos visuales
+    // Estas funciones traducen valores técnicos a formato amigable para el usuario
     const getStatusLabel = (status: string) => {
         switch (status) {
             case 'open': return 'Pendiente';
@@ -326,7 +331,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
         }
     };
 
-    // Solo el técnico asignado puede cambiar el estado
+    // Verifica si el usuario actual puede gestionar el estado del ticket
+    // Solo el técnico asignado (assigned_to) tiene permisos para cambiar estado
     const canManageStatus = user?.id === currentTicket.assigned_to;
 
     return (

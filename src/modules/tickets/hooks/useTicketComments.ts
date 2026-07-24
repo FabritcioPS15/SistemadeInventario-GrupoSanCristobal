@@ -41,14 +41,15 @@ export interface UseTicketCommentsReturn {
 }
 
 export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): UseTicketCommentsReturn {
-  const [ticket, setTicket] = useState<any>(null);
-  const [comments, setComments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const commentsEndRef = useRef<HTMLDivElement>(null);
+  const [ticket, setTicket] = useState<any>(null); // Datos completos del ticket con relaciones
+  const [comments, setComments] = useState<any[]>([]); // Lista de comentarios del ticket
+  const [loading, setLoading] = useState(true); // Indicador de carga inicial
+  const commentsEndRef = useRef<HTMLDivElement>(null); // Referencia para scroll automático al último comentario
 
   // Carga los datos del ticket desde Supabase
-  // Incluye relaciones: solicitante, asignado, ubicación y asignaciones
-  // También busca el ID de AnyDesk en los comentarios si existe
+  // Incluye relaciones: solicitante, asignado, ubicación y asignaciones múltiples
+  // También busca el ID de AnyDesk en los comentarios existentes (formato: "Anydesk de mi PC: XXXXXX")
+  // El ID de AnyDesk se extrae y se agrega al objeto ticket para mostrarlo en la UI
   const fetchTicket = async () => {
     try {
       const { data, error } = await supabase
@@ -65,7 +66,9 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
 
       if (error) throw error;
 
-      // Buscar AnyDesk en los comentarios para mostrarlo en el detalle
+      // Buscar AnyDesk en los comentarios para mostrarlo en el detalle del ticket
+      // Busca comentarios que contengan la palabra "anydesk" (case-insensitive)
+      // Extrae el ID usando regex: "anydesk de mi pc: XXXXXX"
       const { data: comments } = await supabase
         .from('ticket_comments')
         .select('content')
@@ -73,12 +76,14 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
         .ilike('content', '%anydesk%');
 
       if (comments && comments.length > 0) {
+        // Itera sobre los comentarios buscando el patrón de AnyDesk
         for (const comment of comments) {
           const anydeskMatch = comment.content.match(/anydesk de mi pc:\s*([a-zA-Z0-9]+)/i);
           if (anydeskMatch) {
+            // Agrega el ID de AnyDesk al objeto ticket para mostrarlo en la UI
             data.anydesk = anydeskMatch[1];
-            data.anydesk_password = null;
-            break;
+            data.anydesk_password = null; // La contraseña no se guarda por seguridad
+            break; // Solo toma el primer ID encontrado
           }
         }
       }
@@ -92,7 +97,8 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
   };
 
   // Carga todos los comentarios del ticket ordenados cronológicamente
-  // Incluye información del autor de cada comentario
+  // Incluye información completa del autor de cada comentario (nombre, email, avatar, rol)
+  // Orden ascendente: comentarios más antiguos primero
   const fetchComments = async () => {
     try {
       const { data, error } = await supabase
@@ -112,7 +118,8 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
   };
 
   // Agrega un nuevo comentario al ticket
-  // Recarga la lista de comentarios después de insertar
+  // Valida que el contenido no esté vacío antes de insertar
+  // Recarga la lista de comentarios después de insertar para mostrar el nuevo mensaje
   const addComment = async (content: string) => {
     if (!content.trim()) return;
 
@@ -129,7 +136,8 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
   };
 
   // Hace scroll suave hasta el último comentario
-  // Útil para mostrar nuevos comentarios automáticamente
+  // Usa un pequeño delay (100ms) para asegurar que el DOM se actualizó
+  // Útil para mostrar nuevos comentarios automáticamente cuando se reciben en tiempo real
   const scrollToBottom = () => {
     setTimeout(() => {
       commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -137,6 +145,7 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
   };
 
   // Carga inicial del ticket y comentarios cuando cambia el ticketId
+  // Se ejecuta al montar el componente y cuando el usuario navega a otro ticket
   useEffect(() => {
     if (ticketId) {
       fetchTicket();
@@ -145,6 +154,8 @@ export function useTicketComments({ ticketId, user }: UseTicketCommentsProps): U
   }, [ticketId]);
 
   // Auto-scroll al fondo cuando se agregan nuevos comentarios
+  // Esto asegura que el usuario siempre vea el mensaje más reciente
+  // Se activa cada vez que cambia la lista de comentarios
   useEffect(() => {
     scrollToBottom();
   }, [comments]);

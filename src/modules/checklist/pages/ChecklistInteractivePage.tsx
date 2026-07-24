@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { CheckCircle2, Clock, User, MapPin, FileText, Save, Eye, CheckSquare, Settings } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
@@ -528,7 +528,7 @@ export default function ChecklistInteractive() {
               <div className="bg-white rounded-none border border-slate-200 shadow-sm p-5 space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-1 h-4 bg-blue-600" />
-                  <h3 className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Selección</h3>
+                  <h3 className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Selección</h3>
                 </div>
 
                 <div className="space-y-2">
@@ -601,7 +601,7 @@ export default function ChecklistInteractive() {
                     <div key={category} className="bg-white rounded-none border border-slate-200 shadow-sm overflow-hidden">
                       <div className={`p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3`}>
                         <div className={`w-1.5 h-6 ${selectedType === 'escon' ? 'bg-blue-600' : selectedType === 'ecsal' ? 'bg-emerald-600' : 'bg-orange-600'} rounded-none`} />
-                        <h4 className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">
+                        <h4 className="text-[12px] font-black text-[#002855] tracking-[0.2em]">
                           {category}
                         </h4>
                       </div>
@@ -624,9 +624,9 @@ export default function ChecklistInteractive() {
 
                                 <div className="flex-1">
                                   <div className="flex items-center gap-3 mb-3">
-                                    <h5 className="text-[13px] font-black text-[#002855] uppercase leading-tight">{item.title}</h5>
+                                    <h5 className="text-[13px] font-black text-[#002855] leading-tight">{item.title}</h5>
                                     {item.required && (
-                                      <span className="px-2 py-0.5 border border-rose-200 bg-rose-50 text-rose-600 text-[9px] font-black uppercase tracking-widest">Requerido</span>
+                                      <span className="px-2 py-0.5 border border-rose-200 bg-rose-50 text-rose-600 text-[10px] font-black tracking-wider">Requerido</span>
                                     )}
                                   </div>
                                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed italic">{item.description}</p>
@@ -661,7 +661,7 @@ export default function ChecklistInteractive() {
             <div className="p-6 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-1.5 h-6 bg-blue-600" />
-                <h3 className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Registros Históricos</h3>
+                <h3 className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Registros Históricos</h3>
               </div>
               <div className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                 <Clock className="w-3.5 h-3.5" />
@@ -679,19 +679,19 @@ export default function ChecklistInteractive() {
                 <div className="w-16 h-16 bg-slate-50 rounded-none flex items-center justify-center mx-auto mb-6 border border-slate-100">
                   <FileText className="w-8 h-8 text-slate-300" />
                 </div>
-                <h4 className="text-[14px] font-black text-[#002855] uppercase tracking-tight mb-2">Base de datos vacía</h4>
+                <h4 className="text-[13px] font-black text-[#002855] leading-tight tracking-tight mb-2">Base de datos vacía</h4>
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No se han encontrado registros previos de inspección</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-white border-b border-slate-100">
-                      <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Cuestionario</th>
-                      <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Sede / Información</th>
-                      <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Progreso</th>
-                      <th className="px-4 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Estado</th>
-                      <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Acciones</th>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="px-6 py-6 text-[12px] font-black text-[#002855] tracking-[0.2em]">Cuestionario</th>
+                      <th className="px-4 py-6 text-[12px] font-black text-[#002855] tracking-[0.2em]">Ubicación / Información</th>
+                      <th className="px-4 py-6 text-[12px] font-black text-[#002855] tracking-[0.2em]">Progreso</th>
+                      <th className="px-4 py-6 text-[12px] font-black text-[#002855] tracking-[0.2em]">Estado</th>
+                      <th className="px-6 py-6 text-[12px] font-black text-[#002855] tracking-[0.2em] text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -711,8 +711,8 @@ export default function ChecklistInteractive() {
                                 <CheckSquare size={18} />
                               </div>
                               <div className="flex flex-col">
-                                <span className="text-[14px] font-black text-[#002855] uppercase leading-tight">{template?.name.split(' - ')[0]}</span>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 italic">{template?.name.split(' - ')[1]}</p>
+                                <span className="text-[13px] font-black text-[#002855] leading-tight">{template?.name.split(' - ')[0]}</span>
+                                <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1 italic">{template?.name.split(' - ')[1]}</p>
                               </div>
                             </div>
                           </td>
@@ -731,7 +731,7 @@ export default function ChecklistInteractive() {
                           <td className="px-4 py-5 font-bold">
                             <div className="flex flex-col gap-2 min-w-[120px]">
                               <div className="flex items-center justify-between">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{completed}/{total} ítems</span>
+                                <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">{completed}/{total} ítems</span>
                                 <span className="text-[10px] font-black text-[#002855]">{percentage}%</span>
                               </div>
                               <div className="w-full bg-slate-100 rounded-none h-1.5 overflow-hidden">

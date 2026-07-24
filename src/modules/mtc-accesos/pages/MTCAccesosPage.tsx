@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, List } from 'lucide-react';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
@@ -22,6 +22,19 @@ import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
 import FilterSelect from '../../../shared/components/ui/FilterSelect';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCellIcon,
+  TableCellPrimary,
+  TableCellSecondary,
+  TableCellBadge,
+  TableActionButton
+} from '../../../shared/components/ui/Table';
 
 type MTCAcceso = {
   id: string;
@@ -295,7 +308,7 @@ export default function MTCAccesos() {
                 placeholder="Buscar acceso, URL o tipo..."
                 value={searchTerm}
                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
@@ -317,7 +330,7 @@ export default function MTCAccesos() {
           {canEdit() && (
             <button
               onClick={() => setView(view === 'form' ? 'list' : 'form')}
-              className={`w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${view === 'form' ? 'bg-slate-800 text-white' : 'bg-[#002855] text-white hover:bg-blue-800'}`}
+              className={`w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm ${view === 'form' ? 'bg-slate-800 text-white' : 'bg-[#002855] text-white hover:bg-blue-800'}`}
             >
               {view === 'form' ? <List size={14} /> : <Plus size={14} />}
               {view === 'form' ? 'Ver Lista' : 'Nuevo Acceso'}
@@ -329,7 +342,7 @@ export default function MTCAccesos() {
           {canEdit() && selectedIds.length > 0 && viewMode === 'table' && (
             <button
               onClick={() => handleBulkDelete(selectedIds)}
-              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-widest"
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-wider"
             >
               <Trash2 size={14} />
               Eliminar ({selectedIds.length})
@@ -341,7 +354,7 @@ export default function MTCAccesos() {
           <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-8">
               <div className="mb-8 border-b border-gray-100 pb-6">
-                <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
                   {editingAcceso ? 'Actualización de Credenciales' : 'Registro de Nuevo Acceso'}
                 </h3>
                 <p className="text-sm text-slate-500 mt-1 font-medium italic">Gestione de forma segura los accesos a plataformas del MTC.</p>
@@ -361,7 +374,7 @@ export default function MTCAccesos() {
               </div>
             ) : viewMode === 'table' ? (
               <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
-                <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
+                <div className="bg-slate-50 border-b border-slate-200 relative z-20">
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -372,79 +385,91 @@ export default function MTCAccesos() {
                   />
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse border-spacing-0">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200">
-                        <th className="px-6 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Nombre</span></th>
-                        <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Tipo</span></th>
-                        <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">URL / Endpoint</span></th>
-                        <th className="px-4 py-5 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Usuario</span></th>
-                        <th className="px-6 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
+                  <Table>
+                    <TableHeader>
+                      <tr>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>URL / Endpoint</TableHead>
+                        <TableHead>Usuario</TableHead>
+                        <TableHead className="text-center">Acciones</TableHead>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    </TableHeader>
+                    <TableBody>
                       {paginatedAccesos.map(acceso => (
-                        <tr key={acceso.id} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0" onDoubleClick={() => handleViewAcceso(acceso)}>
-                          <td className="px-6 py-4 font-bold text-left">
+                        <TableRow key={acceso.id} className="cursor-pointer" onDoubleClick={() => handleViewAcceso(acceso)}>
+                          <TableCell>
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
-                                {getAccessTypeIcon(acceso.access_type)}
-                              </div>
+                              <TableCellIcon icon={getAccessTypeIcon(acceso.access_type)} />
                               <div className="flex flex-col">
-                                <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">{acceso.name}</span>
-                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(String(acceso.created_at).includes('T') ? String(acceso.created_at) : `${acceso.created_at}T12:00:00`).toLocaleDateString()}</span>
+                                <TableCellPrimary>{acceso.name}</TableCellPrimary>
+                                <TableCellSecondary>{new Date(String(acceso.created_at).includes('T') ? String(acceso.created_at) : `${acceso.created_at}T12:00:00`).toLocaleDateString()}</TableCellSecondary>
                               </div>
                             </div>
-                          </td>
-                          <td className="px-4 py-4 text-left">
-                            <span className={`px-2 py-1 text-[10px] font-black uppercase tracking-widest border ${getAccessTypeColor(acceso.access_type)}`}>
-                              {acceso.access_type}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-left">
-                            <a href={acceso.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[13px] font-extrabold text-blue-600 truncate max-w-[220px] block hover:text-blue-800 transition-colors">
-                              {acceso.url}
-                            </a>
-                          </td>
-                          <td className="px-4 py-4 text-left">
+                          </TableCell>
+                          <TableCell>
+                            <TableCellBadge className={getAccessTypeColor(acceso.access_type)}>{acceso.access_type}</TableCellBadge>
+                          </TableCell>
+                          <TableCell>
+                            <a href={acceso.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[13px] font-black text-blue-600 truncate max-w-[220px] block hover:text-blue-800 transition-colors">{acceso.url}</a>
+                          </TableCell>
+                          <TableCell>
                             {acceso.username ? (
                               <div className="flex flex-col">
-                                <span className="text-[13px] font-black text-[#002855] font-mono">{acceso.username}</span>
-                                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                                  {acceso.password ? '••••••••' : 'Sin contraseña'}
-                                </span>
+                                <TableCellPrimary className="font-mono">{acceso.username}</TableCellPrimary>
+                                <TableCellSecondary>{acceso.password ? '••••••••' : 'Sin contraseña'}</TableCellSecondary>
                               </div>
-                            ) : (
-                              <span className="text-slate-300 italic text-xs">Sin credenciales</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            ) : <span className="text-slate-300 italic text-xs">Sin credenciales</span>}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
                               {canEdit() && (
                                 <>
-                                  <button onClick={(e) => { e.stopPropagation(); handleEditAcceso(acceso); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteAcceso(acceso); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"><Trash2 size={14} /></button>
+                                  <TableActionButton
+                                    icon={<Edit size={14} />}
+                                    onClick={(e) => { e.stopPropagation(); handleEditAcceso(acceso); }}
+                                    title="Editar"
+                                  />
+                                  <TableActionButton
+                                    icon={<Trash2 size={14} />}
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteAcceso(acceso); }}
+                                    title="Eliminar"
+                                    variant="danger"
+                                  />
                                 </>
                               )}
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalItems={filteredAccesos.length}
-                    itemsPerPage={itemsPerPage}
-                    onPageChange={setCurrentPage}
-                    onItemsPerPageChange={setItemsPerPage}
-                  />
+                  <div className="flex items-center justify-between p-4 border-b border-slate-200">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={filteredAccesos.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setCurrentPage}
+                      onItemsPerPageChange={setItemsPerPage}
+                    />
+                    {canEdit() && paginatedAccesos.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.length === paginatedAccesos.length && paginatedAccesos.length > 0}
+                          onChange={() => toggleSelectAll(paginatedAccesos)}
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer shadow-sm"
+                        />
+                        <span className="text-xs font-medium text-slate-600">Seleccionar todos</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {paginatedAccesos.map(acceso => (
@@ -463,9 +488,9 @@ export default function MTCAccesos() {
                         )}
                         <div className="flex items-start justify-between mb-6">
                           <div className="flex-1">
-                            <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors uppercase tracking-tight mb-2">{acceso.name}</h3>
+                            <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors tracking-tight mb-2">{acceso.name}</h3>
                             <div className="flex items-center gap-2">
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${getAccessTypeColor(acceso.access_type)}`}>
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-black tracking-wider border ${getAccessTypeColor(acceso.access_type)}`}>
                                 {getAccessTypeIcon(acceso.access_type)} {acceso.access_type}
                               </span>
                             </div>
@@ -474,7 +499,7 @@ export default function MTCAccesos() {
                         <div className="space-y-4 mb-6">
                           <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
                             <div className="flex items-center justify-between mb-2">
-                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Enlace Directo</label>
+                              <label className="text-[10px] font-black text-gray-400 tracking-wider">Enlace Directo</label>
                               <button onClick={() => copyToClipboard(acceso.url, `url-${acceso.id}`)} className="p-1.5 hover:bg-white rounded-lg transition-colors text-gray-400 hover:text-blue-600 active:scale-90">
                                 {copiedItems[`url-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                               </button>
@@ -488,7 +513,7 @@ export default function MTCAccesos() {
                             <div className="grid grid-cols-2 gap-4">
                               <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/30">
                                 <div className="flex items-center justify-between mb-2">
-                                  <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest">Identidad</label>
+                                  <label className="text-[10px] font-black text-blue-700/50 tracking-widest">Identidad</label>
                                   <button onClick={() => copyToClipboard(acceso.username!, `username-${acceso.id}`)} className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-400 hover:text-blue-600 active:scale-90">
                                     {copiedItems[`username-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
                                   </button>
@@ -498,7 +523,7 @@ export default function MTCAccesos() {
                               {acceso.password && (
                                 <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100/30">
                                   <div className="flex items-center justify-between mb-2">
-                                    <label className="text-[10px] font-black text-blue-700/50 uppercase tracking-widest">Token / Pass</label>
+                                    <label className="text-[10px] font-black text-blue-700/50 tracking-widest">Token / Pass</label>
                                     <div className="flex items-center gap-1">
                                       <button onClick={() => copyToClipboard(acceso.password!, `password-${acceso.id}`)} className="p-1.5 hover:bg-white rounded-lg transition-colors text-blue-400 hover:text-blue-600 active:scale-90">
                                         {copiedItems[`password-${acceso.id}`] ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
@@ -515,7 +540,7 @@ export default function MTCAccesos() {
                           )}
                           {acceso.notes && (
                             <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
-                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Observaciones</label>
+                              <label className="text-[10px] font-black text-gray-400 tracking-widest block mb-2">Observaciones</label>
                               <p className="text-xs text-gray-600 italic leading-relaxed whitespace-pre-wrap">{acceso.notes}</p>
                             </div>
                           )}
@@ -550,8 +575,8 @@ export default function MTCAccesos() {
                       {getAccessTypeIcon(viewingAcceso.access_type)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-xs sm:text-base font-black text-white uppercase tracking-tight leading-snug line-clamp-1">{viewingAcceso.name}</h2>
-                      <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1">MTC ACCESO — {viewingAcceso.access_type.toUpperCase()}</p>
+                      <h2 className="text-xs sm:text-base font-black text-white tracking-tight leading-snug line-clamp-1">{viewingAcceso.name}</h2>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1">MTC ACCESO — {viewingAcceso.access_type.toUpperCase()}</p>
                     </div>
                   </div>
                   <button onClick={() => setViewingAcceso(undefined)} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1" aria-label="Cerrar">

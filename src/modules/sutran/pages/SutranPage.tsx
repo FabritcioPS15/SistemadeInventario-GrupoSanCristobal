@@ -1,10 +1,8 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Plus, Building2, Calendar, FileText, User, AlertTriangle, Edit, X, Search, MapPin, Trash2 } from 'lucide-react';
-import ExcelJS from 'exceljs';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { supabase } from '../../../shared/services/supabase';
 import type { SutranVisit } from '../../../shared/services/supabase';
+import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
 import { useSupabaseQuery } from '../../../shared/hooks/useSupabaseQuery';
 import SutranVisitForm from '../forms/SutranVisitForm';
 import { useAuth } from '../../../app/providers/AuthContext';
@@ -23,6 +21,7 @@ import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, TableCellPrimary, TableCellSecondary, TableCellBadge, TableActionButton } from '../../../shared/components/ui/Table';
 
 export default function Sutran() {
   const { canEdit } = useAuth();
@@ -30,8 +29,8 @@ export default function Sutran() {
 
   // — Todos los estados declarados antes de ser usados —
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [visitTypeFilter, setVisitTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [visitTypeFilter, setVisitTypeFilter] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingVisit, setEditingVisit] = useState<SutranVisit | undefined>();
@@ -74,14 +73,14 @@ export default function Sutran() {
   };
   // Tipo correcto: wrapper con data[] y count para paginación del servidor
   const { data: visitsData, loading, refetch: refetchVisits } = useSupabaseQuery<{ data: SutranVisit[]; count: number }>(
-    `sutran_visits:p${currentPage}-l${itemsPerPage}-s${statusFilter}-t${visitTypeFilter}-q${searchTerm}-loc${selectedLocations.join(',')}-k${sortConfig?.key}-d${sortConfig?.direction}`,
+    `sutran_visits:p${currentPage}-l${itemsPerPage}-s${statusFilter.join(',')}-t${visitTypeFilter.join(',')}-q${searchTerm}-loc${selectedLocations.join(',')}-k${sortConfig?.key}-d${sortConfig?.direction}`,
     async () => {
       let query = supabase
         .from('sutran_visits')
         .select('id, visit_date, location_id, visit_type, status, inspector_name, findings, observations, locations(id, name, type, region)', { count: 'exact' });
 
-      if (statusFilter) query = query.eq('status', statusFilter);
-      if (visitTypeFilter) query = query.eq('visit_type', visitTypeFilter);
+      if (statusFilter.length > 0) query = query.in('status', statusFilter);
+      if (visitTypeFilter.length > 0) query = query.in('visit_type', visitTypeFilter);
       if (selectedLocations.length > 0) query = query.in('location_id', selectedLocations);
       if (searchTerm) query = query.or(`inspector_name.ilike.%${searchTerm}%,observations.ilike.%${searchTerm}%,findings.ilike.%${searchTerm}%`);
 
@@ -200,7 +199,7 @@ export default function Sutran() {
         onClick={() => handleSort(sortKey)}
         className="flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors"
       >
-        <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">{label}</span>
+        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">{label}</span>
         {isSorted ? (
           <span className="text-[#002855] text-[10px]">
             {sortConfig.direction === 'asc' ? '▲' : '▼'}
@@ -214,44 +213,32 @@ export default function Sutran() {
 
   const handleGenerateExcel = async () => {
     try {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Visitas SUTRAN');
+      const visitsToExport = selectedIds.length > 0
+        ? paginatedVisits.filter(v => selectedIds.includes(v.id))
+        : paginatedVisits;
 
-      worksheet.columns = [
-        { header: 'Fecha', key: 'visit_date', width: 15 },
-        { header: 'Inspector', key: 'inspector_name', width: 25 },
-        { header: 'Sede', key: 'location_name', width: 20 },
-        { header: 'Tipo', key: 'visit_type', width: 15 },
-        { header: 'Estado', key: 'status', width: 12 },
-        { header: 'Hallazgos', key: 'findings', width: 30 }
-      ];
+      const data = visitsToExport.map(visit => ({
+        visit_date: new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString(),
+        inspector_name: visit.inspector_name || '',
+        location_name: (visit as any).locations?.name || '',
+        visit_type: getVisitTypeLabel(visit.visit_type),
+        status: statusLabels[visit.status],
+        findings: visit.findings || 'Sin hallazgos'
+      }));
 
-      worksheet.getRow(1).font = { bold: true, size: 12 };
-      worksheet.getRow(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE0E0E0' }
-      };
-
-      paginatedVisits.forEach(visit => {
-        worksheet.addRow({
-          visit_date: new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString(),
-          inspector_name: visit.inspector_name || '',
-          location_name: (visit as any).locations?.name || '',
-          visit_type: getVisitTypeLabel(visit.visit_type),
-          status: statusLabels[visit.status],
-          findings: visit.findings || 'Sin hallazgos'
-        });
+      await generateExcel({
+        title: 'Reporte de Visitas SUTRAN',
+        filename: `visitas_sutran_${new Date().toISOString().split('T')[0]}`,
+        columns: [
+          { header: 'Fecha', key: 'visit_date', width: 15 },
+          { header: 'Inspector', key: 'inspector_name', width: 25 },
+          { header: 'Ubicación', key: 'location_name', width: 20 },
+          { header: 'Tipo', key: 'visit_type', width: 15 },
+          { header: 'Estado', key: 'status', width: 12 },
+          { header: 'Hallazgos', key: 'findings', width: 30 }
+        ],
+        data
       });
-
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `visitas_sutran_${new Date().toISOString().split('T')[0]}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exportando Excel:', error);
       notifyError('Error al exportar a Excel', 'Error de exportación');
@@ -259,25 +246,32 @@ export default function Sutran() {
   };
 
   const handleGeneratePDF = () => {
-    const doc = new jsPDF();
-    const tableData = paginatedVisits.map(v => [
-      new Date(String(v.visit_date).includes('T') ? String(v.visit_date) : `${v.visit_date}T12:00:00`).toLocaleDateString(),
-      v.inspector_name,
-      (v as any).locations?.name || '—',
-      getVisitTypeLabel(v.visit_type),
-      statusLabels[v.status],
-      v.findings || 'Sin hallazgos'
-    ]);
+    const visitsToExport = selectedIds.length > 0
+      ? paginatedVisits.filter(v => selectedIds.includes(v.id))
+      : paginatedVisits;
 
-    autoTable(doc, {
-      head: [['Fecha', 'Inspector', 'Sede', 'Tipo', 'Estado', 'Hallazgos']],
-      body: tableData,
-      theme: 'grid',
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [0, 40, 85] }
+    const data = visitsToExport.map(v => ({
+      visit_date: new Date(String(v.visit_date).includes('T') ? String(v.visit_date) : `${v.visit_date}T12:00:00`).toLocaleDateString(),
+      inspector_name: v.inspector_name || '',
+      location_name: (v as any).locations?.name || '—',
+      visit_type: getVisitTypeLabel(v.visit_type),
+      status: statusLabels[v.status],
+      findings: v.findings || 'Sin hallazgos'
+    }));
+
+    generatePDF({
+      title: 'Reporte de Visitas SUTRAN',
+      filename: `Reporte_SUTRAN_${new Date().toISOString().split('T')[0]}`,
+      columns: [
+        { header: 'Fecha', key: 'visit_date' },
+        { header: 'Inspector', key: 'inspector_name' },
+        { header: 'Ubicación', key: 'location_name' },
+        { header: 'Tipo', key: 'visit_type' },
+        { header: 'Estado', key: 'status' },
+        { header: 'Hallazgos', key: 'findings' }
+      ],
+      data
     });
-
-    doc.save(`Reporte_SUTRAN_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -293,17 +287,17 @@ export default function Sutran() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Buscar por inspector, sede o hallazgos..."
+                placeholder="Buscar por inspector, ubicación o hallazgos..."
                 value={searchTerm}
                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
               { key: 'status', placeholder: 'TODOS LOS ESTADOS', options: Object.entries(statusLabels).map(([val, label]) => ({ value: val, label })) },
               {
                 key: 'visitType', placeholder: 'TODOS LOS TIPOS', options: [
@@ -313,11 +307,11 @@ export default function Sutran() {
                 ]
               },
             ]}
-            values={{ location: selectedLocations[0] || '', status: statusFilter, visitType: visitTypeFilter }}
+            values={{ location: selectedLocations, status: statusFilter, visitType: visitTypeFilter }}
             onChange={(key, value) => {
-              if (key === 'location') setSelectedLocations(value ? [value as string] : []);
-              else if (key === 'status') setStatusFilter(value as string);
-              else if (key === 'visitType') setVisitTypeFilter(value as string);
+              if (key === 'location') setSelectedLocations(value as string[]);
+              else if (key === 'status') setStatusFilter(value as string[]);
+              else if (key === 'visitType') setVisitTypeFilter(value as string[]);
               setCurrentPage(1);
             }}
           />
@@ -351,7 +345,7 @@ export default function Sutran() {
           <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-8">
               <div className="mb-8 border-b border-gray-100 pb-6">
-                <h3 className="text-xl font-bold text-slate-900 uppercase tracking-tight">
+                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
                   {editingVisit ? 'Actualización de Reporte SUTRAN' : 'Nuevo Registro de Inspección'}
                 </h3>
                 <p className="text-sm text-slate-500 mt-1 font-medium italic">Gestione los resultados y observaciones de las visitas de SUTRAN.</p>
@@ -370,8 +364,8 @@ export default function Sutran() {
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800"></div>
               </div>
             ) : viewMode === 'table' ? (
-              <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
-                <div className="bg-slate-50/50 border-b border-slate-100 shrink-0">
+              <div className="bg-white border border-slate-200 shadow-sm overflow-hidden flex flex-col rounded-none">
+                <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -382,31 +376,31 @@ export default function Sutran() {
                   />
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse border-spacing-0">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200">
+                  <Table>
+                    <TableHeader>
+                      <tr>
                         {canEdit() && (
-                          <th className="px-4 py-5 text-center w-12">
+                          <TableHead className="text-center w-12">
                             <input
                               type="checkbox"
                               checked={paginatedVisits.length > 0 && selectedIds.length === paginatedVisits.length}
                               onChange={toggleSelectAll}
                               className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
                             />
-                          </th>
+                          </TableHead>
                         )}
-                        <th className="px-4 py-5 text-left">{renderSortableHeader('Fecha', 'visit_date')}</th>
-                        <th className="px-4 py-5 text-left">{renderSortableHeader('Sede', 'location_name')}</th>
-                        <th className="px-4 py-5 text-left">{renderSortableHeader('Tipo', 'visit_type')}</th>
-                        <th className="px-4 py-5 text-left">{renderSortableHeader('Principales Hallazgos', 'findings')}</th>
-                        <th className="px-4 py-5 text-center"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></th>
+                        <TableHead>{renderSortableHeader('FECHA', 'visit_date')}</TableHead>
+                        <TableHead>{renderSortableHeader('UBICAIÓN', 'location_name')}</TableHead>
+                        <TableHead>{renderSortableHeader('TIPO', 'visit_type')}</TableHead>
+                        <TableHead>{renderSortableHeader('PRINCIPALES HALLAZGOS', 'findings')}</TableHead>
+                        <TableHead className="text-center"><span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Acciones</span></TableHead>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    </TableHeader>
+                    <TableBody>
                       {paginatedVisits.map(visit => (
-                        <tr key={visit.id} className={`hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group relative border-b border-slate-50 last:border-0 ${selectedIds.includes(visit.id) ? 'bg-blue-50/50' : ''}`} onDoubleClick={() => handleViewVisit(visit)}>
+                        <TableRow key={visit.id} className={`${selectedIds.includes(visit.id) ? 'bg-blue-50/50' : ''}`} onDoubleClick={() => handleViewVisit(visit)}>
                           {canEdit() && (
-                            <td className="px-4 py-4 text-center w-12">
+                            <TableCell className="text-center w-12">
                               <input
                                 type="checkbox"
                                 checked={selectedIds.includes(visit.id)}
@@ -414,52 +408,61 @@ export default function Sutran() {
                                 onClick={e => e.stopPropagation()}
                                 className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
                               />
-                            </td>
+                            </TableCell>
                           )}
-                          <td className="px-4 py-4 font-bold text-left">
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
-                                <Calendar size={14} />
-                              </div>
-                              <span className="text-[13px] font-black text-[#002855] uppercase leading-tight">
-                                {new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString()}
-                              </span>
+                          <TableCell>
+                            <TableCellPrimary>
+                              {new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString()}
+                            </TableCellPrimary>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5 text-slate-700">
+                              <MapPin size={14} className="text-rose-500 shrink-0" />
+                              <TableCellSecondary>{(visit as any).locations?.name}</TableCellSecondary>
                             </div>
-                          </td>
-                          <td className="px-4 py-4 text-left">
-                            <span className="text-[11px] font-bold text-[#002855] uppercase">{(visit as any).locations?.name}</span>
-                          </td>
-                          <td className="px-4 py-4 text-left">
-                            <span className="text-[11px] font-bold text-slate-700 uppercase">
+                          </TableCell>
+                          <TableCell>
+                            <TableCellPrimary>
                               {getVisitTypeLabel(visit.visit_type)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-left">
+                            </TableCellPrimary>
+                          </TableCell>
+                          <TableCell>
                             {visit.findings ? (
-                              <p className="text-[11px] font-bold text-slate-600 line-clamp-2 max-w-[300px]">{visit.findings}</p>
+                              <TableCellPrimary className="line-clamp-2 max-w-[300px]">{visit.findings}</TableCellPrimary>
                             ) : (
-                              <span className="text-slate-300 italic text-xs">Sin hallazgos registrados</span>
+                              <TableCellSecondary className="italic">Sin hallazgos registrados</TableCellSecondary>
                             )}
-                          </td>
-                          <td className="px-4 py-4 text-center">
-                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
                               {visit.evidence_url && (
-                                <a href={visit.evidence_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="w-8 h-8 flex items-center justify-center text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Ver Evidencias">
-                                  <FileText size={14} />
-                                </a>
+                                <TableActionButton
+                                  icon={<FileText size={14} />}
+                                  onClick={() => window.open(visit.evidence_url!, '_blank')}
+                                  title="Ver Evidencias"
+                                />
                               )}
                               {canEdit() && (
                                 <>
-                                  <button onClick={(e) => { e.stopPropagation(); handleEditVisit(visit); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Editar"><Edit size={14} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleDeleteVisit(visit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm" title="Eliminar"><AlertTriangle size={14} /></button>
+                                  <TableActionButton
+                                    icon={<Edit size={14} />}
+                                    onClick={(e) => { e.stopPropagation(); handleEditVisit(visit); }}
+                                    title="Editar"
+                                  />
+                                  <TableActionButton
+                                    icon={<AlertTriangle size={14} />}
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteVisit(visit.id); }}
+                                    title="Eliminar"
+                                    variant="danger"
+                                  />
                                 </>
                               )}
                             </div>
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             ) : (
@@ -491,12 +494,12 @@ export default function Sutran() {
                       <div className="p-6 flex-1">
                         <div className="flex items-start justify-between mb-6">
                           <div className="flex-1">
-                            <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors uppercase tracking-tight mb-2">Visita SUTRAN - {(visit as any).locations?.name}</h3>
+                            <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors tracking-tight mb-2">Visita SUTRAN - {(visit as any).locations?.name}</h3>
                             <div className="flex flex-wrap gap-2">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${typeColors[visit.visit_type]}`}>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wider border ${typeColors[visit.visit_type]}`}>
                                 {getVisitTypeLabel(visit.visit_type)}
                               </span>
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${statusColors[visit.status]}`}>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wider border ${statusColors[visit.status]}`}>
                                 {statusLabels[visit.status]}
                               </span>
                             </div>
@@ -505,14 +508,14 @@ export default function Sutran() {
                         <div className="space-y-4 mb-6">
                           <div className="grid grid-cols-2 gap-4">
                             <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
-                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Fecha</label>
+                              <label className="text-[10px] font-black text-gray-400 tracking-wider block mb-1">FECHA</label>
                               <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
                                 <Calendar size={14} className="text-blue-500" />
                                 {new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString()}
                               </div>
                             </div>
                             <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
-                              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Inspector</label>
+                              <label className="text-[10px] font-black text-gray-400 tracking-wider block mb-1">Inspector</label>
                               <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
                                 <User size={14} className="text-emerald-500" />
                                 <span className="truncate">{visit.inspector_name}</span>
@@ -521,7 +524,7 @@ export default function Sutran() {
                           </div>
                           {visit.evidence_url && (
                             <div className="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100/50">
-                              <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-1">Evidencias</label>
+                              <label className="text-[10px] font-black text-indigo-400 tracking-wider block mb-1">Evidencias</label>
                               <a href={visit.evidence_url} target="_blank" rel="noopener noreferrer" className="text-sm font-bold text-indigo-600 hover:text-indigo-800 underline flex items-center gap-2">
                                 <FileText size={14} />
                                 Ver Archivos Adjuntos
@@ -530,7 +533,7 @@ export default function Sutran() {
                           )}
                           {visit.findings && (
                             <div className="bg-amber-50/30 p-4 rounded-xl border border-amber-100/30">
-                              <label className="text-[10px] font-black text-amber-600 uppercase tracking-widest block mb-2">Hallazgos principales</label>
+                              <label className="text-[10px] font-black text-amber-600 tracking-wider block mb-2">Hallazgos principales</label>
                               <p className="text-sm text-amber-900 font-medium leading-relaxed line-clamp-3">{visit.findings}</p>
                             </div>
                           )}
@@ -565,8 +568,8 @@ export default function Sutran() {
                       <Building2 size={20} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-xs sm:text-base font-black text-white uppercase tracking-tight leading-snug line-clamp-1">Detalle de Inspección</h2>
-                      <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1">SUTRAN — {(viewingVisit as any).locations?.name}</p>
+                      <h2 className="text-xs sm:text-base font-black text-white tracking-tight leading-snug line-clamp-1">Detalle de Inspección</h2>
+                      <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1">SUTRAN — {(viewingVisit as any).locations?.name}</p>
                     </div>
                   </div>
                   <button onClick={() => setViewingVisit(undefined)} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1" aria-label="Cerrar">
@@ -585,7 +588,7 @@ export default function Sutran() {
                           <span className="text-[10px] sm:text-[11px] font-black text-slate-700">{viewingVisit.inspector_name}</span>
                         </DetailModalRow>
                         <DetailModalRow label="Estado">
-                          <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${statusColors[viewingVisit.status]}`}>{statusLabels[viewingVisit.status]}</span>
+                          <span className={`px-2 py-0.5 text-[10px] font-black tracking-wider border ${statusColors[viewingVisit.status]}`}>{statusLabels[viewingVisit.status]}</span>
                         </DetailModalRow>
                       </DetailModalCard>
                     </DetailModalSection>
@@ -593,7 +596,7 @@ export default function Sutran() {
                     <DetailModalSection title="Tipo de Visita">
                       <DetailModalCard className="space-y-2.5 sm:space-y-3">
                         <DetailModalRow label="Tipo">
-                          <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${typeColors[viewingVisit.visit_type]}`}>{getVisitTypeLabel(viewingVisit.visit_type)}</span>
+                          <span className={`px-2 py-0.5 text-[10px] font-black tracking-wider border ${typeColors[viewingVisit.visit_type]}`}>{getVisitTypeLabel(viewingVisit.visit_type)}</span>
                         </DetailModalRow>
                         {viewingVisit.inspector_email && (
                           <DetailModalRow label="Contacto">

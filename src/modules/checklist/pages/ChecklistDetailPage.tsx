@@ -68,10 +68,10 @@ export default function ChecklistDetail() {
         };
       default:
         return {
-          title: 'SEDE',
+          title: 'UBICACIÓN',
           icon: <Building2 size={32} />,
           color: 'slate',
-          description: 'Sede'
+          description: 'Ubicación'
         };
     }
   };
@@ -89,7 +89,7 @@ export default function ChecklistDetail() {
   if (!location) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <p className="text-gray-500 font-medium">No se encontró la sede.</p>
+        <p className="text-gray-500 font-medium">No se encontró la ubicación.</p>
       </div>
     );
   }
@@ -157,7 +157,7 @@ export default function ChecklistDetail() {
                   <ExternalLink size={20} className="text-slate-300 group-hover:text-blue-600 transition-colors" />
                 </div>
                 <h3 className="text-lg font-black text-slate-900 uppercase mb-2">Realizar Checklist</h3>
-                <p className="text-sm text-slate-600 font-medium">Acceder al formulario de checklist para esta sede</p>
+                <p className="text-sm text-slate-600 font-medium">Acceder al formulario de checklist para esta ubicación</p>
               </div>
               <div className={`bg-${typeInfo.color}-100 px-6 py-3 border-t border-${typeInfo.color}-200`}>
                 <span className={`text-xs font-black uppercase tracking-widest text-${typeInfo.color}-700`}>
@@ -196,7 +196,7 @@ export default function ChecklistDetail() {
 
           {/* Additional Info */}
           <div className="mt-8 bg-white border border-slate-200 rounded-none shadow-sm p-6">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4">Información de la Sede</h3>
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4">Información de la Ubicación</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <span className="text-xs text-slate-500 font-bold uppercase tracking-widest block mb-1">Nombre</span>

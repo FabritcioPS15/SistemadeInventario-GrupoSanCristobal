@@ -4,15 +4,19 @@
 
 @layer base {
   :root {
-    font-family: 'Sansation', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   }
 
   body {
     margin: 0;
-    font-family: 'Sansation', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: #f8f9fc;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
   .page-fade-in {
@@ -22,6 +26,14 @@
   @keyframes simpleFadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+  }
+
+  /* Global Zebra Striping para todas las tablas */
+  tbody tr:nth-child(odd):not(:hover) {
+    background-color: #ffffff;
+  }
+  tbody tr:nth-child(even):not(:hover) {
+    background-color: #f1f5f9; /* Más oscuro para notar la diferencia (slate-100) */
   }
 }
 

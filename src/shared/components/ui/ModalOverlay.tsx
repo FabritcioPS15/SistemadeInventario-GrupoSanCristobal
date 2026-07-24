@@ -32,7 +32,7 @@ export default function ModalOverlay({
 
   return (
     <div
-      className={`${inset} flex items-stretch sm:items-center justify-center p-0 sm:p-3 md:p-5 lg:p-6 animate-in fade-in duration-300 sm:overflow-y-auto ${className}`}
+      className={`${inset} flex items-start sm:items-center justify-center p-3 sm:p-3 md:p-5 lg:p-6 animate-in fade-in duration-300 overflow-y-auto pt-20 sm:pt-0 ${className}`}
       onClick={closeOnBackdrop ? onClose : undefined}
       role="dialog"
       aria-modal="true"

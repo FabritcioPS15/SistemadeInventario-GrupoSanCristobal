@@ -21,6 +21,7 @@ import { notifyTicketAttended, notifyTicketResolved, notifyTicketClosed } from '
 import { useTicketComments } from '../hooks/useTicketComments';
 import { useTicketRealtime } from '../hooks/useTicketRealtime';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import QuickResponses from '../components/QuickResponses';
 
 export default function TicketDetail() {
     const { ticketId } = useParams();
@@ -29,20 +30,21 @@ export default function TicketDetail() {
     const { success: notifySuccess, error: notifyError, info: notifyInfo, warning: notifyWarning, confirm } = useNotify();
     
     // Estado local de UI (no persistido en DB)
-    const [newComment, setNewComment] = useState('');
-    const [sending, setSending] = useState(false);
-    const [copiedItem, setCopiedItem] = useState<string | null>(null);
-    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-    const [showListMenu, setShowListMenu] = useState(false);
-    const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
+    const [newComment, setNewComment] = useState(''); // Texto del comentario en edición
+    const [sending, setSending] = useState(false); // Indicador de envío en progreso
+    const [copiedItem, setCopiedItem] = useState<string | null>(null); // Item copiado al portapapeles (para feedback visual)
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false); // Visibilidad del selector de emojis
+    const [showListMenu, setShowListMenu] = useState(false); // Visibilidad del menú de listas
+    const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false); // Visibilidad del modal de confirmación de finalización
     const [activeFormats, setActiveFormats] = useState<string[]>([]); // Formatos activos del editor (bold, italic, etc.)
-    const [mobileTab, setMobileTab] = useState<'details' | 'chat' | 'people'>('chat');
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [statusUpdating, setStatusUpdating] = useState(false);
-    const [uploadingImage, setUploadingImage] = useState(false);
+    const [mobileTab, setMobileTab] = useState<'details' | 'chat' | 'people'>('chat'); // Pestaña activa en móvil
+    const fileInputRef = useRef<HTMLInputElement>(null); // Referencia al input de archivos
+    const [statusUpdating, setStatusUpdating] = useState(false); // Indicador de actualización de estado
+    const [uploadingImage, setUploadingImage] = useState(false); // Indicador de subida de imagen
     const editorRef = useRef<HTMLDivElement>(null); // Referencia al editor contentEditable
 
-    // Use hooks for data and realtime
+    // Use hooks para datos y tiempo real
+    // useTicketComments: carga ticket, comentarios y maneja adición de mensajes
     const {
         ticket,
         comments,
@@ -53,11 +55,12 @@ export default function TicketDetail() {
         addComment,
     } = useTicketComments({ ticketId, user });
 
+    // useTicketRealtime: suscribe a cambios del ticket y presencia de usuarios
     const { onlineUsers } = useTicketRealtime({
         ticketId,
         user,
-        onTicketUpdate: fetchTicket,
-        onCommentsUpdate: fetchComments,
+        onTicketUpdate: fetchTicket, // Recargar ticket cuando cambie en DB
+        onCommentsUpdate: fetchComments, // Recargar comentarios cuando se agregue uno
     });
 
     useEffect(() => {
@@ -73,6 +76,7 @@ export default function TicketDetail() {
     // Sube una imagen al storage (bucket 'chat-attachments') y la inserta como comentario
     // Usa formato markdown ![imagen](url) para que sea renderizada en el chat
     // Acepta tanto selección manual como pegado directo desde el portapapeles
+    // La imagen se guarda en la ruta: ticket_{id}/nombre_archivo
     const uploadFile = async (file: File) => {
         if (!ticketId) return;
         try {
@@ -140,7 +144,9 @@ export default function TicketDetail() {
     // Envía un comentario al ticket:
     // 1. Convierte el HTML del editor contentEditable a Markdown
     // 2. Llama a addComment() del hook useTicketComments
-    // 3. Limpia el editor después del envío exitoso
+    // 3. Detecta @menciones y notifica a los usuarios mencionados
+    // 4. Limpia el editor después del envío exitoso
+    // Las menciones usan formato @Nombre y generan notificaciones push
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newComment.trim() || sending) return;
@@ -151,6 +157,39 @@ export default function TicketDetail() {
             if (!content.trim()) return;
 
             await addComment(content);
+
+            // Detectar @menciones y notificar
+            const mentionRegex = /@(\w+(?:\s\w+)?)/g;
+            let mentionMatch;
+            const mentionedNames: string[] = [];
+            while ((mentionMatch = mentionRegex.exec(content)) !== null) {
+                mentionedNames.push(mentionMatch[1].trim());
+            }
+
+            if (mentionedNames.length > 0 && ticket?.id) {
+                // Buscar usuarios por nombre y notificarles
+                for (const name of mentionedNames) {
+                    const { data: mentionedUsers } = await supabase
+                        .from('users')
+                        .select('id')
+                        .ilike('full_name', `%${name}%`)
+                        .neq('id', user?.id);
+
+                    if (mentionedUsers && mentionedUsers.length > 0) {
+                        for (const mentioned of mentionedUsers) {
+                            await supabase.from('notifications').insert([{
+                                user_id: mentioned.id,
+                                type: 'ticket_mention',
+                                title: 'Te mencionaron en un ticket',
+                                message: `${user?.full_name || 'Alguien'} te mencionó en "${ticket?.title}"`,
+                                ticket_id: ticket?.id,
+                                created_at: new Date().toISOString(),
+                            }]);
+                        }
+                    }
+                }
+            }
+
             if (editorRef.current) editorRef.current.innerHTML = '';
             setNewComment('');
         } catch (error) {
@@ -160,7 +199,8 @@ export default function TicketDetail() {
         }
     };
 
-    // Funciones para emojis y formato
+    // Lista de emojis comunes para el selector
+    // Incluye emojis de reacción, estado, objetos y símbolos útiles
     const commonEmojis = [
         '😀', '😊', '😂', '❤️', '👍', '👎', '🎉', '🔥', '💯', '✅',
         '❌', '🚀', '💪', '🙏', '👏', '🤝', '💡', '⚡', '🌟', '✨',
@@ -169,6 +209,8 @@ export default function TicketDetail() {
         '⭐', '🌟', '💫', '🌙', '☀️', '🌺', '🦁', '🐧', '🦊', '🐼'
     ];
 
+    // Inserta un emoji en el editor en la posición del cursor
+    // Usa execCommand para compatibilidad con contentEditable
     const addEmoji = (emoji: string) => {
         if (!editorRef.current) return;
 
@@ -184,11 +226,15 @@ export default function TicketDetail() {
         setShowEmojiPicker(false);
     };
 
+    // Actualiza la lista de formatos activos en el editor
+    // Verifica qué comandos de formato están activos en la selección actual
     const updateActiveFormats = () => {
         const formats = ['bold', 'italic', 'underline', 'strikeThrough', 'insertUnorderedList', 'insertOrderedList'];
         setActiveFormats(formats.filter(f => document.queryCommandState(f)));
     };
 
+    // Activa/desactiva un formato de texto en el editor
+    // Comandos soportados: bold, italic, underline, strikeThrough, etc.
     const toggleFormat = (command: string) => {
         document.execCommand(command, false);
         updateActiveFormats();
@@ -199,6 +245,7 @@ export default function TicketDetail() {
     // Convierte HTML (desde contentEditable) a Markdown simple
     // Soporta: negrita (**), cursiva (_), subrayado (__), tachado (~~),
     // listas con viñetas (•), listas numeradas (1.), saltos de línea
+    // Esta conversión es necesaria para almacenar el contenido de forma consistente
     const htmlToMarkdown = (html: string) => {
         let text = html
             // Listas
@@ -230,9 +277,12 @@ export default function TicketDetail() {
     // Convierte Markdown a HTML seguro para renderizar en el chat
     // Soporta: negrita, cursiva, subrayado, tachado, destacado (==),
     // código inline/bloque, citas (>), encabezados (#), listas,
-    // checklists, imágenes, y saltos de línea
+    // checklists, imágenes, menciones (@usuario), y saltos de línea
+    // Las menciones se resaltan en azul para facilitar la identificación
     const renderMarkdown = (text: string) => {
         return text
+            // Menciones @usuario — resaltar en azul
+            .replace(/@(\w+(?:\s\w+)?)/g, '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-800 font-bold rounded-none text-[12px]">@$1</span>')
             // Formatos de texto
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **negrita**
             .replace(/\*(.*?)\*/g, '<em>$1</em>') // *cursiva*
@@ -362,7 +412,7 @@ export default function TicketDetail() {
                     ticket.title || '',
                     user?.id || '',
                     user?.full_name || '',
-                    ticket.locations?.name || 'Sin ubicación'
+                    ticket.locations?.name || 'Sin Ubicación'
                 );
                 notifySuccess(`Ticket marcado como resuelto.`, 'Estado actualizado');
             } else if (newStatus === 'closed') {
@@ -371,7 +421,7 @@ export default function TicketDetail() {
                     ticket.title || '',
                     user?.id || '',
                     user?.full_name || '',
-                    ticket.locations?.name || 'Sin ubicación'
+                    ticket.locations?.name || 'Sin Ubicación'
                 );
                 notifySuccess(`Ticket cerrado correctamente.`, 'Estado actualizado');
             } else if (newStatus === 'in_progress') {
@@ -1111,6 +1161,16 @@ export default function TicketDetail() {
                                             {uploadingImage ? <Loader2 size={16} className="animate-spin text-[#002855]" /> : <ImageIcon size={16} />}
                                             <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Imagen</span>
                                         </button>
+
+                                        <div className="w-px h-5 bg-slate-200 mx-1" />
+
+                                        <QuickResponses onSelect={(text) => {
+                                            if (editorRef.current) {
+                                                editorRef.current.innerHTML = text;
+                                                setNewComment(text);
+                                                editorRef.current.focus();
+                                            }
+                                        }} />
                                     </div>
 
                                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Registrar Avance</span>

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Wrench } from 'lucide-react';
+import { Wrench, Mail, Plus, X } from 'lucide-react';
 import { supabase, AssetWithDetails } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 import SearchableAssetSelect from '../../inventory/components/SearchableAssetSelect';
 import { PartUsed } from '../../../shared/types/inventory.types';
+import { emailService } from '../../../shared/services/emailService';
 
 type MaintenanceRecord = {
   id: string;
@@ -36,6 +37,13 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [sendEmail, setSendEmail] = useState(false);
+  const [emailRecipients, setEmailRecipients] = useState({
+    to: [] as string[],
+    cc: [] as string[],
+  });
+  const [newEmailTo, setNewEmailTo] = useState('');
+  const [newEmailCc, setNewEmailCc] = useState('');
 
   const [formData, setFormData] = useState({
     asset_id: editMaintenance?.asset_id || assetId || '',
@@ -153,7 +161,39 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
           setLoading(false);
           return;
         }
-        
+      }
+
+      // Enviar correo si está habilitado y hay destinatarios
+      if (sendEmail && emailRecipients.to.length > 0) {
+        const selectedAsset = assets.find(a => a.id === formData.asset_id);
+        const assetName = selectedAsset 
+          ? `${selectedAsset.brand || ''} ${selectedAsset.model || ''} ${selectedAsset.descripcion || ''}`.trim()
+          : 'Activo no especificado';
+
+        const maintenanceTypeLabels = {
+          preventive: 'Preventivo',
+          corrective: 'Correctivo',
+          technical_review: 'Revisión Técnica',
+          repair: 'Reparación',
+        };
+
+        const emailResult = await emailService.sendMaintenanceNotification({
+          to: emailRecipients.to,
+          cc: emailRecipients.cc,
+          assetName,
+          maintenanceType: maintenanceTypeLabels[formData.maintenance_type as keyof typeof maintenanceTypeLabels],
+          description: formData.description,
+          technician: formData.technician,
+          scheduledDate: formData.scheduled_date,
+          location: selectedAsset?.locations?.name,
+        });
+
+        if (!emailResult.success) {
+          console.error('Error al enviar correo:', emailResult.error);
+          setErrors({ submit: 'Mantenimiento guardado pero error al enviar correo: ' + emailResult.error });
+          setLoading(false);
+          return;
+        }
       }
 
       setLoading(false);
@@ -188,8 +228,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
       icon={<Wrench size={24} className="text-blue-600" />}
     >
       {/* Section: Información Principal */}
-      <FormSection title="Información del Mantenimiento" color="blue">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <FormSection title="Información del Mantenimiento" color="blue" columns={3}>
           <FormField label="Activo" required error={errors.asset_id}>
             <SearchableAssetSelect
               assets={assets}
@@ -288,7 +327,6 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
               <label className="text-sm text-gray-700">Activar reclamo de garantía</label>
             </div>
           </FormField>
-        </div>
       </FormSection>
 
       {/* Section: Descripción */}
@@ -344,6 +382,135 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
             error={errors.notes}
           />
         </FormField>
+      </FormSection>
+
+      {/* Section: Notificación por Correo */}
+      <FormSection title="Notificación por Correo Electrónico" color="indigo">
+        <div className="flex items-center gap-3 mb-6">
+          <input
+            type="checkbox"
+            id="sendEmail"
+            checked={sendEmail}
+            onChange={(e) => setSendEmail(e.target.checked)}
+            className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+          />
+          <label htmlFor="sendEmail" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <Mail size={16} className="text-indigo-600" />
+            Enviar notificación por correo
+          </label>
+        </div>
+
+        {sendEmail && (
+          <div className="space-y-4">
+            {/* Destinatarios Principales (TO) */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Destinatarios Principales (Para)
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="email"
+                  value={newEmailTo}
+                  onChange={(e) => setNewEmailTo(e.target.value)}
+                  placeholder="correo@ejemplo.com"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newEmailTo && !emailRecipients.to.includes(newEmailTo)) {
+                      setEmailRecipients(prev => ({
+                        ...prev,
+                        to: [...prev.to, newEmailTo]
+                      }));
+                      setNewEmailTo('');
+                    }
+                  }}
+                  className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {emailRecipients.to.map((email, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm"
+                  >
+                    {email}
+                    <button
+                      type="button"
+                      onClick={() => setEmailRecipients(prev => ({
+                        ...prev,
+                        to: prev.to.filter((_, i) => i !== index)
+                      }))}
+                      className="hover:text-indigo-600"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Destinatarios en Copia (CC) */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Copia (CC)
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="email"
+                  value={newEmailCc}
+                  onChange={(e) => setNewEmailCc(e.target.value)}
+                  placeholder="correo@ejemplo.com"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (newEmailCc && !emailRecipients.cc.includes(newEmailCc)) {
+                      setEmailRecipients(prev => ({
+                        ...prev,
+                        cc: [...prev.cc, newEmailCc]
+                      }));
+                      setNewEmailCc('');
+                    }
+                  }}
+                  className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {emailRecipients.cc.map((email, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm"
+                  >
+                    {email}
+                    <button
+                      type="button"
+                      onClick={() => setEmailRecipients(prev => ({
+                        ...prev,
+                        cc: prev.cc.filter((_, i) => i !== index)
+                      }))}
+                      className="hover:text-gray-600"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {emailRecipients.to.length === 0 && (
+              <p className="text-sm text-amber-600 mt-2">
+                ⚠️ Debe agregar al menos un destinatario principal para enviar el correo.
+              </p>
+            )}
+          </div>
+        )}
       </FormSection>
     </BaseForm>
   );

@@ -1,4 +1,4 @@
-// Página principal de Mesa de Ayuda
+﻿// Página principal de Mesa de Ayuda
 // Muestra dashboard de tickets, reportes y gestión de tickets
 // Incluye automatización de estados y exportación a PDF/Excel
 import { useState, useEffect, useMemo } from 'react';
@@ -11,6 +11,10 @@ import { useAuth } from '../../../app/providers/AuthContext';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import TicketForm from '../forms/TicketForm';
+import SLATimer from '../components/SLATimer';
+import { useTicketNotifications } from '../hooks/useTicketNotifications';
+import { Ticket, TicketStatus, TicketPriority } from '../tickets.types';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../shared/components/ui/Table';
 
 // =============================================================================
 // TicketsPage.tsx — Página principal del módulo Mesa de Ayuda
@@ -44,6 +48,9 @@ export default function Tickets() {
     const [searchTerm, setSearchTerm] = useState('');
     const [startDate, setStartDate] = useState(''); // Filtro de fecha inicio
     const [endDate, setEndDate] = useState(''); // Filtro de fecha fin
+
+    // Suscripción a notificaciones en tiempo real
+    useTicketNotifications();
 
     // Determina la vista activa basándose en la URL
     // - dashboard: vista general de todos los tickets
@@ -127,8 +134,45 @@ export default function Tickets() {
         };
     }, [tickets]);
 
+    // ─── DRAG & DROP ─────────────────────────────────────────────────────────────
+    // Maneja el evento de soltar un ticket en una columna Kanban
+    // Actualiza el estado del ticket en Supabase y refresca la lista
+    const [draggedTicket, setDraggedTicket] = useState<string | null>(null);
+
+    const handleDragStart = (ticketId: string) => {
+        setDraggedTicket(ticketId);
+    };
+
+    const handleDrop = async (newStatus: TicketStatus) => {
+        if (!draggedTicket) return;
+        const ticketId = draggedTicket;
+        setDraggedTicket(null);
+
+        try {
+            const updateData: Record<string, any> = { status: newStatus };
+            if (newStatus === 'in_progress') updateData.attended_at = new Date().toISOString();
+            if (newStatus === 'resolved') updateData.resolved_at = new Date().toISOString();
+            if (newStatus === 'closed') updateData.closed_at = new Date().toISOString();
+
+            const { error } = await supabase
+                .from('tickets')
+                .update(updateData)
+                .eq('id', ticketId);
+
+            if (error) {
+                console.error('Error al mover ticket:', error);
+                return;
+            }
+
+            fetchTickets();
+        } catch (error) {
+            console.error('Error en drag & drop:', error);
+        }
+    };
+
     // Carga todos los tickets desde la base de datos
     // Incluye relaciones: solicitante, asignado y ubicación
+    // Esta función se llama al montar el componente y cuando hay cambios en tiempo real
     const fetchTickets = async () => {
         try {
             const { data, error } = await supabase
@@ -163,9 +207,10 @@ export default function Tickets() {
 
     // --- AUTOMATIZACIÓN DE ESTADOS ---
     // Revisa cada minuto si hay tickets que necesitan cambio automático de estado:
-    // - Resuelto -> Cerrado (después de 3 minutos)
-    // - Cerrado -> Archivado (después de 10 minutos)
+    // - Resuelto -> Cerrado (después de 3 minutos): permite validación del usuario
+    // - Cerrado -> Archivado (después de 10 minutos): limpieza automática
     // También limpia archivos adjuntos de tickets archivados del storage
+    // Esto reduce la carga manual del sistema y mantiene el dashboard limpio
     useEffect(() => {
         const interval = setInterval(() => {
             handleAutomation();
@@ -174,12 +219,14 @@ export default function Tickets() {
     }, [tickets]);
 
     
+    // Función principal de automatización de estados
+    // Se ejecuta cada minuto y procesa tickets que cumplen criterios de tiempo
     const handleAutomation = async (ticketsData: any[] = tickets) => {
-        
         const now = new Date();
-        const threeMinutes = 3 * 60 * 1000;
+        const threeMinutes = 3 * 60 * 1000; // 3 minutos en milisegundos
 
         // 1. Resuelto -> Cerrado (automáticamente después de 3 minutos)
+        // Permite que el usuario valide la solución antes del cierre definitivo
         const toClose = ticketsData.filter(t =>
             t.status === 'resolved' &&
             t.resolved_at &&
@@ -187,6 +234,7 @@ export default function Tickets() {
         );
 
         // 2. Cerrado -> Archivado (después de 10 minutos)
+        // Mueve tickets antiguos al historial para mantener el dashboard limpio
         const toArchive = ticketsData.filter(t => {
             const isClosed = t.status === 'closed';
             const hasClosedAt = t.closed_at;
@@ -203,7 +251,8 @@ export default function Tickets() {
         });
 
 
-        // Procesar cierre automático
+        // Procesar cierre automático de tickets resueltos
+        // Itera sobre cada ticket y actualiza su estado a 'closed'
         if (toClose.length > 0) {
             
             for (const ticket of toClose) {
@@ -224,7 +273,9 @@ export default function Tickets() {
             }
         }
 
-        // Procesar archivado automático
+        // Procesar archivado automático de tickets cerrados
+        // Además de cambiar el estado, limpia archivos adjuntos del storage
+        // para liberar espacio y mantener el sistema organizado
         if (toArchive.length > 0) {
             
             for (const ticket of toArchive) {
@@ -244,6 +295,8 @@ export default function Tickets() {
                     }
 
                     // Limpiar almacenamiento para tickets archivados (Imágenes temporales)
+                    // Elimina todas las imágenes adjuntas del bucket 'chat-attachments'
+                    // Esto libera espacio de storage y mantiene el sistema limpio
                     try {
                         const { data: files } = await supabase.storage.from('chat-attachments').list(`ticket_${ticket.id}`);
                         if (files && files.length > 0) {
@@ -270,6 +323,7 @@ export default function Tickets() {
     
     // Filtra y categoriza los tickets según la vista activa
     // Aplica filtros de búsqueda, rango de fechas y estado
+    // Retorna un objeto con listas separadas para cada columna del Kanban
     const filteredTickets = useMemo(() => {
         let active = tickets.filter(t => t.status !== 'archived');
         
@@ -322,10 +376,10 @@ export default function Tickets() {
         };
     }, [tickets, searchTerm, activeTab, user?.id, startDate, endDate]);
 
-    // Calcula métricas del periodo seleccionado
-    // - Tasa de resolución (resueltos / total)
-    // - Tiempo promedio de respuesta
-    // - Tickets activos
+    // Calcula métricas del periodo seleccionado para el reporte
+    // - Tasa de resolución: porcentaje de tickets resueltos/cerrados/archivados
+    // - Tiempo promedio de respuesta: tiempo entre creación y primera atención
+    // - Tickets activos: tickets en estado 'open' o 'in_progress'
     const metricsData = useMemo(() => {
         let filteredForMetrics = [...tickets];
         if (startDate) {
@@ -362,6 +416,7 @@ export default function Tickets() {
 
     // Genera un reporte PDF con métricas y lista de tickets
     // Incluye tabla con los primeros 100 tickets del periodo
+    // Usa jsPDF y autoTable para generar el documento
     const generatePDF = () => {
         const doc = new jsPDF();
 
@@ -424,6 +479,7 @@ export default function Tickets() {
 
     // Genera un reporte Excel con todos los datos de los tickets
     // Incluye más detalles que el PDF (descripción, fechas, etc.)
+// Usa la librería xlsx para crear el archivo con múltiples columnas
     const generateExcel = () => {
         // Filter tickets for report
         let reportTickets = [...tickets];
@@ -444,7 +500,7 @@ export default function Tickets() {
             'Estado': t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : t.status === 'closed' ? 'Cerrado' : 'Archivado',
             'Prioridad': t.priority === 'critical' ? 'P1 - Crítica' : t.priority === 'high' ? 'P2 - Alta' : t.priority === 'medium' ? 'P3 - Media' : 'P4 - Baja',
             'Solicitante': t.requester?.full_name || 'N/A',
-            'Sede': t.locations?.name || 'N/A',
+            'Ubicación': t.locations?.name || 'N/A',
             'Atendido Por': t.attendant?.full_name || 'Sin asignar',
             'Fecha Creación': new Date(t.created_at).toLocaleString(),
             'Fecha Cierre': t.closed_at ? new Date(t.closed_at).toLocaleString() : 'N/A'
@@ -476,7 +532,7 @@ export default function Tickets() {
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
                                     <div className="flex flex-col p-6 bg-slate-50 border border-slate-200 rounded-none">
-                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Tickets</div>
+                                        <div className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-2">Total Tickets</div>
                                         <div className="text-3xl font-black text-[#002855]">{metricsData.total}</div>
                                     </div>
                                     <div className="flex flex-col p-6 bg-emerald-50/50 border border-emerald-100 rounded-none">
@@ -491,7 +547,7 @@ export default function Tickets() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Fecha Inicio</label>
+                                        <label className="text-[12px] font-black text-[#002855] tracking-[0.2em] px-2">Fecha Inicio</label>
                                         <input 
                                             type="date" 
                                             value={startDate}
@@ -500,7 +556,7 @@ export default function Tickets() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Fecha Fin</label>
+                                        <label className="text-[12px] font-black text-[#002855] tracking-[0.2em] px-2">Fecha Fin</label>
                                         <input 
                                             type="date" 
                                             value={endDate}
@@ -554,33 +610,33 @@ export default function Tickets() {
                                         </div>
                                     ) : (
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-left border-collapse border-spacing-0">
-                                                <thead>
-                                                    <tr className="bg-slate-50 border-b border-slate-200">
-                                                        <th className="px-6 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">ID</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Incidente</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Atendido por</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Prioridad</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Fecha</span></th>
+                                            <Table>
+                                                <TableHeader>
+                                                    <tr>
+                                                        <TableHead>ID</TableHead>
+                                                        <TableHead>Incidente</TableHead>
+                                                        <TableHead>Estado</TableHead>
+                                                        <TableHead>Atendido por</TableHead>
+                                                        <TableHead>Prioridad</TableHead>
+                                                        <TableHead>Fecha</TableHead>
                                                     </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100">
+                                                </TableHeader>
+                                                <TableBody>
                                                     {filteredTickets.myCreated.map(t => {
                                                         const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                                         return (
-                                                            <tr key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group border-b border-slate-50 last:border-0 relative">
-                                                                <td className="px-6 py-4">
-                                                                    <span className="text-[12px] font-black text-[#002855] group-hover:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
-                                                                </td>
-                                                                <td className="px-4 py-4">
+                                                            <TableRow key={t.id} onClick={() => navigate(`/ticket/${t.id}`)}>
+                                                                <TableCell>
+                                                                    <span className="text-[12px] font-black text-[#002855] group-hover/row:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
+                                                                </TableCell>
+                                                                <TableCell>
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[13px] font-black text-slate-700 uppercase leading-tight line-clamp-1">{t.title}</span>
-                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t.locations?.name || 'Central'}</span>
+                                                                        <span className="text-[12px] font-bold text-slate-700 leading-tight mt-1">{t.locations?.name || 'Central'}</span>
                                                                     </div>
-                                                                </td>
-                                                                <td className="px-4 py-4">
-                                                                    <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
                                                                         t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
                                                                             t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
                                                                                 'text-slate-600 bg-slate-100 border-slate-200'
@@ -588,28 +644,30 @@ export default function Tickets() {
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                                                                         {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                                     </span>
-                                                                </td>
-                                                                <td className="px-4 py-4">
+                                                                </TableCell>
+                                                                <TableCell>
                                                                     {t.attendant ? (
                                                                         <div className="flex flex-col">
                                                                             <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{t.attendant.full_name}</span>
                                                                         </div>
                                                                     ) : <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sin asignar</span>}
-                                                                </td>
-                                                                <td className="px-4 py-4">
-                                                                    <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
                                                                         {prio.label}
                                                                     </span>
-                                                                </td>
-                                                                <td className="px-4 py-4 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                                                                    {new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                                                </td>
-                                                            </tr>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+                                                                        {new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                                    </span>
+                                                                </TableCell>
+                                                            </TableRow>
                                                         );
                                                     })}
-                                                </tbody>
-                                            </table>
+                                                </TableBody>
+                                            </Table>
                                         </div>
                                     )}
                                 </div>
@@ -625,33 +683,33 @@ export default function Tickets() {
                                     </div>
                                     <div className="overflow-hidden">
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-left border-collapse border-spacing-0">
-                                                <thead>
-                                                    <tr className="bg-slate-50 border-b border-slate-200">
-                                                        <th className="px-6 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">ID</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Incidente</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Solicitante</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Prioridad</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Fecha</span></th>
+                                            <Table>
+                                                <TableHeader>
+                                                    <tr>
+                                                        <TableHead>ID</TableHead>
+                                                        <TableHead>Incidente</TableHead>
+                                                        <TableHead>Estado</TableHead>
+                                                        <TableHead>Solicitante</TableHead>
+                                                        <TableHead>Prioridad</TableHead>
+                                                        <TableHead>Fecha</TableHead>
                                                     </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100">
+                                                </TableHeader>
+                                                <TableBody>
                                                     {filteredTickets.myAttended.map(t => {
                                                         const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                                         return (
-                                                            <tr key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group border-b border-slate-50 last:border-0 relative">
-                                                                <td className="px-6 py-4">
-                                                                    <span className="text-[12px] font-black text-[#002855] group-hover:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
-                                                                </td>
-                                                                <td className="px-4 py-4">
+                                                            <TableRow key={t.id} onClick={() => navigate(`/ticket/${t.id}`)}>
+                                                                <TableCell>
+                                                                    <span className="text-[12px] font-black text-[#002855] group-hover/row:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
+                                                                </TableCell>
+                                                                <TableCell>
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[13px] font-black text-slate-700 uppercase leading-tight line-clamp-1">{t.title}</span>
-                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t.locations?.name || 'Central'}</span>
+                                                                        <span className="text-[12px] font-bold text-slate-700 leading-tight mt-1">{t.locations?.name || 'Central'}</span>
                                                                     </div>
-                                                                </td>
-                                                                <td className="px-4 py-4">
-                                                                    <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
                                                                         t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
                                                                             t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
                                                                                 'text-slate-600 bg-slate-100 border-slate-200'
@@ -659,24 +717,26 @@ export default function Tickets() {
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                                                                         {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                                     </span>
-                                                                </td>
-                                                                <td className="px-4 py-4">
+                                                                </TableCell>
+                                                                <TableCell>
                                                                     <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{t.requester?.full_name}</span>
-                                                                </td>
-                                                                <td className="px-4 py-4">
-                                                                    <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
                                                                         {prio.label}
                                                                     </span>
-                                                                </td>
-                                                                <td className="px-4 py-4 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                                                                    {new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                                                </td>
-                                                            </tr>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+                                                                        {new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                                    </span>
+                                                                </TableCell>
+                                                            </TableRow>
                                                         );
                                                     })}
-                                                </tbody>
-                                            </table>
+                                                </TableBody>
+                                            </Table>
                                         </div>
                                     </div>
                                 </div>
@@ -689,7 +749,12 @@ export default function Tickets() {
                                 <div className="flex overflow-x-auto pb-6 custom-scrollbar w-full max-w-[1600px] mx-auto">
 
                                     {/* Column: Pendiente */}
-                                    <div className="flex-none w-[320px] sm:w-[380px] px-3 sm:px-5 border-r border-slate-200 last:border-0">
+                                    <div
+                                        className="flex-none w-[320px] sm:w-[380px] px-3 sm:px-5 border-r border-slate-200 last:border-0"
+                                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('bg-blue-50/30'); }}
+                                        onDragLeave={(e) => { e.currentTarget.classList.remove('bg-blue-50/30'); }}
+                                        onDrop={() => { handleDrop('open'); }}
+                                    >
                                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 pr-2">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-orange-500" />
@@ -699,14 +764,22 @@ export default function Tickets() {
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
                                             {filteredTickets.pending.map(t => (
-                                                <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-white p-4 sm:p-5 rounded-none border border-slate-200 hover:border-[#002855] shadow-sm transition-all cursor-pointer group">
+                                                <div key={t.id}
+                                                    draggable
+                                                    onDragStart={() => handleDragStart(t.id)}
+                                                    onClick={() => navigate(`/ticket/${t.id}`)}
+                                                    className="bg-white p-4 sm:p-5 rounded-none border border-slate-200 hover:border-[#002855] shadow-sm transition-all cursor-pointer group hover:shadow-md active:shadow-inner active:cursor-grabbing"
+                                                >
                                                     <div className="flex justify-between items-start mb-2">
                                                         <span className="text-[8px] sm:text-[9px] font-black text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
                                                         <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
                                                             {PRIORITY_STYLES[t.priority]?.label || 'P4'}
                                                         </span>
                                                     </div>
-                                                    <h4 className="text-xs sm:text-sm font-black text-[#002855] leading-tight mb-3 sm:mb-4 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
+                                                    <h4 className="text-xs sm:text-sm font-black text-[#002855] leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
+                                                    <div className="mb-2">
+                                                        <SLATimer createdAt={t.created_at} priority={(t.priority as TicketPriority) || 'medium'} />
+                                                    </div>
                                                     <div className="space-y-2 sm:space-y-3">
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-orange-600 border border-orange-100 uppercase shadow-inner">
@@ -739,7 +812,12 @@ export default function Tickets() {
                                     </div>
 
                                     {/* Column: En Proceso */}
-                                    <div className="flex-none w-[320px] sm:w-[380px] px-3 sm:px-5 border-r border-slate-200 last:border-0">
+                                    <div
+                                        className="flex-none w-[320px] sm:w-[380px] px-3 sm:px-5 border-r border-slate-200 last:border-0"
+                                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('bg-blue-50/30'); }}
+                                        onDragLeave={(e) => { e.currentTarget.classList.remove('bg-blue-50/30'); }}
+                                        onDrop={() => { handleDrop('in_progress'); }}
+                                    >
                                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 pr-2">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-blue-500" />
@@ -749,7 +827,12 @@ export default function Tickets() {
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
                                             {filteredTickets.inProgress.map(t => (
-                                                <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-white p-4 sm:p-5 rounded-none border border-slate-200 hover:border-[#002855] shadow-sm transition-all cursor-pointer group">
+                                                <div key={t.id}
+                                                    draggable
+                                                    onDragStart={() => handleDragStart(t.id)}
+                                                    onClick={() => navigate(`/ticket/${t.id}`)}
+                                                    className="bg-white p-4 sm:p-5 rounded-none border border-slate-200 hover:border-[#002855] shadow-sm transition-all cursor-pointer group hover:shadow-md"
+                                                >
                                                     <div className="flex justify-between items-start mb-2">
                                                         <span className="text-[8px] sm:text-[9px] font-black text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
                                                         <div className="flex items-center gap-2">
@@ -759,7 +842,10 @@ export default function Tickets() {
                                                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                                         </div>
                                                     </div>
-                                                    <h4 className="text-xs sm:text-sm font-black text-[#002855] leading-tight mb-3 sm:mb-4 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
+                                                    <h4 className="text-xs sm:text-sm font-black text-[#002855] leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
+                                                    <div className="mb-2">
+                                                        <SLATimer createdAt={t.created_at} priority={(t.priority as TicketPriority) || 'medium'} />
+                                                    </div>
                                                     <div className="space-y-2 sm:space-y-3">
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-orange-600 border border-orange-100 uppercase shadow-inner">
@@ -792,7 +878,12 @@ export default function Tickets() {
                                     </div>
 
                                     {/* Column: Resolved */}
-                                    <div className="flex-none w-[320px] sm:w-[380px] px-3 sm:px-5 border-r border-slate-200 last:border-0">
+                                    <div
+                                        className="flex-none w-[320px] sm:w-[380px] px-3 sm:px-5 border-r border-slate-200 last:border-0"
+                                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('bg-emerald-50/30'); }}
+                                        onDragLeave={(e) => { e.currentTarget.classList.remove('bg-emerald-50/30'); }}
+                                        onDrop={() => { handleDrop('resolved'); }}
+                                    >
                                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 pr-2">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-emerald-500" />
@@ -802,14 +893,22 @@ export default function Tickets() {
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
                                             {filteredTickets.resolved.map(t => (
-                                                <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-emerald-50/30 p-4 sm:p-5 rounded-none border border-emerald-200 hover:border-[#002855] shadow-sm transition-all cursor-pointer group">
+                                                <div key={t.id}
+                                                    draggable
+                                                    onDragStart={() => handleDragStart(t.id)}
+                                                    onClick={() => navigate(`/ticket/${t.id}`)}
+                                                    className="bg-emerald-50/30 p-4 sm:p-5 rounded-none border border-emerald-200 hover:border-[#002855] shadow-sm transition-all cursor-pointer group hover:shadow-md"
+                                                >
                                                     <div className="flex justify-between items-start mb-2">
                                                         <span className="text-[8px] sm:text-[9px] font-black text-emerald-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
                                                         <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
                                                             {PRIORITY_STYLES[t.priority]?.label || 'P4'}
                                                         </span>
                                                     </div>
-                                                    <h4 className="text-xs sm:text-sm font-black text-emerald-900 leading-tight mb-3 sm:mb-4 line-clamp-2 uppercase">{t.title}</h4>
+                                                    <h4 className="text-xs sm:text-sm font-black text-emerald-900 leading-tight mb-2 line-clamp-2 uppercase">{t.title}</h4>
+                                                    <div className="mb-2">
+                                                        <SLATimer createdAt={t.created_at} priority={(t.priority as TicketPriority) || 'medium'} />
+                                                    </div>
                                                     <div className="space-y-2 sm:space-y-3">
                                                         <div className="flex items-center gap-2">
                                                             <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-orange-600 border border-orange-100 uppercase shadow-inner">
@@ -842,7 +941,12 @@ export default function Tickets() {
                                     </div>
 
                                     {/* Column: Cerrados */}
-                                    <div className="flex-none w-[320px] sm:w-[380px] px-3 sm:px-5 border-r border-slate-200 last:border-0">
+                                    <div
+                                        className="flex-none w-[320px] sm:w-[380px] px-3 sm:px-5 border-r border-slate-200 last:border-0"
+                                        onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('bg-slate-50/30'); }}
+                                        onDragLeave={(e) => { e.currentTarget.classList.remove('bg-slate-50/30'); }}
+                                        onDrop={() => { handleDrop('closed'); }}
+                                    >
                                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 pr-2">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-slate-400" />
@@ -947,7 +1051,7 @@ export default function Tickets() {
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 px-4 gap-4">
                                     <div>
                                         <h2 className="text-lg sm:text-xl font-black text-[#002855]">Historial de tickets</h2>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Reporte detallado de las últimas interacciones</p>
+                                        <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">Reporte detallado de las últimas interacciones</p>
                                     </div>
                                     <div className="flex gap-2">
                                         <button
@@ -968,32 +1072,32 @@ export default function Tickets() {
                                     </div>
                                     <div className="overflow-hidden">
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-left border-collapse border-spacing-0">
-                                                <thead>
-                                                    <tr className="bg-slate-50 border-b border-slate-200">
-                                                        <th className="px-6 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">ID Ticket</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Incidente</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Solicitante</span></th>
-                                                        <th className="px-4 py-4 text-left"><span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Prioridad</span></th>
+                                            <Table>
+                                                <TableHeader>
+                                                    <tr>
+                                                        <TableHead>ID Ticket</TableHead>
+                                                        <TableHead>Incidente</TableHead>
+                                                        <TableHead>Estado</TableHead>
+                                                        <TableHead>Solicitante</TableHead>
+                                                        <TableHead>Prioridad</TableHead>
                                                     </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-100">
+                                                </TableHeader>
+                                                <TableBody>
                                                     {filteredTickets.recent.map(t => {
                                                         const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                                         return (
-                                                            <tr key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="hover:bg-blue-50/70 cursor-pointer transition-colors duration-200 group border-b border-slate-50 last:border-0 relative">
-                                                                <td className="px-6 py-4">
-                                                                    <span className="text-[12px] font-black text-[#002855] group-hover:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
-                                                                </td>
-                                                                <td className="px-4 py-4">
+                                                            <TableRow key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="cursor-pointer">
+                                                                <TableCell>
+                                                                    <span className="text-[12px] font-black text-[#002855] group-hover/row:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
+                                                                </TableCell>
+                                                                <TableCell>
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[13px] font-black text-slate-700 uppercase leading-tight line-clamp-1">{t.title}</span>
-                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString()}</span>
+                                                                        <span className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString()}</span>
                                                                     </div>
-                                                                </td>
-                                                                <td className="px-4 py-4">
-                                                                    <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
                                                                         t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
                                                                             t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
                                                                                 'text-slate-600 bg-slate-100 border-slate-200'
@@ -1001,24 +1105,24 @@ export default function Tickets() {
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
                                                                         {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                                     </span>
-                                                                </td>
-                                                                <td className="px-4 py-4">
+                                                                </TableCell>
+                                                                <TableCell>
                                                                     <div className="flex flex-col">
                                                                         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{t.requester?.full_name}</span>
-                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{t.locations?.name || 'Central'}</span>
+                                                                        <span className="text-[10px] font-bold text-slate-700 leading-tight truncate">{t.locations?.name || 'Central'}</span>
                                                                     </div>
-                                                                </td>
-                                                                <td className="px-4 py-4">
-                                                                    <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
+                                                                </TableCell>
+                                                                <TableCell>
+                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
                                                                         {prio.label}
                                                                     </span>
-                                                                </td>
-                                                            </tr>
+                                                                </TableCell>
+                                                            </TableRow>
                                                         );
                                                     })}
-                                                </tbody>
-                                            </table>
+                                                </TableBody>
+                                            </Table>
                                         </div>
                                     </div>
                                 </div>

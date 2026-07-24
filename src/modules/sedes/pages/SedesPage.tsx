@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Trash2, MapPin, X, Building, ChevronUp, ChevronDown, Search, Plus, Filter } from 'lucide-react';
+﻿import { useEffect, useState, useMemo } from 'react';
+import { Trash2, MapPin, X, Building, ChevronDown, Search, Plus, Filter, Edit } from 'lucide-react';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ExcelJS from 'exceljs';
 import jsPDF from 'jspdf';
@@ -15,6 +15,16 @@ import {
   PrimaryButton,
   RowActions,
   Pagination,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCellPrimary,
+  TableCellSecondary,
+  TableCellBadge,
+  TableActionButton,
 } from '../../../shared/components/ui';
 import DetailModal, {
   DetailModalHeader,
@@ -37,11 +47,11 @@ const typeLabels: Record<string, string> = {
 
 // Uniform corporate palette — same base color for all types
 const typeColors: Record<string, string> = {
-  revision:            'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
-  policlinico:         'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
+  revision: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
+  policlinico: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
   escuela_conductores: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
-  central:             'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
-  circuito:            'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
+  central: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
+  circuito: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
 };
 
 export default function Sedes() {
@@ -217,7 +227,7 @@ export default function Sedes() {
         onClick={() => handleSort(sortKey)}
         className="flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors"
       >
-        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">{label}</span>
+        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">{label}</span>
         {isSorted ? (
           <span className="text-[#002855] text-[10px]">
             {sortDirection === 'asc' ? '▲' : '▼'}
@@ -228,10 +238,6 @@ export default function Sedes() {
       </button>
     );
   };
-
-  const SortIcon = ({ field }: { field: string }) => sortField === field
-    ? (sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)
-    : null;
 
   return (
     <>
@@ -249,7 +255,7 @@ export default function Sedes() {
                   placeholder="Buscar por nombre, dirección o notas..."
                   value={search}
                   onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                  className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                  className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
                 />
               </>
             }
@@ -258,9 +264,9 @@ export default function Sedes() {
               filters={[
                 { key: 'type', placeholder: 'TODOS LOS TIPOS', icon: Filter, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: typeEntries.map(type => ({ value: type, label: typeLabels[type] })) },
               ]}
-              values={{ type: selectedTypes.length === 1 ? selectedTypes[0] : '' }}
-              onChange={(key, value) => {
-                setSelectedTypes(value ? [value as string] : []);
+              values={{ type: selectedTypes }}
+              onChange={(_, value) => {
+                setSelectedTypes(value as string[]);
                 setCurrentPage(1);
               }}
             />
@@ -302,8 +308,8 @@ export default function Sedes() {
                           <MapPin size={16} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-tight truncate leading-tight group-hover:text-blue-700 transition-colors">{loc.name}</h3>
-                          <span className={`inline-block px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest border rounded-none mt-1 ${typeColors[loc.type] || 'bg-[#002855]/8 text-[#002855] border-[#002855]/20'}`}>
+                          <h3 className="text-[13px] font-black text-[#002855] tracking-tight truncate leading-tight group-hover:text-blue-700 transition-colors">{loc.name}</h3>
+                          <span className={`inline-block px-1.5 py-0.5 text-[10px] font-black tracking-wider border rounded-none mt-1 ${typeColors[loc.type] || 'bg-[#002855]/8 text-[#002855] border-[#002855]/20'}`}>
                             {typeLabels[loc.type] || loc.type}
                           </span>
                         </div>
@@ -311,12 +317,12 @@ export default function Sedes() {
 
                       <div className="space-y-2">
                         <div className="p-2 rounded-none border bg-slate-50 border-slate-100">
-                          <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-0.5 ml-1">Dirección</label>
-                          <p className="text-[9px] font-mono font-black text-slate-600 truncate">{loc.address || '—'}</p>
+                          <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-0.5 ml-1">Dirección</label>
+                          <p className="text-[11px] font-mono font-black text-slate-600 truncate">{loc.address || '—'}</p>
                         </div>
                         <div className={`p-2 rounded-none border transition-all ${camCount > 0 ? 'bg-emerald-50/20 border-emerald-100/50' : 'bg-slate-50 border-slate-100'}`}>
-                          <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest block mb-0.5 ml-1">Cámaras</label>
-                          <p className={`text-[9px] font-mono font-black ${camCount > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>{camCount}</p>
+                          <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-0.5 ml-1">Cámaras</label>
+                          <p className={`text-[11px] font-mono font-black ${camCount > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>{camCount}</p>
                         </div>
                       </div>
                     </div>
@@ -333,7 +339,7 @@ export default function Sedes() {
               })}
             </div>
           ) : (
-            <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
+            <div className="bg-white border border-slate-200 shadow-sm overflow-hidden flex flex-col rounded-none">
               {/* Pagination Header */}
               <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
                 <Pagination
@@ -346,8 +352,8 @@ export default function Sedes() {
                 >
                   {selectedIds.length > 0 && canEdit() && (
                     <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-2 duration-300">
-                      <span className="hidden xl:block text-[10px] font-black text-rose-600 uppercase tracking-widest">{selectedIds.length} marcados</span>
-                      <button onClick={handleBulkDelete} className="flex items-center gap-2 px-3 py-2 bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest rounded-md hover:bg-rose-600 transition-all shadow-sm active:scale-95" title="Eliminar seleccionados">
+                      <span className="hidden xl:block text-[10px] font-black text-rose-600 tracking-wider">{selectedIds.length} marcados</span>
+                      <button onClick={handleBulkDelete} className="flex items-center gap-2 px-3 py-2 bg-rose-500 text-white text-[10px] font-black tracking-wider rounded-md hover:bg-rose-600 transition-all shadow-sm active:scale-95" title="Eliminar seleccionados">
                         <Trash2 size={14} /><span className="hidden sm:inline">Eliminar</span>
                       </button>
                     </div>
@@ -374,8 +380,8 @@ export default function Sedes() {
                                 <MapPin size={18} />
                               </div>
                               <div className="flex flex-col">
-                                <span className="text-sm font-black text-[#002855] uppercase leading-tight">{loc.name}</span>
-                                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mt-0.5">{typeLabels[loc.type] || loc.type}</span>
+                                <span className="text-[13px] font-black text-[#002855] leading-tight">{loc.name}</span>
+                                <span className="text-[10px] font-semibold text-slate-400 tracking-wider mt-0.5">{typeLabels[loc.type] || loc.type}</span>
                               </div>
                             </div>
                           </div>
@@ -386,11 +392,11 @@ export default function Sedes() {
                           <div className="px-5 pb-5 space-y-5 border-t border-slate-50/50 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                             <div className="grid grid-cols-2 gap-3">
                               <div className="p-4 rounded-xl border bg-slate-50 border-slate-100">
-                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Dirección</label>
+                                <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-1.5">Dirección</label>
                                 <span className="text-[11px] font-mono font-black text-[#002855]">{loc.address || '—'}</span>
                               </div>
                               <div className={`p-4 rounded-xl border ${camCount > 0 ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-slate-50 border-slate-100'}`}>
-                                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Cámaras</label>
+                                <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-1.5">Cámaras</label>
                                 <span className={`text-[11px] font-mono font-black ${camCount > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{camCount}</span>
                               </div>
                             </div>
@@ -411,81 +417,86 @@ export default function Sedes() {
                 {/* Desktop Table */}
                 <div className="hidden md:block overflow-hidden relative group/table">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse border-spacing-0">
-                      <thead className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
+                    <Table>
+                      <TableHeader>
                         <tr>
-                          <th className="px-6 py-4 text-left w-12">
+                          <TableHead className="w-12">
                             {canEdit() && (
                               <input type="checkbox" checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length} onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
                             )}
-                          </th>
-                          <th className="px-6 py-4 text-left">
-                            {renderSortableHeader('Sede', 'name')}
-                          </th>
-                          <th className="px-4 py-4 text-left">
-                            {renderSortableHeader('Tipo', 'type')}
-                          </th>
-                          <th className="px-4 py-4 text-left">
-                            <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Dirección</span>
-                          </th>
-                          <th className="px-4 py-4 text-left">
-                            {renderSortableHeader('Cámaras', 'cameras')}
-                          </th>
-                          <th className="px-6 py-4 text-center">
-                            <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span>
-                          </th>
+                          </TableHead>
+                          <TableHead>
+                            {renderSortableHeader('SEDE', 'name')}
+                          </TableHead>
+                          <TableHead>
+                            {renderSortableHeader('TIPO', 'type')}
+                          </TableHead>
+                          <TableHead>
+                            <span className="text-[12px] font-black text-[#002855] tracking-[0.15em]">Dirección</span>
+                          </TableHead>
+                          <TableHead>
+                            {renderSortableHeader('CÁMARAS', 'cameras')}
+                          </TableHead>
+                          <TableHead className="text-center">
+                            <span className="text-[12px] font-black text-[#002855] tracking-[0.15em]">Acciones</span>
+                          </TableHead>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
+                      </TableHeader>
+                      <TableBody>
                         {paginatedData.map(loc => {
                           const camCount = cameraCounts[loc.id] || 0;
                           return (
-                            <tr
+                            <TableRow
                               key={loc.id}
-                              className={`hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20 ${selectedIds.includes(loc.id) ? 'bg-blue-50/40' : ''}`}
+                              className={`${selectedIds.includes(loc.id) ? 'bg-blue-50/40' : ''}`}
                               onClick={() => { setSelectedLocation(loc); setShowDetails(true); }}
                             >
-                              <td className="px-6 py-4 text-left w-12">
+                              <TableCell className="w-12">
                                 <input type="checkbox" checked={selectedIds.includes(loc.id)} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
-                              </td>
-                              <td className="px-6 py-4 font-bold text-left">
-                                <div className="flex items-center gap-4">
-                                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-slate-100 text-slate-400 group-hover:bg-[#002855] group-hover:text-white transition-all shadow-sm shrink-0">
-                                    <MapPin size={16} />
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <span className="text-[13px] font-black text-[#002855] uppercase leading-none">{loc.name}</span>
-                                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 md:hidden">{typeLabels[loc.type] || loc.type}</span>
-                                  </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <TableCellPrimary>{loc.name}</TableCellPrimary>
+                                  <TableCellSecondary className="md:hidden">{typeLabels[loc.type] || loc.type}</TableCellSecondary>
                                 </div>
-                              </td>
-                              <td className="px-4 py-4 text-left">
-                                <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-none ${typeColors[loc.type] || 'bg-[#002855]/8 text-[#002855] border-[#002855]/20'}`}>
+                              </TableCell>
+                              <TableCell>
+                                <TableCellBadge className={typeColors[loc.type] || 'bg-[#002855]/8 text-[#002855] border-[#002855]/20'}>
                                   {typeLabels[loc.type] || loc.type}
-                                </span>
-                              </td>
-                              <td className="px-4 py-4 text-left">
-                                <span className="text-sm font-extrabold text-slate-600 truncate max-w-xs block leading-none">{loc.address || '—'}</span>
-                              </td>
-                              <td className="px-4 py-4 text-left">
-                                <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-black uppercase tracking-wider border rounded-none ${camCount > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                                </TableCellBadge>
+                              </TableCell>
+                              <TableCell>
+                                <TableCellPrimary className="truncate max-w-xs">{loc.address || '—'}</TableCellPrimary>
+                              </TableCell>
+                              <TableCell>
+                                <TableCellBadge className={camCount > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}>
                                   {camCount} Instaladas
-                                </span>
-                              </td>
-                              <td className="px-6 py-4 text-center">
-                                <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
-                                  <RowActions
-                                    canEdit={canEdit()}
-                                    onEdit={(e) => { e.stopPropagation(); openEdit(loc); }}
-                                    onDelete={(e) => { e.stopPropagation(); del(loc); }}
-                                  />
+                                </TableCellBadge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                                  {canEdit() && (
+                                    <>
+                                      <TableActionButton
+                                        icon={<Edit size={14} />}
+                                        onClick={(e) => { e.stopPropagation(); openEdit(loc); }}
+                                        title="Editar"
+                                      />
+                                      <TableActionButton
+                                        icon={<Trash2 size={14} />}
+                                        onClick={(e) => { e.stopPropagation(); del(loc); }}
+                                        title="Eliminar"
+                                        variant="danger"
+                                      />
+                                    </>
+                                  )}
                                 </div>
-                              </td>
-                            </tr>
+                              </TableCell>
+                            </TableRow>
                           );
                         })}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               </div>
@@ -500,13 +511,13 @@ export default function Sedes() {
           <div className="bg-[#002855]/95 backdrop-blur-md text-white px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 border border-white/10 pointer-events-auto">
             <div className="flex items-center gap-2 pr-4 border-r border-white/10">
               <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-[9px] font-black">{selectedIds.length}</div>
-              <span className="text-[8px] font-black uppercase tracking-widest opacity-80">Marcadas</span>
+              <span className="text-[8px] font-black tracking-widest opacity-80">Marcadas</span>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-100 transition-colors">
+              <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-[8px] font-black tracking-widest text-rose-400 hover:text-rose-100 transition-colors">
                 <Trash2 size={12} /> Eliminar lote
               </button>
-              <button onClick={() => setSelectedIds([])} className="text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors">Cerrar</button>
+              <button onClick={() => setSelectedIds([])} className="text-[8px] font-black tracking-widest text-slate-400 hover:text-white transition-colors">Cerrar</button>
             </div>
           </div>
         </div>
@@ -534,10 +545,10 @@ export default function Sedes() {
                 <Building size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
                   {selectedLocation.name}
                 </h2>
-                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                   <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
                   <span className="line-clamp-2 sm:truncate">{typeLabels[selectedLocation.type] || selectedLocation.type}</span>
                 </p>
@@ -557,7 +568,7 @@ export default function Sedes() {
               <DetailModalSection title="Información General">
                 <DetailModalCard className="space-y-2.5 sm:space-y-3">
                   <DetailModalRow label="Tipo de Sede">
-                    <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black uppercase tracking-widest border ${typeColors[selectedLocation.type] || 'bg-slate-50 text-slate-700 border-slate-200'}`}>
+                    <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${typeColors[selectedLocation.type] || 'bg-slate-50 text-slate-700 border-slate-200'}`}>
                       {typeLabels[selectedLocation.type] || selectedLocation.type}
                     </span>
                   </DetailModalRow>

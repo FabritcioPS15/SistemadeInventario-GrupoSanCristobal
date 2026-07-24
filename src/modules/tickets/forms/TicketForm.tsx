@@ -37,34 +37,40 @@ const FREQUENT_ISSUES = [
 ];
 
 export default function TicketForm({ onClose, onSave }: TicketFormProps) {
-  const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [locations, setLocations] = useState<any[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const suggestionRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth(); // Usuario actual autenticado
+  const [loading, setLoading] = useState(false); // Indicador de envío en progreso
+  const [locations, setLocations] = useState<any[]>([]); // Lista de sedes disponibles
+  const [errors, setErrors] = useState<Record<string, string>>({}); // Errores de validación por campo
+  const [showSuggestions, setShowSuggestions] = useState(false); // Visibilidad del menú de sugerencias
+  const suggestionRef = useRef<HTMLDivElement>(null); // Referencia al contenedor de sugerencias (para detectar clics fuera)
 
+  // Estado del formulario con valores iniciales
+  // location_id se auto-asigna del usuario actual si está disponible
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    priority: 'medium',
-    category: 'sistemas',
-    location_id: user?.location_id || '',
-    anydesk: ''
+    title: '', // Título del incidente
+    description: '', // Descripción detallada del problema
+    priority: 'medium', // Prioridad por defecto
+    category: 'sistemas', // Categoría por defecto
+    location_id: user?.location_id || '', // Sede del usuario (auto-asignada)
+    anydesk: '' // ID de AnyDesk opcional
   });
 
+  // Opciones de prioridad para el selector
+  // Cada valor corresponde a un nivel SLA específico
   const priorities = [
-    { value: 'critical', label: 'P1 - Crítica' },
-    { value: 'high', label: 'P2 - Alta' },
-    { value: 'medium', label: 'P3 - Media' },
-    { value: 'low', label: 'P4 - Baja' },
+    { value: 'critical', label: 'P1 - Crítica' }, // 4h SLA
+    { value: 'high', label: 'P2 - Alta' }, // 8h SLA
+    { value: 'medium', label: 'P3 - Media' }, // 24h SLA
+    { value: 'low', label: 'P4 - Baja' }, // 72h SLA
   ];
 
+  // Opciones de categorías para el selector
+  // Cada categoría dirige el ticket al equipo correspondiente
   const categories = [
-    { value: 'sistemas', label: 'Área de Sistemas' },
-    { value: 'contable', label: 'Área contable' },
-    { value: 'legal', label: 'Área legal' },
-    { value: 'operaciones', label: 'Área de operaciones' },
+    { value: 'sistemas', label: 'Área de Sistemas' }, // Soporte técnico
+    { value: 'contable', label: 'Área contable' }, // Facturación y pagos
+    { value: 'legal', label: 'Área legal' }, // Documentación legal
+    { value: 'operaciones', label: 'Área de operaciones' }, // Procesos operativos
   ];
 
   // Carga la lista de sedes disponibles al montar el componente
@@ -279,8 +285,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
         icon={<Send size={20} className="text-white" />}
       >
       {/* Section: Información del Ticket */}
-      <FormSection title="Detalles del Incidente" color="blue">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <FormSection title="Detalles del Incidente" color="blue" columns={3}>
           <FormField label="Asunto o Título" required error={errors.title} className="h-12 pt-0">
             <div className="relative h-full mt-4" ref={suggestionRef}>
               <FormInput
@@ -304,10 +309,10 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
                       className="w-full text-left px-5 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between border-b border-slate-100 last:border-0"
                     >
                       <div className="flex flex-col">
-                        <span className="text-[11px] font-black text-[#002855] uppercase">{issue.title}</span>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{issue.description.slice(0, 60)}...</span>
+                        <span className="text-[12px] font-black text-[#002855] uppercase">{issue.title}</span>
+                        <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{issue.description.slice(0, 60)}...</span>
                       </div>
-                      <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-none uppercase tracking-widest">{issue.category}</span>
+                      <span className="text-[12px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-none uppercase tracking-widest">{issue.category}</span>
                     </button>
                   ))}
                 </div>
@@ -325,7 +330,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             >
               {categories.map((cat) => (
                 <option key={cat.value} value={cat.value}>
-                  {cat.label.toUpperCase()}
+                  {cat.label}
                 </option>
               ))}
             </FormSelect>
@@ -341,7 +346,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
             >
               {priorities.map((pri) => (
                 <option key={pri.value} value={pri.value}>
-                  {pri.label.toUpperCase()}
+                  {pri.label}
                 </option>
               ))}
             </FormSelect>
@@ -357,7 +362,6 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
               error={errors.anydesk}
             />
           </FormField>
-        </div>
       </FormSection>
 
       {/* Section: Información de Ubicación */}

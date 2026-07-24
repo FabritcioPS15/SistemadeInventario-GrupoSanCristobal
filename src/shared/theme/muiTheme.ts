@@ -3,7 +3,7 @@ import type {} from '@mui/x-date-pickers/themeAugmentation';
 
 export const muiTheme = createTheme({
   typography: {
-    fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
+    fontFamily: '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif',
   },
   palette: {
     primary: {

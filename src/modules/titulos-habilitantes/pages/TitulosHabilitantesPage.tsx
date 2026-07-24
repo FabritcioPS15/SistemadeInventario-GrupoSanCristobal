@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Plus, Trash2, MapPin, Search, FileText, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -15,6 +15,7 @@ import ExportButtons from '../../../shared/components/ui/ExportButtons';
 import LoadingSpinner from '../../../shared/components/ui/LoadingSpinner';
 import PrimaryButton from '../../../shared/components/ui/PrimaryButton';
 import RowActions from '../../../shared/components/ui/RowActions';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../shared/components/ui/Table';
 
 type TituloHabilitante = {
   id: string;
@@ -348,14 +349,14 @@ export default function TitulosHabilitantes() {
                 placeholder="Buscar por título, tipo o número..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name.toUpperCase() })) },
+              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
             ]}
             values={{ location: selectedLocations[0] || '' }}
             onChange={(_key, value) => {
@@ -377,7 +378,7 @@ export default function TitulosHabilitantes() {
           {canEdit() && selectedIds.length > 0 && viewMode === 'table' && (
             <button
               onClick={handleBulkDelete}
-              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-widest"
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-wider"
             >
               <Trash2 size={14} />
               Eliminar ({selectedIds.length})
@@ -411,32 +412,32 @@ export default function TitulosHabilitantes() {
 
                 <div className="mb-4">
                   <h4 className="text-[14px] font-black text-slate-800 uppercase leading-none">{titulo.titulo}</h4>
-                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-1">{titulo.tipo}</p>
+                  <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{titulo.tipo}</p>
                 </div>
 
                 <div className="space-y-3 mb-6">
-                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 uppercase">
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 uppercase">
                     <MapPin size={14} className="text-rose-500 shrink-0" />
-                    <span className="truncate">{titulo.locations?.name || 'Sede N/A'}</span>
+                    <span className="truncate">{titulo.locations?.name || 'Ubicación N/A'}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Número</label>
-                      <span className="text-[9px] font-black text-slate-600 uppercase truncate">{titulo.numero || '—'}</span>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Número</label>
+                      <span className="text-[11px] font-black text-slate-600 uppercase truncate">{titulo.numero || '—'}</span>
                     </div>
                     <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Doc.</label>
-                      <span className="text-[9px] font-black text-slate-600 uppercase truncate">{titulo.vigencia_documento || '—'}</span>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Vigencia Doc.</label>
+                      <span className="text-[11px] font-black text-slate-600 uppercase truncate">{titulo.vigencia_documento || '—'}</span>
                     </div>
                     <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Del</label>
-                      <span className="text-[9px] font-black text-slate-600 uppercase truncate">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Vigencia Del</label>
+                      <span className="text-[11px] font-black text-slate-600 uppercase truncate">
                         {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
                       </span>
                     </div>
                     <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                      <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Vigencia Al</label>
-                      <span className="text-[9px] font-black text-slate-600 uppercase truncate">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Vigencia Al</label>
+                      <span className="text-[11px] font-black text-slate-600 uppercase truncate">
                         {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
                       </span>
                     </div>
@@ -455,7 +456,7 @@ export default function TitulosHabilitantes() {
           </div>
         ) : (
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
-            <div className="bg-slate-50/50 border-b border-slate-100 shrink-0">
+            <div className="bg-slate-50 border-b border-slate-200 shrink-0">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -466,90 +467,87 @@ export default function TitulosHabilitantes() {
               />
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse border-spacing-0">
-                <thead>
-                  <tr className="bg-slate-50/70 border-b border-slate-200/80 backdrop-blur-sm">
+              <Table>
+                <TableHeader>
+                  <tr>
                     {canEdit() && (
-                      <th className="px-4 py-4 text-center w-12">
+                      <TableHead className="text-center w-12">
                         <input
                           type="checkbox"
                           checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length}
                           onChange={() => toggleSelectAll(paginatedData)}
                           className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
                         />
-                      </th>
+                      </TableHead>
                     )}
 
-                    <th className="px-4 py-4 text-left">
+                    <TableHead>
                       <button
                         onClick={() => handleSort('titulo')}
                         className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
                       >
-                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Título</span>
+                        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Título</span>
                         {sortField === 'titulo' && (
                           sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
                         )}
                       </button>
-                    </th>
-                    <th className="px-4 py-4 text-left">
+                    </TableHead>
+                    <TableHead>
                       <button
                         onClick={() => handleSort('tipo')}
                         className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
                       >
-                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Tipo</span>
+                        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Tipo</span>
                         {sortField === 'tipo' && (
                           sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
                         )}
                       </button>
-                    </th>
-                    <th className="px-4 py-4 text-left">
-                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Número</span>
-                    </th>
-                    <th className="px-4 py-4 text-left">
-                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Del</span>
-                    </th>
-                    <th className="px-4 py-4 text-left">
-                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Al</span>
-                    </th>
-                    <th className="px-4 py-4 text-left">
-                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Vigencia Doc.</span>
-                    </th>
-                    <th className="px-4 py-4 text-left">
+                    </TableHead>
+                    <TableHead>
+                      <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Vigencia Del</span>
+                    </TableHead>
+                    <TableHead>
+                      <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Vigencia Al</span>
+                    </TableHead>
+                    <TableHead>
+                      <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Vigencia Doc.</span>
+                    </TableHead>
+                    <TableHead>
                       <button
                         onClick={() => handleSort('fecha_vencimiento')}
                         className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
                       >
-                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Días para Vencer</span>
+                        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Días para Vencer</span>
                         {sortField === 'fecha_vencimiento' && (
                           sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
                         )}
                       </button>
-                    </th>
-                    <th className="px-4 py-4 text-left">
+                    </TableHead>
+                    <TableHead>
                       <button
                         onClick={() => handleSort('ubicacion')}
                         className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
                       >
-                        <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Ubicación</span>
+                        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Ubicación</span>
                         {sortField === 'ubicacion' && (
                           sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
                         )}
                       </button>
-                    </th>
-                    <th className="px-4 py-4 text-center">
-                      <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.15em]">Acciones</span>
-                    </th>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Acciones</span>
+                    </TableHead>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
+                </TableHeader>
+                <TableBody>
                   {paginatedData.map((titulo) => (
-                    <tr
+                    <TableRow
                       key={titulo.id}
-                      className={`hover:bg-slate-50/80 cursor-pointer transition-colors duration-150 group relative border-b border-slate-100 last:border-0 odd:bg-white even:bg-slate-50/20 ${selectedIds.includes(titulo.id) ? 'bg-blue-50/40' : ''}`}
+                      className={`cursor-pointer ${selectedIds.includes(titulo.id) ? 'bg-blue-50/40' : ''}`}
                       onClick={() => { setSelectedTitulo(titulo); setShowDetails(true); }}
                     >
                       {canEdit() && (
-                        <td className="px-4 py-4 text-center w-12">
+                        <TableCell className="text-center w-12">
                           <input
                             type="checkbox"
                             checked={selectedIds.includes(titulo.id)}
@@ -557,52 +555,49 @@ export default function TitulosHabilitantes() {
                             onClick={e => e.stopPropagation()}
                             className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
                           />
-                        </td>
+                        </TableCell>
                       )}
-                      <td className="px-4 py-4 text-left">
-                        <span className="text-[12px] font-black text-slate-800 uppercase">{titulo.titulo}</span>
-                      </td>
-                      <td className="px-4 py-4 text-left">
+                      <TableCell>
+                        <span className="text-[13px] font-black text-[#002855] leading-tight">{titulo.titulo}</span>
+                      </TableCell>
+                      <TableCell>
                         <span className="text-[12px] font-bold text-slate-700 uppercase">{titulo.tipo}</span>
-                      </td>
-                      <td className="px-4 py-4 text-left">
-                        <span className="text-[12px] font-mono font-black text-slate-800">{titulo.numero || '—'}</span>
-                      </td>
-                      <td className="px-4 py-4 text-left">
+                      </TableCell>
+                      <TableCell>
                         <span className="text-[12px] font-bold text-slate-700">
                           {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
                         </span>
-                      </td>
-                      <td className="px-4 py-4 text-left">
+                      </TableCell>
+                      <TableCell>
                         <span className="text-[12px] font-bold text-slate-700">
                           {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
                         </span>
-                      </td>
-                      <td className="px-4 py-4 text-left">
+                      </TableCell>
+                      <TableCell>
                         <span className="text-[12px] font-bold text-slate-700 uppercase">{titulo.vigencia_documento || '—'}</span>
-                      </td>
-                      <td className="px-4 py-4 text-left">
+                      </TableCell>
+                      <TableCell>
                         {renderStatus(titulo)}
-                      </td>
-                      <td className="px-4 py-4 text-left">
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-1.5 text-slate-700">
                           <MapPin size={14} className="text-rose-500 shrink-0" />
-                          <span className="text-[12px] font-bold uppercase truncate max-w-xs block">{titulo.locations?.name || 'Sede N/A'}</span>
+                          <span className="text-[12px] font-bold uppercase truncate max-w-xs block">{titulo.locations?.name || 'Ubicación N/A'}</span>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150">
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover/row:opacity-100 transition-opacity duration-150">
                           <RowActions
                             canEdit={canEdit()}
                             onEdit={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }}
                             onDelete={(e) => { e.stopPropagation(); handleDelete(titulo.id); }}
                           />
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}

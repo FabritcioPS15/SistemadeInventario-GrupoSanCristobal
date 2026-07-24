@@ -313,233 +313,205 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
   return (
 
     <BaseForm
-
       title={editServer ? 'Editar Servidor' : 'Nuevo Servidor'}
-
       subtitle="Módulo de Gestión de Servidores"
-
       onClose={onClose}
-
       onSubmit={handleSubmit}
-
       loading={loading}
-
       error={errors.submit}
-
       icon={<ServerIcon size={24} className="text-blue-600" />}
-
     >
 
-    
-
       {/* Section: Información Básica */}
+      <FormSection title="Información Básica" color="blue" columns={4}>
+        <FormField label="Nombre del Servidor" required error={errors.name}>
+          <FormInput
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="Ej: SRV-DB-01, SRV-WEB-02"
+            required
+            error={errors.name}
+          />
+        </FormField>
 
-      <FormSection title="Información Básica" color="blue">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
-          <FormField label="Nombre del Servidor" required error={errors.name}>
+        <FormField label="Ubicación" required error={errors.location_id}>
 
-            <FormInput
+          <FormSelect
 
-              type="text"
+            name="location_id"
 
-              name="name"
+            value={formData.location_id}
 
-              value={formData.name}
+            onChange={handleChange}
 
-              onChange={handleChange}
+            required
 
-              placeholder="Ej: SRV-DB-01, SRV-WEB-02"
+            error={errors.location_id}
 
-              required
+          >
 
-              error={errors.name}
+            <option value="">Seleccionar ubicación</option>
 
-            />
+            {locations.map((loc) => (
 
-          </FormField>
+              <option key={loc.id} value={loc.id}>
 
+                {loc.name}
 
+              </option>
 
-          <FormField label="Ubicación" required error={errors.location_id}>
+            ))}
 
-            <FormSelect
+          </FormSelect>
 
-              name="location_id"
+        </FormField>
 
-              value={formData.location_id}
 
-              onChange={handleChange}
 
-              required
+        <FormField label="Dirección IP" required error={errors.ip_address}>
 
-              error={errors.location_id}
+          <FormInput
 
-            >
+            type="text"
 
-              <option value="">Seleccionar ubicación</option>
+            name="ip_address"
 
-              {locations.map((loc) => (
+            value={formData.ip_address}
 
-                <option key={loc.id} value={loc.id}>
+            onChange={handleChange}
 
-                  {loc.name}
+            placeholder="Ej: 192.168.1.100 (formato IPv4)"
 
-                </option>
+            required
 
-              ))}
+            error={errors.ip_address}
 
-            </FormSelect>
+          />
 
-          </FormField>
+          <p className="text-xs text-gray-500 mt-1">Formato: 4 números separados por puntos (0-255)</p>
 
+        </FormField>
 
 
-          <FormField label="Dirección IP" required error={errors.ip_address}>
 
-            <FormInput
+        <FormField label="ID de Anydesk" error={errors.anydesk_id}>
 
-              type="text"
+          <FormInput
 
-              name="ip_address"
+            type="text"
 
-              value={formData.ip_address}
+            name="anydesk_id"
 
-              onChange={handleChange}
+            value={formData.anydesk_id}
 
-              placeholder="Ej: 192.168.1.100 (formato IPv4)"
+            onChange={handleChange}
 
-              required
+            placeholder="Ej: 123456789 (8-12 dígitos)"
 
-              error={errors.ip_address}
+            error={errors.anydesk_id}
 
-            />
+          />
 
-            <p className="text-xs text-gray-500 mt-1">Formato: 4 números separados por puntos (0-255)</p>
+          <p className="text-xs text-gray-500 mt-1">Opcional: 8-12 dígitos numéricos para acceso remoto</p>
 
-          </FormField>
+        </FormField>
 
 
 
-          <FormField label="ID de Anydesk" error={errors.anydesk_id}>
+        <FormField label="Clave de Anydesk">
 
-            <FormInput
+          <FormInput
 
-              type="text"
+            type="password"
 
-              name="anydesk_id"
+            name="anydesk_password"
 
-              value={formData.anydesk_id}
+            value={formData.anydesk_password}
 
-              onChange={handleChange}
+            onChange={handleChange}
 
-              placeholder="Ej: 123456789 (8-12 dígitos)"
+            placeholder="Contraseña de Anydesk"
 
-              error={errors.anydesk_id}
+          />
 
-            />
 
-            <p className="text-xs text-gray-500 mt-1">Opcional: 8-12 dígitos numéricos para acceso remoto</p>
-
-          </FormField>
-
-
-
-          <FormField label="Clave de Anydesk">
-
-            <FormInput
-
-              type="password"
-
-              name="anydesk_password"
-
-              value={formData.anydesk_password}
-
-              onChange={handleChange}
-
-              placeholder="Contraseña de Anydesk"
-
-            />
-
-          </FormField>
-
-        </div>
+        </FormField>
 
       </FormSection>
 
 
 
+
+
       {/* Section: Credenciales de Acceso */}
 
-      <FormSection title="Credenciales de Acceso Administrador de Windows" color="emerald">
+      <FormSection title="Credenciales de Acceso Administrador de Windows" color="emerald" columns={4}>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <FormField label="Usuario" error={errors.username}>
 
-          <FormField label="Usuario" error={errors.username}>
+          <FormInput
 
-            <FormInput
+            type="text"
 
-              type="text"
+            name="username"
 
-              name="username"
+            value={formData.username}
 
-              value={formData.username}
+            onChange={handleChange}
 
-              onChange={handleChange}
+            placeholder="Nombre de usuario"
 
-              placeholder="Nombre de usuario"
+            error={errors.username}
 
-              error={errors.username}
+          />
 
-            />
-
-          </FormField>
+        </FormField>
 
 
 
-          <FormField label="Contraseña" error={errors.password}>
+        <FormField label="Contraseña" error={errors.password}>
 
-            <FormInput
+          <FormInput
 
-              type="password"
+            type="password"
 
-              name="password"
+            name="password"
 
-              value={formData.password}
+            value={formData.password}
 
-              onChange={handleChange}
+            onChange={handleChange}
 
-              placeholder="Contraseña de acceso"
+            placeholder="Contraseña de acceso"
 
-              error={errors.password}
+            error={errors.password}
 
-            />
+          />
 
-          </FormField>
+        </FormField>
 
 
 
-          <FormField label="Contraseña Backup Scanner">
+        <FormField label="Contraseña Backup Scanner">
 
-            <FormInput
+          <FormInput
 
-              type="password"
+            type="password"
 
-              name="backup_scanner_password"
+            name="backup_scanner_password"
 
-              value={formData.backup_scanner_password}
+            value={formData.backup_scanner_password}
 
-              onChange={handleChange}
+            onChange={handleChange}
 
-              placeholder="Contraseña del backup scanner"
+            placeholder="Contraseña del backup scanner"
 
-            />
+          />
 
-          </FormField>
-
-        </div>
-
+        </FormField>
       </FormSection>
 
 

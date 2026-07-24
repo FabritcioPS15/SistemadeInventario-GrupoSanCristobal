@@ -291,8 +291,8 @@ export default function VehicleImportModal({ isOpen, onClose, onSuccess, locatio
                             <Truck size={18} className="text-white" />
                         </div>
                         <div>
-                            <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">Importar Flota Vehicular</h2>
-                            <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Mapear manualmente las hojas a las sedes/escuelas</p>
+                            <h2 className="text-sm font-black text-white tracking-[0.2em] leading-tight">Importar Flota Vehicular</h2>
+                            <p className="text-[10px] font-bold text-blue-200 tracking-widest mt-0.5">Mapear manualmente las hojas a las sedes/escuelas</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all">
@@ -356,15 +356,15 @@ export default function VehicleImportModal({ isOpen, onClose, onSuccess, locatio
                                     <>
                                         <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm border-l-4 border-l-blue-500">
                                             <div className="text-2xl font-bold text-blue-600">{preview.totalRecords}</div>
-                                            <div className="text-xs text-slate-500 uppercase font-bold">Vehículos</div>
+                                            <div className="text-xs text-slate-500 font-bold">Vehículos</div>
                                         </div>
                                         <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm border-l-4 border-l-green-500">
                                             <div className="text-2xl font-bold text-green-600">{preview.validRecords}</div>
-                                            <div className="text-xs text-slate-500 uppercase font-bold">Listos</div>
+                                            <div className="text-xs text-slate-500 font-bold">Listos</div>
                                         </div>
                                         <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm border-l-4 border-l-red-500">
                                             <div className="text-2xl font-bold text-red-600">{preview.invalidRecords}</div>
-                                            <div className="text-xs text-slate-500 uppercase font-bold">Errores</div>
+                                            <div className="text-xs text-slate-500 font-bold">Errores</div>
                                         </div>
                                     </>
                                 )}
@@ -373,12 +373,12 @@ export default function VehicleImportModal({ isOpen, onClose, onSuccess, locatio
                             {/* MAPPING TABLE */}
                             <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
                                 <div className="bg-slate-50 px-6 py-3 border-b border-slate-200 flex justify-between items-center">
-                                    <h5 className="font-bold text-slate-700 text-sm uppercase tracking-wide">Mapeo de Sedes por Hoja</h5>
+                                    <h5 className="font-bold text-slate-700 text-sm tracking-wide">Mapeo de Sedes por Hoja</h5>
                                     <span className="text-xs text-slate-500">Cada hoja debería ser una sede/escuela</span>
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm text-left">
-                                        <thead className="bg-slate-50 text-slate-500 uppercase text-xs font-semibold">
+                                        <thead className="bg-slate-50 text-slate-500 text-xs font-semibold">
                                             <tr>
                                                 <th className="px-6 py-3">Hoja (Excel)</th>
                                                 <th className="px-6 py-3">Registros</th>
@@ -467,21 +467,21 @@ export default function VehicleImportModal({ isOpen, onClose, onSuccess, locatio
 
                 {/* Footer */}
                 <div className="sticky bottom-0 bg-white border-t px-4 py-3 flex items-center justify-between gap-3 z-10">
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <div className="text-[10px] font-black text-slate-400 tracking-widest">
                         {preview ? `${preview.validRecords} vehículos listos de ${preview.totalRecords} totales` : 'Esperando archivo...'}
                     </div>
                     <div className="flex items-center gap-3">
                         <button
                             onClick={onClose}
                             disabled={importing}
-                            className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all disabled:opacity-50"
+                            className="px-6 py-2 text-[10px] font-black tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all disabled:opacity-50"
                         >
                             Cancelar
                         </button>
                         <button
                             onClick={handleImport}
                             disabled={!file || !preview || preview.validRecords === 0 || importing}
-                            className="px-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg disabled:cursor-not-allowed"
+                            className="px-8 py-2 text-[10px] font-black tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg disabled:cursor-not-allowed"
                         >
                             {importing && <Loader2 size={14} className="animate-spin" />}
                             {importing ? 'Importando...' : `Importar ${preview?.validRecords || 0} Vehículos`}

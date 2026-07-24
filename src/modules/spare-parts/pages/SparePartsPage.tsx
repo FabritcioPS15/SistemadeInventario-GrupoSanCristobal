@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+﻿import { useState, useEffect, useMemo, useRef } from 'react';
 import { Plus, Edit, Trash2, Package,  X,  FileText, LayoutGrid, List as ListIcon, AlertTriangle, Search, MapPin, ChevronDown } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
@@ -19,6 +19,7 @@ import DetailModal, {
   DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../shared/components/ui/Table';
 
 type SparePart = {
   id: string;
@@ -280,7 +281,7 @@ export default function SpareParts() {
               placeholder="Buscar repuesto por nombre, código, marca..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); }}
-              className="w-full pl-12 pr-4 py-3 text-[11px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+              className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
             />
           </div>
 
@@ -295,7 +296,7 @@ export default function SpareParts() {
               >
                 <option value="all">TODAS LAS CATEGORÍAS</option>
                 {categories.filter(c => c !== 'all').map(c => (
-                  <option key={c} value={c}>{c.toUpperCase()}</option>
+                  <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </div>
@@ -345,7 +346,7 @@ export default function SpareParts() {
                         }}
                         className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 mr-3"
                       />
-                      <span className="text-xs font-medium text-slate-700">{location.name.toUpperCase()}</span>
+                      <span className="text-xs font-medium text-slate-700">{location.name}</span>
                     </label>
                   ))}
                 </div>
@@ -457,7 +458,7 @@ export default function SpareParts() {
                 <div className="space-y-1 mb-4">
                   <h3 className="font-black text-slate-900 uppercase tracking-tight line-clamp-1">{part.name}</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{part.category}</span>
+                    <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">{part.category}</span>
                     <div className="w-1 h-1 bg-slate-200 rounded-full" />
                     <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">{part.part_number}</span>
                   </div>
@@ -491,37 +492,37 @@ export default function SpareParts() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer" onClick={() => handleSort('name')}>Producto</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer" onClick={() => handleSort('category')}>Categoría</th>
-                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer" onClick={() => handleSort('quantity')}>Stock</th>
-                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer" onClick={() => handleSort('unit_price')}>Precio</th>
-                    <th className="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ubicación</th>
-                    <th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Acciones</th>
+              <Table>
+                <TableHeader>
+                  <tr>
+                    <TableHead><button onClick={() => handleSort('name')} className="flex items-center gap-1"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Producto</span></button></TableHead>
+                    <TableHead><button onClick={() => handleSort('category')} className="flex items-center gap-1"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Categoría</span></button></TableHead>
+                    <TableHead className="text-right"><button onClick={() => handleSort('quantity')} className="flex items-center gap-1 ml-auto"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Stock</span></button></TableHead>
+                    <TableHead className="text-right"><button onClick={() => handleSort('unit_price')} className="flex items-center gap-1 ml-auto"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Precio</span></button></TableHead>
+                    <TableHead className="text-center">Ubicación</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
+                </TableHeader>
+                <TableBody>
                   {filteredParts.map((part) => (
-                    <tr key={part.id} className={`hover:bg-blue-50/30 transition-colors group cursor-pointer ${part.quantity <= part.min_quantity ? 'bg-amber-50/20' : ''}`} onClick={() => { setSelectedPart(part); setShowDetails(true); }}>
-                      <td className="px-6 py-4">
+                    <TableRow key={part.id} className={`cursor-pointer ${part.quantity <= part.min_quantity ? 'bg-amber-50/20' : ''}`} onClick={() => { setSelectedPart(part); setShowDetails(true); }}>
+                      <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="bg-slate-50 p-2 rounded-lg text-slate-400">
+                          <div className="w-9 h-9 rounded-none flex items-center justify-center bg-slate-100 text-slate-400 group-hover/row:bg-[#002855] group-hover/row:text-white transition-all shadow-sm">
                             <Package size={16} />
                           </div>
                           <div>
-                            <p className="font-black text-slate-900 uppercase tracking-tight text-sm">{part.name}</p>
+                            <p className="font-black text-[#002855] uppercase tracking-tight text-sm">{part.name}</p>
                             <p className="text-[10px] text-slate-400 font-mono">{part.part_number}</p>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
+                      </TableCell>
+                      <TableCell>
                         <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">{part.category}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
+                      </TableCell>
+                      <TableCell className="text-right">
                         <div className="inline-flex flex-col items-end">
                           <span className={`text-sm font-black ${part.quantity <= part.min_quantity ? 'text-amber-600' : 'text-slate-700'}`}>
                             {part.quantity} {part.unit}
@@ -530,23 +531,23 @@ export default function SpareParts() {
                             <span className="text-[8px] font-black text-amber-500 uppercase">Mín: {part.min_quantity}</span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 text-right font-black text-sm text-slate-700">
-                        ${part.unit_price.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-[4px] text-[10px] font-bold uppercase">{part.location || "—"}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => { setEditingPart(part); setShowForm(true); }} className="p-2 text-slate-400 hover:text-blue-600"><Edit size={16} /></button>
-                          <button onClick={() => handleDelete(part.id)} className="p-2 text-slate-400 hover:text-rose-600"><Trash2 size={16} /></button>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="font-black text-sm text-slate-700">${part.unit_price.toFixed(2)}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="bg-slate-100 text-slate-500 px-2 py-0.5 text-[10px] font-bold uppercase">{part.location || "—"}</span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                          <button onClick={(e) => { e.stopPropagation(); setEditingPart(part); setShowForm(true); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-none border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete(part.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-200 transition-all shadow-sm"><Trash2 size={14} /></button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}

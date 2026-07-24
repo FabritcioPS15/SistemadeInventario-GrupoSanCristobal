@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+﻿import { useState, useRef, useMemo, useEffect } from 'react';
 import { X, FileSpreadsheet, AlertCircle, CheckCircle, Loader2, Upload } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase, AssetType, Location, Category, Subcategory } from '../services/supabase';
@@ -810,7 +810,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm text-left">
-                                        <thead className="bg-slate-50 text-slate-500 uppercase text-xs font-semibold">
+                                        <thead className="bg-slate-50 border-b border-slate-200">
                                             <tr>
                                                 <th className="px-6 py-3">Hoja (Excel)</th>
                                                 <th className="px-6 py-3">Registros</th>
@@ -896,7 +896,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                                         <h5 className="font-bold text-slate-700 text-sm uppercase tracking-wide">Vista Previa de Categorización (Primeros 5 registros)</h5>
                                     </div>
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-[11px] text-left">
+                                        <table className="w-full text-[12px] text-left">
                                             <thead className="bg-slate-50 text-slate-500 uppercase font-black tracking-widest">
                                                 <tr>
                                                     <th className="px-6 py-3">Descripción</th>

@@ -179,8 +179,7 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
       icon={<Package size={24} className="text-blue-600" />}
     >
       {/* Section: Información Principal */}
-      <FormSection title="Información del Repuesto" color="blue">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <FormSection title="Información del Repuesto" color="blue" columns={4}>
           <FormField label="Nombre del Repuesto" required error={errors.name}>
             <FormInput
               type="text"
@@ -232,7 +231,6 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
               ))}
             </FormSelect>
           </FormField>
-        </div>
       </FormSection>
 
       {/* Section: Descripción */}
@@ -251,8 +249,7 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
       </FormSection>
 
       {/* Section: Inventario */}
-      <FormSection title="Gestión de Inventario" color="amber">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <FormSection title="Gestión de Inventario" color="amber" columns={4}>
           <FormField label="Cantidad Actual" required error={errors.quantity}>
             <FormInput
               type="number"
@@ -304,7 +301,6 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
               error={errors.min_quantity}
             />
           </FormField>
-        </div>
 
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex justify-between items-center">
@@ -317,8 +313,7 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
       </FormSection>
 
       {/* Section: Proveedor y Ubicación */}
-      <FormSection title="Proveedor y Ubicación" color="purple">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <FormSection title="Proveedor y Ubicación" color="purple" columns={4}>
           <FormField label="Proveedor" error={errors.supplier}>
             <FormInput
               type="text"
@@ -340,7 +335,6 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
               error={errors.location}
             />
           </FormField>
-        </div>
       </FormSection>
 
 

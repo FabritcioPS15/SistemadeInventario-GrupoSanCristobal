@@ -110,11 +110,11 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <HardDrive className="h-5 w-5 text-indigo-600" />
-          <span className="text-sm font-black text-[#002855] uppercase tracking-wider">Discos Configurados ({disks.length})</span>
+          <HardDrive className="h-4 w-4 text-blue-600" />
+          <span className="text-[10px] font-black text-[#002855] uppercase tracking-wider">Discos ({disks.length})</span>
         </div>
         {!showAddForm && disks.length < 8 && (
           <button
@@ -124,59 +124,44 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
               setFormData(prev => ({ ...prev, disk_number: available[0] || 1 }));
               setShowAddForm(true);
             }}
-            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-sm"
+            className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
           >
             <Plus size={14} /> Añadir Disco
           </button>
         )}
       </div>
 
-      {/* Lista de Discos - Más compacta */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* Lista de Discos - Compacta */}
+      <div className="space-y-1">
         {disks.map((disk, idx) => (
-          <div key={idx} className="bg-slate-50 border border-slate-200 p-3 flex items-center justify-between group">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-white border border-slate-200 flex items-center justify-center text-[#002855] font-black text-xs">
-                {disk.disk_number}
-              </div>
-              <div>
-                <p className="text-[11px] font-black text-[#002855] uppercase leading-tight">
-                  {disk.disk_type} - {disk.total_capacity_gb}GB {disk.brand ? `(${disk.brand})` : ''}
-                </p>
-                <div className="flex flex-col mt-0.5">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                    {disk.status === 'active' ? '✓ Activo' : '⚠ ' + disk.status}
-                    {disk.serial_number && <span className="ml-2 text-slate-300">S/N: {disk.serial_number}</span>}
-                  </p>
-                  {disk.stored_from || disk.stored_to ? (
-                    <p className="text-[9px] font-black text-blue-600 uppercase mt-1">
-                      Grabación: {disk.stored_from ? new Date(String(disk.stored_from + 'T00:00:00').includes('T') ? String(disk.stored_from + 'T00:00:00') : `${disk.stored_from + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—'} al {disk.stored_to ? new Date(String(disk.stored_to + 'T00:00:00').includes('T') ? String(disk.stored_to + 'T00:00:00') : `${disk.stored_to + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—'}
-                    </p>
-                  ) : (
-                    <p className="text-[9px] font-bold text-slate-300 uppercase mt-1 italic">Sin fechas de grabación</p>
-                  )}
-                </div>
-              </div>
+          <div key={idx} className="bg-slate-50 border border-slate-200 px-2 py-1.5 flex items-center justify-between group">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[9px] font-black text-[#002855] bg-white border border-slate-200 w-5 h-5 flex items-center justify-center shrink-0">{disk.disk_number}</span>
+              <span className="text-[10px] font-black text-[#002855] truncate">{disk.disk_type} {disk.total_capacity_gb}GB</span>
+              <span className={`text-[8px] font-bold px-1 py-0.5 ${disk.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {disk.status === 'active' ? 'Activo' : disk.status}
+              </span>
+              {disk.brand && <span className="text-[8px] font-bold text-slate-400 truncate hidden sm:inline">{disk.brand}</span>}
             </div>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button type="button" onClick={() => startEdit(idx)} className="p-1.5 text-blue-600 hover:bg-blue-50 transition-colors"><Edit2 size={14} /></button>
-              <button type="button" onClick={() => removeDisk(idx)} className="p-1.5 text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={14} /></button>
+            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+              <button type="button" onClick={() => startEdit(idx)} className="p-1 text-blue-600 hover:bg-blue-50 transition-colors"><Edit2 size={12} /></button>
+              <button type="button" onClick={() => removeDisk(idx)} className="p-1 text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={12} /></button>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Formulario Inline - Sin pasos extras */}
+      {/* Formulario Inline */}
       {showAddForm && (
-        <div className="bg-white border-2 border-indigo-100 p-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center justify-between border-b border-indigo-50 pb-2 mb-2">
-            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">
+        <div className="bg-white border-2 border-blue-100 p-3 space-y-3 animate-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center justify-between border-b border-blue-50 pb-1.5 mb-2">
+            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">
               {editingIndex !== null ? 'Editando Disco' : 'Nuevo Disco de Almacenamiento'}
             </span>
             <button type="button" onClick={resetForm} className="text-slate-400 hover:text-slate-600 font-bold text-[10px] uppercase">Cancelar</button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">N° Disco</label>
               <select
@@ -221,7 +206,7 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div className="space-y-1">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grabación Desde (Opcional)</label>
               <input
@@ -245,7 +230,7 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
           <button
             type="button"
             onClick={handleAddOrUpdate}
-            className="w-full py-2 bg-indigo-50 text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-indigo-600 hover:text-white transition-all border border-indigo-200"
+            className="w-full py-2 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-600 hover:text-white transition-all border border-blue-200"
           >
             {editingIndex !== null ? 'Actualizar en Lista' : 'Confirmar Disco y Añadir'}
           </button>
