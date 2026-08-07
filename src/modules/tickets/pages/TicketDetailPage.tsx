@@ -282,7 +282,7 @@ export default function TicketDetail() {
     const renderMarkdown = (text: string) => {
         return text
             // Menciones @usuario — resaltar en azul
-            .replace(/@(\w+(?:\s\w+)?)/g, '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-800 font-bold rounded-none text-[12px]">@$1</span>')
+            .replace(/@(\w+(?:\s\w+)?)/g, '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-800 font-semibold rounded-none text-[12px]">@$1</span>')
             // Formatos de texto
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // **negrita**
             .replace(/\*(.*?)\*/g, '<em>$1</em>') // *cursiva*
@@ -809,7 +809,7 @@ export default function TicketDetail() {
 
             {/* Header Fijo */}
             <div className="flex-none bg-[#002855] px-6 py-4 flex items-center justify-between shadow-sm z-50">
-                <div className="flex items-center gap-3 text-[14px] font-black uppercase tracking-widest text-slate-300">
+                <div className="flex items-center gap-3 text-[14px] font-semibold uppercase tracking-widest text-slate-300">
                     <button onClick={() => navigate('/tickets')} className="hover:text-white transition-colors flex items-center gap-1">
                         <ArrowLeft size={18} /> Mesa de Ayuda
                     </button>
@@ -817,7 +817,7 @@ export default function TicketDetail() {
                     <span className="text-white">Ticket #{ticket.id.slice(0, 8)}</span>
                 </div>
                 <div className="flex items-center gap-4">
-                    <div className={`px-2 py-1 text-[10px] rounded-none font-black uppercase border ${getPriorityStyle(ticket.priority)}`}>
+                    <div className={`px-2 py-1 text-[10px] rounded-none font-semibold uppercase border ${getPriorityStyle(ticket.priority)}`}>
                         {getPriorityLabel(ticket.priority)}
                     </div>
                 </div>
@@ -826,20 +826,20 @@ export default function TicketDetail() {
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
                 {/* Mobile Tab Bar */}
                 <div className="lg:hidden flex border-b border-slate-200 bg-white flex-none shrink-0 z-10">
-                    <button onClick={() => setMobileTab('details')} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest border-b-2 transition-colors ${mobileTab === 'details' ? 'border-[#002855] text-[#002855]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Detalles</button>
-                    <button onClick={() => setMobileTab('chat')} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest border-b-2 transition-colors ${mobileTab === 'chat' ? 'border-[#002855] text-[#002855]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Chat</button>
-                    <button onClick={() => setMobileTab('people')} className={`flex-1 py-3 text-[11px] font-black uppercase tracking-widest border-b-2 transition-colors ${mobileTab === 'people' ? 'border-[#002855] text-[#002855]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Personas</button>
+                    <button onClick={() => setMobileTab('details')} className={`flex-1 py-3 text-[11px] font-semibold uppercase tracking-widest border-b-2 transition-colors ${mobileTab === 'details' ? 'border-[#002855] text-[#002855]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Detalles</button>
+                    <button onClick={() => setMobileTab('chat')} className={`flex-1 py-3 text-[11px] font-semibold uppercase tracking-widest border-b-2 transition-colors ${mobileTab === 'chat' ? 'border-[#002855] text-[#002855]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Chat</button>
+                    <button onClick={() => setMobileTab('people')} className={`flex-1 py-3 text-[11px] font-semibold uppercase tracking-widest border-b-2 transition-colors ${mobileTab === 'people' ? 'border-[#002855] text-[#002855]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>Personas</button>
                 </div>
 
                 {/* Left side: Ticket Details */}
                 <div className={`w-full lg:w-[320px] xl:w-[350px] lg:flex-none border-r border-slate-200 bg-slate-50 overflow-y-auto ${mobileTab === 'details' ? 'block flex-1 min-h-0' : 'hidden lg:block'}`}>
                     <div className="p-6">
-                        <h2 className="text-sm font-black text-[#002855] leading-tight mb-6 uppercase">{ticket.title}</h2>
+                        <h2 className="text-sm font-semibold text-[#002855] leading-tight mb-6 uppercase">{ticket.title}</h2>
 
                         <div className="space-y-6">
                             {/* Detalle Inicial */}
                             <div>
-                                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">Detalle Inicial</span>
+                                <span className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">Detalle Inicial</span>
                                 <p className="text-[14px] text-slate-700 leading-relaxed font-medium">
                                     {ticket.description}
                                 </p>
@@ -847,12 +847,12 @@ export default function TicketDetail() {
 
                             {/* Anydesk */}
                             <div>
-                                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">Acceso Remoto</span>
+                                <span className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">Acceso Remoto</span>
                                 <div className="space-y-3">
                                     {/* AnyDesk ID */}
                                     <div className="flex items-center justify-between">
                                         <div className="flex-1">
-                                            <p className="text-xs font-bold text-slate-900">AnyDesk: <span className="text-slate-600 font-normal">{ticket.anydesk || 'No proporcionado'}</span></p>
+                                            <p className="text-xs font-semibold text-slate-900">AnyDesk: <span className="text-slate-600 font-normal">{ticket.anydesk || 'No proporcionado'}</span></p>
                                         </div>
                                         {ticket.anydesk && (
                                             <button
@@ -868,7 +868,7 @@ export default function TicketDetail() {
                                     {ticket.anydesk_password && (
                                         <div className="flex items-center justify-between">
                                             <div className="flex-1">
-                                                <p className="text-xs font-bold text-slate-900">Pass: <span className="text-slate-600 font-normal">{ticket.anydesk_password}</span></p>
+                                                <p className="text-xs font-semibold text-slate-900">Pass: <span className="text-slate-600 font-normal">{ticket.anydesk_password}</span></p>
                                             </div>
                                             <button
                                                 onClick={() => handleCopy(ticket.anydesk_password, 'password')}
@@ -883,11 +883,11 @@ export default function TicketDetail() {
 
                             {/* Gestión de Estado */}
                             <div>
-                                <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">Gestión de Estado</span>
+                                <span className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-3">Gestión de Estado</span>
                                 {ticket?.status === 'archived' ? (
                                     <div className="text-center py-4 bg-white border border-slate-200 p-4">
                                         <Lock size={18} className="text-slate-400 mx-auto mb-2" />
-                                        <h3 className="text-[15px] font-black text-slate-700 uppercase mb-1">Bloqueado</h3>
+                                        <h3 className="text-[15px] font-semibold text-slate-700 uppercase mb-1">Bloqueado</h3>
                                         <p className="text-[12px] text-slate-500 uppercase tracking-wider">Ticket archivado.</p>
                                     </div>
                                 ) : isTicketCreator ? (
@@ -896,7 +896,7 @@ export default function TicketDetail() {
                                         {['open', 'in_progress', 'resolved', 'closed'].map(st => (
                                             <div
                                                 key={st}
-                                                className={`w-full px-4 py-2.5 rounded-none text-[12px] font-black uppercase tracking-widest flex items-center justify-between border ${ticket.status === st
+                                                className={`w-full px-4 py-2.5 rounded-none text-[12px] font-semibold uppercase tracking-widest flex items-center justify-between border ${ticket.status === st
                                                     ? 'bg-[#002855] text-white border-[#002855]'
                                                     : 'bg-white text-slate-400 border-slate-200'
                                                     }`}
@@ -917,7 +917,7 @@ export default function TicketDetail() {
                                                 key={st}
                                                 onClick={() => handleStatusUpdate(st)}
                                                 disabled={!canManageStatus || statusUpdating}
-                                                className={`w-full px-4 py-2.5 rounded-none text-[12px] font-black uppercase tracking-widest flex items-center justify-between border transition-colors ${ticket.status === st
+                                                className={`w-full px-4 py-2.5 rounded-none text-[12px] font-semibold uppercase tracking-widest flex items-center justify-between border transition-colors ${ticket.status === st
                                                     ? 'bg-[#002855] text-white border-[#002855]'
                                                     : 'bg-white text-slate-600 border-slate-200 hover:border-[#002855] disabled:opacity-50'
                                                     }`}
@@ -935,10 +935,10 @@ export default function TicketDetail() {
                                 {canReopenTicket && isWithinReopenWindow && (
                                     <div className="mt-4 p-3 bg-white border border-slate-200 rounded-none">
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest">Reapertura</span>
-                                            <span className="text-[9px] font-black text-[#002855]">{10 - timeSinceClosed}m</span>
+                                            <span className="text-[9px] font-semibold text-slate-700 uppercase tracking-widest">Reapertura</span>
+                                            <span className="text-[9px] font-semibold text-[#002855]">{10 - timeSinceClosed}m</span>
                                         </div>
-                                        <button onClick={handleReopenTicket} disabled={statusUpdating} className="w-full py-2 bg-[#002855] text-white rounded-none text-[10px] font-black uppercase tracking-widest flex justify-center border border-[#002855] hover:bg-white hover:text-[#002855] transition-colors">
+                                        <button onClick={handleReopenTicket} disabled={statusUpdating} className="w-full py-2 bg-[#002855] text-white rounded-none text-[10px] font-semibold uppercase tracking-widest flex justify-center border border-[#002855] hover:bg-white hover:text-[#002855] transition-colors">
                                             Reabrir
                                         </button>
                                     </div>
@@ -946,7 +946,7 @@ export default function TicketDetail() {
 
                                 {canFinalizeTicket && (
                                     <div className="mt-6">
-                                        <button onClick={() => setShowFinalizeConfirm(true)} disabled={statusUpdating} className="w-full py-3 bg-rose-600 text-white rounded-none text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-700 transition-colors border border-rose-600">
+                                        <button onClick={() => setShowFinalizeConfirm(true)} disabled={statusUpdating} className="w-full py-3 bg-rose-600 text-white rounded-none text-[10px] font-semibold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-rose-700 transition-colors border border-rose-600">
                                             <AlertCircle size={14} /> Finalizar
                                         </button>
                                     </div>
@@ -964,10 +964,10 @@ export default function TicketDetail() {
                                 <IoChatbubbles size={16} />
                             </div>
                             <div className="flex flex-col">
-                                <h3 className="text-[15px] font-black text-[#002855] uppercase tracking-[0.2em]">Canal de Seguimiento</h3>
+                                <h3 className="text-[15px] font-semibold text-[#002855] uppercase tracking-[0.2em]">Canal de Seguimiento</h3>
                                 <div className="flex items-center gap-2">
                                     <div className="w-2 h-2 bg-green-500 rounded-none animate-pulse" />
-                                    <span className="text-[11px] text-green-600 font-black uppercase tracking-widest">Sincronización Activa</span>
+                                    <span className="text-[11px] text-green-600 font-semibold uppercase tracking-widest">Sincronización Activa</span>
                                 </div>
                             </div>
                         </div>
@@ -989,7 +989,7 @@ export default function TicketDetail() {
                                 {comments.length === 0 ? (
                                     <div className="h-full flex flex-col items-center justify-center text-slate-300">
                                         <MessageSquare size={40} className="mb-4 opacity-10" />
-                                        <p className="text-[10px] font-black uppercase tracking-[0.3em]">No hay registros en el log</p>
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.3em]">No hay registros en el log</p>
                                     </div>
                                 ) : comments.map((c) => {
                                     const isMe = c.user_id === user?.id;
@@ -1005,17 +1005,17 @@ export default function TicketDetail() {
                                             <div key={c.id} className="flex flex-col items-center my-2">
                                                 <div className="flex items-center gap-2 mb-1.5">
                                                     <div className="h-px w-8 bg-slate-200" />
-                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Registro de Sistema</span>
+                                                    <span className="text-[8px] font-semibold text-slate-400 uppercase tracking-[0.2em]">Registro de Sistema</span>
                                                     <div className="h-px w-8 bg-slate-200" />
                                                 </div>
                                                 <div className="bg-white px-4 py-2 border border-slate-200 shadow-sm flex items-center gap-3 relative overflow-hidden group">
                                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#002855]" />
                                                     <div className="w-1.5 h-1.5 bg-[#002855] rounded-none shrink-0" />
-                                                    <span className="text-[10px] font-black text-[#002855] uppercase tracking-widest leading-none">
+                                                    <span className="text-[10px] font-semibold text-[#002855] uppercase tracking-widest leading-none">
                                                         {c.content.replace(/\*\*/g, '')}
                                                     </span>
                                                 </div>
-                                                <span className="text-[8px] font-black text-slate-400 uppercase mt-2 tracking-widest">
+                                                <span className="text-[8px] font-semibold text-slate-400 uppercase mt-2 tracking-widest">
                                                     {new Date(c.created_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
@@ -1036,7 +1036,7 @@ export default function TicketDetail() {
                                             <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[90%] lg:max-w-[85%]`}>
                                                 <div className={`px-4 py-3 border shadow-sm ${isMe ? 'bg-[#002855] border-[#002855] text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
                                                     <p className="text-[14px] leading-relaxed font-medium break-words overflow-hidden" dangerouslySetInnerHTML={{ __html: renderMarkdown(c.content) }} />
-                                                    <div className={`text-[8px] mt-2 font-black uppercase tracking-widest ${isMe ? 'text-slate-300' : 'text-slate-400'}`}>
+                                                    <div className={`text-[8px] mt-2 font-semibold uppercase tracking-widest ${isMe ? 'text-slate-300' : 'text-slate-400'}`}>
                                                         {new Date(c.created_at).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                                     </div>
                                                 </div>
@@ -1048,8 +1048,8 @@ export default function TicketDetail() {
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-slate-300">
                                 <Lock size={40} className="mb-4 opacity-10" />
-                                <p className="text-[10px] font-black uppercase tracking-[0.3em]">Acceso Restringido</p>
-                                <p className="text-[9px] font-black uppercase tracking-widest mt-2">{canJoinTicket ? 'Inicie sesión en el ticket para visualizar' : 'No tiene permisos para este canal'}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.3em]">Acceso Restringido</p>
+                                <p className="text-[9px] font-semibold uppercase tracking-widest mt-2">{canJoinTicket ? 'Inicie sesión en el ticket para visualizar' : 'No tiene permisos para este canal'}</p>
                             </div>
                         )}
                         <div ref={commentsEndRef} />
@@ -1058,13 +1058,13 @@ export default function TicketDetail() {
                     <div className="flex-none p-4 lg:p-6 bg-white border-t border-slate-200 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] z-20">
                         {ticket?.status === 'archived' ? (
                             <div className="text-center py-2">
-                                <p className="text-[14px] font-black text-rose-600 uppercase tracking-widest flex items-center justify-center gap-2">
+                                <p className="text-[14px] font-semibold text-rose-600 uppercase tracking-widest flex items-center justify-center gap-2">
                                     <Lock size={16} /> Archivo Histórico (Solo Lectura)
                                 </p>
                             </div>
                         ) : !isUserAssigned ? (
                             <div className="text-center py-2">
-                                <button onClick={handleJoinTicket} className="px-8 py-3 bg-[#002855] text-white text-[14px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg border border-[#002855] flex items-center gap-2 mx-auto">
+                                <button onClick={handleJoinTicket} className="px-8 py-3 bg-[#002855] text-white text-[14px] font-semibold uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-lg border border-[#002855] flex items-center gap-2 mx-auto">
                                     <MessageSquare size={18} /> Ingresar al Ticket
                                 </button>
                             </div>
@@ -1123,7 +1123,7 @@ export default function TicketDetail() {
                                                     <button
                                                         type="button"
                                                         onClick={() => { toggleFormat('insertUnorderedList'); setShowListMenu(false); }}
-                                                        className="w-full px-3 py-2 text-[10px] font-black uppercase flex items-center gap-3 hover:bg-slate-50 text-slate-600"
+                                                        className="w-full px-3 py-2 text-[10px] font-semibold uppercase flex items-center gap-3 hover:bg-slate-50 text-slate-600"
                                                     >
                                                         <List size={14} className="text-slate-400" />
                                                         <span>Viñetas</span>
@@ -1131,9 +1131,9 @@ export default function TicketDetail() {
                                                     <button
                                                         type="button"
                                                         onClick={() => { toggleFormat('insertOrderedList'); setShowListMenu(false); }}
-                                                        className="w-full px-3 py-2 text-[10px] font-black uppercase flex items-center gap-3 hover:bg-slate-50 text-slate-600 border-t border-slate-100"
+                                                        className="w-full px-3 py-2 text-[10px] font-semibold uppercase flex items-center gap-3 hover:bg-slate-50 text-slate-600 border-t border-slate-100"
                                                     >
-                                                        <div className="font-black text-[10px] text-slate-400">1.</div>
+                                                        <div className="font-semibold text-[10px] text-slate-400">1.</div>
                                                         <span>Numerada</span>
                                                     </button>
                                                 </div>
@@ -1159,7 +1159,7 @@ export default function TicketDetail() {
                                             title="Adjuntar Imagen"
                                         >
                                             {uploadingImage ? <Loader2 size={16} className="animate-spin text-[#002855]" /> : <ImageIcon size={16} />}
-                                            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Imagen</span>
+                                            <span className="text-[10px] font-semibold uppercase tracking-widest hidden sm:inline">Imagen</span>
                                         </button>
 
                                         <div className="w-px h-5 bg-slate-200 mx-1" />
@@ -1173,7 +1173,7 @@ export default function TicketDetail() {
                                         }} />
                                     </div>
 
-                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Registrar Avance</span>
+                                    <span className="text-[10px] font-semibold text-slate-300 uppercase tracking-widest">Registrar Avance</span>
                                 </div>
 
                                 {/* Contenedor de Escritura */}
@@ -1225,8 +1225,8 @@ export default function TicketDetail() {
                                         {showEmojiPicker && (
                                             <div className="absolute bottom-full left-0 mb-4 bg-white border-2 border-[#002855] shadow-2xl p-4 z-[100] w-[300px]">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Emojis Frecuentes</span>
-                                                    <button onClick={() => setShowEmojiPicker(false)} className="text-slate-400 hover:text-rose-600 font-bold">×</button>
+                                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Emojis Frecuentes</span>
+                                                    <button onClick={() => setShowEmojiPicker(false)} className="text-slate-400 hover:text-rose-600 font-semibold">×</button>
                                                 </div>
                                                 <div className="grid grid-cols-7 gap-2">
                                                     {commonEmojis.slice(0, 35).map((emoji, i) => (
@@ -1264,7 +1264,7 @@ export default function TicketDetail() {
                     <div className="p-6 space-y-8">
                         {/* Participantes */}
                         <div>
-                            <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-4">Participantes</span>
+                            <span className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-4">Participantes</span>
                             <div className="space-y-4">
                                 {/* Solicitante */}
                                 <div className="flex items-center gap-3 p-4 bg-white border border-slate-200 shadow-sm">
@@ -1272,7 +1272,7 @@ export default function TicketDetail() {
                                         {ticket.requester?.avatar_url ? <img src={ticket.requester.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-500">{getRoleIcon(ticket.requester?.role, 18)}</div>}
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-[11px] font-black text-[#002855] uppercase truncate">
+                                        <p className="text-[11px] font-semibold text-[#002855] uppercase truncate">
                                             {ticket.requester?.full_name} {ticket.requester_id === user?.id && <span className="opacity-50 text-[9px] ml-1">(YO)</span>}
                                         </p>
                                         <div className="flex items-center gap-2 mt-1">
@@ -1280,12 +1280,12 @@ export default function TicketDetail() {
                                                 {getRoleIcon(ticket.requester?.role, 14)}
                                             </div>
                                             {onlineUsers.has(ticket.requester_id) ? (
-                                                <span className="flex items-center gap-1.5 text-[9px] font-black uppercase text-emerald-500 tracking-widest">
+                                                <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase text-emerald-500 tracking-widest">
                                                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                                                     En Línea
                                                 </span>
                                             ) : (
-                                                <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Solicitante</span>
+                                                <span className="text-[9px] font-semibold uppercase text-slate-400 tracking-widest">Solicitante</span>
                                             )}
                                         </div>
                                     </div>
@@ -1298,7 +1298,7 @@ export default function TicketDetail() {
                                             {ticket.attendant?.avatar_url ? <img src={ticket.attendant.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-white">{getRoleIcon(ticket.attendant?.role, 18)}</div>}
                                         </div>
                                         <div className="min-w-0">
-                                            <p className="text-[11px] font-black text-white uppercase truncate">
+                                            <p className="text-[11px] font-semibold text-white uppercase truncate">
                                                 {ticket.attendant?.full_name} {ticket.assigned_to === user?.id && <span className="opacity-50 text-[9px] ml-1">(YO)</span>}
                                             </p>
                                             <div className="flex items-center gap-2 mt-1">
@@ -1306,12 +1306,12 @@ export default function TicketDetail() {
                                                     {getRoleIcon(ticket.attendant?.role, 14)}
                                                 </div>
                                                 {onlineUsers.has(ticket.assigned_to) ? (
-                                                    <span className="flex items-center gap-1.5 text-[9px] font-black uppercase text-emerald-400 tracking-widest">
+                                                    <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase text-emerald-400 tracking-widest">
                                                         <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
                                                         En Línea
                                                     </span>
                                                 ) : (
-                                                    <span className="text-[9px] font-black uppercase text-slate-300 tracking-widest">Responsable</span>
+                                                    <span className="text-[9px] font-semibold uppercase text-slate-300 tracking-widest">Responsable</span>
                                                 )}
                                             </div>
                                         </div>
@@ -1320,7 +1320,7 @@ export default function TicketDetail() {
 
                                 {/* Atender Ticket Button */}
                                 {canAttendTicket && (
-                                    <button onClick={handleAttendTicket} disabled={statusUpdating} className="w-full py-2 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-colors border border-[#002855]">
+                                    <button onClick={handleAttendTicket} disabled={statusUpdating} className="w-full py-2 bg-[#002855] text-white text-[10px] font-semibold uppercase tracking-widest hover:bg-slate-800 transition-colors border border-[#002855]">
                                         Asignar a mí
                                     </button>
                                 )}
@@ -1330,7 +1330,7 @@ export default function TicketDetail() {
                         {/* Equipo de Soporte */}
                         {getAssignedUsers().length > 0 && (
                             <div>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-4">Personal en Sitio</span>
+                                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block border-b border-slate-200 pb-2 mb-4">Personal en Sitio</span>
                                 <div className="space-y-2">
                                     {getAssignedUsers().map((assignment: any) => (
                                         <div key={assignment.user_id} className="flex items-center gap-3 p-3 bg-white border border-slate-200 shadow-sm">
@@ -1338,7 +1338,7 @@ export default function TicketDetail() {
                                                 {assignment.user?.avatar_url ? <img src={assignment.user.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-400">{getRoleIcon(assignment.user?.role, 16)}</div>}
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-[10px] font-black text-slate-800 uppercase truncate leading-tight">
+                                                <p className="text-[10px] font-semibold text-slate-800 uppercase truncate leading-tight">
                                                     {assignment.user?.full_name} {assignment.user_id === user?.id && <span className="text-[#002855] opacity-50 text-[8px] ml-1">(YO)</span>}
                                                 </p>
                                                 <div className="flex items-center gap-2 mt-1">
@@ -1346,7 +1346,7 @@ export default function TicketDetail() {
                                                         {getRoleIcon(assignment.user?.role, 14)}
                                                     </div>
                                                     {onlineUsers.has(assignment.user_id) && (
-                                                        <span className="flex items-center gap-1.5 text-[9px] font-black uppercase text-emerald-500 tracking-widest">
+                                                        <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase text-emerald-500 tracking-widest">
                                                             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                                                             En Línea
                                                         </span>
@@ -1362,8 +1362,8 @@ export default function TicketDetail() {
                         {/* Cronología */}
                         <div className="pt-4 border-t border-slate-200">
                             <div className="bg-white border border-slate-200 p-4">
-                                <p className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center font-mono">Referencia Temporal</p>
-                                <p className="text-[17px] font-black text-[#002855] text-center mb-1">
+                                <p className="text-[12px] font-semibold text-slate-400 uppercase tracking-widest mb-1 text-center font-mono">Referencia Temporal</p>
+                                <p className="text-[17px] font-semibold text-[#002855] text-center mb-1">
                                     {(() => {
                                         const now = new Date();
                                         const created = new Date(ticket.created_at);
@@ -1375,7 +1375,7 @@ export default function TicketDetail() {
                                         else return `${Math.floor(diffMs / (1000 * 60))} MIN`;
                                     })()}
                                 </p>
-                                <p className="text-[12px] text-slate-500 font-bold uppercase text-center">{new Date(String(ticket.created_at).includes('T') ? String(ticket.created_at) : `${ticket.created_at}T12:00:00`).toLocaleDateString()}</p>
+                                <p className="text-[12px] text-slate-500 font-semibold uppercase text-center">{new Date(String(ticket.created_at).includes('T') ? String(ticket.created_at) : `${ticket.created_at}T12:00:00`).toLocaleDateString()}</p>
                             </div>
                         </div>
                     </div>
@@ -1391,18 +1391,18 @@ export default function TicketDetail() {
                                 <AlertCircle size={20} />
                             </div>
                             <div>
-                                <h3 className="text-xs font-black text-[#002855] uppercase tracking-widest">Finalizar Ciclo</h3>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase">Acción irreversible en DB</p>
+                                <h3 className="text-xs font-semibold text-[#002855] uppercase tracking-widest">Finalizar Ciclo</h3>
+                                <p className="text-[10px] text-slate-500 font-semibold uppercase">Acción irreversible en DB</p>
                             </div>
                         </div>
                         <div className="bg-rose-50 border border-rose-100 p-4 mb-6">
-                            <p className="text-[10px] text-rose-800 font-bold uppercase leading-relaxed">
+                            <p className="text-[10px] text-rose-800 font-semibold uppercase leading-relaxed">
                                 El ticket será marcado como ARCHIVADO. No se admitirán nuevos registros ni cambios de estado.
                             </p>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={() => setShowFinalizeConfirm(false)} className="flex-1 py-2 bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:bg-slate-200 transition-colors">Cancelar</button>
-                            <button onClick={handleFinalizeTicket} disabled={statusUpdating} className="flex-1 py-2 bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest border border-rose-600 hover:bg-rose-700 transition-colors shadow-lg">Finalizar</button>
+                            <button onClick={() => setShowFinalizeConfirm(false)} className="flex-1 py-2 bg-slate-100 text-slate-700 text-[10px] font-semibold uppercase tracking-widest border border-slate-200 hover:bg-slate-200 transition-colors">Cancelar</button>
+                            <button onClick={handleFinalizeTicket} disabled={statusUpdating} className="flex-1 py-2 bg-rose-600 text-white text-[10px] font-semibold uppercase tracking-widest border border-rose-600 hover:bg-rose-700 transition-colors shadow-lg">Finalizar</button>
                         </div>
                     </div>
                 </div>

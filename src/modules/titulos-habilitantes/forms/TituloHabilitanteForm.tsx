@@ -321,7 +321,7 @@ export default function TituloHabilitanteForm({
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2.5">
               <HelpCircle size={18} className="text-blue-600 shrink-0 mt-0.5" />
               <div className="text-[11px] text-blue-800 leading-normal font-medium">
-                <p className="font-bold text-blue-900 mb-0.5">Indicaciones:</p>
+                <p className="font-normal text-blue-900 mb-0.5">Indicaciones:</p>
                 • Seleccione el tipo de documento y el tiempo de vigencia se establecerá de forma automática.<br />
                 • Indique la vigencia desde (Emisión) y se calculará automáticamente la vigencia hasta (Vencimiento).<br />
                 • Los días para vencer se calculan de manera automática en tiempo real.
@@ -457,7 +457,7 @@ export default function TituloHabilitanteForm({
                     name="vigencia_documento"
                     value={formData.vigencia_documento}
                     readOnly
-                    className="bg-slate-100/80 font-semibold text-slate-600 select-none cursor-not-allowed"
+                    className="bg-slate-100/80 font-normal text-slate-600 select-none cursor-not-allowed"
                     placeholder="Se calculará automáticamente"
                     error={errors.vigencia_documento}
                   />
@@ -465,12 +465,12 @@ export default function TituloHabilitanteForm({
 
                 {/* Días para vencer - Calculado en tiempo real */}
                 <div className="flex flex-col justify-end pb-1.5 pl-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">
+                  <label className="text-[10px] font-normal text-slate-400 uppercase tracking-widest mb-1.5 block">
                     Días para Vencer
                   </label>
                   <div className="flex items-center gap-2 h-[42px] px-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-700">
                     <Clock size={16} className="text-slate-400 shrink-0" />
-                    <span className="text-[13px] font-bold">
+                    <span className="text-[13px] font-normal">
                       {formData.vigencia_documento === 'indeterminado' ? (
                         <span className="text-emerald-600 font-extrabold">Vigente (Indeterminado)</span>
                       ) : diasCalculados !== null ? (

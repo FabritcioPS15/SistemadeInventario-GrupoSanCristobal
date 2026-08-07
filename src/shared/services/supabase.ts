@@ -136,6 +136,8 @@ export type Category = {
 
   name: string;
 
+  slug?: string;
+
   description?: string;
 
   created_at: string;
@@ -399,9 +401,15 @@ export type Asset = {
   resolucion_pantalla?: string;
 
   tipo_conexion?: string;
-
   luminosidad?: string;
 
+  // Nuevos campos config-driven (Dinámicos)
+  campos_especificos?: any;
+  tipo_activo?: string;
+  responsable_asignado?: string;
+  proveedor?: string;
+  garantia_hasta?: string;
+  area_ubicacion?: string;
 };
 
 

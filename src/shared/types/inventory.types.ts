@@ -144,6 +144,7 @@ export interface MaintenanceRecord {
   asset_id: string;
   maintenance_type: 'preventive' | 'corrective' | 'technical_review' | 'repair';
   status: 'pending' | 'in_progress' | 'completed' | 'waiting_parts';
+  priority?: 'high' | 'medium' | 'low';
   description: string;
   scheduled_date?: string;
   completed_date?: string;
@@ -152,6 +153,10 @@ export interface MaintenanceRecord {
   failure_cause?: string;
   solution_applied?: string;
   work_hours?: number;
+  labor_cost?: number;
+  service_provider?: string;
+  invoice_number?: string;
+  other_costs?: number;
   parts_used?: PartUsed[];
   next_maintenance_date?: string;
   maintenance_frequency?: number;
@@ -356,4 +361,16 @@ export const MAINTENANCE_STATUS_LABELS: Record<MaintenanceRecord['status'], stri
   in_progress: 'En Progreso',
   completed: 'Completado',
   waiting_parts: 'Esperando Repuestos',
+};
+
+export const PRIORITY_LABELS: Record<string, string> = {
+  high: 'Alta',
+  medium: 'Media',
+  low: 'Baja',
+};
+
+export const PRIORITY_COLORS: Record<string, string> = {
+  high: 'bg-rose-100 text-rose-800 border-rose-200',
+  medium: 'bg-amber-100 text-amber-800 border-amber-200',
+  low: 'bg-emerald-100 text-emerald-800 border-emerald-200',
 };

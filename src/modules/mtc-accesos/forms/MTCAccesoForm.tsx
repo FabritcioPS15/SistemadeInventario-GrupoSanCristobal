@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shield, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '../../../shared/services/supabase';
+import { supabase, Location } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 
 type MTCAccesoType = {
@@ -10,6 +10,10 @@ type MTCAccesoType = {
   username?: string;
   password?: string;
   access_type: string;
+  location_id?: string;
+  locations?: {
+    name: string;
+  };
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -25,6 +29,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [locations, setLocations] = useState<Location[]>([]);
 
   const [formData, setFormData] = useState({
     name: editAcceso?.name || '',
@@ -32,8 +37,20 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
     username: editAcceso?.username || '',
     password: editAcceso?.password || '',
     access_type: editAcceso?.access_type || 'sistema',
+    location_id: editAcceso?.location_id || '',
     notes: editAcceso?.notes || '',
   });
+
+  useEffect(() => {
+    fetchLocations();
+  }, []);
+
+  const fetchLocations = async () => {
+    const { data } = await supabase.from('locations').select('*').order('name');
+    if (data) {
+      setLocations(data);
+    }
+  };
 
   const validateURL = (url: string): boolean => {
     if (!url) return false;
@@ -78,6 +95,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
       username: formData.username.trim() || null,
       password: formData.password || null,
       access_type: formData.access_type,
+      location_id: formData.location_id || null,
       notes: formData.notes.trim() || null,
       updated_at: new Date().toISOString(),
     };
@@ -176,6 +194,21 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
               <option value="portal">Portal Web</option>
               <option value="api">API/WS</option>
               <option value="externo">Acceso Externo</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Sede / Ubicación">
+            <FormSelect
+              name="location_id"
+              value={formData.location_id}
+              onChange={handleChange}
+            >
+              <option value="">Sede no especificada</option>
+              {locations.map(loc => (
+                <option key={loc.id} value={loc.id}>
+                  {loc.name}
+                </option>
+              ))}
             </FormSelect>
           </FormField>
 

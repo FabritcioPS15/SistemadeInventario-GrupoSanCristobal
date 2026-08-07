@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Plus, Edit, Trash2, MapPin, X, Car, List, Search, ChevronDown, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
@@ -17,6 +17,8 @@ import DetailModal, {
   StandardModalFooter,
 } from '../../../shared/components/ui/DetailModal';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
+import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
@@ -72,7 +74,13 @@ export default function FlotaVehicular() {
   const [showDetails, setShowDetails] = useState(false);
   const [selectedVehiculo, setSelectedVehiculo] = useState<Vehiculo | undefined>();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { selectionMode, setSelectionMode } = useSelectionMode();
   const vencimientoMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) setSelectedIds([]);
+    setSelectionMode(!selectionMode);
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -791,7 +799,7 @@ export default function FlotaVehicular() {
                 placeholder="BUSCAR POR PLACA, MARCA O MODELO..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-semibold text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
               />
             </>
           }
@@ -818,6 +826,14 @@ export default function FlotaVehicular() {
           <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
           {canEdit() && (
+            <SelectionModeButton
+              active={selectionMode}
+              onClick={handleToggleSelectionMode}
+              selectedCount={selectedIds.length}
+            />
+          )}
+
+          {canEdit() && (
             <button
               onClick={() => { setEditing(undefined); setView(view === 'form' ? 'list' : 'form'); }}
               className={`w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${view === 'form' ? 'bg-slate-800 text-white' : 'bg-[#002855] text-white hover:bg-blue-800'}`}
@@ -829,7 +845,7 @@ export default function FlotaVehicular() {
 
           <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPdf} />
 
-          {canEdit() && selectedIds.length > 0 && viewMode === 'table' && (
+          {canEdit() && selectionMode && selectedIds.length > 0 && viewMode === 'table' && (
             <button
               onClick={handleBulkDelete}
               className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm"
@@ -921,11 +937,58 @@ export default function FlotaVehicular() {
                     onItemsPerPageChange={setItemsPerPage}
                   />
                 </div>
-                <div className="overflow-x-auto">
+                {/* Mobile card view */}
+                <div className="block md:hidden space-y-3">
+                  {paginatedVehiculos.map((v) => (
+                    <div
+                      key={v.id}
+                      className={`bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer ${selectedIds.includes(v.id) ? 'border-[#002855] bg-[#002855]/5' : ''}`}
+                      onClick={() => handleView(v)}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {canEdit() && selectionMode && (
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(v.id)}
+                              onChange={() => toggleSelect(v.id)}
+                              onClick={e => e.stopPropagation()}
+                              className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer shrink-0"
+                            />
+                          )}
+                          <span className="font-mono text-[13px] font-black text-slate-900 tracking-wider">{v.placa}</span>
+                        </div>
+                        <span className={`text-[9px] font-semibold px-2 py-0.5 border ${v.estado === 'en_proceso' ? 'text-blue-700 bg-blue-50 border-blue-200' : v.estado === 'activa' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
+                          {v.estado === 'en_proceso' ? 'En Proceso' : v.estado === 'activa' ? 'Activa' : 'Inactiva'}
+                        </span>
+                      </div>
+                      <div className="mb-2">
+                        <span className="text-[11px] font-bold text-slate-800">{v.marca} {v.modelo}{v.año ? ` (${v.año})` : ''}</span>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+                          <MapPin size={10} className="text-rose-400 shrink-0" />
+                          <span className="truncate">{getEscuelaNombre(v.ubicacion_actual)}</span>
+                        </div>
+                        <div className="flex gap-4 mt-2 text-[10px] flex-wrap">
+                          <span className="text-slate-400">CITV: <span className="font-semibold text-slate-600">{v.citv_vencimiento ? new Date(v.citv_vencimiento + 'T12:00:00').toLocaleDateString('es-PE') : '—'}</span></span>
+                          <span className="text-slate-400">SOAT: <span className="font-semibold text-slate-600">{v.soat_vencimiento ? new Date(v.soat_vencimiento + 'T12:00:00').toLocaleDateString('es-PE') : '—'}</span></span>
+                          <span className="text-slate-400">Póliza: <span className="font-semibold text-slate-600">{v.poliza_vencimiento ? new Date(v.poliza_vencimiento + 'T12:00:00').toLocaleDateString('es-PE') : '—'}</span></span>
+                        </div>
+                      </div>
+                      {canEdit() && (
+                        <div className="flex gap-1.5 pt-2 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => handleEdit(v)} className="text-[10px] font-bold text-[#002855] hover:underline bg-[#002855]/5 px-2 py-1 rounded-sm w-full text-center" title="Editar Unidad">Editar</button>
+                          <button onClick={() => handleDelete(v.id)} className="text-[10px] font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-1 rounded-sm w-full text-center" title="Eliminar Unidad">Eliminar</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        {canEdit() && (
+                        {canEdit() && selectionMode && (
                           <TableHead className="w-12 text-center">
                             <input
                               type="checkbox"
@@ -951,7 +1014,7 @@ export default function FlotaVehicular() {
                           className={`cursor-pointer transition-colors duration-150 group relative ${selectedIds.includes(v.id) ? 'bg-blue-50/40' : ''}`}
                           onClick={() => handleView(v)}
                         >
-                          {canEdit() && (
+                          {canEdit() && selectionMode && (
                             <TableCell className="text-center w-12">
                               <input
                                 type="checkbox"
@@ -1035,7 +1098,7 @@ export default function FlotaVehicular() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {paginatedVehiculos.map(v => (
                     <div key={v.id} className={`bg-white rounded-2xl shadow-sm border transition-all p-6 flex flex-col group overflow-hidden hover:-translate-y-0.5 duration-200 relative ${selectedIds.includes(v.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-200/80 hover:shadow-xl'}`}>
-                      {canEdit() && (
+                      {canEdit() && selectionMode && (
                         <div className="absolute top-4 right-4 z-10">
                           <input
                             type="checkbox"
@@ -1132,10 +1195,10 @@ export default function FlotaVehicular() {
                   <Car size={20} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                  <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
                     {selectedVehiculo.marca} {selectedVehiculo.modelo} {selectedVehiculo.año ? `(${selectedVehiculo.año})` : ''}
                   </h2>
-                  <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                  <p className="text-[9px] sm:text-[10px] font-normal text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                     <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
                     <span className="line-clamp-2 sm:truncate">{getEscuelaNombre(selectedVehiculo.ubicacion_actual)}</span>
                   </p>
@@ -1157,19 +1220,19 @@ export default function FlotaVehicular() {
               {/* Quick info strip */}
               <div className="grid grid-cols-3 gap-px bg-slate-200 border-b border-slate-200">
                 <div className="bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-black text-slate-400 tracking-widest mb-1">Estado</span>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[8px] sm:text-[9px] font-black tracking-widest border rounded-none ${statusColors[selectedVehiculo.estado]}`}>
+                  <span className="text-[8px] font-normal text-slate-400 tracking-widest mb-1">Estado</span>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[8px] sm:text-[9px] font-normal tracking-widest border rounded-none ${statusColors[selectedVehiculo.estado]}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${selectedVehiculo.estado === 'en_proceso' ? 'bg-blue-500' : selectedVehiculo.estado === 'activa' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                     {selectedVehiculo.estado === 'en_proceso' ? 'En Proceso' : selectedVehiculo.estado === 'activa' ? 'Activa' : 'Inactiva'}
                   </span>
                 </div>
                 <div className="bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-black text-slate-400 tracking-widest mb-1">Marca / Modelo</span>
-                  <span className="text-[10px] sm:text-[11px] font-black text-[#002855] leading-tight">{selectedVehiculo.marca} {selectedVehiculo.modelo}</span>
+                  <span className="text-[8px] font-normal text-slate-400 tracking-widest mb-1">Marca / Modelo</span>
+                  <span className="text-[10px] sm:text-[11px] font-normal text-[#002855] leading-tight">{selectedVehiculo.marca} {selectedVehiculo.modelo}</span>
                 </div>
                 <div className="bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center">
-                  <span className="text-[8px] font-black text-slate-400 tracking-widest mb-1">Color / Año</span>
-                  <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">{selectedVehiculo.color || '—'} / {selectedVehiculo.año || '—'}</span>
+                  <span className="text-[8px] font-normal text-slate-400 tracking-widest mb-1">Color / Año</span>
+                  <span className="text-[10px] sm:text-[11px] font-normal text-[#002855]">{selectedVehiculo.color || '—'} / {selectedVehiculo.año || '—'}</span>
                 </div>
               </div>
 
@@ -1177,7 +1240,7 @@ export default function FlotaVehicular() {
               <div className="p-4 sm:p-6 space-y-4">
                 <div className="flex items-center gap-2 mb-1">
                   <Calendar size={14} className="text-[#002855]" />
-                  <span className="text-[10px] sm:text-[11px] font-black text-[#002855] tracking-[0.15em]">Documentación Vehicular</span>
+                  <span className="text-[10px] sm:text-[11px] font-normal text-[#002855] tracking-[0.15em]">Documentación Vehicular</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1189,7 +1252,7 @@ export default function FlotaVehicular() {
 
                 {selectedVehiculo.notas && (
                   <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100 mt-2">
-                    <span className="text-[8px] sm:text-[9px] font-black text-amber-600 tracking-widest mb-1.5 flex items-center gap-1.5">
+                    <span className="text-[8px] sm:text-[9px] font-normal text-amber-600 tracking-widest mb-1.5 flex items-center gap-1.5">
                       📝 Notas / Observaciones
                     </span>
                     <p className="text-[10px] sm:text-[11px] font-medium text-amber-900 leading-relaxed">

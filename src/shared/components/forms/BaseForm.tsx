@@ -1,20 +1,4 @@
-/**
- * Formulario modal de un solo paso.
- *
- * ⚠️ Para formularios con 2+ pasos usa MultiStepForm (más moderno).
- * ⚠️ BaseForm se mantiene para formularios simples.
- *
- * Componentes exportados:
- *   FormGrid    — cuadrícula responsiva (columns={1|2|3|4})
- *   FormSection — sección con título y colores
- *   FormField   — label + required + error wrapper
- *   FormInput   — input estilizado
- *   FormSelect  — select estilizado
- *   FormTextarea — textarea estilizado
- *
- * PATRÓN: Todos los módulos usan estos componentes de formulario
- * para mantener consistencia visual.
- */
+
 
 import { ReactNode } from 'react';
 import { X, AlertCircle, Loader2 } from 'lucide-react';
@@ -77,9 +61,9 @@ export default function BaseForm({
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">{title}</h2>
+              <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">{title}</h2>
               {subtitle && (
-                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                <p className="text-[9px] sm:text-[10px] font-normal text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                   <span className="line-clamp-2 sm:truncate">{subtitle}</span>
                 </p>
               )}
@@ -104,7 +88,7 @@ export default function BaseForm({
             {error && (
               <div className="bg-rose-50 border border-rose-100 p-4 flex items-center gap-3 text-rose-800">
                 <AlertCircle size={20} />
-                <p className="text-[11px] font-black tracking-widest">{error}</p>
+                <p className="text-[11px] font-normal tracking-widest">{error}</p>
               </div>
             )}
             {children}
@@ -114,7 +98,7 @@ export default function BaseForm({
             {showChangesWarning && (
               <div className="flex items-center gap-2 text-amber-600">
                 <AlertCircle size={14} />
-                <span className="text-[10px] font-black tracking-widest">Cambios sin guardar</span>
+                <span className="text-[10px] font-normal tracking-widest">Cambios sin guardar</span>
               </div>
             )}
             <div className="flex items-center gap-3 ml-auto">
@@ -122,14 +106,14 @@ export default function BaseForm({
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="px-6 py-3 sm:py-2.5 min-h-[44px] text-[10px] font-black uppercase tracking-[0.2em] text-slate-700 bg-slate-200 hover:bg-slate-300 transition-all disabled:opacity-50"
+                className="px-6 py-3 sm:py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-[0.2em] text-slate-700 bg-slate-200 hover:bg-slate-300 transition-all disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-3 sm:py-2.5 min-h-[44px] text-[10px] font-black uppercase tracking-[0.2em] text-white bg-emerald-600 hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg"
+                className="px-6 py-3 sm:py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-[0.2em] text-white bg-emerald-600 hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg"
               >
                 {loading && <Loader2 size={14} className="animate-spin" />}
                 {loading ? 'Procesando...' : 'Guardar Cambios'}
@@ -200,7 +184,7 @@ export function FormSection({
         <div className="flex items-center gap-3">
           <div className={`w-1 h-5 ${colorClasses[color]}`}></div>
           {icon && <span className="text-slate-400">{icon}</span>}
-          <h3 className="text-[11px] font-black text-blue-900 tracking-[0.2em]">{title}</h3>
+          <h3 className="text-[11px] font-normal text-blue-900 tracking-[0.2em]">{title}</h3>
         </div>
         {titleRight && (
           <div className="flex items-center">
@@ -237,8 +221,8 @@ export function FormField({
   const gridClass = gridCols > 1 ? `md:col-span-${gridCols}` : '';
 
   return (
-    <div className={`flex flex-col ${className} ${gridClass}`}>
-      <label className="flex items-end text-[9px] font-black text-gray-400 mb-1.5 ml-1 h-[24px]">
+    <div data-label={label} className={`flex flex-col ${className} ${gridClass}`}>
+      <label className="flex items-end text-[9px] font-normal text-gray-400 mb-1.5 ml-1 min-h-[24px]">
         <span className="line-clamp-2 leading-tight">
           {label} {required && <span className="text-red-500 ml-0.5">*</span>}
         </span>
@@ -247,7 +231,7 @@ export function FormField({
         {children}
       </div>
       {error && (
-        <p className="text-red-500 text-[10px] font-semibold mt-1.5 ml-1">{error}</p>
+        <p className="text-red-500 text-[10px] font-normal mt-1.5 ml-1">{error}</p>
       )}
     </div>
   );
@@ -260,7 +244,7 @@ export function FormInput({
   error,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { error?: string }) {
-  const baseClasses = 'w-full px-3 py-2 h-10 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-[11px] font-black text-[#002855] tracking-[0.1em] placeholder:text-slate-300';
+  const baseClasses = 'w-full px-3 py-2 h-10 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-[11px] font-normal text-[#002855] tracking-[0.1em] placeholder:text-slate-300';
   const errorClasses = error ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : '';
   return (
     <input
@@ -278,7 +262,7 @@ export function FormSelect({
   children,
   ...props
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: string }) {
-  const baseClasses = 'w-full px-3 py-2 h-10 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-[11px] font-black text-[#002855] tracking-[0.1em] appearance-none cursor-pointer';
+  const baseClasses = 'w-full px-3 py-2 h-10 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-[11px] font-normal text-[#002855] tracking-[0.1em] appearance-none cursor-pointer';
   const errorClasses = error ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : '';
 
   return (
@@ -306,7 +290,7 @@ export function FormTextarea({
   rows = 3,
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { error?: string }) {
-  const baseClasses = 'w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-[11px] font-black text-[#002855] tracking-[0.1em] placeholder:text-slate-300 resize-none';
+  const baseClasses = 'w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-[11px] font-normal text-[#002855] tracking-[0.1em] placeholder:text-slate-300 resize-none';
   const errorClasses = error ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : '';
 
   return (

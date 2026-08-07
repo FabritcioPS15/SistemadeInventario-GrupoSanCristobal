@@ -74,7 +74,7 @@ export default function StatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 font-black uppercase tracking-widest border rounded-none ${colors.bg} ${colors.text} ${colors.border} ${sizeClasses[size]} ${className}`}
+      className={`inline-flex items-center gap-1 font-semibold uppercase tracking-widest border rounded-none ${colors.bg} ${colors.text} ${colors.border} ${sizeClasses[size]} ${className}`}
     >
       {showDot && <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />}
       {config.label}

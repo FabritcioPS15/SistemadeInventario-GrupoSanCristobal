@@ -119,7 +119,7 @@ export default function DecoupleModal({ asset, onClose, onConfirm }: DecoupleMod
         <div className="space-y-4">
           {items.map((item, index) => (
             <div key={item.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col gap-3">
-              <div className="font-bold text-slate-700 text-sm flex items-center gap-2">
+              <div className="font-normal text-slate-700 text-sm flex items-center gap-2">
                 <span className="bg-[#002855] text-white w-5 h-5 rounded-full flex items-center justify-center text-xs">
                   {index + 1}
                 </span>

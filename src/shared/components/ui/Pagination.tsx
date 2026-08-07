@@ -81,9 +81,9 @@ export default function Pagination({
                     <div className="flex w-full sm:w-auto items-center justify-between gap-2">
                         {/* Item count info */}
                         <div className="flex items-center gap-3 bg-white px-4 py-2 border border-blue-900/50 shadow-sm flex-1 sm:flex-none">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">
-                                Mostrando <span className="text-[#002855] text-[11px] font-black">{startItem}</span> - <span className="text-[#002855] text-[11px] font-black px-2">{endItem}</span>
-                                EN TOTAL: <span className="text-[#002855] text-[11px] font-black ml-1">{totalItems}</span>
+                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">
+                                Mostrando <span className="text-[#002855] text-[11px] font-semibold">{startItem}</span> - <span className="text-[#002855] text-[11px] font-semibold px-2">{endItem}</span>
+                                EN TOTAL: <span className="text-[#002855] text-[11px] font-semibold ml-1">{totalItems}</span>
                             </p>
                         </div>
 
@@ -99,14 +99,14 @@ export default function Pagination({
                     {/* Items per page selector */}
                     <div className={`sm:flex items-center gap-3 ${isOpen ? 'flex flex-col absolute top-full left-0 right-0 bg-white border border-slate-200 shadow-xl p-4 mt-2 z-50' : 'hidden'}`}>
                         <div className="flex items-center gap-3 w-full sm:w-auto">
-                            <label htmlFor="itemsPerPage" className="text-[10px] font-black text-[#002855] sm:text-white/50 uppercase tracking-widest whitespace-nowrap">
+                            <label htmlFor="itemsPerPage" className="text-[10px] font-semibold text-[#002855] sm:text-white/50 uppercase tracking-widest whitespace-nowrap">
                                 Por página:
                             </label>
                             <select
                                 id="itemsPerPage"
                                 value={itemsPerPage}
                                 onChange={(e) => onItemsPerPageChange(Number(e.target.value))}
-                                className="bg-slate-50 sm:bg-white border sm:border-transparent border-slate-200 text-[11px] font-black text-[#002855] px-4 py-2 hover:bg-slate-100 sm:hover:bg-slate-50 transition-all outline-none cursor-pointer shadow-sm w-full sm:w-auto"
+                                className="bg-slate-50 sm:bg-white border sm:border-transparent border-slate-200 text-[11px] font-semibold text-[#002855] px-4 py-2 hover:bg-slate-100 sm:hover:bg-slate-50 transition-all outline-none cursor-pointer shadow-sm w-full sm:w-auto"
                             >
                                 <option value={10}>10 REGISTROS</option>
                                 <option value={20}>20 REGISTROS</option>
@@ -117,7 +117,7 @@ export default function Pagination({
                         {selectedCount > 0 && onDeleteSelected && (
                             <button
                                 onClick={onDeleteSelected}
-                                className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all rounded-lg shadow-sm active:scale-95 w-full sm:w-auto mt-2 sm:mt-0"
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 text-white text-[11px] font-semibold uppercase tracking-widest hover:bg-rose-700 transition-all rounded-lg shadow-sm active:scale-95 w-full sm:w-auto mt-2 sm:mt-0"
                             >
                                 <Trash2 size={14} />
                                 Eliminar {selectedCount} {selectedCount === 1 ? 'seleccionado' : 'seleccionados'}
@@ -133,7 +133,7 @@ export default function Pagination({
                     <button
                         onClick={() => onPageChange(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className="flex items-center gap-2 px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] text-[#002855] bg-white hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 group shadow-sm"
+                        className="flex items-center gap-2 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#002855] bg-white hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 group shadow-sm"
                     >
                         <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
                         <span className="hidden sm:inline">Anterior</span>
@@ -145,7 +145,7 @@ export default function Pagination({
                                 key={index}
                                 onClick={() => typeof page === 'number' && onPageChange(page)}
                                 disabled={page === '...'}
-                                className={`w-10 h-10 flex items-center justify-center text-[11px] font-black transition-all shadow-sm ${page === currentPage
+                                className={`w-10 h-10 flex items-center justify-center text-[11px] font-semibold transition-all shadow-sm ${page === currentPage
                                     ? 'bg-white text-[#002855] scale-110 z-10 shadow-lg'
                                     : page === '...'
                                         ? 'text-white/20 cursor-default cursor-not-allowed'
@@ -157,14 +157,14 @@ export default function Pagination({
                         ))}
                     </div>
 
-                    <div className="lg:hidden px-4 py-2.5 bg-white shadow-sm text-[10px] font-black text-[#002855] uppercase tracking-widest">
+                    <div className="lg:hidden px-4 py-2.5 bg-white shadow-sm text-[10px] font-semibold text-[#002855] uppercase tracking-widest">
                         {currentPage} <span className="opacity-20 mx-1">/</span> {totalPages}
                     </div>
 
                     <button
                         onClick={() => onPageChange(currentPage + 1)}
                         disabled={currentPage === totalPages}
-                        className="flex items-center gap-2 px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.15em] text-[#002855] bg-white hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 group shadow-sm"
+                        className="flex items-center gap-2 px-5 py-2.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#002855] bg-white hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95 group shadow-sm"
                     >
                         <span className="hidden sm:inline">Siguiente</span>
                         <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />

@@ -114,7 +114,7 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <HardDrive className="h-4 w-4 text-blue-600" />
-          <span className="text-[10px] font-black text-[#002855] uppercase tracking-wider">Discos ({disks.length})</span>
+          <span className="text-[10px] font-normal text-[#002855] uppercase tracking-wider">Discos ({disks.length})</span>
         </div>
         {!showAddForm && disks.length < 8 && (
           <button
@@ -124,7 +124,7 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
               setFormData(prev => ({ ...prev, disk_number: available[0] || 1 }));
               setShowAddForm(true);
             }}
-            className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
+            className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white text-[9px] font-normal uppercase tracking-widest hover:bg-blue-700 transition-all"
           >
             <Plus size={14} /> Añadir Disco
           </button>
@@ -136,12 +136,12 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
         {disks.map((disk, idx) => (
           <div key={idx} className="bg-slate-50 border border-slate-200 px-2 py-1.5 flex items-center justify-between group">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[9px] font-black text-[#002855] bg-white border border-slate-200 w-5 h-5 flex items-center justify-center shrink-0">{disk.disk_number}</span>
-              <span className="text-[10px] font-black text-[#002855] truncate">{disk.disk_type} {disk.total_capacity_gb}GB</span>
-              <span className={`text-[8px] font-bold px-1 py-0.5 ${disk.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+              <span className="text-[9px] font-normal text-[#002855] bg-white border border-slate-200 w-5 h-5 flex items-center justify-center shrink-0">{disk.disk_number}</span>
+              <span className="text-[10px] font-normal text-[#002855] truncate">{disk.disk_type} {disk.total_capacity_gb}GB</span>
+              <span className={`text-[8px] font-normal px-1 py-0.5 ${disk.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                 {disk.status === 'active' ? 'Activo' : disk.status}
               </span>
-              {disk.brand && <span className="text-[8px] font-bold text-slate-400 truncate hidden sm:inline">{disk.brand}</span>}
+              {disk.brand && <span className="text-[8px] font-normal text-slate-400 truncate hidden sm:inline">{disk.brand}</span>}
             </div>
             <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
               <button type="button" onClick={() => startEdit(idx)} className="p-1 text-blue-600 hover:bg-blue-50 transition-colors"><Edit2 size={12} /></button>
@@ -155,29 +155,29 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
       {showAddForm && (
         <div className="bg-white border-2 border-blue-100 p-3 space-y-3 animate-in slide-in-from-top-2 duration-300">
           <div className="flex items-center justify-between border-b border-blue-50 pb-1.5 mb-2">
-            <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.2em]">
+            <span className="text-[10px] font-normal text-blue-600 uppercase tracking-[0.2em]">
               {editingIndex !== null ? 'Editando Disco' : 'Nuevo Disco de Almacenamiento'}
             </span>
-            <button type="button" onClick={resetForm} className="text-slate-400 hover:text-slate-600 font-bold text-[10px] uppercase">Cancelar</button>
+            <button type="button" onClick={resetForm} className="text-slate-400 hover:text-slate-600 font-normal text-[10px] uppercase">Cancelar</button>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">N° Disco</label>
+              <label className="text-[9px] font-normal text-slate-400 uppercase tracking-widest">N° Disco</label>
               <select
                 value={formData.disk_number}
                 onChange={e => setFormData(p => ({ ...p, disk_number: parseInt(e.target.value) }))}
-                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold text-[#002855]"
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-normal text-[#002855]"
               >
                 {getAvailableDiskNumbers().map(n => <option key={n} value={n}>Disco {n}</option>)}
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tipo</label>
+              <label className="text-[9px] font-normal text-slate-400 uppercase tracking-widest">Tipo</label>
               <select
                 value={formData.disk_type}
                 onChange={e => setFormData(p => ({ ...p, disk_type: e.target.value as any }))}
-                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold text-[#002855]"
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-normal text-[#002855]"
               >
                 <option value="HDD">HDD</option>
                 <option value="SSD">SSD</option>
@@ -185,22 +185,22 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Capacidad (GB)</label>
+              <label className="text-[9px] font-normal text-slate-400 uppercase tracking-widest">Capacidad (GB)</label>
               <input
                 type="number"
                 value={formData.total_capacity_gb}
                 onChange={e => setFormData(p => ({ ...p, total_capacity_gb: e.target.value }))}
-                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold"
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-normal"
                 placeholder="Ej: 1000"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Libre (GB)</label>
+              <label className="text-[9px] font-normal text-slate-400 uppercase tracking-widest">Libre (GB)</label>
               <input
                 type="number"
                 value={formData.remaining_capacity_gb}
                 onChange={e => setFormData(p => ({ ...p, remaining_capacity_gb: e.target.value }))}
-                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold"
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-normal"
                 placeholder="Ej: 200"
               />
             </div>
@@ -208,21 +208,21 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grabación Desde (Opcional)</label>
+              <label className="text-[9px] font-normal text-slate-400 uppercase tracking-widest">Grabación Desde (Opcional)</label>
               <input
                 type="date"
                 value={formData.stored_from}
                 onChange={e => setFormData(p => ({ ...p, stored_from: e.target.value }))}
-                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold"
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-normal"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Grabación Hasta (Opcional)</label>
+              <label className="text-[9px] font-normal text-slate-400 uppercase tracking-widest">Grabación Hasta (Opcional)</label>
               <input
                 type="date"
                 value={formData.stored_to}
                 onChange={e => setFormData(p => ({ ...p, stored_to: e.target.value }))}
-                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-bold"
+                className="w-full bg-slate-50 border border-slate-200 p-2 text-xs font-normal"
               />
             </div>
           </div>
@@ -230,7 +230,7 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
           <button
             type="button"
             onClick={handleAddOrUpdate}
-            className="w-full py-2 bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-blue-600 hover:text-white transition-all border border-blue-200"
+            className="w-full py-2 bg-blue-50 text-blue-600 text-[10px] font-normal uppercase tracking-[0.2em] hover:bg-blue-600 hover:text-white transition-all border border-blue-200"
           >
             {editingIndex !== null ? 'Actualizar en Lista' : 'Confirmar Disco y Añadir'}
           </button>

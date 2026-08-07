@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Edit, Trash2, MapPin, Package, Truck, X, Calendar, Plus, LayoutGrid, List, Search, Send } from 'lucide-react';
 import { useHeaderVisible } from '../../../shared/hooks/useHeaderVisible';
 import { supabase, AssetWithDetails, Location } from '../../../shared/services/supabase';
@@ -263,7 +263,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                   {canEdit() && (
                     <button
                       onClick={() => { setEditingShipment(undefined); setView('form'); }}
-                      className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+                      className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
                     >
                       <Plus size={14} /> Nuevo
                     </button>
@@ -471,8 +471,8 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                   <Send size={18} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">Ficha de Envío</h2>
-                  <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">{statusLabels[viewingShipment.status]}</p>
+                  <h2 className="text-sm font-normal text-white uppercase tracking-[0.2em] leading-tight">Ficha de Envío</h2>
+                  <p className="text-[10px] font-normal text-blue-200 uppercase tracking-widest mt-0.5">{statusLabels[viewingShipment.status]}</p>
                 </div>
               </div>
               <button
@@ -489,12 +489,12 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-1 h-4 bg-[#002855] rounded-none" />
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Activo Trasladado</h3>
+                    <h3 className="text-[10px] font-normal text-gray-400 uppercase tracking-[0.2em]">Activo Trasladado</h3>
                   </div>
                   <div className="bg-slate-50 p-6 rounded-none border border-gray-100 font-sans">
-                    <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-2">Marca y Modelo</p>
-                    <p className="text-lg font-black text-[#002855] uppercase">{viewingShipment.assets?.brand} {viewingShipment.assets?.model}</p>
-                    <div className="mt-4 flex items-center gap-2 font-bold text-[10px] uppercase text-slate-500">
+                    <p className="text-[12px] font-normal text-[#002855] tracking-[0.2em] mb-2">Marca y Modelo</p>
+                    <p className="text-lg font-normal text-[#002855] uppercase">{viewingShipment.assets?.brand} {viewingShipment.assets?.model}</p>
+                    <div className="mt-4 flex items-center gap-2 font-normal text-[10px] uppercase text-slate-500">
                       <Package size={14} />
                       {viewingShipment.assets?.asset_types?.name}
                     </div>
@@ -504,12 +504,12 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-1 h-4 bg-emerald-500 rounded-none" />
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Tiempos de Entrega</h3>
+                    <h3 className="text-[10px] font-normal text-gray-400 uppercase tracking-[0.2em]">Tiempos de Entrega</h3>
                   </div>
                   <div className="bg-emerald-50/30 p-6 rounded-none border border-emerald-100/50 font-sans">
                     <div>
-                      <p className="text-[10px] font-black text-emerald-600/60 uppercase tracking-widest mb-2">Fecha de Envío</p>
-                      <div className="flex items-center gap-2 text-sm font-black text-emerald-900 uppercase">
+                      <p className="text-[10px] font-normal text-emerald-600/60 uppercase tracking-widest mb-2">Fecha de Envío</p>
+                      <div className="flex items-center gap-2 text-sm font-normal text-emerald-900 uppercase">
                         <Calendar size={16} />
                         {new Date(String(viewingShipment.shipment_date).includes('T') ? String(viewingShipment.shipment_date) : `${viewingShipment.shipment_date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                       </div>
@@ -522,7 +522,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
               <div className="space-y-6">
                 <div className="flex items-center gap-2">
                   <div className="w-1 h-4 bg-rose-500 rounded-none" />
-                  <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Ruta y Logística</h3>
+                  <h3 className="text-[10px] font-normal text-gray-400 uppercase tracking-[0.2em]">Ruta y Logística</h3>
                 </div>
                 <div className="relative">
                   <div className="absolute left-6 top-10 bottom-10 w-0.5 border-l-2 border-dashed border-slate-200" />
@@ -532,8 +532,8 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                         <MapPin size={20} className="text-slate-400" />
                       </div>
                       <div>
-                        <p className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Punto de Origen</p>
-                        <p className="text-sm font-black text-slate-700 uppercase">{viewingShipment.from_location?.name || 'STOCK CENTRAL'}</p>
+                        <p className="text-[12px] font-normal text-[#002855] tracking-[0.2em]">Punto de Origen</p>
+                        <p className="text-sm font-normal text-slate-700 uppercase">{viewingShipment.from_location?.name || 'STOCK CENTRAL'}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -541,8 +541,8 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                         <MapPin size={20} className="text-white" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Punto de Destino</p>
-                        <p className="text-sm font-black text-[#002855] uppercase">{viewingShipment.to_location?.name}</p>
+                        <p className="text-[10px] font-normal text-blue-400 uppercase tracking-widest">Punto de Destino</p>
+                        <p className="text-sm font-normal text-[#002855] uppercase">{viewingShipment.to_location?.name}</p>
                       </div>
                     </div>
                   </div>
@@ -552,20 +552,20 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
               {/* Información del Transportista */}
               <div className="bg-slate-50 p-6 rounded-none border border-gray-100 grid grid-cols-2 md:grid-cols-4 gap-6 font-sans">
                 <div>
-                  <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-1">Guía / Tracking</p>
-                  <p className="text-xs font-bold text-slate-900 uppercase">{viewingShipment.tracking_number || "NO ASIGNADO"}</p>
+                  <p className="text-[12px] font-normal text-[#002855] tracking-[0.2em] mb-1">Guía / Tracking</p>
+                  <p className="text-xs font-normal text-slate-900 uppercase">{viewingShipment.tracking_number || "NO ASIGNADO"}</p>
                 </div>
                 <div>
-                  <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-1">Empresa Carrier</p>
-                  <p className="text-xs font-bold text-slate-900 uppercase">{viewingShipment.carrier || "RECURSO PROPIO"}</p>
+                  <p className="text-[12px] font-normal text-[#002855] tracking-[0.2em] mb-1">Empresa Carrier</p>
+                  <p className="text-xs font-normal text-slate-900 uppercase">{viewingShipment.carrier || "RECURSO PROPIO"}</p>
                 </div>
                 <div>
-                  <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-1">Enviado Por</p>
-                  <p className="text-xs font-bold text-slate-900 uppercase">{viewingShipment.shipped_by || "—"}</p>
+                  <p className="text-[12px] font-normal text-[#002855] tracking-[0.2em] mb-1">Enviado Por</p>
+                  <p className="text-xs font-normal text-slate-900 uppercase">{viewingShipment.shipped_by || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-1">Recibido Por</p>
-                  <p className="text-xs font-bold text-slate-900 uppercase">{viewingShipment.received_by || "PENDIENTE"}</p>
+                  <p className="text-[12px] font-normal text-[#002855] tracking-[0.2em] mb-1">Recibido Por</p>
+                  <p className="text-xs font-normal text-slate-900 uppercase">{viewingShipment.received_by || "PENDIENTE"}</p>
                 </div>
               </div>
 
@@ -574,7 +574,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-1 h-4 bg-amber-500 rounded-none" />
-                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Observaciones de Logística</h3>
+                    <h3 className="text-[10px] font-normal text-gray-400 uppercase tracking-[0.2em]">Observaciones de Logística</h3>
                   </div>
                   <div className="bg-amber-50/50 p-6 rounded-none border border-amber-100 font-sans">
                     <p className="text-sm text-amber-950 font-medium italic leading-relaxed">{viewingShipment.notes}</p>
@@ -588,7 +588,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
               <div className="flex items-center gap-3 ml-auto">
                 <button
                   onClick={() => setViewingShipment(undefined)}
-                  className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all"
+                  className="px-6 py-2 text-[10px] font-normal uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all"
                 >
                   Cerrar
                 </button>
@@ -598,7 +598,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                       setViewingShipment(undefined);
                       handleEditShipment(viewingShipment);
                     }}
-                    className="px-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all shadow-lg"
+                    className="px-8 py-2 text-[10px] font-normal uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all shadow-lg"
                   >
                     Editar Envío
                   </button>

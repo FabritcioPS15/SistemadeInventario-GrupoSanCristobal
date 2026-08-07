@@ -1,5 +1,5 @@
-﻿import { useState } from 'react';
-import { Plus, Building2, Calendar, FileText, User, AlertTriangle, Edit, X, Search, MapPin, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Building2, Calendar, FileText, User, AlertTriangle, Edit, X, Search, MapPin, Trash2, ExternalLink, Eye } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import type { SutranVisit } from '../../../shared/services/supabase';
 import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
@@ -18,6 +18,8 @@ import DetailModal, {
   DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
+import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
@@ -40,6 +42,12 @@ export default function Sutran() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { selectionMode, setSelectionMode } = useSelectionMode();
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) setSelectedIds([]);
+    setSelectionMode(!selectionMode);
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -161,14 +169,14 @@ export default function Sutran() {
         .eq('id', id);
 
       if (error) {
-        console.error('❌ Error al eliminar visita:', error);
+        console.error('? Error al eliminar visita:', error);
         notifyError(`Error al eliminar la visita: ${error.message}`, 'Error');
       } else {
         await refetchVisits();
         notifySuccess('Visita eliminada correctamente', 'Eliminada');
       }
     } catch (err) {
-      console.error('❌ Error inesperado al eliminar visita:', err);
+      console.error('? Error inesperado al eliminar visita:', err);
       notifyError('Error inesperado al eliminar la visita', 'Error');
     }
   };
@@ -202,10 +210,10 @@ export default function Sutran() {
         <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">{label}</span>
         {isSorted ? (
           <span className="text-[#002855] text-[10px]">
-            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+            {sortConfig.direction === 'asc' ? '?' : '?'}
           </span>
         ) : (
-          <span className="text-slate-300 text-[10px] opacity-50">▲▼</span>
+          <span className="text-slate-300 text-[10px] opacity-50">??</span>
         )}
       </button>
     );
@@ -319,9 +327,17 @@ export default function Sutran() {
           <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
           {canEdit() && (
+            <SelectionModeButton
+              active={selectionMode}
+              onClick={handleToggleSelectionMode}
+              selectedCount={selectedIds.length}
+            />
+          )}
+
+          {canEdit() && (
             <button
               onClick={() => { setEditingVisit(undefined); setShowForm(true); }}
-              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
             >
               <Plus size={14} />
               Nuevo Registro
@@ -330,7 +346,7 @@ export default function Sutran() {
 
           <ExportButtons onExportExcel={handleGenerateExcel} onExportPDF={handleGeneratePDF} />
 
-          {canEdit() && selectedIds.length > 0 && (
+          {canEdit() && selectionMode && selectedIds.length > 0 && (
             <button
               onClick={handleBulkDelete}
               className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-widest"
@@ -341,24 +357,15 @@ export default function Sutran() {
           )}
         </ActionToolbar>
 
-        {showForm ? (
-          <div className="max-w-4xl mx-auto animate-in fade-in duration-500">
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-8">
-              <div className="mb-8 border-b border-gray-100 pb-6">
-                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
-                  {editingVisit ? 'Actualización de Reporte SUTRAN' : 'Nuevo Registro de Inspección'}
-                </h3>
-                <p className="text-sm text-slate-500 mt-1 font-medium italic">Gestione los resultados y observaciones de las visitas de SUTRAN.</p>
-              </div>
-              <SutranVisitForm
-                visit={editingVisit}
-                onSave={handleSaveVisit}
-                onClose={handleCloseForm}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6 animate-in fade-in duration-500">
+        {showForm && (
+          <SutranVisitForm
+            visit={editingVisit}
+            onSave={handleSaveVisit}
+            onClose={handleCloseForm}
+          />
+        )}
+
+        <div className="space-y-6 animate-in fade-in duration-500">
             {loading ? (
               <div className="flex items-center justify-center min-h-[40vh]">
                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800"></div>
@@ -375,11 +382,60 @@ export default function Sutran() {
                     onItemsPerPageChange={setItemsPerPage}
                   />
                 </div>
-                <div className="overflow-x-auto">
+                {/* Mobile card view */}
+                <div className="block md:hidden divide-y divide-slate-100">
+                  {paginatedVisits.map(visit => (
+                    <div key={visit.id} className={`p-3 cursor-pointer hover:bg-slate-50 transition-colors ${selectedIds.includes(visit.id) ? 'bg-blue-50/40' : ''}`} onClick={() => handleViewVisit(visit)}>
+                      <div className="flex items-center gap-2">
+                        {canEdit() && selectionMode && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(visit.id)}
+                            onChange={() => toggleSelect(visit.id)}
+                            onClick={e => e.stopPropagation()}
+                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                          />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-black text-slate-800 leading-tight">
+                            {new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString()}
+                          </p>
+                          <p className="text-[10px] font-semibold text-slate-500">{getVisitTypeLabel(visit.visit_type)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-1">
+                        <MapPin size={10} className="text-rose-400 shrink-0" />
+                        <span className="truncate">{(visit as any).locations?.name}</span>
+                      </div>
+                      {visit.findings && (
+                        <p className="text-[10px] text-slate-600 mt-1 line-clamp-2">{visit.findings}</p>
+                      )}
+                      <div className="flex gap-1.5 mt-1.5" onClick={e => e.stopPropagation()}>
+                        <button onClick={(e) => { e.stopPropagation(); handleViewVisit(visit); }} className="text-[10px] font-semibold text-blue-600 hover:underline">Ver Detalle</button>
+                        {visit.evidence_url && (
+                          <>
+                            <span className="text-slate-300">|</span>
+                            <button onClick={() => window.open(visit.evidence_url!, '_blank')} className="text-[10px] font-semibold text-blue-600 hover:underline">Evidencias</button>
+                          </>
+                        )}
+                        {canEdit() && (
+                          <>
+                            <span className="text-slate-300">|</span>
+                            <button onClick={(e) => { e.stopPropagation(); handleEditVisit(visit); }} className="text-[10px] font-semibold text-slate-600 hover:underline">Editar</button>
+                            <span className="text-slate-300">|</span>
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteVisit(visit.id); }} className="text-[10px] font-semibold text-rose-500 hover:underline">Eliminar</button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <tr>
-                        {canEdit() && (
+                        {canEdit() && selectionMode && (
                           <TableHead className="text-center w-12">
                             <input
                               type="checkbox"
@@ -398,8 +454,8 @@ export default function Sutran() {
                     </TableHeader>
                     <TableBody>
                       {paginatedVisits.map(visit => (
-                        <TableRow key={visit.id} className={`${selectedIds.includes(visit.id) ? 'bg-blue-50/50' : ''}`} onDoubleClick={() => handleViewVisit(visit)}>
-                          {canEdit() && (
+                        <TableRow key={visit.id} className={`cursor-pointer ${selectedIds.includes(visit.id) ? 'bg-blue-50/50' : ''}`} onClick={() => handleViewVisit(visit)} onDoubleClick={() => handleViewVisit(visit)}>
+                          {canEdit() && selectionMode && (
                             <TableCell className="text-center w-12">
                               <input
                                 type="checkbox"
@@ -435,10 +491,15 @@ export default function Sutran() {
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                              <TableActionButton
+                                icon={<Eye size={14} />}
+                                onClick={(e) => { e.stopPropagation(); handleViewVisit(visit); }}
+                                title="Ver Detalle"
+                              />
                               {visit.evidence_url && (
                                 <TableActionButton
                                   icon={<FileText size={14} />}
-                                  onClick={() => window.open(visit.evidence_url!, '_blank')}
+                                  onClick={(e) => { e.stopPropagation(); window.open(visit.evidence_url!, '_blank'); }}
                                   title="Ver Evidencias"
                                 />
                               )}
@@ -480,7 +541,7 @@ export default function Sutran() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {paginatedVisits.map(visit => (
                     <div key={visit.id} className={`bg-white rounded-2xl shadow-sm border transition-all duration-300 flex flex-col group overflow-hidden relative ${selectedIds.includes(visit.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-gray-100 hover:shadow-xl hover:border-slate-300'}`}>
-                      {canEdit() && (
+                      {canEdit() && selectionMode && (
                         <div className="absolute top-4 right-4 z-10">
                           <input
                             type="checkbox"
@@ -560,79 +621,120 @@ export default function Sutran() {
             )}
 
             {viewingVisit && (
-              <DetailModal maxWidth="2xl" onClose={() => setViewingVisit(undefined)} closeOnBackdrop>
+              <DetailModal maxWidth="3xl" onClose={() => setViewingVisit(undefined)} closeOnBackdrop>
                 <DetailModalHeader>
-                  <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
                   <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
                     <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
                       <Building2 size={20} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-xs sm:text-base font-black text-white tracking-tight leading-snug line-clamp-1">Detalle de Inspección</h2>
-                      <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1">SUTRAN — {(viewingVisit as any).locations?.name}</p>
+                      <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white uppercase tracking-tight leading-snug truncate">
+                        Detalle de Inspección SUTRAN
+                      </h2>
+                      <p className="text-[9px] sm:text-[10px] font-normal text-slate-300 uppercase tracking-wide mt-0.5 flex items-center gap-1.5 truncate">
+                        <span>{(viewingVisit as any).locations?.name || 'Sede no especificada'}</span>
+                        <span>•</span>
+                        <span>{new Date(String(viewingVisit.visit_date).includes('T') ? String(viewingVisit.visit_date) : `${viewingVisit.visit_date}T12:00:00`).toLocaleDateString('es-PE')}</span>
+                      </p>
                     </div>
                   </div>
-                  <button onClick={() => setViewingVisit(undefined)} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1" aria-label="Cerrar">
-                    <X size={22} />
+                  <button
+                    onClick={() => setViewingVisit(undefined)}
+                    className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
+                    aria-label="Cerrar detalle"
+                  >
+                    <X size={20} />
                   </button>
                 </DetailModalHeader>
 
                 <DetailModalBody>
-                  <DetailModalGrid>
-                    <DetailModalSection title="Información General">
-                      <DetailModalCard className="space-y-2.5 sm:space-y-3">
-                        <DetailModalRow label="Fecha">
-                          <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">{new Date(String(viewingVisit.visit_date).includes('T') ? String(viewingVisit.visit_date) : `${viewingVisit.visit_date}T12:00:00`).toLocaleDateString()}</span>
-                        </DetailModalRow>
-                        <DetailModalRow label="Inspector">
-                          <span className="text-[10px] sm:text-[11px] font-black text-slate-700">{viewingVisit.inspector_name}</span>
-                        </DetailModalRow>
-                        <DetailModalRow label="Estado">
-                          <span className={`px-2 py-0.5 text-[10px] font-black tracking-wider border ${statusColors[viewingVisit.status]}`}>{statusLabels[viewingVisit.status]}</span>
-                        </DetailModalRow>
-                      </DetailModalCard>
-                    </DetailModalSection>
-
-                    <DetailModalSection title="Tipo de Visita">
-                      <DetailModalCard className="space-y-2.5 sm:space-y-3">
-                        <DetailModalRow label="Tipo">
-                          <span className={`px-2 py-0.5 text-[10px] font-black tracking-wider border ${typeColors[viewingVisit.visit_type]}`}>{getVisitTypeLabel(viewingVisit.visit_type)}</span>
-                        </DetailModalRow>
-                        {viewingVisit.inspector_email && (
-                          <DetailModalRow label="Contacto">
-                            <span className="text-[10px] sm:text-[11px] font-black text-blue-600">{viewingVisit.inspector_email}</span>
-                          </DetailModalRow>
-                        )}
-                        {viewingVisit.evidence_url && (
-                          <DetailModalRow label="Evidencias">
-                            <a href={viewingVisit.evidence_url} target="_blank" rel="noopener noreferrer" className="text-[10px] sm:text-[11px] font-black text-blue-600 hover:text-blue-800 underline truncate block max-w-full">
-                              Ver Evidencias (Drive)
-                            </a>
-                          </DetailModalRow>
-                        )}
-                      </DetailModalCard>
-                    </DetailModalSection>
-                  </DetailModalGrid>
-
-                  {viewingVisit.findings && (
-                    <div className="mt-4 sm:mt-6">
-                      <DetailModalSection title="Hallazgos Identificados">
-                        <DetailModalCard className="bg-amber-50 border-amber-100">
-                          <p className="text-[10px] sm:text-[11px] font-medium text-amber-950 leading-relaxed whitespace-pre-wrap">{viewingVisit.findings}</p>
-                        </DetailModalCard>
-                      </DetailModalSection>
+                  <div className="space-y-4">
+                    {/* Badges de Tipo y Estado */}
+                    <div className="flex items-center gap-2 flex-wrap pb-2 border-b border-slate-100">
+                      <span className={`px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider border ${statusColors[viewingVisit.status]}`}>
+                        {statusLabels[viewingVisit.status]}
+                      </span>
+                      <span className={`px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider border ${typeColors[viewingVisit.visit_type]}`}>
+                        {getVisitTypeLabel(viewingVisit.visit_type)}
+                      </span>
+                      <span className="ml-auto text-[9px] font-mono text-slate-500 flex items-center gap-1">
+                        <MapPin size={11} className="text-rose-500 shrink-0" />
+                        {(viewingVisit as any).locations?.name || 'N/A'}
+                      </span>
                     </div>
-                  )}
 
-                  {viewingVisit.observations && (
-                    <div className="mt-4 sm:mt-6">
-                      <DetailModalSection title="Observaciones Técnicas">
-                        <DetailModalCard>
-                          <p className="text-[10px] sm:text-[11px] font-medium text-slate-700 italic leading-relaxed whitespace-pre-wrap">{viewingVisit.observations}</p>
-                        </DetailModalCard>
-                      </DetailModalSection>
+                    {/* Grilla principal 2 columnas */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Datos de la visita */}
+                      <div className="bg-slate-50 border border-slate-200 p-3 space-y-2">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200/60 pb-1">
+                          Información de Inspección
+                        </p>
+                        <div className="space-y-1.5">
+                          <div>
+                            <span className="text-[9px] text-slate-400 uppercase font-semibold">Fecha de Visita</span>
+                            <p className="text-[11px] font-mono font-medium text-[#002855]">
+                              {new Date(String(viewingVisit.visit_date).includes('T') ? String(viewingVisit.visit_date) : `${viewingVisit.visit_date}T12:00:00`).toLocaleDateString('es-PE')}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-slate-400 uppercase font-semibold">Inspector Asignado</span>
+                            <p className="text-[11px] font-semibold text-slate-700 uppercase">{viewingVisit.inspector_name || 'N/A'}</p>
+                          </div>
+                          {viewingVisit.inspector_email && (
+                            <div>
+                              <span className="text-[9px] text-slate-400 uppercase font-semibold">Contacto del Inspector</span>
+                              <p className="text-[11px] font-mono text-slate-700 break-all">{viewingVisit.inspector_email}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Documentación y Evidencias */}
+                      <div className="bg-slate-50 border border-slate-200 p-3 space-y-2">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200/60 pb-1">
+                          Evidencias y Adjuntos
+                        </p>
+                        <div className="space-y-1.5">
+                          <div>
+                            <span className="text-[9px] text-slate-400 uppercase font-semibold">Enlace de Evidencias</span>
+                            {viewingVisit.evidence_url ? (
+                              <a
+                                href={viewingVisit.evidence_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[11px] font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1.5 break-all mt-0.5"
+                              >
+                                Ver Evidencias en Google Drive <ExternalLink size={12} className="shrink-0" />
+                              </a>
+                            ) : (
+                              <p className="text-[11px] text-slate-500 italic">No hay archivos adjuntos</p>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-[9px] text-slate-400 uppercase font-semibold">Tipo de Acta / Visita</span>
+                            <p className="text-[11px] text-slate-700">{getVisitTypeLabel(viewingVisit.visit_type)}</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  )}
+
+                    {/* Hallazgos */}
+                    {viewingVisit.findings && (
+                      <div className="bg-slate-50 border border-slate-200 p-3">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Hallazgos Identificados</p>
+                        <p className="text-[10px] text-slate-700 leading-relaxed whitespace-pre-wrap">{viewingVisit.findings}</p>
+                      </div>
+                    )}
+
+                    {/* Observaciones */}
+                    {viewingVisit.observations && (
+                      <div className="bg-slate-50 border border-slate-200 p-3">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Observaciones Técnicas</p>
+                        <p className="text-[10px] text-slate-700 leading-relaxed whitespace-pre-wrap">{viewingVisit.observations}</p>
+                      </div>
+                    )}
+                  </div>
                 </DetailModalBody>
 
                 <StandardModalFooter
@@ -643,8 +745,7 @@ export default function Sutran() {
               </DetailModal>
             )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }

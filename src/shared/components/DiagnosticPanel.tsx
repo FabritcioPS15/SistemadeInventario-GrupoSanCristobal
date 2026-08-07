@@ -139,7 +139,7 @@ export default function DiagnosticPanel() {
     <div className="p-8">
       <div className="mb-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Panel de Diagnóstico</h2>
+          <h2 className="text-2xl font-normal text-gray-900">Panel de Diagnóstico</h2>
           <button
             onClick={runDiagnostics}
             disabled={loading}
@@ -160,7 +160,7 @@ export default function DiagnosticPanel() {
           >
             <div className="flex items-center gap-3 mb-2">
               {getStatusIcon(result.status)}
-              <h3 className="font-semibold text-gray-900">{result.test}</h3>
+              <h3 className="font-normal text-gray-900">{result.test}</h3>
             </div>
             <p className="text-gray-700 mb-1">{result.message}</p>
             {result.details && (
@@ -172,7 +172,7 @@ export default function DiagnosticPanel() {
 
       {results.length > 0 && (
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-2">Instrucciones</h3>
+          <h3 className="font-normal text-blue-900 mb-2">Instrucciones</h3>
           <div className="text-sm text-blue-800 space-y-1">
             <p>1. Ejecuta <code className="bg-blue-100 px-2 py-1 rounded">safe_migration.sql</code> en Supabase SQL Editor</p>
             <p>2. Ejecuta <code className="bg-blue-100 px-2 py-1 rounded">fixed_test_data.sql</code> para datos de prueba</p>

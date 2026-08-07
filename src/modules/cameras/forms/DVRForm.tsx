@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { HardDrive } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
-import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
+import { FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 
 interface DVRFormProps {
   editDVR?: any;
@@ -101,9 +102,7 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
     return !isNaN(portNum) && portNum >= 1 && portNum <= 65535;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.code.trim()) {
@@ -205,18 +204,27 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
   };
 
   return (
-    <BaseForm
+    <MultiStepForm
       title={editDVR ? 'Editar DVR' : 'Nuevo DVR'}
       subtitle="Módulo de Gestión de DVR"
       onClose={onClose}
       onSubmit={handleSubmit}
       loading={loading}
       error={errors.submit}
-      icon={<HardDrive size={24} className="text-blue-600" />}
+      icon={<HardDrive size={20} />}
+      steps={[
+        { title: 'Información', description: 'Código, sede y marca' },
+        { title: 'Especificaciones', description: 'Canales, resolución, almacenamiento' },
+        { title: 'Red y Acceso', description: 'IP, puerto, credenciales, notas' },
+      ]}
     >
-      {/* Section: Información Básica */}
-      <FormSection title="Información Básica" color="blue">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Step 1: Información Básica */}
+      <div className="space-y-4">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Información Básica</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Código" required error={errors.code}>
             <FormInput
               type="text"
@@ -268,11 +276,15 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
             />
           </FormField>
         </div>
-      </FormSection>
+      </div>
 
-      {/* Section: Especificaciones del DVR */}
-      <FormSection title="Especificaciones del DVR" color="emerald">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Step 2: Especificaciones del DVR */}
+      <div className="space-y-4">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Especificaciones del DVR</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Marca" required error={errors.marca}>
             <FormInput
               type="text"
@@ -330,7 +342,7 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
           </FormField>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Almacenamiento Total" error={errors.almacenamiento_total}>
             <FormSelect
               name="almacenamiento_total"
@@ -374,11 +386,15 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
             </FormSelect>
           </FormField>
         </div>
-      </FormSection>
+      </div>
 
-      {/* Section: Configuración de Red */}
-      <FormSection title="Configuración de Red y Acceso" color="amber">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Step 3: Red y Acceso + Notas */}
+      <div className="space-y-4">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Configuración de Red y Acceso</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Dirección IP" error={errors.ip}>
             <FormInput
               type="text"
@@ -434,10 +450,11 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
             error={errors.url_acceso}
           />
         </FormField>
-      </FormSection>
 
-      {/* Section: Notas */}
-      <FormSection title="Notas Adicionales" color="purple">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Notas</h3>
+        </div>
         <FormField label="Notas y Observaciones" error={errors.notas}>
           <FormTextarea
             name="notas"
@@ -448,7 +465,7 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
             error={errors.notas}
           />
         </FormField>
-      </FormSection>
-    </BaseForm>
+      </div>
+    </MultiStepForm>
   );
 }

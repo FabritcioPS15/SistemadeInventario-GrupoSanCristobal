@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FileText, Mail, Plus, X, MapPin } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
-import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
+import { FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 import { emailService } from '../../../shared/services/emailService';
 import { RequestFormData, RequestCategory, RequestPriority } from '../../../shared/types/requests.types';
 import { useAuth } from '../../../app/providers/AuthContext';
@@ -75,9 +76,7 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.title.trim()) {
@@ -134,7 +133,6 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
         return;
       }
 
-      // Enviar correo si está habilitado y hay destinatarios
       if (sendEmail && emailRecipients.to.length > 0) {
         const emailResult = await emailService.sendRequestNotification({
           to: emailRecipients.to,
@@ -177,18 +175,28 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
   };
 
   return (
-    <BaseForm
+    <MultiStepForm
       title="Nueva Solicitud"
       subtitle="Módulo de Gestión de Solicitudes"
       onClose={onClose}
       onSubmit={handleSubmit}
       loading={loading}
       error={errors.submit}
-      icon={<FileText size={24} className="text-blue-600" />}
+      icon={<FileText size={20} />}
+      steps={[
+        { title: 'Datos', description: 'Título, categoría, prioridad, sede' },
+        { title: 'Descripción', description: 'Detalle de la solicitud' },
+        { title: 'Notificación', description: 'Correo a aprobadores' },
+      ]}
     >
-      {/* Section: Información Principal */}
-      <FormSection title="Información de la Solicitud" color="blue" columns={3}>
-          <FormField label="Título" required error={errors.title} className="sm:col-span-2 lg:col-span-3">
+      {/* Step 1: Datos de la Solicitud */}
+      <div className="space-y-4">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Información de la Solicitud</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <FormField label="Título" required error={errors.title} className="lg:col-span-2">
             <FormInput
               type="text"
               name="title"
@@ -285,11 +293,15 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
               error={errors.requester_email}
             />
           </FormField>
-      </FormSection>
+        </div>
+      </div>
 
-
-      {/* Section: Descripción */}
-      <FormSection title="Descripción Detallada" color="emerald">
+      {/* Step 2: Descripción */}
+      <div className="space-y-4">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Descripción Detallada</h3>
+        </div>
         <FormField label="Descripción" required error={errors.description}>
           <FormTextarea
             name="description"
@@ -301,10 +313,14 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
             error={errors.description}
           />
         </FormField>
-      </FormSection>
+      </div>
 
-      {/* Section: Notificación por Correo */}
-      <FormSection title="Notificación por Correo Electrónico" color="indigo">
+      {/* Step 3: Notificación por Correo */}
+      <div className="space-y-4">
+        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Notificación por Correo Electrónico</h3>
+        </div>
         <FormField label="Enviar notificación por correo" error={errors.email}>
           <div className="flex items-center gap-3">
             <input
@@ -314,7 +330,7 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
               onChange={(e) => setSendEmail(e.target.checked)}
               className="w-5 h-5 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
             />
-            <label htmlFor="sendEmail" className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+            <label htmlFor="sendEmail" className="flex items-center gap-2 text-sm font-normal text-gray-700">
               <Mail size={16} className="text-indigo-600" />
               Notificar a aprobadores por correo electrónico
             </label>
@@ -322,8 +338,7 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
         </FormField>
 
         {sendEmail && (
-          <div className="space-y-6 mt-6">
-            {/* Destinatarios Principales (TO) */}
+          <div className="space-y-6">
             <FormField label="Destinatarios Principales (Para)" required error={errors.email}>
               <div className="space-y-3">
                 <div className="flex gap-2">
@@ -345,7 +360,7 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
                         setNewEmailTo('');
                       }
                     }}
-                    className="px-4 py-2.5 bg-indigo-600 text-white rounded-none hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm font-semibold"
+                    className="px-4 py-2.5 bg-indigo-600 text-white rounded-none hover:bg-indigo-700 transition-colors flex items-center gap-2 text-sm font-normal"
                   >
                     <Plus size={16} />
                     Agregar
@@ -375,7 +390,6 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
               </div>
             </FormField>
 
-            {/* Destinatarios en Copia (CC) */}
             <FormField label="Copia (CC) - Otros interesados">
               <div className="space-y-3">
                 <div className="flex gap-2">
@@ -397,7 +411,7 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
                         setNewEmailCc('');
                       }
                     }}
-                    className="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-none hover:bg-slate-300 transition-colors flex items-center gap-2 text-sm font-semibold"
+                    className="px-4 py-2.5 bg-slate-200 text-slate-700 rounded-none hover:bg-slate-300 transition-colors flex items-center gap-2 text-sm font-normal"
                   >
                     <Plus size={16} />
                     Agregar
@@ -429,12 +443,12 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
 
             {emailRecipients.to.length === 0 && (
               <p className="text-sm text-amber-600 mt-2">
-                ⚠️ Debe agregar al menos un aprobador (destinatario principal) para enviar el correo.
+                Debe agregar al menos un aprobador (destinatario principal) para enviar el correo.
               </p>
             )}
           </div>
         )}
-      </FormSection>
-    </BaseForm>
+      </div>
+    </MultiStepForm>
   );
 }

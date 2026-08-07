@@ -7,6 +7,7 @@ type ModalOverlayProps = {
   closeOnBackdrop?: boolean;
   lockScroll?: boolean;
   className?: string;
+  style?: React.CSSProperties;
 };
 
 /**
@@ -18,6 +19,7 @@ export default function ModalOverlay({
   closeOnBackdrop = false,
   lockScroll = true,
   className = 'bg-slate-900/60 backdrop-blur-sm',
+  style,
 }: ModalOverlayProps) {
   const inset = useLayoutInset();
 
@@ -36,6 +38,7 @@ export default function ModalOverlay({
       onClick={closeOnBackdrop ? onClose : undefined}
       role="dialog"
       aria-modal="true"
+      style={style}
     >
       {children}
     </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, AssetWithDetails, Category, Subcategory, Location, Area } from '../../../shared/services/supabase';
+import { PATH_CATEGORY_MAP } from '../constants/inventory.constants';
 
 export interface UseInventoryProps {
   categoryFilter?: string;
@@ -48,16 +49,8 @@ export interface UseInventoryReturn {
   fetchInventory: () => Promise<void>;
   refresh: () => Promise<void>;
   handleSort: (key: string) => void;
+  fetchAllFilteredIds: () => Promise<string[]>;
 }
-
-const pathCategoryMap: Record<string, string> = {
-  'tecnologia': 'Tecnología',
-  'seguridad-control': 'Seguridad y Control',
-  'equipos-operativos': 'Equipos Operativos',
-  'mobiliario': 'Mobiliario',
-  'utiles-suministros': 'Útiles y Suministros',
-  'disco-extraido': 'EXTRAIDO'
-};
 
 export function useInventory({ categoryFilter, subcategoryFilter }: UseInventoryProps = {}): UseInventoryReturn {
   // Data state
@@ -115,6 +108,102 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     if (data) setAreas(data);
   };
   
+  const ensureCategoriesLoaded = async (): Promise<Category[]> => {
+    if (categories.length > 0) return categories;
+    const { data } = await supabase.from('categories').select('*').order('name');
+    if (data) {
+      setCategories(data);
+      return data;
+    }
+    return categories;
+  };
+
+  // Resolve the rubro filter (business_type de la empresa) into the set of
+  // company/location ids that must be matched. Returns null when the filter is
+  // inactive and { companyIds: [], locationIds: [] } when no company matches.
+  const resolveRubroFilter = async (): Promise<{ companyIds: string[]; locationIds: string[] } | null> => {
+    if (!filterRubro) return null;
+
+    // Buscar empresas del rubro — sin filtro is_active para no perder datos
+    const { data: rubroCompanies } = await supabase
+      .from('companies')
+      .select('id, name, business_type')
+      .eq('business_type', filterRubro);
+
+    if (!rubroCompanies || rubroCompanies.length === 0) {
+      console.warn(`[Rubro Filter] No se encontraron empresas con business_type="${filterRubro}"`);
+      return { companyIds: [], locationIds: [] };
+    }
+
+    const companyIds = rubroCompanies.map((c: any) => c.id);
+
+    // Obtener sedes que pertenecen a esas empresas
+    const { data: rubroLocations } = await supabase
+      .from('locations')
+      .select('id, name, company_id')
+      .in('company_id', companyIds);
+
+    return {
+      companyIds,
+      locationIds: (rubroLocations || []).map((l: any) => l.id),
+    };
+  };
+
+  // Build the base query with all active filters applied.
+  // Returns null when a filter resolves to an empty result set.
+  const buildQuery = (select: string, currentCategories: Category[], rubro: { companyIds: string[]; locationIds: string[] } | null) => {
+    let query = supabase
+      .from('assets')
+      .select(select, { count: 'exact' });
+
+    // Apply search filter
+    if (searchTerm) {
+      query = query.or(`codigo_unico.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,serial_number.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,item.ilike.%${searchTerm}%`);
+    }
+
+    // Apply category filter from URL
+    const cleanCategoryFilter = categoryFilter?.replace('inventory-', '');
+    const activePathCategory = cleanCategoryFilter ? PATH_CATEGORY_MAP[cleanCategoryFilter] : null;
+
+    if (cleanCategoryFilter === 'disco-extraido') {
+      query = query.eq('status', 'extracted');
+    } else if (activePathCategory) {
+      const cat = currentCategories.find(c => c.name === activePathCategory);
+      if (cat) query = query.eq('category_id', cat.id);
+    }
+
+    // Apply category filter from dropdown
+    if (filterCategory) {
+      query = query.eq('category_id', filterCategory);
+    }
+
+    // Apply location filter
+    if (selectedLocations.length > 0) {
+      query = query.in('location_id', selectedLocations);
+    }
+
+    // Apply status filter
+    if (filterStatus.length > 0) {
+      query = query.in('estado_uso', filterStatus);
+    }
+
+    // Apply rubro filter
+    if (rubro) {
+      if (rubro.companyIds.length === 0) return null;
+
+      // Aplicar filtro OR: activo pertenece al rubro por company_id o por location_id
+      if (rubro.locationIds.length > 0) {
+        query = query.or(
+          `company_id.in.(${rubro.companyIds.join(',')}),location_id.in.(${rubro.locationIds.join(',')})`
+        );
+      } else {
+        query = query.in('company_id', rubro.companyIds);
+      }
+    }
+
+    return query;
+  };
+
   // Main fetch function
   const fetchInventory = async () => {
     setLoading(true);
@@ -123,88 +212,18 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       const to = from + itemsPerPage - 1;
 
       // Ensure categories and subcategories are loaded if URL filtering is active on mount
-      let currentCategories = categories;
-      if (categories.length === 0) {
-        const { data } = await supabase.from('categories').select('*').order('name');
-        if (data) {
-          setCategories(data);
-          currentCategories = data;
-        }
-      }
-      
-      let query = supabase
-        .from('assets')
-        .select('*, locations(name), areas(name)', { count: 'exact' });
-      
-      // Apply search filter
-      if (searchTerm) {
-        query = query.or(`codigo_unico.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,serial_number.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,item.ilike.%${searchTerm}%`);
-      }
-      
-      // Apply category filter from URL
-      const cleanCategoryFilter = categoryFilter?.replace('inventory-', '');
-      const activePathCategory = cleanCategoryFilter ? pathCategoryMap[cleanCategoryFilter] : null;
-      
-      if (cleanCategoryFilter === 'disco-extraido') {
-        query = query.eq('status', 'extracted');
-      } else if (activePathCategory) {
-        const cat = currentCategories.find(c => c.name === activePathCategory);
-        if (cat) query = query.eq('category_id', cat.id);
-      }
-      
-      // Apply category filter from dropdown
-      if (filterCategory) {
-        query = query.eq('category_id', filterCategory);
-      }
-      
-      // Apply location filter
-      if (selectedLocations.length > 0) {
-        query = query.in('location_id', selectedLocations);
-      }
-      
-      // Apply status filter
-      if (filterStatus.length > 0) {
-        query = query.in('estado_uso', filterStatus);
+      const currentCategories = await ensureCategoriesLoaded();
+      const rubro = await resolveRubroFilter();
+
+      const query = buildQuery('*, locations(name), areas(name)', currentCategories, rubro);
+
+      if (!query) {
+        setRawInventory([]);
+        setTotalCount(0);
+        setLoading(false);
+        return;
       }
 
-      // Apply rubro filter (business_type de la empresa)
-      if (filterRubro) {
-        // Buscar empresas del rubro — sin filtro is_active para no perder datos
-        const { data: rubroCompanies } = await supabase
-          .from('companies')
-          .select('id, name, business_type')
-          .eq('business_type', filterRubro);
-
-        if (rubroCompanies && rubroCompanies.length > 0) {
-          const companyIds = rubroCompanies.map((c: any) => c.id);
-
-          // Obtener sedes que pertenecen a esas empresas
-          const { data: rubroLocations } = await supabase
-            .from('locations')
-            .select('id, name, company_id')
-            .in('company_id', companyIds);
-
-          const locationIds = (rubroLocations || []).map((l: any) => l.id);
-
-          // Aplicar filtro OR: activo pertenece al rubro por company_id o por location_id
-          if (locationIds.length > 0) {
-            query = query.or(
-              `company_id.in.(${companyIds.join(',')}),location_id.in.(${locationIds.join(',')})`
-            );
-          } else if (companyIds.length > 0) {
-            query = query.in('company_id', companyIds);
-          }
-        } else {
-          console.warn(`[Rubro Filter] No se encontraron empresas con business_type="${filterRubro}"`);
-          setRawInventory([]);
-          setTotalCount(0);
-          setLoading(false);
-          return;
-        }
-      }
-
-
-      
       // Apply pagination and sort
       let sortField = sortConfig?.key || 'created_at';
       let sortAscending = sortConfig?.direction === 'asc';
@@ -220,7 +239,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       const { data, error, count } = await query
         .order(sortField, { ascending: sortAscending, nullsFirst: false })
         .range(from, to);
-      
+
       if (error) throw error;
       setRawInventory(data || []);
       setTotalCount(count || 0);
@@ -228,6 +247,24 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       console.error('Error fetching inventory:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch the IDs of every asset matching the current filters (across all pages)
+  const fetchAllFilteredIds = async (): Promise<string[]> => {
+    try {
+      const currentCategories = await ensureCategoriesLoaded();
+      const rubro = await resolveRubroFilter();
+
+      const query = buildQuery('id', currentCategories, rubro);
+      if (!query) return [];
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).map((a) => (a as unknown as { id: string }).id);
+    } catch (error) {
+      console.error('Error fetching filtered ids:', error);
+      return [];
     }
   };
   
@@ -327,5 +364,6 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     fetchInventory,
     refresh,
     handleSort,
+    fetchAllFilteredIds,
   };
 }

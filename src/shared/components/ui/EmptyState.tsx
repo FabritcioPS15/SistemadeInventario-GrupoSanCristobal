@@ -29,9 +29,9 @@ export default function EmptyState({ icon: Icon, title, subtitle, action, classN
       <div className="w-16 h-16 rounded-none bg-slate-100 flex items-center justify-center mb-4">
         <Icon size={28} className="text-[#002855] opacity-30" />
       </div>
-      <p className="text-[#002855] font-black uppercase text-xs tracking-widest mb-2">{title}</p>
+      <p className="text-[#002855] font-semibold uppercase text-xs tracking-widest mb-2">{title}</p>
       {subtitle && (
-        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-tight max-w-xs">{subtitle}</p>
+        <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-tight max-w-xs">{subtitle}</p>
       )}
       {action && <div className="mt-6">{action}</div>}
     </div>

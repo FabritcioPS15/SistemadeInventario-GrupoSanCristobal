@@ -84,8 +84,6 @@ export default function RequestsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-
   useEffect(() => {
     fetchRequests();
   }, []);
@@ -93,7 +91,7 @@ export default function RequestsPage() {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('requests')
         .select('*')
         .order('created_at', { ascending: false });
@@ -491,75 +489,54 @@ export default function RequestsPage() {
           </div>
 
           {/* Mobile card view */}
-          <div className="md:hidden space-y-3 mt-4">
-              {paginatedRequests.map((request) => (
-                <div key={request.id} className="bg-white border border-slate-200 relative">
-                  <div className="p-4" onClick={() => handleView(request)}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-black text-[#002855] uppercase truncate">{request.title}</p>
-                        <p className="text-[10px] font-bold text-slate-400 truncate">{request.department || 'Sin departamento'}</p>
-                      </div>
-                      <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-[8px] font-black tracking-widest border ${statusColors[request.status]}`}>
-                        {statusLabels[request.status]}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-[10px] mt-2">
-                      <span className={`px-2 py-0.5 font-black border ${priorityColors[request.priority]}`}>
-                        {priorityLabels[request.priority]}
-                      </span>
-                      <span className="px-2 py-0.5 font-black bg-slate-100 text-slate-600 border border-slate-200">
-                        {categoryLabels[request.category]}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-1">
-                      <MapPin size={12} className="text-rose-500 shrink-0" />
-                      <span className="text-[10px] font-bold text-slate-500 truncate">{request.location?.name || 'No especificada'}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100">
-                      <span className="text-[10px] font-bold text-slate-400 truncate">
-                        {(() => {
-                          const name = request.requester?.full_name || request.requester_name;
-                          if (!name) return 'Desconocido';
-                          if (name.includes('@')) return name.split('@')[0].split('.').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-                          return name;
-                        })()}
-                      </span>
-                      <span className="text-[9px] font-bold text-slate-400">{new Date(request.created_at).toLocaleDateString('es-PE')}</span>
-                    </div>
+          <div className="md:hidden space-y-3">
+            {paginatedRequests.map((request) => (
+              <div key={request.id} className="bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer" onClick={() => handleView(request)}>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12px] font-black text-slate-800 truncate leading-tight">{request.title}</p>
+                    <p className="text-[10px] font-semibold text-slate-400 truncate">{request.department || 'Sin departamento'}</p>
                   </div>
-                  {/* + button */}
-                  <button onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === request.id ? null : request.id); }}
-                    className="absolute bottom-2 right-2 w-8 h-8 flex items-center justify-center bg-[#002855] text-white text-lg font-bold shadow-md active:scale-95 transition-transform">
-                    +
-                  </button>
-                  {/* Floating menu */}
-                  {activeMenuId === request.id && (
+                  <span className={`shrink-0 px-2 py-0.5 text-[9px] font-semibold border ${request.status === 'pending' ? 'text-amber-700 bg-amber-50 border-amber-200' : request.status === 'approved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}`}>
+                    {statusLabels[request.status]}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className={`px-2 py-0.5 text-[9px] font-semibold border ${priorityColors[request.priority]}`}>
+                    {priorityLabels[request.priority]}
+                  </span>
+                  <span className="text-[9px] font-semibold text-slate-500">{categoryLabels[request.category]}</span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-slate-500 mb-2">
+                  <MapPin size={10} className="text-rose-400 shrink-0" />
+                  <span className="truncate">{request.location?.name || 'No especificada'}</span>
+                  <span className="ml-auto font-mono text-slate-400">{new Date(request.created_at).toLocaleDateString('es-PE')}</span>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[9px] font-semibold text-slate-500 truncate">
+                    {(() => {
+                      const name = request.requester?.full_name || request.requester_name;
+                      if (!name) return 'Desconocido';
+                      if (name.includes('@')) return name.split('@')[0].split('.').map((p: string) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+                      return name;
+                    })()}
+                  </span>
+                </div>
+                <div className="flex gap-1.5 pt-2 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => handleView(request)} className="text-[10px] font-bold text-slate-600 hover:underline bg-slate-50 px-2 py-1 rounded-sm w-full text-center">Ver</button>
+                  {canEdit() && request.status === 'pending' && (
                     <>
-                      <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
-                      <div className="absolute bottom-12 right-2 z-50 bg-white border border-slate-200 shadow-xl min-w-[140px]">
-                        <button onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); handleView(request); }}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-[11px] font-black text-slate-700 hover:bg-slate-50 border-b border-slate-100 uppercase tracking-widest">
-                          Ver
-                        </button>
-                        {canEdit() && request.status === 'pending' && (
-                          <>
-                            <button onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); handleApprove(request); }}
-                              className="w-full flex items-center gap-3 px-4 py-3 text-[11px] font-black text-emerald-600 hover:bg-emerald-50 border-b border-slate-100 uppercase tracking-widest">
-                              Aprobar
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); handleReject(request); }}
-                              className="w-full flex items-center gap-3 px-4 py-3 text-[11px] font-black text-rose-600 hover:bg-rose-50 uppercase tracking-widest">
-                              Rechazar
-                            </button>
-                          </>
-                        )}
-                      </div>
+                      <button onClick={() => handleApprove(request)} className="text-[10px] font-bold text-emerald-600 hover:underline bg-emerald-50 px-2 py-1 rounded-sm w-full text-center">Aprobar</button>
+                      <button onClick={() => handleReject(request)} className="text-[10px] font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-1 rounded-sm w-full text-center">Rechazar</button>
                     </>
                   )}
+                  {canEdit() && (
+                    <button onClick={() => handleDelete(request)} className="text-[10px] font-bold text-slate-500 hover:text-rose-600 hover:underline bg-slate-50 hover:bg-rose-50 px-2 py-1 rounded-sm w-full text-center">Eliminar</button>
+                  )}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
           </>
         )}
       </div>
@@ -583,10 +560,10 @@ export default function RequestsPage() {
                 <FileText size={20} className="sm:size-24" />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight truncate">
+                <h2 className="text-base sm:text-lg font-normal text-white tracking-tight leading-tight truncate">
                   {selectedRequest.title}
                 </h2>
-                <p className="text-[10px] sm:text-xs text-blue-200 font-semibold mt-0.5 truncate">
+                <p className="text-[10px] sm:text-xs text-blue-200 font-normal mt-0.5 truncate">
                   {categoryLabels[selectedRequest.category]} • {priorityLabels[selectedRequest.priority]}
                 </p>
               </div>
@@ -606,17 +583,17 @@ export default function RequestsPage() {
                 <div className="space-y-2.5 sm:space-y-3">
                   <DetailModalCard className="space-y-2.5 sm:space-y-3">
                     <DetailModalRow label="Estado">
-                      <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${statusColors[selectedRequest.status]}`}>
+                      <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-normal tracking-widest border ${statusColors[selectedRequest.status]}`}>
                         {statusLabels[selectedRequest.status]}
                       </span>
                     </DetailModalRow>
                     <DetailModalRow label="Categoría">
-                      <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
+                      <span className="text-[10px] sm:text-[11px] font-normal text-[#002855] uppercase">
                         {categoryLabels[selectedRequest.category]}
                       </span>
                     </DetailModalRow>
                     <DetailModalRow label="Prioridad">
-                      <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${priorityColors[selectedRequest.priority]}`}>
+                      <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-normal tracking-widest border ${priorityColors[selectedRequest.priority]}`}>
                         {priorityLabels[selectedRequest.priority]}
                       </span>
                     </DetailModalRow>
@@ -624,12 +601,12 @@ export default function RequestsPage() {
 
                   <DetailModalCard className="space-y-2.5 sm:space-y-3">
                     <DetailModalRow label="Fecha de Creación">
-                      <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
+                      <span className="text-[10px] sm:text-[11px] font-normal text-slate-600">
                         {new Date(selectedRequest.created_at).toLocaleDateString('es-PE')}
                       </span>
                     </DetailModalRow>
                     <DetailModalRow label="Última Actualización">
-                      <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
+                      <span className="text-[10px] sm:text-[11px] font-normal text-slate-600">
                         {new Date(selectedRequest.updated_at).toLocaleDateString('es-PE')}
                       </span>
                     </DetailModalRow>
@@ -640,7 +617,7 @@ export default function RequestsPage() {
               <DetailModalSection title="Solicitante y Ubicación">
                 <DetailModalCard>
                   <DetailModalRow label="Solicitante">
-                    <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">
+                    <span className="text-[10px] sm:text-[11px] font-normal text-[#002855]">
                       {(() => {
                         const name = selectedRequest.requester?.full_name || selectedRequest.requester_name;
                         if (!name) return 'Desconocido';
@@ -654,20 +631,20 @@ export default function RequestsPage() {
                   </DetailModalRow>
                   {selectedRequest.requester_email && (
                     <DetailModalRow label="Correo del Solicitante">
-                      <span className="text-[10px] sm:text-[11px] font-bold text-slate-600">
+                      <span className="text-[10px] sm:text-[11px] font-normal text-slate-600">
                         {selectedRequest.requester_email}
                       </span>
                     </DetailModalRow>
                   )}
                   <DetailModalRow label="Departamento">
-                    <span className="text-[10px] sm:text-[11px] font-bold text-slate-600">
+                    <span className="text-[10px] sm:text-[11px] font-normal text-slate-600">
                       {selectedRequest.department || 'No especificado'}
                     </span>
                   </DetailModalRow>
                   <DetailModalRow label="Sede">
                     <div className="flex items-center gap-2">
                       <MapPin size={14} className="text-rose-500" />
-                      <span className="text-[10px] sm:text-[11px] font-bold text-slate-600">
+                      <span className="text-[10px] sm:text-[11px] font-normal text-slate-600">
                         {selectedRequest.location?.name || 'No especificada'}
                       </span>
                     </div>
@@ -678,13 +655,13 @@ export default function RequestsPage() {
               <DetailModalSection title="Detalles Adicionales">
                 <DetailModalCard>
                   <DetailModalRow label="Fecha Límite">
-                    <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
+                    <span className="text-[10px] sm:text-[11px] font-normal text-slate-600">
                       {selectedRequest.due_date ? new Date(selectedRequest.due_date).toLocaleDateString('es-PE') : 'No especificada'}
                     </span>
                   </DetailModalRow>
                   {selectedRequest.estimated_cost && (
                     <DetailModalRow label="Costo Estimado">
-                      <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">
+                      <span className="text-[10px] sm:text-[11px] font-normal text-[#002855]">
                         S/ {selectedRequest.estimated_cost.toFixed(2)}
                       </span>
                     </DetailModalRow>

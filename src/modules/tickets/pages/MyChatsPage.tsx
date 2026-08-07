@@ -126,7 +126,7 @@ export default function MyChats() {
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <div className="mb-8">
-                <h1 className="text-2xl font-black text-[#002855] mb-2">Mis Chats</h1>
+                <h1 className="text-2xl font-semibold text-[#002855] mb-2">Mis Chats</h1>
                 <p className="text-gray-600">Todos tus tickets y conversaciones en un solo lugar</p>
             </div>
 
@@ -169,8 +169,8 @@ export default function MyChats() {
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-2 h-6 bg-blue-500 rounded-full" />
-                        <h2 className="text-sm font-black text-[#002855] tracking-[0.2em]">Mis Tickets Creados</h2>
-                        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black">{myCreatedTickets.length}</span>
+                        <h2 className="text-sm font-semibold text-[#002855] tracking-[0.2em]">Mis Tickets Creados</h2>
+                        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-semibold">{myCreatedTickets.length}</span>
                     </div>
                     <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
                         <Table>
@@ -189,13 +189,13 @@ export default function MyChats() {
                                     const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                     return (
                                         <TableRow key={t.id} onClick={() => setSelectedTicket(t)} className="cursor-pointer">
-                                            <TableCell><span className="text-[11px] font-black text-[#002855]">#TK-{t.id.slice(0, 6).toUpperCase()}</span></TableCell>
+                                            <TableCell><span className="text-[11px] font-semibold text-[#002855]">#TK-{t.id.slice(0, 6).toUpperCase()}</span></TableCell>
                                             <TableCell>
-                                                <p className="text-[13px] font-black text-[#002855] leading-tight line-clamp-1">{t.title}</p>
+                                                <p className="text-[13px] font-semibold text-[#002855] leading-tight line-clamp-1">{t.title}</p>
                                                 <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{t.locations?.name || 'Central'}</p>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <span className={`px-2 py-1 text-[10px] font-black tracking-wider inline-flex items-center gap-1.5 ${t.status === 'open' ? 'text-orange-600 bg-orange-50 border border-orange-100' : t.status === 'in_progress' ? 'text-blue-600 bg-blue-50 border border-blue-100' : t.status === 'resolved' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'}`}>
+                                                <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider inline-flex items-center gap-1.5 ${t.status === 'open' ? 'text-orange-600 bg-orange-50 border border-orange-100' : t.status === 'in_progress' ? 'text-blue-600 bg-blue-50 border border-blue-100' : t.status === 'resolved' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                                                     {getStatusLabel(t.status)}
                                                 </span>
@@ -203,18 +203,18 @@ export default function MyChats() {
                                             <TableCell>
                                                 {t.attendant ? (
                                                     <div className="flex items-center gap-2">
-                                                        <div className="w-7 h-7 rounded-none bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 overflow-hidden">{t.attendant?.avatar_url ? <img src={t.attendant.avatar_url} className="w-full h-full object-cover" alt="" /> : t.attendant?.full_name?.charAt(0)}</div>
+                                                        <div className="w-7 h-7 rounded-none bg-slate-100 flex items-center justify-center text-[10px] font-semibold text-slate-500 overflow-hidden">{t.attendant?.avatar_url ? <img src={t.attendant.avatar_url} className="w-full h-full object-cover" alt="" /> : t.attendant?.full_name?.charAt(0)}</div>
                                                         <span className="text-[11px] font-semibold text-slate-700">{t.attendant.full_name?.split(' ')[0]}</span>
                                                     </div>
-                                                ) : <span className="text-[10px] text-slate-300 font-black">Sin asignar</span>}
+                                                ) : <span className="text-[10px] text-slate-300 font-semibold">Sin asignar</span>}
                                             </TableCell>
                                             <TableCell>
                                                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-none ${prio.color}`}>
                                                     <div className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
-                                                    <span className="text-[10px] font-black tracking-wider">{prio.label}</span>
+                                                    <span className="text-[10px] font-semibold tracking-wider">{prio.label}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell><span className="text-[10px] font-bold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</span></TableCell>
+                                            <TableCell><span className="text-[10px] font-semibold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</span></TableCell>
                                         </TableRow>
                                     );
                                 })}
@@ -229,8 +229,8 @@ export default function MyChats() {
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-2 h-6 bg-indigo-500 rounded-full" />
-                        <h2 className="text-sm font-black text-[#002855] tracking-[0.2em]">Tickets que Atiendo</h2>
-                        <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg text-[10px] font-black">{myAttendedTickets.length}</span>
+                        <h2 className="text-sm font-semibold text-[#002855] tracking-[0.2em]">Tickets que Atiendo</h2>
+                        <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-lg text-[10px] font-semibold">{myAttendedTickets.length}</span>
                     </div>
                     <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
                         <Table>
@@ -249,30 +249,30 @@ export default function MyChats() {
                                     const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
                                     return (
                                         <TableRow key={t.id} onClick={() => setSelectedTicket(t)} className="cursor-pointer">
-                                            <TableCell><span className="text-[11px] font-black text-[#002855]">#TK-{t.id.slice(0, 6).toUpperCase()}</span></TableCell>
+                                            <TableCell><span className="text-[11px] font-semibold text-[#002855]">#TK-{t.id.slice(0, 6).toUpperCase()}</span></TableCell>
                                             <TableCell>
-                                                <p className="text-[13px] font-black text-[#002855] leading-tight line-clamp-1">{t.title}</p>
+                                                <p className="text-[13px] font-semibold text-[#002855] leading-tight line-clamp-1">{t.title}</p>
                                                 <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{t.locations?.name || 'Central'}</p>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <span className={`px-2 py-1 text-[10px] font-black tracking-wider inline-flex items-center gap-1.5 ${t.status === 'open' ? 'text-orange-600 bg-orange-50 border border-orange-100' : t.status === 'in_progress' ? 'text-blue-600 bg-blue-50 border border-blue-100' : t.status === 'resolved' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'}`}>
+                                                <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider inline-flex items-center gap-1.5 ${t.status === 'open' ? 'text-orange-600 bg-orange-50 border border-orange-100' : t.status === 'in_progress' ? 'text-blue-600 bg-blue-50 border border-blue-100' : t.status === 'resolved' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'}`}>
                                                     <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                                                     {getStatusLabel(t.status)}
                                                 </span>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-7 h-7 rounded-none bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 overflow-hidden">{t.requester?.avatar_url ? <img src={t.requester.avatar_url} className="w-full h-full object-cover" alt="" /> : t.requester?.full_name?.charAt(0)}</div>
+                                                    <div className="w-7 h-7 rounded-none bg-slate-100 flex items-center justify-center text-[10px] font-semibold text-slate-500 overflow-hidden">{t.requester?.avatar_url ? <img src={t.requester.avatar_url} className="w-full h-full object-cover" alt="" /> : t.requester?.full_name?.charAt(0)}</div>
                                                     <span className="text-[11px] font-semibold text-slate-700">{t.requester?.full_name?.split(' ')[0]}</span>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
                                                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-none ${prio.color}`}>
                                                     <div className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
-                                                    <span className="text-[10px] font-black tracking-wider">{prio.label}</span>
+                                                    <span className="text-[10px] font-semibold tracking-wider">{prio.label}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell><span className="text-[10px] font-bold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</span></TableCell>
+                                            <TableCell><span className="text-[10px] font-semibold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</span></TableCell>
                                         </TableRow>
                                     );
                                 })}

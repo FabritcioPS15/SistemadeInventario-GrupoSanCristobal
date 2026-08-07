@@ -48,7 +48,7 @@ export default function SortableTableHeader({
       onClick={() => onSort(sortKey)}
       className={`flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors ${className}`}
     >
-      <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">
+      <span className="text-[12px] font-semibold text-[#002855] tracking-[0.2em]">
         {label}
       </span>
       {renderSortIcon()}

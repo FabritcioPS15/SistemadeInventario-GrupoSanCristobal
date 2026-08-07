@@ -7,6 +7,8 @@ import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import Pagination from '../../../shared/components/ui/Pagination';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
+import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableCellPrimary, TableCellSecondary, TableCellBadge, TableActionButton } from '../../../shared/components/ui/Table';
@@ -19,7 +21,7 @@ import DetailModal, {
   DetailModalCard,
   DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
-import { MaintenanceRecord, AssetWithMaintenanceHistory } from '../../../shared/types/inventory.types';
+import { MaintenanceRecord, AssetWithMaintenanceHistory, PRIORITY_LABELS, PRIORITY_COLORS } from '../../../shared/types/inventory.types';
 
 type MaintenanceProps = {
   categoryFilter?: string;
@@ -47,6 +49,12 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { selectionMode, setSelectionMode } = useSelectionMode();
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) setSelectedIds([]);
+    setSelectionMode(!selectionMode);
+  };
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -354,54 +362,47 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
     <div className="flex flex-col h-full bg-[#f8f9fc]">
 
       <div className="p-6 space-y-6">
-        {/* Statistics Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Mantenimientos</span>
-              <Wrench size={16} className="text-blue-600" />
+        {/* Statistics Dashboard & Status Breakdown */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <div className="bg-white rounded-none border border-slate-200 p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate" title="Total Mantenimientos">Total Mants.</span>
+              <Wrench size={14} className="text-blue-600 shrink-0" />
             </div>
-            <p className="text-2xl font-black text-slate-800">{maintenanceStats.totalRecords}</p>
-            <p className="text-[10px] text-slate-500 mt-1">Registros en sistema</p>
+            <p className="text-base font-black text-slate-800">{maintenanceStats.totalRecords}</p>
           </div>
 
-          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Costo Total</span>
-              <DollarSign size={16} className="text-emerald-600" />
+          <div className="bg-white rounded-none border border-slate-200 p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate" title="Costo Total">Costo Total</span>
+              <DollarSign size={14} className="text-emerald-600 shrink-0" />
             </div>
-            <p className="text-2xl font-black text-slate-800">S/ {maintenanceStats.totalCost.toFixed(2)}</p>
-            <p className="text-[10px] text-slate-500 mt-1">Acumulado histórico</p>
+            <p className="text-base font-black text-slate-800 truncate">S/ {maintenanceStats.totalCost.toFixed(2)}</p>
           </div>
 
-          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Costo Promedio</span>
-              <TrendingUp size={16} className="text-purple-600" />
+          <div className="bg-white rounded-none border border-slate-200 p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate" title="Costo Promedio">Costo Prom.</span>
+              <TrendingUp size={14} className="text-purple-600 shrink-0" />
             </div>
-            <p className="text-2xl font-black text-slate-800">S/ {maintenanceStats.averageCost.toFixed(2)}</p>
-            <p className="text-[10px] text-slate-500 mt-1">Por mantenimiento</p>
+            <p className="text-base font-black text-slate-800 truncate">S/ {maintenanceStats.averageCost.toFixed(2)}</p>
           </div>
 
-          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Horas Totales</span>
-              <Clock size={16} className="text-amber-600" />
+          <div className="bg-white rounded-none border border-slate-200 p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate" title="Horas Totales">Horas</span>
+              <Clock size={14} className="text-amber-600 shrink-0" />
             </div>
-            <p className="text-2xl font-black text-slate-800">{maintenanceStats.totalHours.toFixed(1)}</p>
-            <p className="text-[10px] text-slate-500 mt-1">Horas de trabajo</p>
+            <p className="text-base font-black text-slate-800">{maintenanceStats.totalHours.toFixed(1)}</p>
           </div>
-        </div>
 
-        {/* Status Breakdown */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertCircle size={16} className="text-amber-500" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Pendientes</span>
+          <div className="bg-white rounded-none border border-slate-200 p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate" title="Pendientes">Pendientes</span>
+              <AlertCircle size={14} className="text-amber-500 shrink-0" />
             </div>
-            <p className="text-xl font-black text-amber-600">{maintenanceStats.pendingCount}</p>
-            <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
+            <p className="text-base font-black text-amber-600">{maintenanceStats.pendingCount}</p>
+            <div className="mt-1 h-1 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-amber-500 rounded-full transition-all"
                 style={{ width: `${maintenanceStats.totalRecords > 0 ? (maintenanceStats.pendingCount / maintenanceStats.totalRecords) * 100 : 0}%` }}
@@ -409,13 +410,13 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
             </div>
           </div>
 
-          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock size={16} className="text-blue-500" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">En Progreso</span>
+          <div className="bg-white rounded-none border border-slate-200 p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate" title="En Progreso">En Progreso</span>
+              <Clock size={14} className="text-blue-500 shrink-0" />
             </div>
-            <p className="text-xl font-black text-blue-600">{maintenanceStats.inProgressCount}</p>
-            <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
+            <p className="text-base font-black text-blue-600">{maintenanceStats.inProgressCount}</p>
+            <div className="mt-1 h-1 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-500 rounded-full transition-all"
                 style={{ width: `${maintenanceStats.totalRecords > 0 ? (maintenanceStats.inProgressCount / maintenanceStats.totalRecords) * 100 : 0}%` }}
@@ -423,13 +424,13 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
             </div>
           </div>
 
-          <div className="bg-white rounded-none border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck size={16} className="text-emerald-500" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Completados</span>
+          <div className="bg-white rounded-none border border-slate-200 p-3 shadow-sm">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate" title="Completados">Completados</span>
+              <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
             </div>
-            <p className="text-xl font-black text-emerald-600">{maintenanceStats.completedCount}</p>
-            <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
+            <p className="text-base font-black text-emerald-600">{maintenanceStats.completedCount}</p>
+            <div className="mt-1 h-1 bg-slate-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-emerald-500 rounded-full transition-all"
                 style={{ width: `${maintenanceStats.totalRecords > 0 ? (maintenanceStats.completedCount / maintenanceStats.totalRecords) * 100 : 0}%` }}
@@ -459,7 +460,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
               { key: 'type', placeholder: 'TODOS LOS TIPOS', options: Object.entries(typeLabels).map(([key, label]) => ({ value: key, label })) },
               { key: 'status', placeholder: 'TODOS LOS ESTADOS', options: Object.entries(statusLabels).map(([key, label]) => ({ value: key, label })) },
-              { key: 'asset', placeholder: 'TODOS', wrapperClassName: 'md:max-w-[220px]', options: assetsWithHistory.map(h => ({ value: h.asset.id, label: `${(h.asset as any).item || h.asset.descripcion || h.asset.brand || 'SIN NOMBRE'} ${h.asset.model ? `(${h.asset.model})` : ''}` })) },
+              { key: 'asset', multiple: false, placeholder: 'TODOS', wrapperClassName: 'md:max-w-[220px]', options: assetsWithHistory.map(h => ({ value: h.asset.id, label: `${(h.asset as any).item || h.asset.descripcion || h.asset.brand || 'SIN NOMBRE'} ${h.asset.model ? `(${h.asset.model})` : ''}` })) },
             ]}
             values={{ location: locationFilter, type: typeFilter, status: statusFilter, asset: assetFilter }}
             onChange={(key, value) => {
@@ -474,6 +475,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               setTypeFilter([]);
               setLocationFilter([]);
               setMachineTypeFilter([]);
+              setAssetFilter('');
               setCurrentPage(1);
             }}
           />
@@ -481,8 +483,16 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
           <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
           {canEdit() && (
+            <SelectionModeButton
+              active={selectionMode}
+              onClick={handleToggleSelectionMode}
+              selectedCount={selectedIds.length}
+            />
+          )}
+
+          {canEdit() && (
             <div className="flex gap-2">
-              {selectedIds.length > 0 && (
+              {selectionMode && selectedIds.length > 0 && (
                 <button
                   onClick={handleBulkDelete}
                   className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-none hover:bg-rose-100 transition-colors border border-rose-200"
@@ -498,7 +508,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                   setEditingRecord(undefined);
                   setShowForm(true);
                 }}
-                className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+                className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
               >
                 <Plus size={14} />
                 Nuevo Mantenimiento
@@ -522,43 +532,52 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               </p>
             </div>
           ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
               {paginatedData.map(assetHistory => (
                 <div
                   key={assetHistory.asset.id}
-                  className="bg-white rounded-none shadow-sm border border-slate-100 transition-all duration-300 flex flex-col group overflow-hidden relative hover:bg-slate-50/80 hover:border-blue-200/50"
+                  className={`bg-white border transition-all flex flex-col group overflow-hidden relative hover:bg-slate-50/80 hover:border-blue-200/50 cursor-pointer ${selectedIds.includes(assetHistory.asset.id) ? 'border-blue-500' : 'border-slate-100'}`}
                   onClick={() => handleViewAssetHistory(assetHistory)}
                 >
-                  <div className="p-4 flex-1">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-none flex items-center justify-center bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                        <Wrench size={16} />
-                      </div>
+                  <div className="p-2 sm:p-4 flex-1">
+                    <div className="flex items-center gap-1.5 sm:gap-3">
+                      {canEdit() && selectionMode && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(assetHistory.asset.id)}
+                          onChange={() => toggleSelect(assetHistory.asset.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                        />
+                      )}
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-[13px] font-black text-[#002855] uppercase tracking-tight truncate">
+                        <h3 className="text-[11px] sm:text-[13px] font-black text-[#002855] uppercase truncate leading-tight">
                           {assetHistory.asset.descripcion || `${assetHistory.asset.brand} ${assetHistory.asset.model}` || 'Activo'}
                         </h3>
-                        <span className="text-[10px] font-mono font-black text-blue-600">{assetHistory.asset.codigo_unico}</span>
-                        <span className={`inline-block px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider border mt-1 ${typeColors[assetHistory.latestMaintenanceType]}`}>
-                          {typeLabels[assetHistory.latestMaintenanceType]}
-                        </span>
+                        <span className="text-[9px] sm:text-[10px] font-mono font-black text-blue-600">{assetHistory.asset.codigo_unico}</span>
                       </div>
+                      <span className={`shrink-0 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider border hidden xs:inline-block sm:inline-block ${typeColors[assetHistory.latestMaintenanceType]}`}>
+                        {typeLabels[assetHistory.latestMaintenanceType]}
+                      </span>
                     </div>
-                    <div className="space-y-2">
-                      <div className="p-2 border bg-slate-50 border-slate-100">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">Mantenimientos</label>
-                        <p className="text-[11px] font-mono font-black text-blue-600">{assetHistory.totalRecords} registro(s)</p>
-                      </div>
-                      <div className="p-2 border bg-slate-50 border-slate-100">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">Estado Actual</label>
-                        <span className={`inline-flex items-center px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider border rounded ${statusColors[assetHistory.latestStatus]}`}>
-                          {statusLabels[assetHistory.latestStatus]}
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2 mt-1 text-[9px] sm:text-[10px] text-slate-500 flex-wrap">
+                      <span className="font-mono font-semibold text-blue-500">{assetHistory.totalRecords} mantenimiento(s)</span>
+                      <span className={`font-semibold ${assetHistory.latestStatus === 'completed' ? 'text-emerald-600' : assetHistory.latestStatus === 'pending' ? 'text-amber-600' : 'text-rose-600'}`}>
+                        {statusLabels[assetHistory.latestStatus]}
+                      </span>
+                      <span className="flex items-center gap-0.5 ml-auto">
+                        <MapPin size={9} className="text-rose-400 shrink-0" />
+                        <span className="truncate max-w-[80px] sm:max-w-none">{assetHistory.asset.locations?.name || 'N/A'}</span>
+                      </span>
                     </div>
                   </div>
-                  <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex gap-2">
-                  </div>
+                  {canEdit() && (
+                    <div className="px-2 sm:px-4 py-1 sm:py-3 bg-slate-50/50 border-t border-slate-100 flex gap-1.5 sm:gap-2" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => handleEditRecord(assetHistory.maintenanceRecords[0])} className="text-[9px] sm:text-[10px] font-semibold text-blue-600 hover:underline">Editar</button>
+                      <span className="text-slate-300">|</span>
+                      <button onClick={() => handleDeleteRecord(assetHistory.maintenanceRecords[0])} className="text-[9px] sm:text-[10px] font-semibold text-rose-500 hover:underline">Eliminar</button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -575,11 +594,59 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 />
               </div>
 
-              <div className="overflow-x-auto">
+              {/* Mobile card view */}
+              <div className="block md:hidden space-y-3">
+                {paginatedData.map(assetHistory => (
+                  <div
+                    key={assetHistory.asset.id}
+                    className={`bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer ${selectedIds.includes(assetHistory.asset.id) ? 'border-blue-500 bg-blue-50/20' : ''}`}
+                    onClick={() => handleViewAssetHistory(assetHistory)}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      {canEdit() && selectionMode && (
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(assetHistory.asset.id)}
+                          onChange={() => toggleSelect(assetHistory.asset.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[12px] font-black text-slate-800 truncate leading-tight">
+                          {assetHistory.asset.descripcion || `${assetHistory.asset.brand} ${assetHistory.asset.model}` || 'Activo'}
+                        </p>
+                        <p className="text-[10px] font-semibold text-blue-600 font-mono">{assetHistory.asset.codigo_unico} · {assetHistory.totalRecords} mantenimiento(s)</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className={`text-[9px] font-semibold px-2 py-0.5 border ${typeColors[assetHistory.latestMaintenanceType] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                        {typeLabels[assetHistory.latestMaintenanceType]}
+                      </span>
+                      <span className={`text-[9px] font-semibold px-2 py-0.5 border ${statusColors[assetHistory.latestStatus] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                        {statusLabels[assetHistory.latestStatus]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-slate-500 mb-2">
+                      <MapPin size={10} className="text-rose-400 shrink-0" />
+                      <span className="truncate">{assetHistory.asset.locations?.name || 'Ubicación N/A'}</span>
+                      <span className="ml-auto">{assetHistory.maintenanceRecords[0]?.technician || 'S.A.'}</span>
+                    </div>
+                    {canEdit() && (
+                      <div className="flex gap-1.5 pt-2 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => handleEditRecord(assetHistory.maintenanceRecords[0])} className="text-[10px] font-bold text-blue-600 hover:underline bg-blue-50 px-2 py-1 rounded-sm w-full text-center">Editar</button>
+                        <button onClick={() => handleDeleteRecord(assetHistory.maintenanceRecords[0])} className="text-[10px] font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-1 rounded-sm w-full text-center">Eliminar</button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {canEdit() && (
+                      {canEdit() && selectionMode && (
                         <TableHead className="w-12 text-center px-4 py-4">
                           <input
                             type="checkbox"
@@ -615,7 +682,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         key={assetHistory.asset.id}
                         onClick={() => handleViewAssetHistory(assetHistory)}
                       >
-                        {canEdit() && (
+                        {canEdit() && selectionMode && (
                           <TableCell className="w-12 text-center px-4 py-4">
                             <input
                               type="checkbox"
@@ -692,302 +759,346 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
         {
           viewingRecord && (
-            <DetailModal maxWidth="5xl" onClose={() => setViewingRecord(undefined)} closeOnBackdrop>
+            <DetailModal maxWidth="3xl" onClose={() => setViewingRecord(undefined)} closeOnBackdrop overlayStyle={{ zIndex: 210 }}>
+              {/* Header con tamaño de icono estandarizado */}
               <DetailModalHeader>
-                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
                 <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
                   <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                    <Wrench size={20} className="sm:size-24" />
+                    <Wrench size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight truncate">
+                    <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white uppercase tracking-tight leading-snug truncate">
                       {(viewingRecord?.assets as any)?.descripcion || (viewingRecord?.assets as any)?.brand || 'Activo'} {(viewingRecord?.assets as any)?.model}
-                      <br />
-                      <span className="text-[10px] font-mono font-black text-blue-200">{(viewingRecord?.assets as any)?.codigo_unico}</span>
                     </h2>
-                    <p className="text-[10px] sm:text-xs text-emerald-200 font-semibold mt-0.5 truncate">
-                      {viewingRecord?.assets?.asset_types?.name} • {typeLabels[viewingRecord?.maintenance_type || 'preventive']}
+                    <p className="text-[9px] sm:text-[10px] font-normal text-slate-300 uppercase tracking-wide mt-0.5 flex items-center gap-1.5 truncate">
+                      <span className="font-mono text-slate-300">{(viewingRecord?.assets as any)?.codigo_unico}</span>
+                      <span>•</span>
+                      <span>{viewingRecord?.assets?.asset_types?.name}</span>
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setViewingRecord(undefined)}
-                  className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all"
+                  className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
+                  aria-label="Cerrar detalle"
                 >
-                  <X size={22} />
+                  <X size={20} />
                 </button>
               </DetailModalHeader>
 
-              <DetailModalBody>
-                <DetailModalGrid layout="stack-until-xl">
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
 
-                  <DetailModalSection title="Información General">
-                    <div className="space-y-2.5 sm:space-y-3">
-                      <DetailModalCard className="space-y-2.5 sm:space-y-3">
-                        <DetailModalRow label="Estado">
-                          <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${statusColors[viewingRecord?.status || 'pending']}`}>
-                            {statusLabels[viewingRecord?.status || 'pending']}
-                          </span>
-                        </DetailModalRow>
-                        <DetailModalRow label="Tipo de Mantenimiento">
-                          <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${typeColors[viewingRecord?.maintenance_type || 'preventive']}`}>
-                            {typeLabels[viewingRecord?.maintenance_type || 'preventive']}
-                          </span>
-                        </DetailModalRow>
-                        <DetailModalRow label="Fecha de Completado">
-                          <span className="text-[10px] sm:text-[11px] font-black text-slate-600">
-                            {viewingRecord?.completed_date ? new Date(String(viewingRecord.completed_date as any).includes('T') ? String(viewingRecord.completed_date as any) : `${viewingRecord.completed_date as any}T12:00:00`).toLocaleDateString('es-PE') : 'Pendiente'}
-                          </span>
-                        </DetailModalRow>
-                      </DetailModalCard>
+                {/* Status badges row */}
+                <div className="flex items-center gap-2 flex-wrap pb-2 border-b border-slate-100">
+                  <span className={`px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider border ${statusColors[viewingRecord?.status || 'pending']}`}>
+                    {statusLabels[viewingRecord?.status || 'pending']}
+                  </span>
+                  <span className="px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                    {typeLabels[viewingRecord?.maintenance_type || 'preventive']}
+                  </span>
+                  <span className="px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                    {PRIORITY_LABELS[viewingRecord?.priority || 'medium']}
+                  </span>
+                  <span className="ml-auto text-[9px] font-mono text-slate-500">
+                    {viewingRecord?.completed_date
+                      ? new Date(String(viewingRecord.completed_date as any).includes('T') ? String(viewingRecord.completed_date as any) : `${viewingRecord.completed_date as any}T12:00:00`).toLocaleDateString('es-PE')
+                      : 'Pendiente'}
+                  </span>
+                </div>
 
-                      <DetailModalCard className="space-y-2.5 sm:space-y-3">
-                        <DetailModalRow label="Técnico">
-                          <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">
-                            {viewingRecord?.technician || 'No especificado'}
-                          </span>
-                        </DetailModalRow>
-                        <DetailModalRow label="Horas de Trabajo">
-                          <span className="text-[10px] sm:text-[11px] font-black text-blue-600">
-                            {viewingRecord?.work_hours || 0} h
-                          </span>
-                        </DetailModalRow>
-                        <DetailModalRow label="Costo Total">
-                          <span className="text-[10px] sm:text-[11px] font-black text-emerald-600 font-mono">
-                            S/ {viewingRecord?.total_cost?.toFixed(2) || '0.00'}
-                          </span>
-                        </DetailModalRow>
-                      </DetailModalCard>
-                    </div>
-                  </DetailModalSection>
+                {/* Description */}
+                <div className="bg-slate-50 border border-slate-200 p-3">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Descripción / Motivo</p>
+                  <p className="text-[11px] text-slate-700 leading-relaxed">{viewingRecord?.description}</p>
+                </div>
 
-                  <DetailModalSection title="Diagnóstico y Solución">
-                    <DetailModalCard>
-                      <DetailModalRow label="Falla / Motivo">
-                        <span className="text-[10px] sm:text-[11px] font-semibold text-slate-700">
-                          {viewingRecord?.description}
-                        </span>
-                      </DetailModalRow>
-                      {viewingRecord?.failure_cause && (
-                        <DetailModalRow label="Causa Raíz">
-                          <span className="text-[10px] sm:text-[11px] font-semibold text-rose-700">
-                            {viewingRecord?.failure_cause}
-                          </span>
-                        </DetailModalRow>
-                      )}
-                      <DetailModalRow label="Acción Realizada">
-                        <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 italic leading-relaxed">
-                          {viewingRecord?.solution_applied || 'Sin registro'}
-                        </span>
-                      </DetailModalRow>
-                    </DetailModalCard>
-                  </DetailModalSection>
-
-                  <DetailModalSection title="Garantía">
-                    <DetailModalCard>
-                      <div className={`flex items-center gap-3 p-3 rounded-lg border ${viewingRecord?.warranty_claim ? 'bg-indigo-50 border-indigo-200' : 'bg-slate-50 border-slate-200'}`}>
-                        <ShieldCheck size={20} className={viewingRecord?.warranty_claim ? 'text-indigo-600' : 'text-slate-400'} />
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase">Estado de Garantía</p>
-                          <p className={`text-[11px] font-black ${viewingRecord?.warranty_claim ? 'text-indigo-800' : 'text-slate-500'}`}>
-                            {viewingRecord?.warranty_claim ? 'RECLAMO ACTIVO' : 'SIN RECLAMO'}
-                          </p>
-                        </div>
+                {/* Diagnosis section */}
+                {(viewingRecord?.failure_cause || viewingRecord?.solution_applied) && (
+                  <div className="space-y-2">
+                    {viewingRecord?.failure_cause && (
+                      <div className="bg-slate-50 border border-slate-200 border-l-2 border-l-slate-400 p-3">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Causa Raíz</p>
+                        <p className="text-[11px] text-slate-700 leading-relaxed">{viewingRecord.failure_cause}</p>
                       </div>
-                    </DetailModalCard>
-                  </DetailModalSection>
+                    )}
+                    {viewingRecord?.solution_applied && (
+                      <div className="bg-slate-50 border border-slate-200 border-l-2 border-l-slate-600 p-3">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Solución Aplicada</p>
+                        <p className="text-[11px] text-slate-700 leading-relaxed">{viewingRecord.solution_applied}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                  {viewingRecord?.parts_used && Array.isArray(viewingRecord?.parts_used) && (viewingRecord?.parts_used as any[]).length > 0 && (
-                    <DetailModalSection title="Repuestos Utilizados">
-                      <DetailModalCard>
-                        <div className="space-y-2">
-                          {(viewingRecord?.parts_used as any[]).map((part: any, idx: number) => (
-                            <div key={idx} className="flex justify-between items-center text-xs border-b border-slate-100 pb-2 last:border-0">
-                              <span className="font-semibold text-slate-700">{part.name}</span>
-                              <span className="font-mono text-slate-500">{part.quantity} {part.unit} × S/ {part.unit_price?.toFixed(2)}</span>
-                            </div>
-                          ))}
+                {/* Info grid: Technician, Provider, Invoice, Dates */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Técnico</p>
+                    <p className="text-[11px] font-medium text-slate-700 truncate">{viewingRecord?.technician || 'N/A'}</p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Proveedor</p>
+                    <p className="text-[11px] font-medium text-slate-700 truncate">{viewingRecord?.service_provider || 'N/A'}</p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">N° Factura</p>
+                    <p className="text-[11px] font-medium text-slate-600 truncate">{viewingRecord?.invoice_number || 'N/A'}</p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Horas Trabajo</p>
+                    <p className="text-[11px] font-medium text-slate-700">{viewingRecord?.work_hours || 0} h</p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Próximo Mant.</p>
+                    <p className="text-[11px] font-medium text-slate-700">
+                      {viewingRecord?.next_maintenance_date
+                        ? new Date(String(viewingRecord.next_maintenance_date).includes('T') ? String(viewingRecord.next_maintenance_date) : `${viewingRecord.next_maintenance_date}T12:00:00`).toLocaleDateString('es-PE')
+                        : 'No programado'}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Frecuencia</p>
+                    <p className="text-[11px] font-medium text-slate-600">
+                      {viewingRecord?.maintenance_frequency ? `Cada ${viewingRecord.maintenance_frequency} días` : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Costs row (sobrio) */}
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2 text-center">
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Mano de Obra</p>
+                    <p className="text-[12px] font-bold text-slate-700 font-mono">S/ {viewingRecord?.labor_cost?.toFixed(2) || '0.00'}</p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2 text-center">
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Otros Gastos</p>
+                    <p className="text-[12px] font-bold text-slate-700 font-mono">S/ {viewingRecord?.other_costs?.toFixed(2) || '0.00'}</p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2 text-center">
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Repuestos</p>
+                    <p className="text-[12px] font-bold text-slate-700 font-mono">
+                      S/ {(viewingRecord?.parts_used as any[] || []).reduce((s: number, p: any) => s + (p.total_cost || 0), 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-slate-100 border border-slate-300 px-3 py-2 text-center">
+                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Total</p>
+                    <p className="text-[13px] font-bold text-[#002855] font-mono">S/ {viewingRecord?.total_cost?.toFixed(2) || '0.00'}</p>
+                  </div>
+                </div>
+
+                {/* Parts used */}
+                {viewingRecord?.parts_used && Array.isArray(viewingRecord?.parts_used) && (viewingRecord?.parts_used as any[]).length > 0 && (
+                  <div className="border border-slate-200">
+                    <div className="bg-slate-50 px-3 py-2 border-b border-slate-200">
+                      <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Repuestos Utilizados</p>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {(viewingRecord?.parts_used as any[]).map((part: any, idx: number) => (
+                        <div key={idx} className="px-3 py-2 flex justify-between items-center">
+                          <span className="text-[10px] font-medium text-slate-700">{part.name}</span>
+                          <span className="text-[10px] font-mono text-slate-500">{part.quantity} {part.unit} × S/ {part.unit_price?.toFixed(2)} = <span className="font-bold text-slate-700">S/ {part.total_cost?.toFixed(2)}</span></span>
                         </div>
-                      </DetailModalCard>
-                    </DetailModalSection>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Warranty */}
+                <div className="flex items-center gap-3 px-3 py-2 border bg-slate-50 border-slate-200">
+                  <ShieldCheck size={16} className="text-slate-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-bold text-slate-700">
+                      {viewingRecord?.warranty_claim ? 'GARANTÍA: RECLAMO ACTIVO' : 'Sin reclamo de garantía'}
+                    </span>
+                    {viewingRecord?.warranty_details && (
+                      <p className="text-[10px] text-slate-600 mt-0.5 truncate">{viewingRecord.warranty_details}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {viewingRecord?.notes && (
+                  <div className="bg-slate-50 border border-slate-200 p-3">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Notas</p>
+                    <p className="text-[10px] text-slate-700 leading-relaxed whitespace-pre-wrap">{viewingRecord.notes}</p>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Footer */}
+              <div className="bg-slate-50 border-t border-slate-200 px-4 py-2.5 flex items-center justify-between gap-2 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">Sistema GS</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {canEdit() && (
+                    <button
+                      onClick={() => { setViewingRecord(undefined); handleEditRecord(viewingRecord); }}
+                      className="px-4 py-1.5 bg-[#002855] text-white text-[9px] font-bold uppercase tracking-widest hover:bg-blue-900 transition-all flex items-center gap-1.5"
+                    >
+                      <Edit size={12} />
+                      Editar
+                    </button>
                   )}
-
-                  {viewingRecord?.notes && (
-                    <DetailModalSection title="Notas Adicionales">
-                      <DetailModalCard>
-                        <p className="text-[10px] sm:text-[11px] text-slate-700 leading-relaxed whitespace-pre-wrap">
-                          {viewingRecord.notes}
-                        </p>
-                      </DetailModalCard>
-                    </DetailModalSection>
-                  )}
-
-                </DetailModalGrid>
-              </DetailModalBody>
-
-              <StandardModalFooter
-                onClose={() => setViewingRecord(undefined)}
-                onEdit={canEdit() ? () => { setViewingRecord(undefined); handleEditRecord(viewingRecord); } : undefined}
-                editLabel="Editar"
-              />
+                  <button
+                    onClick={() => setViewingRecord(undefined)}
+                    className="px-4 py-1.5 bg-slate-200 text-slate-700 text-[9px] font-bold uppercase tracking-widest hover:bg-slate-300 transition-all"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
             </DetailModal>
           )
         }
 
         {
           viewingAssetHistory && (
-            <DetailModal maxWidth="5xl" onClose={() => setViewingAssetHistory(undefined)} closeOnBackdrop>
+            <DetailModal maxWidth="3xl" onClose={() => setViewingAssetHistory(undefined)} closeOnBackdrop>
               <DetailModalHeader>
-                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
                 <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
                   <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                    <Wrench size={20} className="sm:size-24" />
+                    <Wrench size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-base sm:text-lg font-black text-white tracking-tight leading-tight truncate">
+                    <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white uppercase tracking-tight leading-snug truncate">
                       {viewingAssetHistory?.asset.descripcion || `${viewingAssetHistory?.asset.brand} ${viewingAssetHistory?.asset.model}` || 'Activo'}
                     </h2>
-                    <p className="text-[10px] font-black font-mono text-blue-200">{viewingAssetHistory?.asset.codigo_unico}</p>
-                    <p className="text-[10px] sm:text-xs text-blue-200 font-semibold mt-0.5 truncate">
-                      {viewingAssetHistory?.asset.asset_types?.name} • {viewingAssetHistory?.totalRecords} mantenimiento(s)
+                    <p className="text-[9px] sm:text-[10px] font-normal text-slate-300 uppercase tracking-wide mt-0.5 flex items-center gap-1.5 truncate">
+                      <span className="font-mono text-slate-300">{viewingAssetHistory?.asset.codigo_unico}</span>
+                      <span>•</span>
+                      <span>{viewingAssetHistory?.asset.asset_types?.name}</span>
+                      <span>•</span>
+                      <span>{viewingAssetHistory?.totalRecords} mantenimiento(s)</span>
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setViewingAssetHistory(undefined)}
-                  className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all"
+                  className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
+                  aria-label="Cerrar historial"
                 >
-                  <X size={22} />
+                  <X size={20} />
                 </button>
               </DetailModalHeader>
 
               <DetailModalBody>
-                <DetailModalGrid layout="stack-until-xl">
+                {/* Asset info summary bar */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2.5">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Marca / Modelo</p>
+                    <p className="text-[11px] font-semibold text-[#002855] truncate">
+                      {viewingAssetHistory?.asset.brand} {viewingAssetHistory?.asset.model}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2.5">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Serie</p>
+                    <p className="text-[11px] font-normal text-slate-600 truncate font-mono">
+                      {viewingAssetHistory?.asset.serial_number || 'N/A'}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2.5">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Ubicación</p>
+                    <p className="text-[11px] font-normal text-slate-600 truncate flex items-center gap-1">
+                      <MapPin size={11} className="text-rose-500 shrink-0" />
+                      {viewingAssetHistory?.asset.locations?.name || 'N/A'}
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2.5">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Estado</p>
+                    <span className={`inline-block px-2 py-0.5 text-[8px] font-bold tracking-widest border ${statusColors[viewingAssetHistory?.latestStatus || 'pending']}`}>
+                      {statusLabels[viewingAssetHistory?.latestStatus || 'pending']}
+                    </span>
+                  </div>
+                </div>
 
-                  <DetailModalSection title="Información del Activo">
-                    <DetailModalCard>
-                      <DetailModalRow label="Marca / Modelo">
-                        <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
-                          {viewingAssetHistory?.asset.brand} {viewingAssetHistory?.asset.model}
-                        </span>
-                      </DetailModalRow>
-                      <DetailModalRow label="Número de Serie">
-                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-600">
-                          {viewingAssetHistory?.asset.serial_number || 'N/A'}
-                        </span>
-                      </DetailModalRow>
-                      <DetailModalRow label="Código Único">
-                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-600">
-                          {viewingAssetHistory?.asset.codigo_unico || 'N/A'}
-                        </span>
-                      </DetailModalRow>
-                      <DetailModalRow label="Ubicación">
-                        <div className="flex items-center gap-2">
-                          <MapPin size={14} className="text-rose-500" />
-                          <span className="text-[10px] sm:text-[11px] font-bold text-slate-600">
-                            {viewingAssetHistory?.asset.locations?.name || 'N/A'}
-                          </span>
-                        </div>
-                      </DetailModalRow>
-                      <DetailModalRow label="Estado Actual">
-                        <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${statusColors[viewingAssetHistory?.latestStatus || 'pending']}`}>
-                          {statusLabels[viewingAssetHistory?.latestStatus || 'pending']}
-                        </span>
-                      </DetailModalRow>
-                    </DetailModalCard>
-                  </DetailModalSection>
+                {/* History section header */}
+                <div className="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
+                  <div className="w-1 h-4 bg-blue-600 shrink-0" />
+                  <h3 className="text-[11px] font-bold text-[#002855] uppercase tracking-widest">
+                    Historial de Mantenimientos
+                  </h3>
+                  <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 border border-blue-200">
+                    {viewingAssetHistory?.totalRecords || 0}
+                  </span>
+                </div>
 
-                  <DetailModalSection title="Historial de Mantenimientos">
-                    <div className="space-y-3">
-                      {viewingAssetHistory?.maintenanceRecords
-                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                        .map((record) => (
-                          <DetailModalCard key={record.id}>
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex gap-2">
-                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${typeColors[record.maintenance_type]}`}>
+                {/* Scrollable compact cards list */}
+                <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
+                  {viewingAssetHistory?.maintenanceRecords
+                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .map((record) => {
+                      const statusBorderColor: Record<string, string> = {
+                        pending: 'border-l-amber-400',
+                        in_progress: 'border-l-blue-400',
+                        completed: 'border-l-emerald-400',
+                        waiting_parts: 'border-l-orange-400',
+                      };
+                      return (
+                        <div
+                          key={record.id}
+                          onClick={() => setViewingRecord(record)}
+                          className={`bg-white border border-slate-200 border-l-[3px] ${statusBorderColor[record.status] || 'border-l-slate-300'} hover:bg-blue-50/40 hover:border-blue-200 cursor-pointer transition-all group`}
+                        >
+                          <div className="px-4 py-3 flex items-center gap-3">
+                            {/* Left: date column */}
+                            <div className="shrink-0 text-center w-14">
+                              <p className="text-[10px] font-mono font-bold text-slate-700 leading-tight">
+                                {new Date(String(record.created_at).includes('T') ? String(record.created_at) : `${record.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
+                              </p>
+                              <p className="text-[9px] font-mono text-slate-400">
+                                {new Date(String(record.created_at).includes('T') ? String(record.created_at) : `${record.created_at}T12:00:00`).getFullYear()}
+                              </p>
+                            </div>
+
+                            {/* Divider */}
+                            <div className="w-px h-8 bg-slate-200 shrink-0" />
+
+                            {/* Center: summary info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[11px] font-semibold text-slate-800 truncate leading-tight">
+                                {record.description}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className={`px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider border ${typeColors[record.maintenance_type]}`}>
                                   {typeLabels[record.maintenance_type]}
                                 </span>
-                                <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider border ${statusColors[record.status]}`}>
+                                <span className={`px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider border ${statusColors[record.status]}`}>
                                   {statusLabels[record.status]}
                                 </span>
+                                {record.technician && (
+                                  <span className="text-[9px] text-slate-400 truncate">
+                                    • {record.technician}
+                                  </span>
+                                )}
                               </div>
-                              <span className="text-[8px] font-mono text-slate-400">
-                                {new Date(String(record.created_at).includes('T') ? String(record.created_at) : `${record.created_at}T12:00:00`).toLocaleDateString('es-PE')}
-                              </span>
                             </div>
-                            <div className="space-y-2">
-                              <DetailModalRow label="Descripción">
-                                <span className="text-[10px] sm:text-[11px] font-semibold text-slate-700">
-                                  {record.description}
+
+                            {/* Right: cost + arrow */}
+                            <div className="shrink-0 text-right flex items-center gap-2">
+                              {(record.total_cost != null && record.total_cost > 0) && (
+                                <span className="text-[11px] font-bold text-emerald-700 font-mono">
+                                  S/ {record.total_cost.toFixed(2)}
                                 </span>
-                              </DetailModalRow>
-                              {record.failure_cause && (
-                                <DetailModalRow label="Causa Raíz">
-                                  <span className="text-[10px] sm:text-[11px] font-semibold text-rose-700">
-                                    {record.failure_cause}
-                                  </span>
-                                </DetailModalRow>
                               )}
-                              {record.solution_applied && (
-                                <DetailModalRow label="Solución Aplicada">
-                                  <span className="text-[10px] sm:text-[11px] font-medium text-slate-600 italic leading-relaxed">
-                                    {record.solution_applied}
-                                  </span>
-                                </DetailModalRow>
-                              )}
-                              <div className="grid grid-cols-4 gap-2 text-[9px]">
-                                <div>
-                                  <p className="font-bold text-slate-400 uppercase">Técnico</p>
-                                  <p className="font-black text-slate-700">{record.technician || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <p className="font-bold text-slate-400 uppercase">Horas</p>
-                                  <p className="font-black text-blue-600">{record.work_hours || 0} h</p>
-                                </div>
-                                <div>
-                                  <p className="font-bold text-slate-400 uppercase">Completado</p>
-                                  <p className="font-black text-slate-700">{record.completed_date ? new Date(String(record.completed_date).includes('T') ? String(record.completed_date) : `${record.completed_date}T12:00:00`).toLocaleDateString('es-PE') : 'Pend.'}</p>
-                                </div>
-                                <div>
-                                  <p className="font-bold text-slate-400 uppercase">Costo</p>
-                                  <p className="font-black text-emerald-600 font-mono">S/ {record.total_cost?.toFixed(2) || '0.00'}</p>
-                                </div>
-                              </div>
-                              </div>
-                              {canEdit() && (
-                                <div className="flex gap-2 pt-2 border-t border-slate-100">
-                                  <button
-                                    onClick={() => {
-                                      setViewingAssetHistory(undefined);
-                                      handleEditRecord(record);
-                                    }}
-                                    className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-amber-600 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-all"
-                                  >
-                                    Editar
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      handleDeleteRecord(record);
-                                      setViewingAssetHistory(undefined);
-                                    }}
-                                    className="flex-1 py-1.5 text-[8px] font-black uppercase tracking-wider text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-all"
-                                  >
-                                    Eliminar
-                                  </button>
-                                </div>
-                              )}
-                            </DetailModalCard>
-                          ))}
+                              <svg className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                          </div>
                         </div>
-                      </DetailModalSection>
-                    </DetailModalGrid>
-                  </DetailModalBody>
-                  <StandardModalFooter
-                    onClose={() => setViewingAssetHistory(undefined)}
-                  />
-                </DetailModal>
-              )
+                      );
+                    })}
+                </div>
+              </DetailModalBody>
+
+              <StandardModalFooter
+                onClose={() => setViewingAssetHistory(undefined)}
+              />
+            </DetailModal>
+          )
             }
       </div>
     </div>

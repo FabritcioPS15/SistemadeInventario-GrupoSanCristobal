@@ -326,8 +326,8 @@ export default function QuotationsPage() {
                 <DollarSign size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-[16px] font-black text-white uppercase tracking-tight">{selected.number}</h2>
-                <p className="text-[10px] font-bold text-blue-200 uppercase">{selected.title}</p>
+                <h2 className="text-[16px] font-normal text-white uppercase tracking-tight">{selected.number}</h2>
+                <p className="text-[10px] font-normal text-blue-200 uppercase">{selected.title}</p>
               </div>
             </div>
             <button onClick={() => setShowDetails(false)} className="p-2 text-white/50 hover:text-white hover:bg-white/10 transition-all"><X size={20} /></button>
@@ -336,18 +336,18 @@ export default function QuotationsPage() {
             <DetailModalGrid layout="stack-until-xl">
               <DetailModalSection title="Cliente">
                 <DetailModalCard>
-                  <DetailModalRow label="Nombre"><span className="text-[11px] font-black text-slate-700">{selected.client_name}</span></DetailModalRow>
+                  <DetailModalRow label="Nombre"><span className="text-[11px] font-normal text-slate-700">{selected.client_name}</span></DetailModalRow>
                   <DetailModalRow label="Email"><span className="text-[11px] font-medium text-slate-600">{selected.client_email}</span></DetailModalRow>
                   {selected.client_phone && <DetailModalRow label="Teléfono"><span className="text-[11px] font-medium text-slate-600">{selected.client_phone}</span></DetailModalRow>}
                 </DetailModalCard>
               </DetailModalSection>
               <DetailModalSection title="Resumen">
                 <DetailModalCard>
-                  <DetailModalRow label="Moneda"><span className="text-[11px] font-black text-slate-700">{selected.currency === 'PEN' ? 'Soles (S/)' : 'Dólares ($)'}</span></DetailModalRow>
-                  <DetailModalRow label="Subtotal"><span className="text-[11px] font-black text-slate-700">{currencySymbol(selected.currency)} {selected.subtotal?.toFixed(2)}</span></DetailModalRow>
-                  {selected.discount > 0 && <DetailModalRow label="Descuento"><span className="text-[11px] font-black text-rose-600">-{currencySymbol(selected.currency)} {selected.discount_amount?.toFixed(2)}</span></DetailModalRow>}
-                  <DetailModalRow label="IGV"><span className="text-[11px] font-black text-slate-700">{currencySymbol(selected.currency)} {selected.tax_amount?.toFixed(2)}</span></DetailModalRow>
-                  <DetailModalRow label="TOTAL"><span className="text-[14px] font-black text-[#002855]">{currencySymbol(selected.currency)} {selected.total?.toFixed(2)}</span></DetailModalRow>
+                  <DetailModalRow label="Moneda"><span className="text-[11px] font-normal text-slate-700">{selected.currency === 'PEN' ? 'Soles (S/)' : 'Dólares ($)'}</span></DetailModalRow>
+                  <DetailModalRow label="Subtotal"><span className="text-[11px] font-normal text-slate-700">{currencySymbol(selected.currency)} {selected.subtotal?.toFixed(2)}</span></DetailModalRow>
+                  {selected.discount > 0 && <DetailModalRow label="Descuento"><span className="text-[11px] font-normal text-rose-600">-{currencySymbol(selected.currency)} {selected.discount_amount?.toFixed(2)}</span></DetailModalRow>}
+                  <DetailModalRow label="IGV"><span className="text-[11px] font-normal text-slate-700">{currencySymbol(selected.currency)} {selected.tax_amount?.toFixed(2)}</span></DetailModalRow>
+                  <DetailModalRow label="TOTAL"><span className="text-[14px] font-normal text-[#002855]">{currencySymbol(selected.currency)} {selected.total?.toFixed(2)}</span></DetailModalRow>
                 </DetailModalCard>
                 <DetailModalCard>
                   <DetailModalRow label="Estado"><StatusBadge status={selected.status || 'draft'} size="md" /></DetailModalRow>
@@ -360,19 +360,19 @@ export default function QuotationsPage() {
                     <table className="w-full text-left">
                       <thead className="bg-[#002855] text-white">
                         <tr>
-                          <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest">Descripción</th>
-                          <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-center">Cant.</th>
-                          <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-right">P. Unit.</th>
-                          <th className="px-4 py-2 text-[9px] font-black uppercase tracking-widest text-right">Total</th>
+                          <th className="px-4 py-2 text-[9px] font-normal uppercase tracking-widest">Descripción</th>
+                          <th className="px-4 py-2 text-[9px] font-normal uppercase tracking-widest text-center">Cant.</th>
+                          <th className="px-4 py-2 text-[9px] font-normal uppercase tracking-widest text-right">P. Unit.</th>
+                          <th className="px-4 py-2 text-[9px] font-normal uppercase tracking-widest text-right">Total</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
                         {(selected.items || []).map((item: any, idx: number) => (
                           <tr key={idx}>
-                            <td className="px-4 py-2 text-[12px] font-bold text-slate-700">{item.description}</td>
+                            <td className="px-4 py-2 text-[12px] font-normal text-slate-700">{item.description}</td>
                             <td className="px-4 py-2 text-[12px] text-slate-600 text-center">{item.quantity}</td>
                             <td className="px-4 py-2 text-[12px] text-slate-600 text-right">{currencySymbol(selected.currency)} {item.unit_price?.toFixed(2)}</td>
-                            <td className="px-4 py-2 text-[12px] font-bold text-slate-700 text-right">{currencySymbol(selected.currency)} {item.total?.toFixed(2)}</td>
+                            <td className="px-4 py-2 text-[12px] font-normal text-slate-700 text-right">{currencySymbol(selected.currency)} {item.total?.toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -389,11 +389,11 @@ export default function QuotationsPage() {
           </DetailModalBody>
           <div className="flex justify-end gap-2 px-6 py-4 border-t border-slate-100 bg-slate-50">
             <button onClick={() => handleSendEmail(selected)}
-              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-500 hover:text-white transition-all uppercase tracking-widest">
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-normal text-blue-600 bg-blue-50 border border-blue-200 hover:bg-blue-500 hover:text-white transition-all uppercase tracking-widest">
               Enviar por Correo
             </button>
             <button onClick={() => setShowDetails(false)}
-              className="px-6 py-2 text-[10px] font-black text-white bg-[#002855] hover:bg-blue-800 transition-all uppercase tracking-widest">
+              className="px-6 py-2 text-[10px] font-normal text-white bg-[#002855] hover:bg-blue-800 transition-all uppercase tracking-widest">
               Cerrar
             </button>
           </div>

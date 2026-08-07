@@ -40,7 +40,7 @@ export default function PrimaryButton({
         ${fullWidthMobile ? 'w-full md:w-auto' : ''}
         flex items-center justify-center gap-2
         px-4 py-3
-        text-[10px] font-black uppercase tracking-widest
+        text-[10px] font-normal uppercase tracking-widest
         transition-all shadow-sm
         disabled:opacity-50 disabled:cursor-not-allowed
         ${variantClasses[variant]}

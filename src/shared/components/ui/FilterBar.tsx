@@ -67,7 +67,7 @@ export default function FilterBar({
           title="Limpiar Filtros"
         >
           <X size={18} className="md:block hidden" />
-          <span className="md:hidden text-[10px] font-black tracking-widest flex items-center gap-2"><X size={14} /> Limpiar Filtros</span>
+          <span className="md:hidden text-[10px] font-semibold tracking-widest flex items-center gap-2"><X size={14} /> Limpiar Filtros</span>
         </button>
       )}
     </>

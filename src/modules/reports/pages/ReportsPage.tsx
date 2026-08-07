@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { BarChart3, Download, FileText, Search, Filter, X, Loader2 } from 'lucide-react';
+import { BarChart3, Download, FileText, Search, X, Loader2 } from 'lucide-react';
 import { FaFilePdf } from 'react-icons/fa6';
 import { RiFileExcel2Fill } from 'react-icons/ri';
 import ExcelJS from 'exceljs';
@@ -28,7 +28,7 @@ const SOURCE_CONFIG: Record<ReportSource, { label: string; table: string; titleF
 };
 
 export default function ReportsPage() {
-  const { notify } = useNotify();
+  const { success: notifySuccess, error: notifyError } = useNotify();
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<'excel' | 'pdf' | null>(null);
   const [selectedSource, setSelectedSource] = useState<ReportSource>('assets');
@@ -54,7 +54,7 @@ export default function ReportsPage() {
       setReports(Object.fromEntries(results) as any);
     } catch (err: any) {
       console.error('Error fetching reports:', err);
-      notify('Error al cargar reportes', { type: 'error' });
+      notifyError('Error al cargar reportes');
     } finally {
       setLoading(false);
     }
@@ -117,9 +117,9 @@ export default function ReportsPage() {
       a.download = `reporte_${config.label.toLowerCase()}_${new Date().toISOString().split('T')[0]}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
-      notify('Reporte exportado a Excel', { type: 'success' });
+      notifySuccess('Reporte exportado a Excel');
     } catch (err) {
-      notify('Error al exportar Excel', { type: 'error' });
+      notifyError('Error al exportar Excel');
     } finally {
       setExporting(null);
     }
@@ -167,9 +167,9 @@ export default function ReportsPage() {
       }
 
       doc.save(`reporte_${config.label.toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`);
-      notify('Reporte exportado a PDF', { type: 'success' });
+      notifySuccess('Reporte exportado a PDF');
     } catch (err) {
-      notify('Error al exportar PDF', { type: 'error' });
+      notifyError('Error al exportar PDF');
     } finally {
       setExporting(null);
     }
@@ -230,9 +230,8 @@ export default function ReportsPage() {
               <button
                 key={key}
                 onClick={() => setSelectedSource(key)}
-                className={`bg-white border p-4 text-left transition-all hover:shadow-md ${
-                  selectedSource === key ? 'border-[#002855] ring-2 ring-[#002855]/20' : 'border-slate-200'
-                }`}
+                className={`bg-white border p-4 text-left transition-all hover:shadow-md ${selectedSource === key ? 'border-[#002855] ring-2 ring-[#002855]/20' : 'border-slate-200'
+                  }`}
               >
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{config.label}</p>
                 <p className="text-2xl font-black text-[#002855]">{data?.count ?? 0}</p>
@@ -325,9 +324,9 @@ export default function ReportsPage() {
             </div>
 
             {/* Data cards - mobile */}
-            <div className="md:hidden divide-y divide-slate-100">
+            <div className="md:hidden space-y-3 p-4">
               {filteredData.slice(0, 50).map((item: any, idx: number) => (
-                <div key={idx} className="p-4 space-y-1.5">
+                <div key={idx} className="bg-white border border-slate-200 p-4 space-y-1.5">
                   {Object.entries(item).slice(0, 5).map(([key, val]: [string, any]) => (
                     <div key={key} className="flex items-start gap-2">
                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest shrink-0 w-20 truncate">{key}:</span>
@@ -342,7 +341,7 @@ export default function ReportsPage() {
                 </div>
               )}
               {filteredData.length === 0 && (
-                <div className="p-10 text-center">
+                <div className="p-10 text-center bg-slate-50 border border-slate-100 mt-4 rounded-lg">
                   <FileText size={32} className="text-slate-200 mx-auto mb-3" />
                   <p className="text-sm font-bold text-slate-400">Sin resultados</p>
                 </div>

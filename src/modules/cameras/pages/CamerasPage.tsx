@@ -21,6 +21,8 @@ import DetailModal, {
 } from '../../../shared/components/ui/DetailModal';
 import ModalOverlay from '../../../shared/components/ui/ModalOverlay';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
+import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
@@ -67,7 +69,13 @@ export default function Cameras({ subview }: CamerasProps) {
   const [storedDisks, setStoredDisks] = useState<StoredDisk[]>([]);
   const [editingDisk, setEditingDisk] = useState<StoredDisk | undefined>();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { selectionMode, setSelectionMode } = useSelectionMode();
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) setSelectedIds([]);
+    setSelectionMode(!selectionMode);
+  };
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -573,7 +581,7 @@ export default function Cameras({ subview }: CamerasProps) {
           {subview === 'cameras-disks' ? (
             <button
               onClick={() => setShowStoredDiskForm(true)}
-              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
             >
               <Plus size={14} />
               Nuevo Disco Almacenado
@@ -581,7 +589,7 @@ export default function Cameras({ subview }: CamerasProps) {
           ) : canEdit() && (
             <button
               onClick={openCreate}
-              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
             >
               <Plus size={14} />
               Agregar Equipo
@@ -590,7 +598,15 @@ export default function Cameras({ subview }: CamerasProps) {
 
           <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPDF} />
 
-          {canEdit() && selectedIds.length > 0 && viewMode === 'table' && !subview && (
+          {canEdit() && subview !== 'cameras-disks' && (
+            <SelectionModeButton
+              active={selectionMode}
+              onClick={handleToggleSelectionMode}
+              selectedCount={selectedIds.length}
+            />
+          )}
+
+          {canEdit() && selectionMode && selectedIds.length > 0 && viewMode === 'table' && !subview && (
             <button
               onClick={handleBulkDelete}
               className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm"
@@ -610,7 +626,7 @@ export default function Cameras({ subview }: CamerasProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {paginatedData.map((cam) => (
                 <div key={cam.id} className={`group bg-white rounded-none shadow-sm border hover:shadow-lg transition-all duration-200 overflow-hidden flex flex-col relative ${selectedIds.includes(cam.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-gray-200 hover:border-blue-300'}`}>
-                  {canEdit() && !subview && (
+                  {canEdit() && selectionMode && !subview && (
                     <div className="absolute top-4 right-4 z-10">
                       <input
                         type="checkbox"
@@ -989,7 +1005,7 @@ export default function Cameras({ subview }: CamerasProps) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      {canEdit() && !subview && (
+                      {canEdit() && selectionMode && !subview && (
                         <TableHead className="w-12 text-center">
                           <input
                             type="checkbox"
@@ -1014,7 +1030,7 @@ export default function Cameras({ subview }: CamerasProps) {
                         className={`cursor-pointer transition-colors duration-150 group/row relative ${selectedIds.includes(cam.id) ? 'bg-blue-50/40' : ''}`}
                         onClick={() => handleView(cam)}
                       >
-                        {canEdit() && !subview && (
+                        {canEdit() && selectionMode && !subview && (
                           <TableCell className="text-center w-12">
                             <input
                               type="checkbox"
@@ -1167,10 +1183,10 @@ export default function Cameras({ subview }: CamerasProps) {
                     <GiCctvCamera size={20} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                    <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
                       {selectedCamera.name}
                     </h2>
-                    <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                    <p className="text-[9px] sm:text-[10px] font-normal text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                       <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
                       <span className="line-clamp-2 sm:truncate">{(selectedCamera as any).locations?.name || 'UBICACIÓN INTEGRAL'}</span>
                     </p>
@@ -1192,30 +1208,30 @@ export default function Cameras({ subview }: CamerasProps) {
                     <div className="space-y-2.5 sm:space-y-3">
                       <DetailModalCard className="space-y-2.5 sm:space-y-3">
                         <DetailModalRow label="Estado Operativo">
-                          <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${selectedCamera.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                          <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-normal tracking-widest border ${selectedCamera.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                             selectedCamera.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-500 border-slate-200'
                             }`}>
                             {selectedCamera.status === 'active' ? 'Activo' : selectedCamera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
                           </span>
                         </DetailModalRow>
                         <DetailModalRow label="Marca / Modelo">
-                          <span className="text-[10px] sm:text-[12px] font-black text-[#002855] uppercase break-words">
+                          <span className="text-[10px] sm:text-[12px] font-normal text-[#002855] uppercase break-words">
                             {selectedCamera.brand || 'GENÉRICA'} {selectedCamera.model || ''}
                           </span>
                         </DetailModalRow>
                         <DetailModalRow label="Flujos de Video">
-                          <span className="text-[10px] sm:text-[12px] font-black text-[#002855]">{selectedCamera.display_count || '0'} CÁMARAS</span>
+                          <span className="text-[10px] sm:text-[12px] font-normal text-[#002855]">{selectedCamera.display_count || '0'} CÁMARAS</span>
                         </DetailModalRow>
                       </DetailModalCard>
 
                       <DetailModalCard className="space-y-2.5 sm:space-y-3">
                         <DetailModalRow label="Registro de Alta">
-                          <span className="text-[10px] sm:text-[12px] font-black text-slate-600">
+                          <span className="text-[10px] sm:text-[12px] font-normal text-slate-600">
                             {new Date(String(selectedCamera.created_at).includes('T') ? String(selectedCamera.created_at) : `${selectedCamera.created_at}T12:00:00`).toLocaleDateString()}
                           </span>
                         </DetailModalRow>
                         <DetailModalRow label="Último Cambio">
-                          <span className="text-[10px] sm:text-[12px] font-black text-slate-600">
+                          <span className="text-[10px] sm:text-[12px] font-normal text-slate-600">
                             {new Date(String(selectedCamera.updated_at).includes('T') ? String(selectedCamera.updated_at) : `${selectedCamera.updated_at}T12:00:00`).toLocaleDateString()}
                           </span>
                         </DetailModalRow>
@@ -1226,24 +1242,24 @@ export default function Cameras({ subview }: CamerasProps) {
                   <DetailModalSection title="Accesos y Red">
                     <DetailModalCard>
                       <DetailModalRow label="Tipo de Conexión">
-                        <span className="inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white border border-slate-200 text-[9px] sm:text-[10px] font-black text-blue-600 uppercase tracking-tighter shadow-sm">
+                        <span className="inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 bg-white border border-slate-200 text-[9px] sm:text-[10px] font-normal text-blue-600 uppercase tracking-tighter shadow-sm">
                           {humanAccess(selectedCamera.access_type)}
                         </span>
                       </DetailModalRow>
 
                       <div className="space-y-2.5 sm:space-y-3 mt-3 sm:mt-4 pt-3 border-t border-slate-200/80">
                         <div className="bg-white border border-slate-200 p-2.5 sm:p-3 rounded-sm">
-                          <span className="text-[8px] sm:text-[9px] font-black text-slate-400 block mb-1.5">Dirección IPv4</span>
+                          <span className="text-[8px] sm:text-[9px] font-normal text-slate-400 block mb-1.5">Dirección IPv4</span>
                           <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
-                            <span className="font-mono text-[11px] sm:text-xs font-black text-blue-600 break-all">{selectedCamera.ip_address || '0.0.0.0'}</span>
-                            <span className="font-mono text-[9px] sm:text-[10px] font-bold text-slate-400 shrink-0">PORT: {selectedCamera.port || '—'}</span>
+                            <span className="font-mono text-[11px] sm:text-xs font-normal text-blue-600 break-all">{selectedCamera.ip_address || '0.0.0.0'}</span>
+                            <span className="font-mono text-[9px] sm:text-[10px] font-normal text-slate-400 shrink-0">PORT: {selectedCamera.port || '—'}</span>
                           </div>
                         </div>
 
                         <div className="bg-white border border-slate-200 p-2.5 sm:p-3 rounded-sm">
-                          <span className="text-[8px] sm:text-[9px] font-black text-slate-400 block mb-1.5">Usuario GS</span>
+                          <span className="text-[8px] sm:text-[9px] font-normal text-slate-400 block mb-1.5">Usuario GS</span>
                           <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="text-[10px] sm:text-[11px] font-black text-[#002855] truncate">{selectedCamera.username || '—'}</span>
+                            <span className="text-[10px] sm:text-[11px] font-normal text-[#002855] truncate">{selectedCamera.username || '—'}</span>
                             <button type="button" onClick={() => copyToClipboard(selectedCamera.username)} className="p-2 min-w-[40px] min-h-[40px] flex items-center justify-center hover:text-blue-600 transition-colors shrink-0" aria-label="Copiar usuario">
                               <Copy size={14} />
                             </button>
@@ -1251,9 +1267,9 @@ export default function Cameras({ subview }: CamerasProps) {
                         </div>
 
                         <div className="bg-white border border-slate-200 p-2.5 sm:p-3 rounded-sm">
-                          <span className="text-[8px] sm:text-[9px] font-black text-slate-400 block mb-1.5">Credenciales</span>
+                          <span className="text-[8px] sm:text-[9px] font-normal text-slate-400 block mb-1.5">Credenciales</span>
                           <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="font-mono text-[10px] sm:text-xs font-bold text-slate-600 tracking-wide break-all">
+                            <span className="font-mono text-[10px] sm:text-xs font-normal text-slate-600 tracking-wide break-all">
                               {visiblePasswords.has(selectedCamera.id) ? (selectedCamera.password || '—') : (selectedCamera.password ? '••••••••' : '—')}
                             </span>
                             <div className="flex gap-0.5 shrink-0">
@@ -1270,10 +1286,10 @@ export default function Cameras({ subview }: CamerasProps) {
                         {selectedCamera.auth_code && (
                           <div className="bg-blue-50 border border-blue-100 p-2.5 sm:p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div className="min-w-0">
-                              <span className="block text-[8px] font-black text-blue-400 tracking-widest">Código de verificación</span>
-                              <span className="font-mono text-xs sm:text-sm font-black text-blue-700 break-all">{selectedCamera.auth_code}</span>
+                              <span className="block text-[8px] font-normal text-blue-400 tracking-widest">Código de verificación</span>
+                              <span className="font-mono text-xs sm:text-sm font-normal text-blue-700 break-all">{selectedCamera.auth_code}</span>
                             </div>
-                            <button type="button" onClick={() => copyToClipboard(selectedCamera.auth_code)} className="w-full sm:w-auto p-2.5 min-h-[44px] flex items-center justify-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest">
+                            <button type="button" onClick={() => copyToClipboard(selectedCamera.auth_code)} className="w-full sm:w-auto p-2.5 min-h-[44px] flex items-center justify-center gap-2 bg-white border border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white transition-all text-[10px] font-normal uppercase tracking-widest">
                               <Copy size={14} /> Copiar
                             </button>
                           </div>
@@ -1284,12 +1300,12 @@ export default function Cameras({ subview }: CamerasProps) {
                             <button
                               type="button"
                               onClick={() => window.open(selectedCamera.url, '_blank', 'noopener')}
-                              className="w-full py-2.5 sm:py-3 bg-[#002855] text-white text-[9px] sm:text-[10px] font-black uppercase tracking-wide sm:tracking-[0.2em] shadow-lg hover:bg-blue-800 transition-all flex items-center justify-center gap-2 min-h-[44px]"
+                              className="w-full py-2.5 sm:py-3 bg-[#002855] text-white text-[9px] sm:text-[10px] font-normal uppercase tracking-wide sm:tracking-[0.2em] shadow-lg hover:bg-blue-800 transition-all flex items-center justify-center gap-2 min-h-[44px]"
                             >
                               Visualizar Cámaras
                               <ArrowRight size={14} />
                             </button>
-                            <span className="block text-[8px] sm:text-[9px] text-slate-400 font-bold mt-1.5 break-all">{selectedCamera.url}</span>
+                            <span className="block text-[8px] sm:text-[9px] text-slate-400 font-normal mt-1.5 break-all">{selectedCamera.url}</span>
                           </div>
                         )}
                       </div>
@@ -1320,8 +1336,8 @@ export default function Cameras({ subview }: CamerasProps) {
                                 <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-blue-600/10 rounded-full blur-3xl" />
                                 <div className="relative z-10">
                                   <div className="flex justify-between items-end mb-3 sm:mb-4 gap-2">
-                                    <span className="text-[8px] sm:text-[9px] font-black tracking-wide sm:tracking-[0.2em] text-blue-400">Capacidad Global</span>
-                                    <span className="text-lg sm:text-[20px] font-black tracking-tighter">{percent}%</span>
+                                    <span className="text-[8px] sm:text-[9px] font-normal tracking-wide sm:tracking-[0.2em] text-blue-400">Capacidad Global</span>
+                                    <span className="text-lg sm:text-[20px] font-normal tracking-tighter">{percent}%</span>
                                   </div>
                                   <div className="w-full bg-white/10 h-1.5 sm:h-2 rounded-none mb-2 sm:mb-3">
                                     <div
@@ -1329,7 +1345,7 @@ export default function Cameras({ subview }: CamerasProps) {
                                       style={{ width: `${percent}%` }}
                                     />
                                   </div>
-                                  <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 text-[10px] sm:text-[11px] font-black uppercase tracking-tighter">
+                                  <div className="flex flex-col sm:flex-row sm:justify-between gap-0.5 text-[10px] sm:text-[11px] font-normal uppercase tracking-tighter">
                                     <span>Ocupado: {totals.used} GB</span>
                                     <span className="text-blue-400">Total: {totals.total} GB</span>
                                   </div>
@@ -1347,10 +1363,10 @@ export default function Cameras({ subview }: CamerasProps) {
                                 <div key={d.id} className="p-2.5 sm:p-3 bg-white border border-slate-200">
                                   <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                                     <div className="min-w-0">
-                                      <span className="text-[9px] sm:text-[10px] font-black text-[#002855] tracking-wide">Disco #{d.disk_number}</span>
-                                      {d.serial_number && <span className="block text-[8px] font-bold text-slate-400 uppercase truncate">S/N: {d.serial_number}</span>}
+                                      <span className="text-[9px] sm:text-[10px] font-normal text-[#002855] tracking-wide">Disco #{d.disk_number}</span>
+                                      {d.serial_number && <span className="block text-[8px] font-normal text-slate-400 uppercase truncate">S/N: {d.serial_number}</span>}
                                     </div>
-                                    <span className={`text-[7px] sm:text-[8px] font-black px-1.5 sm:px-2 py-0.5 border shrink-0 ${d.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                    <span className={`text-[7px] sm:text-[8px] font-normal px-1.5 sm:px-2 py-0.5 border shrink-0 ${d.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                                       d.status === 'full' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-200'
                                       }`}>
                                       {d.status?.toUpperCase() || 'OFFLINE'}
@@ -1359,12 +1375,12 @@ export default function Cameras({ subview }: CamerasProps) {
                                   <div className="w-full bg-slate-100 h-1 mb-2">
                                     <div className={`h-full ${percent > 75 ? 'bg-rose-500' : 'bg-blue-500'}`} style={{ width: `${percent}%` }} />
                                   </div>
-                                  <div className="flex flex-wrap justify-between gap-x-2 gap-y-0.5 text-[8px] sm:text-[9px] font-bold text-slate-400">
+                                  <div className="flex flex-wrap justify-between gap-x-2 gap-y-0.5 text-[8px] sm:text-[9px] font-normal text-slate-400">
                                     <span className="break-words">TIPO: {d.disk_type || 'GS-SATA'} {d.brand ? `(${d.brand})` : ''}</span>
                                     <span className="shrink-0">{used}/{total} GB</span>
                                   </div>
                                   {(d.stored_from || d.stored_to) && (
-                                    <div className="text-[7px] sm:text-[8px] font-black text-blue-600 border-t border-slate-50 pt-1.5 mt-1.5 leading-relaxed">
+                                    <div className="text-[7px] sm:text-[8px] font-normal text-blue-600 border-t border-slate-50 pt-1.5 mt-1.5 leading-relaxed">
                                       Grabación: {d.stored_from ? new Date(String(d.stored_from + 'T00:00:00').includes('T') ? String(d.stored_from + 'T00:00:00') : `${d.stored_from + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—'} — {d.stored_to ? new Date(String(d.stored_to + 'T00:00:00').includes('T') ? String(d.stored_to + 'T00:00:00') : `${d.stored_to + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—'}
                                     </div>
                                   )}
@@ -1375,13 +1391,13 @@ export default function Cameras({ subview }: CamerasProps) {
                         </div>
                       ) : (
                         <div className="p-6 sm:p-8 border-2 border-dashed border-slate-200 text-center">
-                          <span className="text-[9px] sm:text-[10px] font-black text-slate-300 tracking-widest">Sin registro de almacenamiento</span>
+                          <span className="text-[9px] sm:text-[10px] font-normal text-slate-300 tracking-widest">Sin registro de almacenamiento</span>
                         </div>
                       )}
 
                       {selectedCamera.notes && (
                         <div className="p-3 sm:p-4 bg-amber-50 border border-amber-100">
-                          <span className="text-[8px] sm:text-[9px] font-black text-amber-600 tracking-widest mb-1.5 flex items-center gap-1">
+                          <span className="text-[8px] sm:text-[9px] font-normal text-amber-600 tracking-widest mb-1.5 flex items-center gap-1">
                             <Star size={10} /> Notas Técnicas
                           </span>
                           <p className="text-[10px] sm:text-[11px] font-medium text-amber-900 leading-relaxed">

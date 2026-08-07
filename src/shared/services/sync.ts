@@ -499,3 +499,32 @@ export async function cleanupOrphanedData(): Promise<{
     };
   }
 }
+
+/**
+ * Uploads an asset image to Supabase Storage
+ */
+export async function uploadAssetImage(file: File, assetCode: string): Promise<string | null> {
+  try {
+    const fileExt = file.name.split('.').pop() || 'png';
+    const fileName = `${assetCode}_${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('assets')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Error uploading asset image:', uploadError);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('assets')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  } catch (error) {
+    console.error('Exception in uploadAssetImage:', error);
+    return null;
+  }
+}

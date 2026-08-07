@@ -163,8 +163,8 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
                 <ClipboardList size={18} className="text-white" />
               </div>
               <div>
-                <h2 className="text-sm font-black text-white tracking-[0.2em] leading-tight">Gestión de Plantillas</h2>
-                <p className="text-[10px] font-bold text-blue-200  tracking-widest mt-0.5">Seleccionar y administrar plantillas</p>
+                <h2 className="text-sm font-normal text-white tracking-[0.2em] leading-tight">Gestión de Plantillas</h2>
+                <p className="text-[10px] font-normal text-blue-200  tracking-widest mt-0.5">Seleccionar y administrar plantillas</p>
               </div>
             </div>
             <button onClick={onClose} className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all">
@@ -176,7 +176,7 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
             <div className="mb-8">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-1 h-4 bg-blue-600" />
-                <label className="text-[11px] font-black text-slate-500 tracking-[0.2em]">Seleccionar Formulario</label>
+                <label className="text-[11px] font-normal text-slate-500 tracking-[0.2em]">Seleccionar Formulario</label>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 {Object.entries(templates).map(([id, template]) => (
@@ -193,8 +193,8 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
                         : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
-                    <div className={`text-[12px] font-black tracking-widest mb-1 ${selectedTemplateId === id ? `text-${template.type === 'escon' ? 'blue' : template.type === 'ecsal' ? 'emerald' : 'orange'}-600` : 'text-[#002855]'}`}>{template.name.split(' - ')[0]}</div>
-                    <div className="text-[10px] font-bold text-slate-400 tracking-tighter leading-tight">{template.items.length} Requerimientos</div>
+                    <div className={`text-[12px] font-normal tracking-widest mb-1 ${selectedTemplateId === id ? `text-${template.type === 'escon' ? 'blue' : template.type === 'ecsal' ? 'emerald' : 'orange'}-600` : 'text-[#002855]'}`}>{template.name.split(' - ')[0]}</div>
+                    <div className="text-[10px] font-normal text-slate-400 tracking-tighter leading-tight">{template.items.length} Requerimientos</div>
                     {selectedTemplateId === id && <div className={`absolute top-0 right-0 w-2 h-2 bg-${template.type === 'escon' ? 'blue' : template.type === 'ecsal' ? 'emerald' : 'orange'}-500`} />}
                   </button>
                 ))}
@@ -203,10 +203,10 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
 
             <div className="bg-slate-50/50 border border-slate-200 rounded-none p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[14px] font-black text-[#002855] tracking-tight">{selectedTemplate.name}</h3>
-                <span className="px-3 py-1 bg-white border border-slate-200 text-[10px] font-black text-slate-500 tracking-widest">Previsualización</span>
+                <h3 className="text-[14px] font-normal text-[#002855] tracking-tight">{selectedTemplate.name}</h3>
+                <span className="px-3 py-1 bg-white border border-slate-200 text-[10px] font-normal text-slate-500 tracking-widest">Previsualización</span>
               </div>
-              <p className="text-[11px] font-bold text-slate-400 tracking-widest mb-6 leading-relaxed italic">{selectedTemplate.description}</p>
+              <p className="text-[11px] font-normal text-slate-400 tracking-widest mb-6 leading-relaxed italic">{selectedTemplate.description}</p>
               
               <div className="space-y-3">
                 {getCategories(selectedTemplate).map(category => {
@@ -214,15 +214,15 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
                   return (
                     <div key={category} className="bg-white border border-slate-100 rounded-none p-4 shadow-sm">
                       <div className="flex items-center justify-between mb-4 border-b border-slate-50 pb-2">
-                        <h4 className="text-[11px] font-black text-[#002855] tracking-widest">{category}</h4>
-                        <span className="text-[9px] font-bold text-slate-400">{items.length} ítems</span>
+                        <h4 className="text-[11px] font-normal text-[#002855] tracking-widest">{category}</h4>
+                        <span className="text-[9px] font-normal text-slate-400">{items.length} ítems</span>
                       </div>
                       <div className="space-y-2">
                         {items.map(item => (
                           <div key={item.id} className="flex items-center justify-between text-[11px] hover:bg-slate-50 rounded px-2 py-1 transition-colors">
-                            <span className="font-bold text-slate-600 tracking-tight">{item.title}</span>
+                            <span className="font-normal text-slate-600 tracking-tight">{item.title}</span>
                             {item.required && (
-                              <span className="px-2 py-0.5 border border-rose-100 bg-rose-50 text-rose-600 text-[9px] font-black tracking-widest">Requerido</span>
+                              <span className="px-2 py-0.5 border border-rose-100 bg-rose-50 text-rose-600 text-[9px] font-normal tracking-widest">Requerido</span>
                             )}
                           </div>
                         ))}
@@ -236,7 +236,7 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
             <div className="flex justify-end mt-8">
               <button
                 onClick={handleEditTemplate}
-                className="px-8 py-3 bg-[#002855] text-white rounded-none font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-800 transition-all shadow-lg flex items-center gap-2 group"
+                className="px-8 py-3 bg-[#002855] text-white rounded-none font-normal text-[10px] uppercase tracking-[0.2em] hover:bg-blue-800 transition-all shadow-lg flex items-center gap-2 group"
               >
                 <Edit size={14} className="group-hover:rotate-12 transition-transform" />
                 MODIFICAR ESTRUCTURA
@@ -259,8 +259,8 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
               <Settings size={18} className="text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">Estructura: {editingTemplate.name}</h2>
-              <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Configuración de requerimientos</p>
+              <h2 className="text-sm font-normal text-white uppercase tracking-[0.2em] leading-tight">Estructura: {editingTemplate.name}</h2>
+              <p className="text-[10px] font-normal text-blue-200 uppercase tracking-widest mt-0.5">Configuración de requerimientos</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -286,7 +286,7 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
         <div className="p-8 overflow-y-auto max-h-[70vh] bg-slate-50/30">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-500 tracking-[0.2em]">Nombre Identificador</label>
+              <label className="text-[10px] font-normal text-slate-500 tracking-[0.2em]">Nombre Identificador</label>
               <input
                 type="text"
                 value={editingTemplate.name}
@@ -295,12 +295,12 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
                     setEditingTemplate({ ...editingTemplate, name: e.target.value });
                   }
                 }}
-                className="w-full p-4 bg-white border border-slate-200 rounded-none text-[11px] font-bold tracking-widest placeholder:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                className="w-full p-4 bg-white border border-slate-200 rounded-none text-[11px] font-normal tracking-widest placeholder:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-500 tracking-[0.2em]">Descripción Técnica</label>
+              <label className="text-[10px] font-normal text-slate-500 tracking-[0.2em]">Descripción Técnica</label>
               <textarea
                 value={editingTemplate.description}
                 onChange={(e) => {
@@ -308,7 +308,7 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
                     setEditingTemplate({ ...editingTemplate, description: e.target.value });
                   }
                 }}
-                className="w-full p-4 bg-white border border-slate-200 rounded-none text-[11px] font-bold uppercase tracking-widest placeholder:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all h-20 resize-none leading-relaxed"
+                className="w-full p-4 bg-white border border-slate-200 rounded-none text-[11px] font-normal uppercase tracking-widest placeholder:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all h-20 resize-none leading-relaxed"
               />
             </div>
           </div>
@@ -317,11 +317,11 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-6 bg-blue-600" />
-                <h3 className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">Configuración de Requerimientos</h3>
+                <h3 className="text-[12px] font-normal text-[#002855] uppercase tracking-[0.2em]">Configuración de Requerimientos</h3>
               </div>
               <button
                 onClick={handleAddCategory}
-                className="px-5 py-2 bg-[#002855] text-white rounded-none font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-800 transition-all flex items-center gap-2 shadow-md"
+                className="px-5 py-2 bg-[#002855] text-white rounded-none font-normal text-[10px] uppercase tracking-[0.2em] hover:bg-blue-800 transition-all flex items-center gap-2 shadow-md"
               >
                 <Plus size={14} />
                 Agregar Categoría
@@ -343,15 +343,15 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
                         <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
                           <ChevronDown size={18} className="text-slate-400" />
                         </div>
-                        <h4 className="text-[11px] font-black text-[#002855] uppercase tracking-widest">{category}</h4>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase bg-slate-50 px-2 py-0.5 border border-slate-100">{items.length} Ítems</span>
+                        <h4 className="text-[11px] font-normal text-[#002855] uppercase tracking-widest">{category}</h4>
+                        <span className="text-[9px] font-normal text-slate-400 uppercase bg-slate-50 px-2 py-0.5 border border-slate-100">{items.length} Ítems</span>
                       </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleAddItem(category);
                         }}
-                        className="px-3 py-1.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-none font-black hover:bg-blue-100 transition-all flex items-center gap-1.5 text-[9px] uppercase tracking-widest"
+                        className="px-3 py-1.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-none font-normal hover:bg-blue-100 transition-all flex items-center gap-1.5 text-[9px] uppercase tracking-widest"
                       >
                         <Plus size={12} />
                         Añadir Ítem
@@ -365,29 +365,29 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
                             <div className="absolute top-0 left-0 w-1 h-0 group-hover/item:h-full bg-blue-500 transition-all duration-300" />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                               <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Identificador Interno (ID)</label>
+                                <label className="text-[9px] font-normal text-slate-400 uppercase tracking-widest">Identificador Interno (ID)</label>
                                 <input
                                   type="text"
                                   value={item.id}
                                   onChange={(e) => handleUpdateItem(item.id, 'id', e.target.value)}
-                                  className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-none text-[10px] font-bold uppercase tracking-widest focus:bg-white focus:border-blue-500 outline-none transition-all"
+                                  className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-none text-[10px] font-normal uppercase tracking-widest focus:bg-white focus:border-blue-500 outline-none transition-all"
                                 />
                               </div>
                               <div className="space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Título del Requerimiento</label>
+                                <label className="text-[9px] font-normal text-slate-400 uppercase tracking-widest">Título del Requerimiento</label>
                                 <input
                                   type="text"
                                   value={item.title}
                                   onChange={(e) => handleUpdateItem(item.id, 'title', e.target.value)}
-                                  className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-none text-[10px] font-bold tracking-widest focus:bg-white focus:border-blue-500 outline-none transition-all"
+                                  className="w-full p-2.5 bg-slate-50 border border-slate-100 rounded-none text-[10px] font-normal tracking-widest focus:bg-white focus:border-blue-500 outline-none transition-all"
                                 />
                               </div>
                               <div className="md:col-span-2 space-y-1.5">
-                                <label className="text-[9px] font-black text-slate-400 tracking-widest">Especificaciones de Verificación</label>
+                                <label className="text-[9px] font-normal text-slate-400 tracking-widest">Especificaciones de Verificación</label>
                                 <textarea
                                   value={item.description}
                                   onChange={(e) => handleUpdateItem(item.id, 'description', e.target.value)}
-                                  className="w-full p-3 bg-slate-50 border border-slate-100 rounded-none text-[10px] font-bold tracking-widest focus:bg-white focus:border-blue-500 outline-none transition-all h-16 resize-none leading-relaxed"
+                                  className="w-full p-3 bg-slate-50 border border-slate-100 rounded-none text-[10px] font-normal tracking-widest focus:bg-white focus:border-blue-500 outline-none transition-all h-16 resize-none leading-relaxed"
                                 />
                               </div>
                               <div className="flex items-center gap-6">
@@ -398,7 +398,7 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
                                     onChange={(e) => handleUpdateItem(item.id, 'required', e.target.checked)}
                                     className="w-4 h-4 rounded-none border-slate-300 text-blue-600 focus:ring-blue-500"
                                   />
-                                  <span className="text-[10px] font-black text-slate-500 tracking-widest group-hover:text-blue-600 transition-colors">Obligatorio</span>
+                                  <span className="text-[10px] font-normal text-slate-500 tracking-widest group-hover:text-blue-600 transition-colors">Obligatorio</span>
                                 </label>
                               </div>
                               <div className="flex items-center justify-end">

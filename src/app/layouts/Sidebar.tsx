@@ -182,6 +182,10 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             { id: 'cat-operativos', label: 'Equipos Operativos', path: '/inventory/equipos-operativos' },
             { id: 'cat-mobiliario', label: 'Mobiliario', path: '/inventory/mobiliario' },
             { id: 'cat-suministros', label: 'Útiles y Suministros', path: '/inventory/utiles-suministros' },
+            { id: 'cat-flota', label: 'Flota Vehicular', path: '/inventory/flota-vehicular' },
+            { id: 'cat-infraestructura', label: 'Infraestructura TI', path: '/inventory/infraestructura-ti' },
+            { id: 'cat-herramientas', label: 'Herramientas y Equipos', path: '/inventory/herramientas-equipos' },
+            { id: 'cat-instalaciones', label: 'Instalaciones', path: '/inventory/instalaciones' },
           ]
         },
         {

@@ -30,13 +30,16 @@ export const STATUS_MAP: Record<string, { label: string, color: string }> = {
 };
 
 export const PATH_CATEGORY_MAP: Record<string, string> = {
-  'computo-ti': 'Equipos de Cómputo y TI',
-  'biometricos-control': 'Equipos Biométricos y Control',
-  'equipos-medicos': 'Equipos Médicos',
+  'tecnologia': 'Tecnología',
+  'seguridad-control': 'Seguridad y Control',
+  'equipos-operativos': 'Equipos Operativos',
   'mobiliario': 'Mobiliario',
-  'seguridad': 'Seguridad',
-  'utiles-oficina': 'Útiles de Oficina',
-  'disco-extraido': 'EXTRAIDO'
+  'utiles-suministros': 'Útiles y Suministros',
+  'flota-vehicular': 'Flota Vehicular',
+  'infraestructura-ti': 'Infraestructura TI',
+  'herramientas-equipos': 'Herramientas y Equipos',
+  'instalaciones': 'Instalaciones',
+  'disco-extraido': 'EXTRAIDO',
 };
 
 export const SUBCATEGORY_SLUG_MAP: Record<string, string[]> = {

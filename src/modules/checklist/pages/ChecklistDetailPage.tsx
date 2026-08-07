@@ -109,11 +109,11 @@ export default function ChecklistDetail() {
             className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors mb-6"
           >
             <ArrowLeft size={20} />
-            <span className="text-sm font-semibold">Volver a Checklist</span>
+            <span className="text-sm font-normal">Volver a Checklist</span>
           </button>
           <button onClick={handleDelete} className="flex items-center gap-2 text-red-600 hover:text-red-800 transition-colors mb-6">
             <Trash2 size={20} />
-            <span className="text-sm font-semibold">Eliminar checklist</span>
+            <span className="text-sm font-normal">Eliminar checklist</span>
           </button>
 
           {/* Location Info Card */}
@@ -124,15 +124,15 @@ export default function ChecklistDetail() {
                   {typeInfo.icon}
                 </div>
                 <div>
-                  <h1 className="text-2xl font-black text-white uppercase tracking-tight">{location.name}</h1>
-                  <p className="text-white/80 text-sm font-semibold uppercase tracking-wider">{typeInfo.description}</p>
+                  <h1 className="text-2xl font-normal text-white uppercase tracking-tight">{location.name}</h1>
+                  <p className="text-white/80 text-sm font-normal uppercase tracking-wider">{typeInfo.description}</p>
                 </div>
               </div>
             </div>
             <div className="p-6">
               <div className="flex items-center gap-2 text-slate-600">
                 <MapPin size={16} className="text-slate-400" />
-                <span className="text-sm font-semibold uppercase tracking-wider">{location.address || 'Sin dirección registrada'}</span>
+                <span className="text-sm font-normal uppercase tracking-wider">{location.address || 'Sin dirección registrada'}</span>
               </div>
             </div>
           </div>
@@ -156,11 +156,11 @@ export default function ChecklistDetail() {
                   </div>
                   <ExternalLink size={20} className="text-slate-300 group-hover:text-blue-600 transition-colors" />
                 </div>
-                <h3 className="text-lg font-black text-slate-900 uppercase mb-2">Realizar Checklist</h3>
+                <h3 className="text-lg font-normal text-slate-900 uppercase mb-2">Realizar Checklist</h3>
                 <p className="text-sm text-slate-600 font-medium">Acceder al formulario de checklist para esta ubicación</p>
               </div>
               <div className={`bg-${typeInfo.color}-100 px-6 py-3 border-t border-${typeInfo.color}-200`}>
-                <span className={`text-xs font-black uppercase tracking-widest text-${typeInfo.color}-700`}>
+                <span className={`text-xs font-normal uppercase tracking-widest text-${typeInfo.color}-700`}>
                   Abrir en Drive
                 </span>
               </div>
@@ -183,11 +183,11 @@ export default function ChecklistDetail() {
                   </div>
                   <ExternalLink size={20} className="text-slate-300 group-hover:text-emerald-600 transition-colors" />
                 </div>
-                <h3 className="text-lg font-black text-slate-900 uppercase mb-2">Ver Historial</h3>
+                <h3 className="text-lg font-normal text-slate-900 uppercase mb-2">Ver Historial</h3>
                 <p className="text-sm text-slate-600 font-medium">Acceder a la carpeta de evidencias y documentos históricos</p>
               </div>
               <div className="bg-emerald-100 px-6 py-3 border-t border-emerald-200">
-                <span className="text-xs font-black uppercase tracking-widest text-emerald-700">
+                <span className="text-xs font-normal uppercase tracking-widest text-emerald-700">
                   Abrir Evidencias
                 </span>
               </div>
@@ -196,15 +196,15 @@ export default function ChecklistDetail() {
 
           {/* Additional Info */}
           <div className="mt-8 bg-white border border-slate-200 rounded-none shadow-sm p-6">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4">Información de la Ubicación</h3>
+            <h3 className="text-sm font-normal text-slate-900 uppercase tracking-wider mb-4">Información de la Ubicación</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <span className="text-xs text-slate-500 font-bold uppercase tracking-widest block mb-1">Nombre</span>
-                <span className="text-sm font-semibold text-slate-900">{location.name}</span>
+                <span className="text-xs text-slate-500 font-normal uppercase tracking-widest block mb-1">Nombre</span>
+                <span className="text-sm font-normal text-slate-900">{location.name}</span>
               </div>
               <div>
-                <span className="text-xs text-slate-500 font-bold uppercase tracking-widest block mb-1">Tipo</span>
-                <span className="text-sm font-semibold text-slate-900">{typeInfo.description}</span>
+                <span className="text-xs text-slate-500 font-normal uppercase tracking-widest block mb-1">Tipo</span>
+                <span className="text-sm font-normal text-slate-900">{typeInfo.description}</span>
               </div>
             </div>
           </div>

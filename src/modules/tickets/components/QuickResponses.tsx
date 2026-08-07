@@ -40,7 +40,7 @@ export default function QuickResponses({ onSelect }: QuickResponsesProps) {
       </button>
       {open && (
         <div className="absolute bottom-full left-0 mb-2 w-72 bg-white border border-slate-200 shadow-xl z-50 max-h-64 overflow-y-auto">
-          <div className="px-3 py-2 bg-[#002855] text-white text-[9px] font-black uppercase tracking-wider">
+          <div className="px-3 py-2 bg-[#002855] text-white text-[9px] font-semibold uppercase tracking-wider">
             Respuestas rápidas
           </div>
           {QUICK_RESPONSES.map((r, i) => (
@@ -50,7 +50,7 @@ export default function QuickResponses({ onSelect }: QuickResponsesProps) {
               className="w-full text-left px-3 py-2.5 text-[11px] font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#002855] border-b border-slate-100 last:border-0 transition-colors"
               onClick={() => { onSelect(r.text); setOpen(false); }}
             >
-              <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider block">{r.label}</span>
+              <span className="text-[8px] font-semibold text-slate-400 uppercase tracking-wider block">{r.label}</span>
               <span className="line-clamp-2">{r.text}</span>
             </button>
           ))}

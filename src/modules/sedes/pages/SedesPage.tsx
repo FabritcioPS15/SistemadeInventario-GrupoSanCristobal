@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Trash2, MapPin, X, Building, ChevronDown, Search, Plus, Filter, Edit } from 'lucide-react';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ExcelJS from 'exceljs';
@@ -36,6 +36,8 @@ import DetailModal, {
   DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
+import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 
 const typeLabels: Record<string, string> = {
   revision: 'Revisión',
@@ -71,6 +73,12 @@ export default function Sedes() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { selectionMode, toggleSelectionMode } = useSelectionMode();
+
+  const handleToggleSelectionMode = () => {
+    setSelectedIds([]);
+    toggleSelectionMode();
+  };
   const [sortField, setSortField] = useState<'name' | 'type' | 'cameras'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -98,16 +106,31 @@ export default function Sedes() {
   }, [locations, cameraCounts]);
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
-    if (data) setLocations(data);
+    try {
+      const { data, error } = await supabase.from('locations').select('*').order('name');
+      if (error) {
+        console.error('Error al cargar sedes:', error);
+      }
+      if (data) setLocations(data);
+    } catch (err) {
+      console.error('Error inesperado al cargar sedes:', err);
+    }
   };
 
   const fetchCameraCounts = async () => {
-    const { data } = await supabase.from('cameras').select('location_id');
-    if (data) {
-      const counts: Record<string, number> = {};
-      data.forEach(c => { if (c.location_id) counts[c.location_id] = (counts[c.location_id] || 0) + 1; });
-      setCameraCounts(counts);
+    try {
+      const { data, error } = await supabase.from('cameras').select('location_id');
+      if (error) {
+        console.error('Error al obtener conteo de cámaras:', error);
+        return;
+      }
+      if (data) {
+        const counts: Record<string, number> = {};
+        data.forEach(c => { if (c.location_id) counts[c.location_id] = (counts[c.location_id] || 0) + 1; });
+        setCameraCounts(counts);
+      }
+    } catch (err) {
+      console.error('Error en fetchCameraCounts:', err);
     }
   };
 
@@ -274,6 +297,14 @@ export default function Sedes() {
             <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
             {canEdit() && (
+              <SelectionModeButton
+                active={selectionMode}
+                onClick={handleToggleSelectionMode}
+                selectedCount={selectedIds.length}
+              />
+            )}
+
+            {canEdit() && (
               <PrimaryButton icon={Plus} onClick={openCreate}>
                 Nueva Sede
               </PrimaryButton>
@@ -295,9 +326,9 @@ export default function Sedes() {
                     onClick={() => { setSelectedLocation(loc); setShowDetails(true); }}
                     className={`bg-white rounded-none shadow-sm border transition-all duration-300 flex flex-col group overflow-hidden relative cursor-pointer hover:bg-slate-50/80 hover:border-blue-200/50 hover:shadow-md ${isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-100'}`}
                   >
-                    {canEdit() && (
+                    {canEdit() && selectionMode && (
                       <div className="absolute top-4 left-4 z-20">
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded border-slate-200 text-blue-600 focus:ring-blue-500 cursor-pointer shadow-sm" />
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded border-slate-200 text-blue-600 focus:ring-blue-500 cursor-pointer shadow-sm animate-in fade-in slide-in-from-right-2 duration-200" />
                       </div>
                     )}
                     <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-blue-500/10 transition-colors" />
@@ -350,7 +381,7 @@ export default function Sedes() {
                   onPageChange={setCurrentPage}
                   onItemsPerPageChange={setItemsPerPage}
                 >
-                  {selectedIds.length > 0 && canEdit() && (
+                  {selectionMode && selectedIds.length > 0 && canEdit() && (
                     <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-2 duration-300">
                       <span className="hidden xl:block text-[10px] font-black text-rose-600 tracking-wider">{selectedIds.length} marcados</span>
                       <button onClick={handleBulkDelete} className="flex items-center gap-2 px-3 py-2 bg-rose-500 text-white text-[10px] font-black tracking-wider rounded-md hover:bg-rose-600 transition-all shadow-sm active:scale-95" title="Eliminar seleccionados">
@@ -363,20 +394,20 @@ export default function Sedes() {
 
               <div className="flex-1">
                 {/* Mobile Accordion */}
-                <div className="md:hidden divide-y divide-slate-100">
+                <div className="md:hidden space-y-3">
                   {paginatedData.map(loc => {
                     const isExpanded = expandedId === loc.id;
                     const camCount = cameraCounts[loc.id] || 0;
                     const isSelected = selectedIds.includes(loc.id);
                     return (
-                      <div key={loc.id} className={`bg-white overflow-hidden transition-all duration-300 ${isSelected ? 'bg-blue-50/30' : ''}`}>
-                        <div className={`p-5 flex items-center justify-between transition-colors ${isExpanded ? 'bg-slate-50/50' : ''}`}>
+                      <div key={loc.id} className={`bg-white border border-slate-200 p-4 transition-all duration-300 ${isSelected ? 'border-[#002855] bg-[#002855]/5' : ''}`}>
+                        <div className={`flex items-center justify-between`}>
                           <div className="flex items-center gap-4">
-                            {canEdit() && (
-                              <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
-                            )}
+                    {canEdit() && selectionMode && (
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded border-slate-200 text-blue-600 focus:ring-blue-500 cursor-pointer shadow-sm animate-in fade-in slide-in-from-right-2 duration-200" />
+                    )}
                             <div className="flex items-center gap-3 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : loc.id)}>
-                              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm bg-slate-50 text-slate-400">
+                              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm bg-slate-50 border border-slate-100 text-slate-400">
                                 <MapPin size={18} />
                               </div>
                               <div className="flex flex-col">
@@ -389,23 +420,24 @@ export default function Sedes() {
                         </div>
 
                         {isExpanded && (
-                          <div className="px-5 pb-5 space-y-5 border-t border-slate-50/50 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="space-y-4 border-t border-slate-100 mt-4 pt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                             <div className="grid grid-cols-2 gap-3">
-                              <div className="p-4 rounded-xl border bg-slate-50 border-slate-100">
-                                <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-1.5">Dirección</label>
+                              <div className="p-3 rounded-xl border bg-slate-50 border-slate-100">
+                                <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-1">Dirección</label>
                                 <span className="text-[11px] font-mono font-black text-[#002855]">{loc.address || '—'}</span>
                               </div>
-                              <div className={`p-4 rounded-xl border ${camCount > 0 ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-slate-50 border-slate-100'}`}>
-                                <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-1.5">Cámaras</label>
+                              <div className={`p-3 rounded-xl border ${camCount > 0 ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-slate-50 border-slate-100'}`}>
+                                <label className="text-[10px] font-black text-slate-400 tracking-wider block mb-1">Cámaras</label>
                                 <span className={`text-[11px] font-mono font-black ${camCount > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>{camCount}</span>
                               </div>
                             </div>
-                            <div className="flex gap-2">
-                              <RowActions
-                                canEdit={canEdit()}
-                                onEdit={() => openEdit(loc)}
-                                onDelete={() => del(loc)}
-                              />
+                            <div className="flex gap-1.5 border-t border-slate-100 pt-3">
+                              {canEdit() && (
+                                <>
+                                  <button onClick={() => openEdit(loc)} className="text-[10px] font-bold text-[#002855] hover:underline bg-[#002855]/5 px-2 py-1 rounded-sm w-full text-center">Editar</button>
+                                  <button onClick={() => del(loc)} className="text-[10px] font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-1 rounded-sm w-full text-center">Eliminar</button>
+                                </>
+                              )}
                             </div>
                           </div>
                         )}
@@ -421,8 +453,8 @@ export default function Sedes() {
                       <TableHeader>
                         <tr>
                           <TableHead className="w-12">
-                            {canEdit() && (
-                              <input type="checkbox" checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length} onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
+                            {canEdit() && selectionMode && (
+                              <input type="checkbox" checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length} onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200" />
                             )}
                           </TableHead>
                           <TableHead>
@@ -452,7 +484,9 @@ export default function Sedes() {
                               onClick={() => { setSelectedLocation(loc); setShowDetails(true); }}
                             >
                               <TableCell className="w-12">
-                                <input type="checkbox" checked={selectedIds.includes(loc.id)} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
+                                {canEdit() && selectionMode && (
+                                <input type="checkbox" checked={selectedIds.includes(loc.id)} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200" />
+                                )}
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-col">
@@ -506,7 +540,7 @@ export default function Sedes() {
       </div>
 
       {/* Bulk action bar */}
-      {selectedIds.length > 0 && canEdit() && (
+      {selectionMode && selectedIds.length > 0 && canEdit() && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[60] pointer-events-none w-full flex justify-center px-6">
           <div className="bg-[#002855]/95 backdrop-blur-md text-white px-4 py-1.5 rounded-full shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 border border-white/10 pointer-events-auto">
             <div className="flex items-center gap-2 pr-4 border-r border-white/10">
@@ -545,10 +579,10 @@ export default function Sedes() {
                 <Building size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
                   {selectedLocation.name}
                 </h2>
-                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                <p className="text-[9px] sm:text-[10px] font-normal text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                   <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
                   <span className="line-clamp-2 sm:truncate">{typeLabels[selectedLocation.type] || selectedLocation.type}</span>
                 </p>
@@ -568,18 +602,18 @@ export default function Sedes() {
               <DetailModalSection title="Información General">
                 <DetailModalCard className="space-y-2.5 sm:space-y-3">
                   <DetailModalRow label="Tipo de Sede">
-                    <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-widest border ${typeColors[selectedLocation.type] || 'bg-slate-50 text-slate-700 border-slate-200'}`}>
+                    <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-normal tracking-widest border ${typeColors[selectedLocation.type] || 'bg-slate-50 text-slate-700 border-slate-200'}`}>
                       {typeLabels[selectedLocation.type] || selectedLocation.type}
                     </span>
                   </DetailModalRow>
                   <DetailModalRow label="Cámaras Instaladas">
-                    <span className="text-[10px] sm:text-[11px] font-black text-[#002855]">{cameraCounts[selectedLocation.id] || 0} CÁMARAS</span>
+                    <span className="text-[10px] sm:text-[11px] font-normal text-[#002855]">{cameraCounts[selectedLocation.id] || 0} CÁMARAS</span>
                   </DetailModalRow>
                 </DetailModalCard>
 
                 <DetailModalCard className="space-y-2.5 sm:space-y-3">
                   <DetailModalRow label="Dirección">
-                    <span className="text-[10px] sm:text-[11px] font-black text-slate-700 break-words">
+                    <span className="text-[10px] sm:text-[11px] font-normal text-slate-700 break-words">
                       {selectedLocation.address || '—'}
                     </span>
                   </DetailModalRow>

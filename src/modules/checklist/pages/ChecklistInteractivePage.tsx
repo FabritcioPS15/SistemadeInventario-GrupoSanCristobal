@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, Clock, User, MapPin, FileText, Save, Eye, CheckSquare, Settings } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
@@ -472,22 +472,22 @@ export default function ChecklistInteractive() {
                 <CheckSquare className="w-6 h-6 text-[#002855]" />
               </div>
               <div>
-                <h1 className="text-[18px] font-black text-[#002855] uppercase tracking-tight">Checklist Interactivo</h1>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Formularios digitales y gestión de cumplimiento</p>
+                <h1 className="text-[18px] font-normal text-[#002855] uppercase tracking-tight">Checklist Interactivo</h1>
+                <p className="text-[11px] font-normal text-slate-400 uppercase tracking-widest mt-1">Formularios digitales y gestión de cumplimiento</p>
               </div>
             </div>
             
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={() => navigate('/checklist')}
-                className="px-5 py-2 bg-slate-100 text-slate-600 rounded-none border border-slate-200 hover:bg-slate-200 transition-all font-black text-[10px] uppercase tracking-[0.2em]"
+                className="px-5 py-2 bg-slate-100 text-slate-600 rounded-none border border-slate-200 hover:bg-slate-200 transition-all font-normal text-[10px] uppercase tracking-[0.2em]"
               >
                 Vista Tradicional
               </button>
               {canManageTemplates && (
                 <button
                   onClick={() => setShowTemplateManager(true)}
-                  className="px-5 py-2 bg-amber-500 text-white rounded-none hover:bg-amber-600 transition-all font-black text-[10px] uppercase tracking-[0.2em] shadow-sm flex items-center gap-2"
+                  className="px-5 py-2 bg-amber-500 text-white rounded-none hover:bg-amber-600 transition-all font-normal text-[10px] uppercase tracking-[0.2em] shadow-sm flex items-center gap-2"
                 >
                   <Settings size={14} />
                   Plantillas
@@ -500,7 +500,7 @@ export default function ChecklistInteractive() {
           <div className="flex mt-8 border-b border-slate-200">
             <button
               onClick={() => setActiveTab('new')}
-              className={`px-8 py-4 font-black text-[11px] uppercase tracking-[0.2em] transition-all relative ${activeTab === 'new'
+              className={`px-8 py-4 font-normal text-[11px] uppercase tracking-[0.2em] transition-all relative ${activeTab === 'new'
                 ? 'text-blue-600'
                 : 'text-slate-400 hover:text-slate-600'
                 }`}
@@ -510,7 +510,7 @@ export default function ChecklistInteractive() {
             </button>
             <button
               onClick={() => setActiveTab('history')}
-              className={`px-8 py-4 font-black text-[11px] uppercase tracking-[0.2em] transition-all relative ${activeTab === 'history'
+              className={`px-8 py-4 font-normal text-[11px] uppercase tracking-[0.2em] transition-all relative ${activeTab === 'history'
                 ? 'text-blue-600'
                 : 'text-slate-400 hover:text-slate-600'
                 }`}
@@ -528,7 +528,7 @@ export default function ChecklistInteractive() {
               <div className="bg-white rounded-none border border-slate-200 shadow-sm p-5 space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-1 h-4 bg-blue-600" />
-                  <h3 className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Selección</h3>
+                  <h3 className="text-[12px] font-normal text-[#002855] tracking-[0.2em]">Selección</h3>
                 </div>
 
                 <div className="space-y-2">
@@ -541,8 +541,8 @@ export default function ChecklistInteractive() {
                         : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
                         }`}
                     >
-                      <div className={`text-[11px] font-black uppercase tracking-widest mb-1 ${selectedType === key ? `text-${key === 'escon' ? 'blue' : key === 'ecsal' ? 'emerald' : 'orange'}-600` : 'text-[#002855]'}`}>{template.name}</div>
-                      <div className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter leading-tight">{template.description}</div>
+                      <div className={`text-[11px] font-normal uppercase tracking-widest mb-1 ${selectedType === key ? `text-${key === 'escon' ? 'blue' : key === 'ecsal' ? 'emerald' : 'orange'}-600` : 'text-[#002855]'}`}>{template.name}</div>
+                      <div className="text-[9px] font-normal text-slate-400 uppercase tracking-tighter leading-tight">{template.description}</div>
                     </button>
                   ))}
                 </div>
@@ -551,8 +551,8 @@ export default function ChecklistInteractive() {
                   <div className="mt-8 pt-6 border-t border-slate-100">
                     <div className="mb-6">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Progreso</span>
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${getProgress() === 100 ? 'text-emerald-600' : 'text-blue-600'}`}>{Math.round(getProgress())}%</span>
+                        <span className="text-[10px] font-normal text-slate-500 uppercase tracking-widest">Progreso</span>
+                        <span className={`text-[10px] font-normal uppercase tracking-widest ${getProgress() === 100 ? 'text-emerald-600' : 'text-blue-600'}`}>{Math.round(getProgress())}%</span>
                       </div>
                       <div className="w-full bg-slate-100 rounded-none h-1.5 overflow-hidden">
                         <div
@@ -565,7 +565,7 @@ export default function ChecklistInteractive() {
                     <button
                       onClick={saveChecklist}
                       disabled={saving}
-                      className={`w-full py-3 rounded-none font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group ${
+                      className={`w-full py-3 rounded-none font-normal text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group ${
                         getProgress() === 100 
                           ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md' 
                           : 'bg-[#002855] text-white hover:bg-blue-800 shadow-md'
@@ -586,11 +586,11 @@ export default function ChecklistInteractive() {
                   <div className="w-16 h-16 bg-slate-50 rounded-none flex items-center justify-center mx-auto mb-6 border border-slate-100">
                     <CheckSquare className="w-8 h-8 text-slate-300" />
                   </div>
-                  <h3 className="text-[16px] font-black text-[#002855] uppercase tracking-tight mb-2">Completar nuevo checklist</h3>
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-8">Seleccione un tipo de unidad para iniciar el proceso de verificación</p>
+                  <h3 className="text-[16px] font-normal text-[#002855] uppercase tracking-tight mb-2">Completar nuevo checklist</h3>
+                  <p className="text-[11px] font-normal text-slate-400 uppercase tracking-widest mb-8">Seleccione un tipo de unidad para iniciar el proceso de verificación</p>
                   <button
                     onClick={startNewChecklist}
-                    className="px-10 py-3 bg-[#002855] text-white rounded-none font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-800 transition-all shadow-lg"
+                    className="px-10 py-3 bg-[#002855] text-white rounded-none font-normal text-[10px] uppercase tracking-[0.2em] hover:bg-blue-800 transition-all shadow-lg"
                   >
                     Iniciar Formulario
                   </button>
@@ -601,7 +601,7 @@ export default function ChecklistInteractive() {
                     <div key={category} className="bg-white rounded-none border border-slate-200 shadow-sm overflow-hidden">
                       <div className={`p-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3`}>
                         <div className={`w-1.5 h-6 ${selectedType === 'escon' ? 'bg-blue-600' : selectedType === 'ecsal' ? 'bg-emerald-600' : 'bg-orange-600'} rounded-none`} />
-                        <h4 className="text-[12px] font-black text-[#002855] tracking-[0.2em]">
+                        <h4 className="text-[12px] font-normal text-[#002855] tracking-[0.2em]">
                           {category}
                         </h4>
                       </div>
@@ -624,19 +624,19 @@ export default function ChecklistInteractive() {
 
                                 <div className="flex-1">
                                   <div className="flex items-center gap-3 mb-3">
-                                    <h5 className="text-[13px] font-black text-[#002855] leading-tight">{item.title}</h5>
+                                    <h5 className="text-[13px] font-normal text-[#002855] leading-tight">{item.title}</h5>
                                     {item.required && (
-                                      <span className="px-2 py-0.5 border border-rose-200 bg-rose-50 text-rose-600 text-[10px] font-black tracking-wider">Requerido</span>
+                                      <span className="px-2 py-0.5 border border-rose-200 bg-rose-50 text-rose-600 text-[10px] font-normal tracking-wider">Requerido</span>
                                     )}
                                   </div>
-                                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 leading-relaxed italic">{item.description}</p>
+                                  <p className="text-[11px] font-normal text-slate-400 uppercase tracking-widest mb-6 leading-relaxed italic">{item.description}</p>
 
                                   <div className="relative">
                                     <textarea
                                       value={response.notes || ''}
                                       onChange={(e) => updateResponse(item.id, 'notes', e.target.value)}
                                       placeholder="OBSERVACIONES Y NOTAS DETALLADAS..."
-                                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-bold uppercase tracking-widest placeholder:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all h-24 resize-none"
+                                      className="w-full p-4 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-normal uppercase tracking-widest placeholder:text-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all h-24 resize-none"
                                     />
                                     <div className="absolute top-2 right-2">
                                       <FileText size={14} className="text-slate-200" />
@@ -661,9 +661,9 @@ export default function ChecklistInteractive() {
             <div className="p-6 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-1.5 h-6 bg-blue-600" />
-                <h3 className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Registros Históricos</h3>
+                <h3 className="text-[12px] font-normal text-[#002855] tracking-[0.2em]">Registros Históricos</h3>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+              <div className="flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 text-[10px] font-normal text-slate-500 uppercase tracking-widest">
                 <Clock className="w-3.5 h-3.5" />
                 {history.length} Registros
               </div>
@@ -672,26 +672,26 @@ export default function ChecklistInteractive() {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-24">
                 <div className="w-10 h-10 border-4 border-slate-100 border-t-blue-600 rounded-none animate-spin mb-4"></div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Sincronizando expedientes...</p>
+                <p className="text-[10px] font-normal text-slate-400 uppercase tracking-[0.2em]">Sincronizando expedientes...</p>
               </div>
             ) : history.length === 0 ? (
               <div className="text-center py-24">
                 <div className="w-16 h-16 bg-slate-50 rounded-none flex items-center justify-center mx-auto mb-6 border border-slate-100">
                   <FileText className="w-8 h-8 text-slate-300" />
                 </div>
-                <h4 className="text-[13px] font-black text-[#002855] leading-tight tracking-tight mb-2">Base de datos vacía</h4>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No se han encontrado registros previos de inspección</p>
+                <h4 className="text-[13px] font-normal text-[#002855] leading-tight tracking-tight mb-2">Base de datos vacía</h4>
+                <p className="text-[11px] font-normal text-slate-400 uppercase tracking-widest">No se han encontrado registros previos de inspección</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="px-6 py-6 text-[12px] font-black text-[#002855] tracking-[0.2em]">Cuestionario</th>
-                      <th className="px-4 py-6 text-[12px] font-black text-[#002855] tracking-[0.2em]">Ubicación / Información</th>
-                      <th className="px-4 py-6 text-[12px] font-black text-[#002855] tracking-[0.2em]">Progreso</th>
-                      <th className="px-4 py-6 text-[12px] font-black text-[#002855] tracking-[0.2em]">Estado</th>
-                      <th className="px-6 py-6 text-[12px] font-black text-[#002855] tracking-[0.2em] text-right">Acciones</th>
+                      <th className="px-6 py-6 text-[12px] font-normal text-[#002855] tracking-[0.2em]">Cuestionario</th>
+                      <th className="px-4 py-6 text-[12px] font-normal text-[#002855] tracking-[0.2em]">Ubicación / Información</th>
+                      <th className="px-4 py-6 text-[12px] font-normal text-[#002855] tracking-[0.2em]">Progreso</th>
+                      <th className="px-4 py-6 text-[12px] font-normal text-[#002855] tracking-[0.2em]">Estado</th>
+                      <th className="px-6 py-6 text-[12px] font-normal text-[#002855] tracking-[0.2em] text-right">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -705,34 +705,34 @@ export default function ChecklistInteractive() {
 
                       return (
                         <tr key={checklist.id} className="hover:bg-slate-50 transition-colors group relative border-b border-slate-50 last:border-0">
-                          <td className="px-6 py-5 font-bold">
+                          <td className="px-6 py-5 font-normal">
                             <div className="flex items-center gap-3">
                               <div className={`w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-${colorClass}-50 text-${colorClass}-500 group-hover:bg-${colorClass}-600 group-hover:text-white`}>
                                 <CheckSquare size={18} />
                               </div>
                               <div className="flex flex-col">
-                                <span className="text-[13px] font-black text-[#002855] leading-tight">{template?.name.split(' - ')[0]}</span>
-                                <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1 italic">{template?.name.split(' - ')[1]}</p>
+                                <span className="text-[13px] font-normal text-[#002855] leading-tight">{template?.name.split(' - ')[0]}</span>
+                                <p className="text-[11px] font-normal text-slate-400 tracking-wider mt-1 italic">{template?.name.split(' - ')[1]}</p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-5 font-bold">
+                          <td className="px-4 py-5 font-normal">
                             <div className="flex flex-col gap-1.5">
                               <div className="flex items-center gap-2">
                                 <User size={12} className="text-slate-400" />
-                                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{checklist.users?.full_name}</span>
+                                <span className="text-[11px] font-normal text-slate-600 uppercase tracking-widest">{checklist.users?.full_name}</span>
                               </div>
                               <div className="flex items-center gap-2">
                                 <MapPin size={12} className="text-rose-500" />
-                                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{checklist.locations?.name}</span>
+                                <span className="text-[11px] font-normal text-slate-600 uppercase tracking-widest">{checklist.locations?.name}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-5 font-bold">
+                          <td className="px-4 py-5 font-normal">
                             <div className="flex flex-col gap-2 min-w-[120px]">
                               <div className="flex items-center justify-between">
-                                <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">{completed}/{total} ítems</span>
-                                <span className="text-[10px] font-black text-[#002855]">{percentage}%</span>
+                                <span className="text-[12px] font-normal text-[#002855] tracking-[0.2em]">{completed}/{total} ítems</span>
+                                <span className="text-[10px] font-normal text-[#002855]">{percentage}%</span>
                               </div>
                               <div className="w-full bg-slate-100 rounded-none h-1.5 overflow-hidden">
                                 <div 
@@ -742,8 +742,8 @@ export default function ChecklistInteractive() {
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-5 font-bold">
-                            <span className={`px-2.5 py-1 border text-[9px] font-black uppercase tracking-[0.2em] ${
+                          <td className="px-4 py-5 font-normal">
+                            <span className={`px-2.5 py-1 border text-[9px] font-normal uppercase tracking-[0.2em] ${
                               checklist.status === 'completed'
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                                 : 'bg-blue-50 border-blue-200 text-blue-700'
@@ -751,10 +751,10 @@ export default function ChecklistInteractive() {
                               {checklist.status === 'completed' ? 'FINALIZADO' : 'EN CURSO'}
                             </span>
                           </td>
-                          <td className="px-6 py-5 text-right font-bold">
+                          <td className="px-6 py-5 text-right font-normal">
                             <button
                               onClick={() => loadChecklist(checklist)}
-                              className={`px-4 py-2 border border-${colorClass}-200 bg-white text-${colorClass}-600 hover:bg-${colorClass}-600 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 ml-auto`}
+                              className={`px-4 py-2 border border-${colorClass}-200 bg-white text-${colorClass}-600 hover:bg-${colorClass}-600 hover:text-white transition-all font-normal text-[10px] uppercase tracking-widest shadow-sm flex items-center justify-center gap-2 ml-auto`}
                             >
                               <Eye className="w-3.5 h-3.5" />
                               VER REGISTRO

@@ -287,7 +287,7 @@ export default function TicketHistory() {
                     {/* Action Bar */}
                     <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
                         <div className="absolute -top-3 -left-3">
-                            <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+                            <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-semibold uppercase tracking-tight shadow-xl">
                                 {filteredTickets.length} Tickets
                             </div>
                         </div>
@@ -300,7 +300,7 @@ export default function TicketHistory() {
                                 placeholder="BUSCAR POR TÍTULO, SOLICITANTE O UBICACIÓN..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+                                className="w-full pl-12 pr-4 py-3 text-[12px] font-semibold text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
                             />
                         </div>
 
@@ -333,7 +333,7 @@ export default function TicketHistory() {
                             <button
                                 onClick={handleRefresh}
                                 disabled={refreshing}
-                                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm disabled:opacity-50"
+                                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-semibold uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm disabled:opacity-50"
                             >
                                 <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
                                 Refrescar
@@ -362,7 +362,7 @@ export default function TicketHistory() {
                     {filterDateRange.includes('custom') && (
                         <div className="flex items-center gap-3 animate-in slide-in-from-left-2 duration-300">
                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Desde</span>
+                                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Desde</span>
                                 <input
                                     type="date"
                                     value={startDate}
@@ -371,7 +371,7 @@ export default function TicketHistory() {
                                 />
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hasta</span>
+                                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Hasta</span>
                                 <input
                                     type="date"
                                     value={endDate}
@@ -387,8 +387,8 @@ export default function TicketHistory() {
                             <div className="w-24 h-24 rounded-full bg-slate-50 border-2 border-dashed border-slate-200 flex items-center justify-center mx-auto mb-6">
                                 <ShieldCheck size={48} className="text-slate-300" />
                             </div>
-                            <h3 className="text-xl font-bold text-[#002855] uppercase tracking-widest mb-2">No se encontraron tickets</h3>
-                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
+                            <h3 className="text-xl font-semibold text-[#002855] uppercase tracking-widest mb-2">No se encontraron tickets</h3>
+                            <p className="text-slate-400 text-[10px] font-semibold uppercase tracking-widest">
                                 {searchTerm || filterPriority.length > 0 || filterDateRange.length > 0
                                     ? 'Intenta ajustar los filtros de búsqueda'
                                     : 'Los tickets cerrados aparecerán aquí después de 10 minutos'
@@ -397,7 +397,46 @@ export default function TicketHistory() {
                         </div>
                     ) : (
                         <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
-                            <div className="overflow-x-auto">
+                            {/* Mobile view */}
+                            <div className="md:hidden space-y-3 p-4 bg-slate-50 border-b border-slate-200">
+                                {filteredTickets.map((ticket) => {
+                                    const prio = PRIORITY_STYLES[ticket.priority] || PRIORITY_STYLES.medium;
+                                    return (
+                                        <div key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)} className="bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-[10px] font-semibold text-[#002855] uppercase">#TK-{ticket.id.slice(0, 6)}</span>
+                                                <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider border ${prio.color} rounded-none`}>
+                                                    {prio.label}
+                                                </span>
+                                            </div>
+                                            <p className="text-[12px] font-semibold text-slate-700 uppercase leading-tight mb-2 line-clamp-2">{ticket.title}</p>
+                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-2">
+                                                <span className="truncate">{ticket.locations?.name || 'Central'}</span>
+                                            </div>
+                                            <div className="flex flex-col gap-1 text-[10px] text-slate-500 mt-2 pt-2 border-t border-slate-100">
+                                                <div className="flex items-center justify-between">
+                                                    <span>Solicitante:</span>
+                                                    <span className="font-semibold text-slate-600">{ticket.requester?.full_name || 'N/A'}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span>Atendido por:</span>
+                                                    <span className="font-semibold text-slate-600">{ticket.attendant?.full_name || 'Sin asignar'}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between mt-1 pt-1 border-t border-slate-50">
+                                                    <span>Cierre:</span>
+                                                    <span className="font-semibold text-slate-600">{ticket.closed_at ? new Date(String(ticket.closed_at).includes('T') ? String(ticket.closed_at) : `${ticket.closed_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) : 'N/A'}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span>Tiempo:</span>
+                                                    <span className="font-semibold text-slate-600">{getTimeToClose(ticket)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            
+                            <div className="hidden md:block overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -414,7 +453,7 @@ export default function TicketHistory() {
                                             const prio = PRIORITY_STYLES[ticket.priority] || PRIORITY_STYLES.medium;
                                             return (
                                                 <TableRow key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)}>
-                                                    <TableCell className="font-bold w-12">
+                                                    <TableCell className="font-semibold w-12">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
                                                                 <TicketIcon size={14} />
@@ -423,10 +462,10 @@ export default function TicketHistory() {
                                                     </TableCell>
                                                     <TableCell>
                                                         <div className="flex flex-col">
-                                                            <span className="text-[14px] font-black text-[#002855] uppercase leading-tight group-hover:text-blue-600 transition-colors">
+                                                            <span className="text-[14px] font-semibold text-[#002855] uppercase leading-tight group-hover:text-blue-600 transition-colors">
                                                                 #{ticket.id.slice(0, 6).toUpperCase()} - {ticket.title}
                                                             </span>
-                                                            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                                            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mt-1">
                                                                 {ticket.locations?.name || 'Central'}
                                                             </span>
                                                         </div>
@@ -434,26 +473,26 @@ export default function TicketHistory() {
                                                     <TableCell>
                                                         <div className="flex items-center gap-2">
                                                             <User size={12} className="text-slate-400" />
-                                                            <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{ticket.requester?.full_name || 'N/A'}</span>
+                                                            <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest">{ticket.requester?.full_name || 'N/A'}</span>
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>
                                                         {ticket.attendant ? (
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{ticket.attendant.full_name}</span>
+                                                                <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest">{ticket.attendant.full_name}</span>
                                                             </div>
                                                         ) : (
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Sin asignar</span>
+                                                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Sin asignar</span>
                                                         )}
                                                     </TableCell>
                                                     <TableCell>
-                                                        <span className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
+                                                        <span className={`px-2 py-1 text-[9px] font-semibold uppercase tracking-widest border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
                                                             <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
                                                             {prio.label}
                                                         </span>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <div className="flex flex-col gap-1 text-[10px] font-bold text-slate-600">
+                                                        <div className="flex flex-col gap-1 text-[10px] font-semibold text-slate-600">
                                                             <div className="flex items-center gap-1.5">
                                                                 <Calendar size={12} className="text-slate-400" />
                                                                 <span className="uppercase tracking-widest">

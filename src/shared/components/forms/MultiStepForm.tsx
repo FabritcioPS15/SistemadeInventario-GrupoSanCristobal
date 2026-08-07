@@ -1,27 +1,4 @@
-/**
- * Formulario multi-paso reutilizable.
- *
- * CÓMO USARLO (ver CameraForm.tsx como ejemplo):
- *   <MultiStepForm
- *     title="Nuevo Recurso"
- *     steps={[
- *       { title: 'Datos básicos', description: '...' },
- *       { title: 'Configuración', description: '...' },
- *     ]}
- *     onSubmit={handleSubmit}
- *     onClose={onClose}
- *     icon={<MiIcono size={20} />}
- *   >
- *     <div>... step 0 ...</div>
- *     <div>... step 1 ...</div>
- *   </MultiStepForm>
- *
- * REGLAS:
- * - children debe ser un array con tantos elementos como steps haya.
- * - NO use <form> alrededor — el botón Guardar es type="button".
- * - La validación nativa busca inputs con required; scrollea al faltante.
- * - Si necesitas validación custom, hazla dentro de onSubmit y retorna error.
- */
+
 
 import { ReactNode, useState, useRef, useCallback } from 'react';
 import { Check, ChevronLeft, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
@@ -81,7 +58,7 @@ export default function MultiStepForm({
         const label = f.closest('[data-label]')?.getAttribute('data-label') || f.name || 'Campo requerido';
         return label;
       });
-      setStepErrors(prev => ({ ...prev, [stepIndex]: `Completa: ${fieldNames.join(', ')}` }));
+      setStepErrors(prev => ({ ...prev, [stepIndex]: `Completa los campos: ${fieldNames.join(', ')}` }));
       emptyRequired[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
       emptyRequired[0].focus();
       return false;
@@ -136,9 +113,9 @@ export default function MultiStepForm({
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">{title}</h2>
+              <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">{title}</h2>
               {subtitle && (
-                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                <p className="text-[9px] sm:text-[10px] font-normal text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                   <span className="line-clamp-2 sm:truncate">{subtitle}</span>
                 </p>
               )}
@@ -163,7 +140,7 @@ export default function MultiStepForm({
                 <button
                   type="button"
                   onClick={() => { if (i < currentStep || validateStep(currentStep)) setCurrentStep(i); }}
-                  className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-[8px] sm:text-[10px] font-black uppercase tracking-wider transition-all shrink-0 ${
+                  className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-[8px] sm:text-[10px] font-normal uppercase tracking-wider transition-all shrink-0 ${
                     i === currentStep
                       ? 'bg-[#002855] text-white'
                       : i < currentStep
@@ -194,14 +171,14 @@ export default function MultiStepForm({
             {error && (
               <div ref={errorRef} className="bg-rose-50 border border-rose-100 p-4 flex items-center gap-3 text-rose-800">
                 <AlertCircle size={20} />
-                <p className="text-[11px] font-black tracking-widest">{error}</p>
+                <p className="text-[11px] font-normal tracking-widest">{error}</p>
               </div>
             )}
 
             {stepErrors[currentStep] && (
-              <div className="bg-amber-50 border border-amber-200 p-3 flex items-center gap-2 text-amber-700">
-                <AlertCircle size={16} />
-                <p className="text-[10px] font-black tracking-wider">{stepErrors[currentStep]}</p>
+              <div className="bg-amber-50 border border-amber-300 px-4 py-3 flex items-center gap-3 text-amber-800 shadow-sm">
+                <AlertCircle size={16} className="shrink-0 text-amber-500" />
+                <p className="text-[11px] font-normal tracking-wide">{stepErrors[currentStep]}</p>
               </div>
             )}
 
@@ -218,7 +195,7 @@ export default function MultiStepForm({
                   type="button"
                   onClick={handlePrev}
                   disabled={loading || submitting}
-                  className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] text-[10px] font-black uppercase tracking-wider text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wider text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all disabled:opacity-50"
                 >
                   <ChevronLeft size={14} />
                   Anterior
@@ -231,7 +208,7 @@ export default function MultiStepForm({
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="flex items-center gap-1.5 px-6 py-2.5 min-h-[44px] text-[10px] font-black uppercase tracking-wider text-white bg-[#002855] hover:bg-blue-800 transition-all"
+                  className="flex items-center gap-1.5 px-6 py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wider text-white bg-[#002855] hover:bg-blue-800 transition-all"
                 >
                   Siguiente
                   <ChevronRight size={14} />
@@ -241,7 +218,7 @@ export default function MultiStepForm({
                   type="button"
                   onClick={handleSubmit}
                   disabled={loading || submitting}
-                  className="flex items-center gap-2 px-8 py-2.5 min-h-[44px] text-[10px] font-black uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-lg"
+                  className="flex items-center gap-2 px-8 py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-lg"
                 >
                   {(loading || submitting) && <Loader2 size={14} className="animate-spin" />}
                   {(loading || submitting) ? 'Guardando...' : 'Guardar'}

@@ -1,10 +1,12 @@
-﻿import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Car, ChevronRight, Stethoscope, GraduationCap, FileText, ExternalLink, Edit, MapPin, Search, X, ListChecks, FolderOpen, Plus } from 'lucide-react';
 import { supabase, Location } from '../../../shared/services/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthContext';
 import LocationForm from '../../sedes/forms/LocationForm';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
+import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import DetailModal, {
@@ -32,6 +34,12 @@ export default function Checklist({ type }: { type?: string }) {
    const [currentPage, setCurrentPage] = useState(1);
    const [itemsPerPage, setItemsPerPage] = useState(10);
    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+   const { selectionMode, toggleSelectionMode } = useSelectionMode();
+
+   const handleToggleSelectionMode = () => {
+      setSelectedIds([]);
+      toggleSelectionMode();
+   };
 
    const driveLinks: Record<string, string> = {
       escon: 'https://drive.google.com/drive/folders/170_fX-XqA6K8F8-R7Nn-T5R_N4L5lX_h?usp=drive_link',
@@ -182,8 +190,8 @@ export default function Checklist({ type }: { type?: string }) {
             name: loc.name,
             type: label,
             address: loc.address || 'Sin dirección',
-            checklist_link: loc.checklist_url ? '✓ Disponible' : '✗ No configurado',
-            evidence_link: loc.history_url ? '✓ Disponible' : '✗ No configurado',
+            checklist_link: loc.checklist_url ? '? Disponible' : '? No configurado',
+            evidence_link: loc.history_url ? '? Disponible' : '? No configurado',
          };
       });
 
@@ -219,7 +227,7 @@ export default function Checklist({ type }: { type?: string }) {
                            setSearchTerm(e.target.value);
                            setCurrentPage(1);
                         }}
-                        className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                        className="w-full pl-12 pr-4 py-3 text-[12px] font-normal text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
                      />
                   </>
                }
@@ -253,7 +261,7 @@ export default function Checklist({ type }: { type?: string }) {
                      href={driveLinks[type]}
                      target="_blank"
                      rel="noopener noreferrer"
-                     className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+                     className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
                   >
                      <ExternalLink size={14} />
                      Abrir Drive
@@ -266,7 +274,7 @@ export default function Checklist({ type }: { type?: string }) {
                         setEditingLocation(undefined);
                         setShowForm(true);
                      }}
-                     className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+                     className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
                   >
                      <Plus size={14} />
                      NUEVA UBICACIÓN
@@ -275,105 +283,176 @@ export default function Checklist({ type }: { type?: string }) {
 
                <ExportButtons onExportExcel={handleExportExcel} onExportPDF={handleExportPdf} />
 
+               {canEdit() && (
+                  <SelectionModeButton
+                     active={selectionMode}
+                     onClick={handleToggleSelectionMode}
+                     selectedCount={selectedIds.length}
+                  />
+               )}
+
                <ViewToggle viewMode={viewMode} onChange={(m) => setViewMode(m as 'grid' | 'table')} />
             </ActionToolbar>
 
             {viewMode === 'table' ? (
-               <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
-                  <div className="bg-slate-50 border-b border-slate-200 shrink-0">
-                     <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        totalItems={filteredLocations.length}
-                        itemsPerPage={itemsPerPage}
-                        onPageChange={setCurrentPage}
-                        onItemsPerPageChange={setItemsPerPage}
-                     />
-                  </div>
-                  <div className="overflow-x-auto">
-                     <Table>
-                        <TableHeader>
-                           <tr>
-                              {canEdit() && (
-                                 <TableHead className="text-center w-12">
-                                    <input
-                                       type="checkbox"
-                                       checked={paginatedLocations.length > 0 && selectedIds.length === paginatedLocations.length}
-                                       onChange={toggleSelectAll}
-                                       className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
-                                    />
-                                 </TableHead>
-                              )}
-                              <TableHead>Ubicación</TableHead>
-                              <TableHead>Dirección</TableHead>
-                              <TableHead className="text-center">Tipo</TableHead>
-                              <TableHead className="text-right">Acciones</TableHead>
-                           </tr>
-                        </TableHeader>
-                        <TableBody>
-                           {paginatedLocations.map(location => {
-                              const { icon, color, label } = getIconData(location.type);
-                              const isSelected = selectedIds.includes(location.id);
-                              return (
-                                 <TableRow
-                                    key={location.id}
-                                    className={`cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}
-                                    onClick={() => setSelectedLocation(location)}
-                                 >
-                                    {canEdit() && (
-                                       <TableCell className="text-center w-12" onClick={e => e.stopPropagation()}>
-                                          <input
-                                             type="checkbox"
-                                             checked={isSelected}
-                                             onChange={(e) => toggleSelect(location.id, e as any)}
-                                             className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
-                                          />
-                                       </TableCell>
-                                    )}
-                                    <TableCell>
-                                       <div className="flex items-center gap-3">
-                                          <div className={`w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover/row:bg-${color}-600 group-hover/row:text-white group-hover/row:shadow-md`}>
-                                             {icon}
+               <>
+                  {/* Mobile cards */}
+                  <div className="block md:hidden space-y-3">
+                     <div className="bg-white border border-slate-200 shadow-sm">
+                        <Pagination
+                           currentPage={currentPage}
+                           totalPages={totalPages}
+                           totalItems={filteredLocations.length}
+                           itemsPerPage={itemsPerPage}
+                           onPageChange={setCurrentPage}
+                           onItemsPerPageChange={setItemsPerPage}
+                        />
+                     </div>
+                     <div className="space-y-3">
+                        {paginatedLocations.map(location => {
+                           const { icon, color, label } = getIconData(location.type);
+                           const isSelected = selectedIds.includes(location.id);
+                           return (
+                              <div key={location.id} onClick={() => setSelectedLocation(location)} className={`bg-white border ${isSelected ? 'border-blue-300 bg-blue-50/30' : 'border-slate-200'} p-4 active:bg-slate-50 transition-all cursor-pointer`}>
+                                 <div className="flex items-start justify-between mb-3">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                       {canEdit() && selectionMode && (
+                                          <div onClick={e => e.stopPropagation()} className="shrink-0">
+                                             <input
+                                                type="checkbox"
+                                                checked={isSelected}
+                                                onChange={(e) => toggleSelect(location.id, e as any)}
+                                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                             />
                                           </div>
-                                          <span className="text-[13px] font-black text-[#002855] leading-tight">
-                                             {location.name}
-                                          </span>
+                                       )}
+                                       <div className={`w-9 h-9 shrink-0 flex items-center justify-center bg-slate-100 text-slate-400`}>
+                                          {icon}
                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                       <div className="flex items-center gap-2">
-                                          <MapPin size={12} className="text-slate-400" />
-                                          <span className="text-[12px] font-bold text-slate-700 uppercase tracking-widest">
-                                             {location.address || 'Sin dirección'}
-                                          </span>
+                                       <div className="min-w-0 flex-1">
+                                          <p className="text-[13px] font-normal text-[#002855] leading-tight truncate">{location.name}</p>
+                                          {location.address && (
+                                             <p className="text-[10px] text-slate-500 truncate mt-0.5">{location.address}</p>
+                                          )}
                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                       <span className={`px-2 py-0.5 text-[10px] font-black uppercase tracking-widest border border-${color}-200 text-${color}-600 bg-${color}-50`}>
-                                          {label}
-                                       </span>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                                          <span className={`text-[10px] font-black text-[#002855] uppercase tracking-widest pr-2`}>
-                                             Opciones →
+                                    </div>
+                                    <span className={`shrink-0 px-2 py-0.5 text-[9px] font-normal uppercase tracking-widest border ${color === 'blue' ? 'border-blue-200 text-blue-600 bg-blue-50' : color === 'emerald' ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : 'border-orange-200 text-orange-600 bg-orange-50'}`}>
+                                       {label}
+                                    </span>
+                                 </div>
+                                 <button
+                                    onClick={(e) => { e.stopPropagation(); setSelectedLocation(location); }}
+                                    className="w-full py-2.5 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all flex items-center justify-center gap-2"
+                                 >
+                                    Ver Opciones
+                                 </button>
+                              </div>
+                           );
+                        })}
+                        {paginatedLocations.length === 0 && (
+                           <div className="py-16 text-center text-slate-400 text-sm font-medium bg-white border border-slate-200">
+                              No se encontraron ubicaciones.
+                           </div>
+                        )}
+                     </div>
+                  </div>
+                  {/* Desktop table */}
+                  <div className="hidden md:block bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col">
+                     <div className="bg-slate-50 border-b border-slate-200 shrink-0">
+                        <Pagination
+                           currentPage={currentPage}
+                           totalPages={totalPages}
+                           totalItems={filteredLocations.length}
+                           itemsPerPage={itemsPerPage}
+                           onPageChange={setCurrentPage}
+                           onItemsPerPageChange={setItemsPerPage}
+                        />
+                     </div>
+                     <div className="overflow-x-auto">
+                        <Table>
+                           <TableHeader>
+                              <tr>
+                                 {canEdit() && selectionMode && (
+                                    <TableHead className="text-center w-12">
+                                       <input
+                                          type="checkbox"
+                                          checked={paginatedLocations.length > 0 && selectedIds.length === paginatedLocations.length}
+                                          onChange={toggleSelectAll}
+                                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                                       />
+                                    </TableHead>
+                                 )}
+                                 <TableHead>Ubicación</TableHead>
+                                 <TableHead>Dirección</TableHead>
+                                 <TableHead className="text-center">Tipo</TableHead>
+                                 <TableHead className="text-right">Acciones</TableHead>
+                              </tr>
+                           </TableHeader>
+                           <TableBody>
+                              {paginatedLocations.map(location => {
+                                 const { icon, color, label } = getIconData(location.type);
+                                 const isSelected = selectedIds.includes(location.id);
+                                 return (
+                                    <TableRow
+                                       key={location.id}
+                                       className={`cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}
+                                       onClick={() => setSelectedLocation(location)}
+                                    >
+                                       {canEdit() && selectionMode && (
+                                          <TableCell className="text-center w-12" onClick={e => e.stopPropagation()}>
+                                             <input
+                                                type="checkbox"
+                                                checked={isSelected}
+                                                onChange={(e) => toggleSelect(location.id, e as any)}
+                                                className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                                             />
+                                          </TableCell>
+                                       )}
+                                       <TableCell>
+                                          <div className="flex items-center gap-3">
+                                             <div className={`w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400`}>
+                                                {icon}
+                                             </div>
+                                             <span className="text-[13px] font-normal text-[#002855] leading-tight">
+                                                {location.name}
+                                             </span>
+                                          </div>
+                                       </TableCell>
+                                       <TableCell>
+                                          <div className="flex items-center gap-2">
+                                             <MapPin size={12} className="text-slate-400" />
+                                             <span className="text-[12px] font-normal text-slate-700 uppercase tracking-widest">
+                                                {location.address || 'Sin dirección'}
+                                             </span>
+                                          </div>
+                                       </TableCell>
+                                       <TableCell className="text-center">
+                                          <span className={`px-2 py-0.5 text-[10px] font-normal uppercase tracking-widest border ${color === 'blue' ? 'border-blue-200 text-blue-600 bg-blue-50' : color === 'emerald' ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : color === 'orange' ? 'border-orange-200 text-orange-600 bg-orange-50' : 'border-slate-200 text-slate-600 bg-slate-50'}`}>
+                                             {label}
                                           </span>
-                                       </div>
+                                       </TableCell>
+                                       <TableCell className="text-right">
+                                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                             <span className="text-[10px] font-normal text-[#002855] uppercase tracking-widest pr-2">
+                                                Opciones ?
+                                             </span>
+                                          </div>
+                                       </TableCell>
+                                    </TableRow>
+                                 );
+                              })}
+                              {paginatedLocations.length === 0 && (
+                                 <TableRow>
+                                    <TableCell colSpan={canEdit() ? 5 : 4} className="h-32 text-center text-slate-400 text-sm font-medium">
+                                       No se encontraron ubicaciones.
                                     </TableCell>
                                  </TableRow>
-                              );
-                           })}
-                           {paginatedLocations.length === 0 && (
-                              <TableRow>
-                                 <TableCell colSpan={canEdit() ? 5 : 4} className="h-32 text-center text-slate-400 text-sm font-medium">
-                                    No se encontraron ubicaciones.
-                                 </TableCell>
-                              </TableRow>
-                           )}
-                        </TableBody>
-                     </Table>
+                              )}
+                           </TableBody>
+                        </Table>
+                     </div>
                   </div>
-               </div>
+               </>
             ) : (
                <div className="space-y-4">
                   <div className="bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden">
@@ -396,14 +475,14 @@ export default function Checklist({ type }: { type?: string }) {
                                     <div className={`w-12 h-12 rounded-none flex items-center justify-center transition-all bg-white text-slate-400 shadow-sm border border-slate-200 group-hover:bg-${color}-600 group-hover:text-white group-hover:border-transparent`}>
                                        {icon}
                                     </div>
-                                    <span className={`px-3 py-1.5 text-[10px] font-black tracking-wider border border-${color}-200 text-${color}-600 bg-${color}-50 rounded-none`}>
+                                    <span className={`px-3 py-1.5 text-[10px] font-normal tracking-wider border border-${color}-200 text-${color}-600 bg-${color}-50 rounded-none`}>
                                        {label}
                                     </span>
                                  </div>
-                                 <h3 className="text-[13px] font-black text-[#002855] leading-tight mb-2">
+                                 <h3 className="text-[13px] font-normal text-[#002855] leading-tight mb-2">
                                     {location.name}
                                  </h3>
-                                 <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                 <div className="flex items-center gap-1.5 text-[10px] font-normal text-slate-500 uppercase tracking-widest">
                                     <MapPin size={12} className="text-rose-500" />
                                     <span className="truncate">{location.address || 'Sin dirección'}</span>
                                  </div>
@@ -412,7 +491,7 @@ export default function Checklist({ type }: { type?: string }) {
                               <div className="p-4 bg-slate-50 border-t border-slate-100 mt-auto">
                                  <button
                                     onClick={() => setSelectedLocation(location)}
-                                    className="w-full py-2.5 bg-[#002855] text-white rounded-none hover:bg-blue-800 transition-all text-[10px] font-black uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"
+                                    className="w-full py-2.5 bg-[#002855] text-white rounded-none hover:bg-blue-800 transition-all text-[10px] font-normal uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"
                                  >
                                     Ver Opciones <ChevronRight size={14} />
                                  </button>
@@ -434,8 +513,8 @@ export default function Checklist({ type }: { type?: string }) {
                            <Building2 size={20} />
                         </div>
                         <div className="min-w-0 flex-1">
-                           <h2 className="text-xs sm:text-base font-black text-white uppercase tracking-tight leading-snug line-clamp-1">{selectedLocation.name}</h2>
-                           <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-center gap-1">
+                           <h2 className="text-xs sm:text-base font-normal text-white uppercase tracking-tight leading-snug line-clamp-1">{selectedLocation.name}</h2>
+                           <p className="text-[9px] sm:text-[10px] font-normal text-blue-200 uppercase tracking-wide mt-1 flex items-center gap-1">
                               <MapPin size={10} />
                               {selectedLocation.address || 'Sin dirección'}
                            </p>
@@ -460,7 +539,7 @@ export default function Checklist({ type }: { type?: string }) {
                                  <ListChecks size={18} />
                               </div>
                               <div className="text-left">
-                                 <span className="block text-[12px] font-black text-[#002855] uppercase tracking-widest">Llenar Checklist</span>
+                                 <span className="block text-[12px] font-normal text-[#002855] uppercase tracking-widest">Llenar Checklist</span>
                                  <span className="block text-[10px] text-slate-500 uppercase mt-0.5">Formulario interactivo</span>
                               </div>
                            </div>
@@ -478,7 +557,7 @@ export default function Checklist({ type }: { type?: string }) {
                                  <FileText size={18} />
                               </div>
                               <div className="text-left">
-                                 <span className="block text-[12px] font-black text-[#002855] uppercase tracking-widest">Checklist Drive</span>
+                                 <span className="block text-[12px] font-normal text-[#002855] uppercase tracking-widest">Checklist Drive</span>
                                  <span className="block text-[10px] text-slate-500 uppercase mt-0.5">Documento general</span>
                               </div>
                            </div>
@@ -496,7 +575,7 @@ export default function Checklist({ type }: { type?: string }) {
                                  <FolderOpen size={18} />
                               </div>
                               <div className="text-left">
-                                 <span className="block text-[12px] font-black text-[#002855] uppercase tracking-widest">Evidencias</span>
+                                 <span className="block text-[12px] font-normal text-[#002855] uppercase tracking-widest">Evidencias</span>
                                  <span className="block text-[10px] text-slate-500 uppercase mt-0.5">Historial de fotos y docs</span>
                               </div>
                            </div>
@@ -510,7 +589,7 @@ export default function Checklist({ type }: { type?: string }) {
                                  setSelectedLocation(null);
                                  handleEditLinks(selectedLocation);
                               }}
-                              className="w-full flex items-center justify-center gap-2 p-3 mt-4 bg-white border border-slate-200 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 transition-all text-[10px] font-black text-slate-500 uppercase tracking-widest"
+                              className="w-full flex items-center justify-center gap-2 p-3 mt-4 bg-white border border-slate-200 hover:bg-amber-50 hover:border-amber-200 hover:text-amber-600 transition-all text-[10px] font-normal text-slate-500 uppercase tracking-widest"
                            >
                               <Edit size={14} />
                               Editar Enlaces Drive

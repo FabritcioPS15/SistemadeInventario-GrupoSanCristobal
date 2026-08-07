@@ -125,7 +125,7 @@ export default function SystemIntegrity() {
               <Database size={24} className="text-blue-700" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Integridad del Sistema</h1>
+              <h1 className="text-2xl font-normal text-gray-900">Integridad del Sistema</h1>
               <p className="text-gray-600">Monitoreo y sincronización de datos</p>
             </div>
           </div>
@@ -145,7 +145,7 @@ export default function SystemIntegrity() {
           <div className="flex items-center gap-3">
             {getHealthIcon(systemHealth)}
             <div>
-              <h3 className="font-semibold">
+              <h3 className="font-normal">
                 Estado del Sistema: {systemHealth === 'excellent' ? 'Excelente' :
                   systemHealth === 'good' ? 'Bueno' :
                     systemHealth === 'warning' ? 'Advertencia' : 'Crítico'}
@@ -163,48 +163,48 @@ export default function SystemIntegrity() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Resumen del sistema */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumen del Sistema</h2>
+            <h2 className="text-lg font-normal text-gray-900 mb-4">Resumen del Sistema</h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-3">
                 <Package size={20} className="text-blue-600" />
                 <div>
                   <p className="text-sm text-gray-600">Activos</p>
-                  <p className="font-semibold">{report.summary.totalAssets}</p>
+                  <p className="font-normal">{report.summary.totalAssets}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <MapPin size={20} className="text-green-600" />
                 <div>
                   <p className="text-sm text-gray-600">Ubicaciones</p>
-                  <p className="font-semibold">{report.summary.totalLocations}</p>
+                  <p className="font-normal">{report.summary.totalLocations}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Users size={20} className="text-purple-600" />
                 <div>
                   <p className="text-sm text-gray-600">Usuarios</p>
-                  <p className="font-semibold">{report.summary.totalUsers}</p>
+                  <p className="font-normal">{report.summary.totalUsers}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Camera size={20} className="text-orange-600" />
                 <div>
                   <p className="text-sm text-gray-600">Cámaras</p>
-                  <p className="font-semibold">{report.summary.totalCameras}</p>
+                  <p className="font-normal">{report.summary.totalCameras}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Wrench size={20} className="text-yellow-600" />
                 <div>
                   <p className="text-sm text-gray-600">Mantenimientos</p>
-                  <p className="font-semibold">{report.summary.totalMaintenanceRecords}</p>
+                  <p className="font-normal">{report.summary.totalMaintenanceRecords}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Send size={20} className="text-red-600" />
                 <div>
                   <p className="text-sm text-gray-600">Envíos</p>
-                  <p className="font-semibold">{report.summary.totalShipments}</p>
+                  <p className="font-normal">{report.summary.totalShipments}</p>
                 </div>
               </div>
             </div>
@@ -212,7 +212,7 @@ export default function SystemIntegrity() {
 
           {/* Problemas detectados */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Problemas Detectados</h2>
+            <h2 className="text-lg font-normal text-gray-900 mb-4">Problemas Detectados</h2>
             <div className="space-y-3">
               {report.issues.assetsWithoutLocation > 0 && (
                 <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
@@ -220,7 +220,7 @@ export default function SystemIntegrity() {
                     <AlertTriangle size={18} className="text-yellow-600" />
                     <span className="text-sm">Activos sin ubicación</span>
                   </div>
-                  <span className="font-semibold text-yellow-800">{report.issues.assetsWithoutLocation}</span>
+                  <span className="font-normal text-yellow-800">{report.issues.assetsWithoutLocation}</span>
                 </div>
               )}
               {report.issues.assetsWithInconsistentStatus > 0 && (
@@ -229,7 +229,7 @@ export default function SystemIntegrity() {
                     <AlertTriangle size={18} className="text-orange-600" />
                     <span className="text-sm">Estados inconsistentes</span>
                   </div>
-                  <span className="font-semibold text-orange-800">{report.issues.assetsWithInconsistentStatus}</span>
+                  <span className="font-normal text-orange-800">{report.issues.assetsWithInconsistentStatus}</span>
                 </div>
               )}
               {report.issues.maintenanceRecordsWithoutAssets > 0 && (
@@ -238,7 +238,7 @@ export default function SystemIntegrity() {
                     <AlertTriangle size={18} className="text-red-600" />
                     <span className="text-sm">Mantenimientos huérfanos</span>
                   </div>
-                  <span className="font-semibold text-red-800">{report.issues.maintenanceRecordsWithoutAssets}</span>
+                  <span className="font-normal text-red-800">{report.issues.maintenanceRecordsWithoutAssets}</span>
                 </div>
               )}
               {report.issues.shipmentsWithoutAssets > 0 && (
@@ -247,7 +247,7 @@ export default function SystemIntegrity() {
                     <AlertTriangle size={18} className="text-red-600" />
                     <span className="text-sm">Envíos huérfanos</span>
                   </div>
-                  <span className="font-semibold text-red-800">{report.issues.shipmentsWithoutAssets}</span>
+                  <span className="font-normal text-red-800">{report.issues.shipmentsWithoutAssets}</span>
                 </div>
               )}
               {totalIssues === 0 && (
@@ -261,7 +261,7 @@ export default function SystemIntegrity() {
 
           {/* Recomendaciones */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:col-span-2">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recomendaciones</h2>
+            <h2 className="text-lg font-normal text-gray-900 mb-4">Recomendaciones</h2>
             <div className="space-y-2">
               {report.recommendations.map((recommendation, index) => (
                 <div key={index} className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg">
@@ -274,7 +274,7 @@ export default function SystemIntegrity() {
 
           {/* Acciones */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 lg:col-span-2">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones del Sistema</h2>
+            <h2 className="text-lg font-normal text-gray-900 mb-4">Acciones del Sistema</h2>
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={handleSyncAll}

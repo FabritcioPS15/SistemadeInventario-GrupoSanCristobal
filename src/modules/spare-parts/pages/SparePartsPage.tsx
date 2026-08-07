@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Plus, Edit, Trash2, Package,  X,  FileText, LayoutGrid, List as ListIcon, AlertTriangle, Search, MapPin, ChevronDown } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
@@ -392,7 +392,7 @@ export default function SpareParts() {
                   setEditingPart(undefined);
                   setShowForm(true);
                 }}
-                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+                className="flex items-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
               >
                 <Plus size={14} />
                 Agregar Repuesto
@@ -577,10 +577,10 @@ export default function SpareParts() {
                 <Package size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
                   {selectedPart.name}
                 </h2>
-                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
+                <p className="text-[9px] sm:text-[10px] font-normal text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                   <span className="line-clamp-2 sm:truncate">{selectedPart.part_number}</span>
                 </p>
               </div>
@@ -599,17 +599,17 @@ export default function SpareParts() {
               <DetailModalSection title="Información del Producto">
                 <DetailModalCard className="space-y-2.5 sm:space-y-3">
                   <DetailModalRow label="Categoría">
-                    <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
+                    <span className="text-[10px] sm:text-[11px] font-normal text-[#002855] uppercase">
                       {selectedPart.category}
                     </span>
                   </DetailModalRow>
                   <DetailModalRow label="Fabricante">
-                    <span className="text-[10px] sm:text-[11px] font-black text-slate-700 uppercase">
+                    <span className="text-[10px] sm:text-[11px] font-normal text-slate-700 uppercase">
                       {selectedPart.manufacturer || '—'}
                     </span>
                   </DetailModalRow>
                   <DetailModalRow label="Proveedor">
-                    <span className="text-[10px] sm:text-[11px] font-black text-slate-700 uppercase">
+                    <span className="text-[10px] sm:text-[11px] font-normal text-slate-700 uppercase">
                       {selectedPart.supplier || '—'}
                     </span>
                   </DetailModalRow>
@@ -617,17 +617,17 @@ export default function SpareParts() {
 
                 <DetailModalCard className="space-y-2.5 sm:space-y-3">
                   <DetailModalRow label="Stock Actual">
-                    <span className={`text-[10px] sm:text-[11px] font-black ${selectedPart.quantity <= selectedPart.min_quantity ? 'text-amber-600' : 'text-slate-700'}`}>
+                    <span className={`text-[10px] sm:text-[11px] font-normal ${selectedPart.quantity <= selectedPart.min_quantity ? 'text-amber-600' : 'text-slate-700'}`}>
                       {selectedPart.quantity} {selectedPart.unit}
                     </span>
                   </DetailModalRow>
                   <DetailModalRow label="Stock Mínimo">
-                    <span className="text-[10px] sm:text-[11px] font-black text-slate-700">
+                    <span className="text-[10px] sm:text-[11px] font-normal text-slate-700">
                       {selectedPart.min_quantity} {selectedPart.unit}
                     </span>
                   </DetailModalRow>
                   <DetailModalRow label="Precio Unitario">
-                    <span className="text-[10px] sm:text-[11px] font-mono font-black text-slate-700">
+                    <span className="text-[10px] sm:text-[11px] font-mono font-normal text-slate-700">
                       ${selectedPart.unit_price.toFixed(2)}
                     </span>
                   </DetailModalRow>
@@ -637,7 +637,7 @@ export default function SpareParts() {
               <DetailModalSection title="Ubicación">
                 <DetailModalCard>
                   <DetailModalRow label="Ubicación">
-                    <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
+                    <span className="text-[10px] sm:text-[11px] font-normal text-[#002855] uppercase">
                       {selectedPart.location || '—'}
                     </span>
                   </DetailModalRow>
@@ -659,7 +659,7 @@ export default function SpareParts() {
                   <DetailModalCard className="bg-amber-50 border-amber-100">
                     <div className="flex items-center gap-2">
                       <AlertTriangle size={14} className="text-amber-600 shrink-0" />
-                      <p className="text-[10px] sm:text-[11px] font-black text-amber-900 uppercase tracking-tight">
+                      <p className="text-[10px] sm:text-[11px] font-normal text-amber-900 uppercase tracking-tight">
                         Abastecimiento Requerido
                       </p>
                     </div>
@@ -673,14 +673,14 @@ export default function SpareParts() {
             {canEdit() && (
               <button
                 onClick={() => { setShowDetails(false); setEditingPart(selectedPart); setShowForm(true); }}
-                className="flex items-center gap-2 px-4 py-2.5 text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-500 hover:text-white transition-all uppercase tracking-widest"
+                className="flex items-center gap-2 px-4 py-2.5 text-[10px] font-normal text-amber-600 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-500 hover:text-white transition-all uppercase tracking-widest"
               >
                 <Edit size={14} /> Editar
               </button>
             )}
             <button
               onClick={() => setShowDetails(false)}
-              className="px-6 py-2.5 text-[10px] font-black text-white bg-[#002855] rounded-lg hover:bg-blue-800 transition-all uppercase tracking-widest"
+              className="px-6 py-2.5 text-[10px] font-normal text-white bg-[#002855] rounded-lg hover:bg-blue-800 transition-all uppercase tracking-widest"
             >
               Cerrar
             </button>

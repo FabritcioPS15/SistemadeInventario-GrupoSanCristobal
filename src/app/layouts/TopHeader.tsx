@@ -768,7 +768,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                     <div className="w-2 h-2 bg-green-400 rounded-full" />
 
-                                    <span className="text-[12px] font-black tracking-widest">Sistema GSC</span>
+                                    <span className="text-[12px] font-semibold tracking-widest">Sistema GSC</span>
 
                                 </button>
 
@@ -786,7 +786,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                             className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-md shadow-sm hover:bg-blue-200 transition-all"
                                             title="Navegar a Tickets">
                                             <Ticket size={14} />
-                                            <span className="text-[12px] font-black tracking-widest">Tickets</span>
+                                            <span className="text-[12px] font-semibold tracking-widest">Tickets</span>
                                         </button>
                                     </div>
                                     <ChevronRight size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
@@ -811,7 +811,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                                 onClick={() => navigate(`/${pathnames[0]}`)}
 
-                                                className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-black text-slate-700 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
+                                                className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold text-slate-700 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
 
                                                 title={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
 
@@ -829,7 +829,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                                 onClick={() => navigate(`/${pathnames[0]}`)}
 
-                                                className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold text-slate-500 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
 
                                                 title={`Navegar a ${ROUTE_LABELS[pathnames[0].toLowerCase()] || pathnames[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`}
 
@@ -875,7 +875,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                                                 onClick={() => navigate(fullPath)}
 
-                                                                className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-black text-slate-700 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[180px] sm:max-w-[250px]"
+                                                                className="flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold text-slate-700 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[180px] sm:max-w-[250px]"
 
                                                                 title={`Navegar a ${label}`}
 
@@ -897,7 +897,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                                                                     onClick={() => navigate(fullPath)}
 
-                                                                    className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-black text-slate-500 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[100px] sm:max-w-[150px] group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                                                                    className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold text-slate-500 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all truncate max-w-[100px] sm:max-w-[150px] group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
 
                                                                     title={`Navegar a ${label}`}
 
@@ -930,7 +930,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                 /* Dashboard como módulo actual cuando no hay pathnames */
                                 <button
                                     onClick={() => navigate('/')}
-                                    className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-black text-slate-700 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
+                                    className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-slate-700 tracking-widest hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
                                     title="Navegar al Dashboard"
                                 >
                                     <span>Dashboard</span>
@@ -956,7 +956,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
 
                             onClick={() => setShowActions(v => !v)}
 
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'}`}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-semibold tracking-widest transition-all ${showActions ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'}`}
 
                         >
 

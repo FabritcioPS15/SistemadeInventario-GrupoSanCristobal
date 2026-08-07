@@ -525,43 +525,43 @@ export default function Tickets() {
                         <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-4">
                             <div className="bg-white border border-slate-200 rounded-none shadow-sm p-6 lg:p-8 relative">
                                 <div className="absolute -top-3 -left-3">
-                                    <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+                                    <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-semibold uppercase tracking-tight shadow-xl">
                                         REPORTES DE TICKETS
                                     </div>
                                 </div>
                                 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
                                     <div className="flex flex-col p-6 bg-slate-50 border border-slate-200 rounded-none">
-                                        <div className="text-[12px] font-black text-[#002855] tracking-[0.2em] mb-2">Total Tickets</div>
-                                        <div className="text-3xl font-black text-[#002855]">{metricsData.total}</div>
+                                        <div className="text-[12px] font-semibold text-[#002855] tracking-[0.2em] mb-2">Total Tickets</div>
+                                        <div className="text-3xl font-semibold text-[#002855]">{metricsData.total}</div>
                                     </div>
                                     <div className="flex flex-col p-6 bg-emerald-50/50 border border-emerald-100 rounded-none">
-                                        <div className="text-[10px] font-black text-emerald-600/70 uppercase tracking-widest mb-2">Resueltos</div>
-                                        <div className="text-3xl font-black text-emerald-600">{metricsData.resolved}</div>
+                                        <div className="text-[10px] font-semibold text-emerald-600/70 uppercase tracking-widest mb-2">Resueltos</div>
+                                        <div className="text-3xl font-semibold text-emerald-600">{metricsData.resolved}</div>
                                     </div>
                                     <div className="flex flex-col p-6 bg-amber-50/50 border border-amber-100 rounded-none">
-                                        <div className="text-[10px] font-black text-amber-600/70 uppercase tracking-widest mb-2">Activos</div>
-                                        <div className="text-3xl font-black text-amber-600">{metricsData.activeTickets}</div>
+                                        <div className="text-[10px] font-semibold text-amber-600/70 uppercase tracking-widest mb-2">Activos</div>
+                                        <div className="text-3xl font-semibold text-amber-600">{metricsData.activeTickets}</div>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                     <div className="space-y-2">
-                                        <label className="text-[12px] font-black text-[#002855] tracking-[0.2em] px-2">Fecha Inicio</label>
+                                        <label className="text-[12px] font-semibold text-[#002855] tracking-[0.2em] px-2">Fecha Inicio</label>
                                         <input 
                                             type="date" 
                                             value={startDate}
                                             onChange={(e) => setStartDate(e.target.value)}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-black text-[#002855] focus:outline-none focus:border-[#002855]/30 transition-all"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-semibold text-[#002855] focus:outline-none focus:border-[#002855]/30 transition-all"
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[12px] font-black text-[#002855] tracking-[0.2em] px-2">Fecha Fin</label>
+                                        <label className="text-[12px] font-semibold text-[#002855] tracking-[0.2em] px-2">Fecha Fin</label>
                                         <input 
                                             type="date" 
                                             value={endDate}
                                             onChange={(e) => setEndDate(e.target.value)}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-black text-[#002855] focus:outline-none focus:border-[#002855]/30 transition-all"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-semibold text-[#002855] focus:outline-none focus:border-[#002855]/30 transition-all"
                                         />
                                     </div>
                                 </div>
@@ -569,21 +569,21 @@ export default function Tickets() {
                                 <div className="flex flex-col sm:flex-row gap-4">
                                     <button
                                         onClick={() => navigate('/tickets/history')}
-                                        className="flex-1 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm flex items-center justify-center gap-2"
+                                        className="flex-1 px-4 py-3 bg-[#002855] text-white text-[10px] font-semibold uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm flex items-center justify-center gap-2"
                                     >
                                         <History size={16} />
                                         Ver Historial Diario
                                     </button>
                                     <button
                                         onClick={generatePDF}
-                                        className="flex-1 sm:flex-none px-4 py-3 bg-white border border-slate-200 text-rose-600 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 hover:border-rose-200 transition-all shadow-sm flex items-center justify-center"
+                                        className="flex-1 sm:flex-none px-4 py-3 bg-white border border-slate-200 text-rose-600 text-[10px] font-semibold uppercase tracking-widest hover:bg-rose-50 hover:border-rose-200 transition-all shadow-sm flex items-center justify-center"
                                         title="Exportar a PDF"
                                     >
                                         <FaFilePdf size={16} className="mr-2" /> PDF
                                     </button>
                                     <button
                                         onClick={generateExcel}
-                                        className="flex-1 sm:flex-none px-4 py-3 bg-white border border-slate-200 text-emerald-600 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-50 hover:border-emerald-200 transition-all shadow-sm flex items-center justify-center"
+                                        className="flex-1 sm:flex-none px-4 py-3 bg-white border border-slate-200 text-emerald-600 text-[10px] font-semibold uppercase tracking-widest hover:bg-emerald-50 hover:border-emerald-200 transition-all shadow-sm flex items-center justify-center"
                                         title="Exportar a Excel"
                                     >
                                         <RiFileExcel2Fill size={16} className="mr-2" /> EXCEL
@@ -598,7 +598,7 @@ export default function Tickets() {
                             {/* Tabla: Mis solicitudes creadas */}
                             <div className="bg-white border border-slate-200 rounded-none shadow-sm flex flex-col p-4 relative pt-10">
                                 <div className="absolute -top-3 -left-3">
-                                    <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+                                    <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-semibold uppercase tracking-tight shadow-xl">
                                         SOLICITUDES CREADAS ({filteredTickets.myCreated.length})
                                     </div>
                                 </div>
@@ -606,69 +606,101 @@ export default function Tickets() {
                                     {filteredTickets.myCreated.length === 0 ? (
                                         <div className="py-16 flex flex-col items-center justify-center gap-3 bg-slate-50/50 border border-dashed border-slate-200">
                                             <CheckCircle2 size={32} className="text-slate-300" />
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sin solicitudes creadas</p>
+                                            <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Sin solicitudes creadas</p>
                                         </div>
                                     ) : (
-                                        <div className="overflow-x-auto">
-                                            <Table>
-                                                <TableHeader>
-                                                    <tr>
-                                                        <TableHead>ID</TableHead>
-                                                        <TableHead>Incidente</TableHead>
-                                                        <TableHead>Estado</TableHead>
-                                                        <TableHead>Atendido por</TableHead>
-                                                        <TableHead>Prioridad</TableHead>
-                                                        <TableHead>Fecha</TableHead>
-                                                    </tr>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {filteredTickets.myCreated.map(t => {
-                                                        const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
-                                                        return (
-                                                            <TableRow key={t.id} onClick={() => navigate(`/ticket/${t.id}`)}>
-                                                                <TableCell>
-                                                                    <span className="text-[12px] font-black text-[#002855] group-hover/row:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-[13px] font-black text-slate-700 uppercase leading-tight line-clamp-1">{t.title}</span>
-                                                                        <span className="text-[12px] font-bold text-slate-700 leading-tight mt-1">{t.locations?.name || 'Central'}</span>
-                                                                    </div>
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
-                                                                        t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
-                                                                            t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
-                                                                                'text-slate-600 bg-slate-100 border-slate-200'
-                                                                    }`}>
-                                                                        <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                                                                        {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
-                                                                    </span>
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    {t.attendant ? (
+                                        <>
+                                            {/* Mobile cards */}
+                                            <div className="block md:hidden space-y-3">
+                                                {filteredTickets.myCreated.map(t => {
+                                                    const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
+                                                    return (
+                                                        <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="text-[10px] font-semibold text-[#002855] uppercase">#TK-{t.id.slice(0, 6)}</span>
+                                                                <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider border ${prio.color} rounded-none`}>
+                                                                    {prio.label}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[12px] font-semibold text-slate-700 uppercase leading-tight mb-2 line-clamp-2">{t.title}</p>
+                                                            <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-2">
+                                                                <span className="truncate">{t.locations?.name || 'Central'}</span>
+                                                                <span className="text-slate-300">•</span>
+                                                                <span>{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between">
+                                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold tracking-wider border rounded-none ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' : t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' : t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
+                                                                    <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                                                    {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
+                                                                </span>
+                                                                <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[140px]">{t.attendant?.full_name || 'Sin asignar'}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            {/* Desktop table */}
+                                            <div className="hidden md:block overflow-x-auto">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <tr>
+                                                            <TableHead>ID</TableHead>
+                                                            <TableHead>Incidente</TableHead>
+                                                            <TableHead>Estado</TableHead>
+                                                            <TableHead>Atendido por</TableHead>
+                                                            <TableHead>Prioridad</TableHead>
+                                                            <TableHead>Fecha</TableHead>
+                                                        </tr>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {filteredTickets.myCreated.map(t => {
+                                                            const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
+                                                            return (
+                                                                <TableRow key={t.id} onClick={() => navigate(`/ticket/${t.id}`)}>
+                                                                    <TableCell>
+                                                                        <span className="text-[12px] font-semibold text-[#002855] group-hover/row:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
+                                                                    </TableCell>
+                                                                    <TableCell>
                                                                         <div className="flex flex-col">
-                                                                            <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{t.attendant.full_name}</span>
+                                                                            <span className="text-[13px] font-semibold text-slate-700 uppercase leading-tight line-clamp-1">{t.title}</span>
+                                                                            <span className="text-[12px] font-semibold text-slate-700 leading-tight mt-1">{t.locations?.name || 'Central'}</span>
                                                                         </div>
-                                                                    ) : <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sin asignar</span>}
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
-                                                                        <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
-                                                                        {prio.label}
-                                                                    </span>
-                                                                </TableCell>
-                                                                <TableCell>
-                                                                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                                                                        {new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                                                    </span>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        );
-                                                    })}
-                                                </TableBody>
-                                            </Table>
-                                        </div>
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
+                                                                            t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
+                                                                                t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
+                                                                                    'text-slate-600 bg-slate-100 border-slate-200'
+                                                                        }`}>
+                                                                            <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                                                            {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
+                                                                        </span>
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {t.attendant ? (
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest">{t.attendant.full_name}</span>
+                                                                            </div>
+                                                                        ) : <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Sin asignar</span>}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
+                                                                            <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
+                                                                            {prio.label}
+                                                                        </span>
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest">
+                                                                            {new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                                        </span>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            );
+                                                        })}
+                                                    </TableBody>
+                                                </Table>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             </div>
@@ -677,12 +709,42 @@ export default function Tickets() {
                             {filteredTickets.myAttended.length > 0 && (
                                 <div className="bg-white border border-slate-200 rounded-none shadow-sm flex flex-col p-4 relative pt-10">
                                     <div className="absolute -top-3 -left-3">
-                                        <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+                                        <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-semibold uppercase tracking-tight shadow-xl">
                                             TICKETS QUE ATIENDO ({filteredTickets.myAttended.length})
                                         </div>
                                     </div>
                                     <div className="overflow-hidden">
-                                        <div className="overflow-x-auto">
+                                        {/* Mobile cards */}
+                                        <div className="block md:hidden space-y-3">
+                                            {filteredTickets.myAttended.map(t => {
+                                                const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
+                                                return (
+                                                    <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-[10px] font-semibold text-[#002855] uppercase">#TK-{t.id.slice(0, 6)}</span>
+                                                            <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider border ${prio.color} rounded-none`}>
+                                                                {prio.label}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[12px] font-semibold text-slate-700 uppercase leading-tight mb-2 line-clamp-2">{t.title}</p>
+                                                        <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-2">
+                                                            <span className="truncate">{t.locations?.name || 'Central'}</span>
+                                                            <span className="text-slate-300">•</span>
+                                                            <span>{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold tracking-wider border rounded-none ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' : t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' : t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                                                {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
+                                                            </span>
+                                                            <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[140px]">{t.requester?.full_name || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        {/* Desktop table */}
+                                        <div className="hidden md:block overflow-x-auto">
                                             <Table>
                                                 <TableHeader>
                                                     <tr>
@@ -700,16 +762,16 @@ export default function Tickets() {
                                                         return (
                                                             <TableRow key={t.id} onClick={() => navigate(`/ticket/${t.id}`)}>
                                                                 <TableCell>
-                                                                    <span className="text-[12px] font-black text-[#002855] group-hover/row:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
+                                                                    <span className="text-[12px] font-semibold text-[#002855] group-hover/row:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     <div className="flex flex-col">
-                                                                        <span className="text-[13px] font-black text-slate-700 uppercase leading-tight line-clamp-1">{t.title}</span>
-                                                                        <span className="text-[12px] font-bold text-slate-700 leading-tight mt-1">{t.locations?.name || 'Central'}</span>
+                                                                        <span className="text-[13px] font-semibold text-slate-700 uppercase leading-tight line-clamp-1">{t.title}</span>
+                                                                        <span className="text-[12px] font-semibold text-slate-700 leading-tight mt-1">{t.locations?.name || 'Central'}</span>
                                                                     </div>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
+                                                                    <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
                                                                         t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
                                                                             t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
                                                                                 'text-slate-600 bg-slate-100 border-slate-200'
@@ -719,16 +781,16 @@ export default function Tickets() {
                                                                     </span>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{t.requester?.full_name}</span>
+                                                                    <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest">{t.requester?.full_name}</span>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
+                                                                    <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
                                                                         {prio.label}
                                                                     </span>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+                                                                    <span className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest">
                                                                         {new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                                     </span>
                                                                 </TableCell>
@@ -758,8 +820,8 @@ export default function Tickets() {
                                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 pr-2">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-orange-500" />
-                                                <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">En Espera</h3>
-                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-black">{filteredTickets.pending.length}</span>
+                                                <h3 className="text-[11px] font-semibold text-[#002855] uppercase tracking-[0.2em]">En Espera</h3>
+                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-semibold">{filteredTickets.pending.length}</span>
                                             </div>
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
@@ -771,37 +833,37 @@ export default function Tickets() {
                                                     className="bg-white p-4 sm:p-5 rounded-none border border-slate-200 hover:border-[#002855] shadow-sm transition-all cursor-pointer group hover:shadow-md active:shadow-inner active:cursor-grabbing"
                                                 >
                                                     <div className="flex justify-between items-start mb-2">
-                                                        <span className="text-[8px] sm:text-[9px] font-black text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
-                                                        <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                        <span className="text-[8px] sm:text-[9px] font-semibold text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
+                                                        <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-semibold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
                                                             {PRIORITY_STYLES[t.priority]?.label || 'P4'}
                                                         </span>
                                                     </div>
-                                                    <h4 className="text-xs sm:text-sm font-black text-[#002855] leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
+                                                    <h4 className="text-xs sm:text-sm font-semibold text-[#002855] leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
                                                     <div className="mb-2">
                                                         <SLATimer createdAt={t.created_at} priority={(t.priority as TicketPriority) || 'medium'} />
                                                     </div>
                                                     <div className="space-y-2 sm:space-y-3">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-orange-600 border border-orange-100 uppercase shadow-inner">
+                                                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-orange-600 border border-orange-100 uppercase shadow-inner">
                                                                 {t.requester?.avatar_url ? (
                                                                     <img src={t.requester.avatar_url} alt="" className="w-full h-full object-cover" />
                                                                 ) : t.requester?.full_name?.charAt(0)}
                                                             </div>
                                                             <div className="flex-1">
-                                                                <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Solicitante</p>
-                                                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.requester?.full_name}</p>
+                                                                <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Solicitante</p>
+                                                                <p className="text-[9px] sm:text-[10px] font-semibold text-slate-700">{t.requester?.full_name}</p>
                                                             </div>
                                                         </div>
                                                         {t.attendant && (
                                                             <div className="flex items-center gap-2">
-                                                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-blue-50 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-blue-600 border border-blue-100 uppercase shadow-inner">
+                                                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-blue-50 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-blue-600 border border-blue-100 uppercase shadow-inner">
                                                                     {t.attendant?.avatar_url ? (
                                                                         <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
                                                                 ) : t.attendant?.full_name?.charAt(0)}
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                    <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Atendido por</p>
-                                                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.attendant?.full_name}</p>
+                                                                    <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Atendido por</p>
+                                                                    <p className="text-[9px] sm:text-[10px] font-semibold text-slate-700">{t.attendant?.full_name}</p>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -821,8 +883,8 @@ export default function Tickets() {
                                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 pr-2">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-blue-500" />
-                                                <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">En Proceso</h3>
-                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-black">{filteredTickets.inProgress.length}</span>
+                                                <h3 className="text-[11px] font-semibold text-[#002855] uppercase tracking-[0.2em]">En Proceso</h3>
+                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-semibold">{filteredTickets.inProgress.length}</span>
                                             </div>
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
@@ -834,40 +896,40 @@ export default function Tickets() {
                                                     className="bg-white p-4 sm:p-5 rounded-none border border-slate-200 hover:border-[#002855] shadow-sm transition-all cursor-pointer group hover:shadow-md"
                                                 >
                                                     <div className="flex justify-between items-start mb-2">
-                                                        <span className="text-[8px] sm:text-[9px] font-black text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
+                                                        <span className="text-[8px] sm:text-[9px] font-semibold text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                            <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-semibold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
                                                                 {PRIORITY_STYLES[t.priority]?.label || 'P4'}
                                                             </span>
                                                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                                         </div>
                                                     </div>
-                                                    <h4 className="text-xs sm:text-sm font-black text-[#002855] leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
+                                                    <h4 className="text-xs sm:text-sm font-semibold text-[#002855] leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2 uppercase">{t.title}</h4>
                                                     <div className="mb-2">
                                                         <SLATimer createdAt={t.created_at} priority={(t.priority as TicketPriority) || 'medium'} />
                                                     </div>
                                                     <div className="space-y-2 sm:space-y-3">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-orange-600 border border-orange-100 uppercase shadow-inner">
+                                                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-orange-600 border border-orange-100 uppercase shadow-inner">
                                                                 {t.requester?.avatar_url ? (
                                                                     <img src={t.requester.avatar_url} alt="" className="w-full h-full object-cover" />
                                                                 ) : t.requester?.full_name?.charAt(0)}
                                                             </div>
                                                             <div className="flex-1">
-                                                                <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Solicitante</p>
-                                                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.requester?.full_name}</p>
+                                                                <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Solicitante</p>
+                                                                <p className="text-[9px] sm:text-[10px] font-semibold text-slate-700">{t.requester?.full_name}</p>
                                                             </div>
                                                         </div>
                                                         {t.attendant && (
                                                             <div className="flex items-center gap-2">
-                                                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-blue-50 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-blue-600 border border-blue-100 uppercase shadow-inner">
+                                                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-blue-50 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-blue-600 border border-blue-100 uppercase shadow-inner">
                                                                     {t.attendant?.avatar_url ? (
                                                                         <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
                                                                     ) : t.attendant?.full_name?.charAt(0)}
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                    <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Atendido por</p>
-                                                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.attendant?.full_name}</p>
+                                                                    <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Atendido por</p>
+                                                                    <p className="text-[9px] sm:text-[10px] font-semibold text-slate-700">{t.attendant?.full_name}</p>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -887,8 +949,8 @@ export default function Tickets() {
                                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 pr-2">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-emerald-500" />
-                                                <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Finalizados</h3>
-                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-black">{filteredTickets.resolved.length}</span>
+                                                <h3 className="text-[11px] font-semibold text-[#002855] uppercase tracking-[0.2em]">Finalizados</h3>
+                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-semibold">{filteredTickets.resolved.length}</span>
                                             </div>
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
@@ -900,37 +962,37 @@ export default function Tickets() {
                                                     className="bg-emerald-50/30 p-4 sm:p-5 rounded-none border border-emerald-200 hover:border-[#002855] shadow-sm transition-all cursor-pointer group hover:shadow-md"
                                                 >
                                                     <div className="flex justify-between items-start mb-2">
-                                                        <span className="text-[8px] sm:text-[9px] font-black text-emerald-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
-                                                        <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                        <span className="text-[8px] sm:text-[9px] font-semibold text-emerald-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
+                                                        <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-semibold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
                                                             {PRIORITY_STYLES[t.priority]?.label || 'P4'}
                                                         </span>
                                                     </div>
-                                                    <h4 className="text-xs sm:text-sm font-black text-emerald-900 leading-tight mb-2 line-clamp-2 uppercase">{t.title}</h4>
+                                                    <h4 className="text-xs sm:text-sm font-semibold text-emerald-900 leading-tight mb-2 line-clamp-2 uppercase">{t.title}</h4>
                                                     <div className="mb-2">
                                                         <SLATimer createdAt={t.created_at} priority={(t.priority as TicketPriority) || 'medium'} />
                                                     </div>
                                                     <div className="space-y-2 sm:space-y-3">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-orange-600 border border-orange-100 uppercase shadow-inner">
+                                                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-orange-600 border border-orange-100 uppercase shadow-inner">
                                                                 {t.requester?.avatar_url ? (
                                                                     <img src={t.requester.avatar_url} alt="" className="w-full h-full object-cover" />
                                                                 ) : t.requester?.full_name?.charAt(0)}
                                                             </div>
                                                             <div className="flex-1">
-                                                                <p className="text-[8px] sm:text-[9px] font-black text-emerald-600 uppercase tracking-tight">Solicitante</p>
-                                                                 <p className="text-[9px] sm:text-[10px] font-bold text-emerald-800">{t.requester?.full_name}</p>
+                                                                <p className="text-[8px] sm:text-[9px] font-semibold text-emerald-600 uppercase tracking-tight">Solicitante</p>
+                                                                 <p className="text-[9px] sm:text-[10px] font-semibold text-emerald-800">{t.requester?.full_name}</p>
                                                             </div>
                                                         </div>
                                                         {t.attendant && (
                                                             <div className="flex items-center gap-2">
-                                                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-emerald-100 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-emerald-700 border border-emerald-200 uppercase shadow-inner">
+                                                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-emerald-100 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-emerald-700 border border-emerald-200 uppercase shadow-inner">
                                                                     {t.attendant?.avatar_url ? (
                                                                         <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
                                                                     ) : t.attendant?.full_name?.charAt(0)}
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                     <p className="text-[8px] sm:text-[9px] font-black text-emerald-600 uppercase tracking-tight">Atendido por</p>
-                                                                     <p className="text-[9px] sm:text-[10px] font-bold text-emerald-800">{t.attendant?.full_name}</p>
+                                                                     <p className="text-[8px] sm:text-[9px] font-semibold text-emerald-600 uppercase tracking-tight">Atendido por</p>
+                                                                     <p className="text-[9px] sm:text-[10px] font-semibold text-emerald-800">{t.attendant?.full_name}</p>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -950,8 +1012,8 @@ export default function Tickets() {
                                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200 pr-2">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-slate-400" />
-                                                <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Cerrados</h3>
-                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-black">{filteredTickets.closed.length}</span>
+                                                <h3 className="text-[11px] font-semibold text-[#002855] uppercase tracking-[0.2em]">Cerrados</h3>
+                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-semibold">{filteredTickets.closed.length}</span>
                                             </div>
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
@@ -990,41 +1052,41 @@ export default function Tickets() {
                                                 return (
                                                 <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-slate-50/30 p-4 sm:p-5 rounded-none border border-slate-200 hover:border-slate-400 shadow-sm transition-all cursor-pointer group">
                                                     <div className="flex justify-between items-start mb-2">
-                                                        <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
-                                                        <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-bold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                        <span className="text-[8px] sm:text-[9px] font-semibold text-slate-400 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
+                                                        <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-semibold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
                                                             {PRIORITY_STYLES[t.priority]?.label || 'P4'}
                                                         </span>
                                                     </div>
-                                                    <h4 className="text-xs sm:text-sm font-black text-slate-700 leading-tight mb-3 sm:mb-4 line-clamp-2 uppercase">{t.title}</h4>
+                                                    <h4 className="text-xs sm:text-sm font-semibold text-slate-700 leading-tight mb-3 sm:mb-4 line-clamp-2 uppercase">{t.title}</h4>
                                                     <div className="space-y-2 sm:space-y-3">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-orange-600 border border-orange-100 uppercase shadow-inner">
+                                                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-orange-600 border border-orange-100 uppercase shadow-inner">
                                                                 {t.requester?.avatar_url ? (
                                                                     <img src={t.requester.avatar_url} alt="" className="w-full h-full object-cover" />
                                                                 ) : t.requester?.full_name?.charAt(0)}
                                                             </div>
                                                             <div className="flex-1">
-                                                                <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Solicitante</p>
-                                                                <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.requester?.full_name}</p>
+                                                                <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Solicitante</p>
+                                                                <p className="text-[9px] sm:text-[10px] font-semibold text-slate-700">{t.requester?.full_name}</p>
                                                             </div>
                                                         </div>
                                                         {t.attendant && (
                                                             <div className="flex items-center gap-2">
-                                                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-slate-200 flex items-center justify-center text-[8px] sm:text-[9px] font-black text-slate-600 border border-slate-300 uppercase shadow-inner">
+                                                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-slate-200 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-slate-600 border border-slate-300 uppercase shadow-inner">
                                                                     {t.attendant?.avatar_url ? (
                                                                         <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
                                                                     ) : t.attendant?.full_name?.charAt(0)}
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                    <p className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Atendido por</p>
-                                                                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-700">{t.attendant?.full_name}</p>
+                                                                    <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Atendido por</p>
+                                                                    <p className="text-[9px] sm:text-[10px] font-semibold text-slate-700">{t.attendant?.full_name}</p>
                                                                 </div>
                                                             </div>
                                                         )}
                                                         <div className="border-t border-slate-200 pt-2 sm:pt-3 space-y-1 sm:space-y-2">
                                                             <div className="flex justify-between items-center">
-                                                                <span className="text-[8px] sm:text-[9px] font-black text-slate-500 uppercase tracking-tight">Creado:</span>
-                                                                <span className="text-[8px] sm:text-[9px] font-bold text-slate-600">
+                                                                <span className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Creado:</span>
+                                                                <span className="text-[8px] sm:text-[9px] font-semibold text-slate-600">
                                                                     {createdDate && !isNaN(createdDate.getTime()) 
                                                                         ? createdDate.toLocaleString('es-PE', { 
                                                                             day: '2-digit', 
@@ -1050,13 +1112,13 @@ export default function Tickets() {
                             <div className="px-4 sm:px-8 pb-32 mt-10 max-w-[1800px] mx-auto w-full">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 px-4 gap-4">
                                     <div>
-                                        <h2 className="text-lg sm:text-xl font-black text-[#002855]">Historial de tickets</h2>
+                                        <h2 className="text-lg sm:text-xl font-semibold text-[#002855]">Historial de tickets</h2>
                                         <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">Reporte detallado de las últimas interacciones</p>
                                     </div>
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => navigate('/tickets/history')}
-                                            className="px-4 sm:px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-[#002855] hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                                            className="px-4 sm:px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-[9px] sm:text-[10px] font-semibold uppercase tracking-widest text-[#002855] hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
                                         >
                                             Historial de tickets
                                             <ArrowRight size={14} />
@@ -1066,12 +1128,42 @@ export default function Tickets() {
 
                                 <div className="bg-white border border-slate-200 rounded-none shadow-sm flex flex-col p-4 relative pt-10">
                                     <div className="absolute -top-3 -left-3">
-                                        <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+                                        <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-semibold uppercase tracking-tight shadow-xl">
                                             ÚLTIMAS INTERACCIONES ({filteredTickets.recent.length})
                                         </div>
                                     </div>
                                     <div className="overflow-hidden">
-                                        <div className="overflow-x-auto">
+                                        {/* Mobile cards */}
+                                        <div className="block md:hidden space-y-3">
+                                            {filteredTickets.recent.map(t => {
+                                                const prio = PRIORITY_STYLES[t.priority] || PRIORITY_STYLES.medium;
+                                                return (
+                                                    <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-[10px] font-semibold text-[#002855] uppercase">#TK-{t.id.slice(0, 6)}</span>
+                                                            <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider border ${prio.color} rounded-none`}>
+                                                                {prio.label}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[12px] font-semibold text-slate-700 uppercase leading-tight mb-2 line-clamp-2">{t.title}</p>
+                                                        <div className="flex items-center gap-2 text-[10px] text-slate-500 mb-2">
+                                                            <span className="truncate">{t.locations?.name || 'Central'}</span>
+                                                            <span className="text-slate-300">•</span>
+                                                            <span>{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold tracking-wider border rounded-none ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' : t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' : t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+                                                                {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
+                                                            </span>
+                                                            <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[140px]">{t.requester?.full_name || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        {/* Desktop table */}
+                                        <div className="hidden md:block overflow-x-auto">
                                             <Table>
                                                 <TableHeader>
                                                     <tr>
@@ -1088,16 +1180,16 @@ export default function Tickets() {
                                                         return (
                                                             <TableRow key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="cursor-pointer">
                                                                 <TableCell>
-                                                                    <span className="text-[12px] font-black text-[#002855] group-hover/row:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
+                                                                    <span className="text-[12px] font-semibold text-[#002855] group-hover/row:text-blue-600 transition-colors uppercase">#TK-{t.id.slice(0, 6)}</span>
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     <div className="flex flex-col">
-                                                                        <span className="text-[13px] font-black text-slate-700 uppercase leading-tight line-clamp-1">{t.title}</span>
+                                                                        <span className="text-[13px] font-semibold text-slate-700 uppercase leading-tight line-clamp-1">{t.title}</span>
                                                                         <span className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString()}</span>
                                                                     </div>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
+                                                                    <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
                                                                         t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
                                                                             t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
                                                                                 'text-slate-600 bg-slate-100 border-slate-200'
@@ -1108,12 +1200,12 @@ export default function Tickets() {
                                                                 </TableCell>
                                                                 <TableCell>
                                                                     <div className="flex flex-col">
-                                                                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-widest">{t.requester?.full_name}</span>
-                                                                        <span className="text-[10px] font-bold text-slate-700 leading-tight truncate">{t.locations?.name || 'Central'}</span>
+                                                                        <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest">{t.requester?.full_name}</span>
+                                                                        <span className="text-[10px] font-semibold text-slate-700 leading-tight truncate">{t.locations?.name || 'Central'}</span>
                                                                     </div>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <span className={`px-2 py-1 text-[10px] font-black tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
+                                                                    <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
                                                                         {prio.label}
                                                                     </span>

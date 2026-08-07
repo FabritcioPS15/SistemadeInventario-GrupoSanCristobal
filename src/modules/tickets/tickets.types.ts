@@ -1,8 +1,8 @@
 // Niveles de prioridad de los tickets
-// critical: P1 - Problemas críticos que afectan operaciones vitales (4h SLA)
-// high: P2 - Problemas importantes que afectan funcionalidad principal (8h SLA)
-// medium: P3 - Problemas moderados con workaround disponible (24h SLA)
-// low: P4 - Problemas menores sin impacto inmediato (72h SLA)
+// critical: P1 - Problemas críticos que afectan operaciones vitales
+// high: P2 - Problemas importantes que afectan funcionalidad principal
+// medium: P3 - Problemas moderados con workaround disponible 
+// low: P4 - Problemas menores sin impacto inmediato 
 export type TicketPriority = 'critical' | 'high' | 'medium' | 'low';
 // Estados del ciclo de vida de un ticket
 // open: Pendiente - Ticket creado y esperando atención

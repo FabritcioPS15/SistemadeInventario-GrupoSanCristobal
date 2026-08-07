@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Edit, Trash2, MapPin, Upload, Package, Layers, LayoutGrid, List, BarChart3, FileSpreadsheet, Circle, Plus } from 'lucide-react';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import { supabase, AssetWithDetails } from '../../../shared/services/supabase';
@@ -10,9 +10,11 @@ import ExcelImportModal from '../../../shared/components/ExcelImportModal';
 import { generateAndDownloadTemplate } from '../../../shared/utils/excelTemplate';
 import Pagination from '../../../shared/components/ui/Pagination';
 import { useAuth } from '../../../app/providers/AuthContext';
+import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
+import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import SearchBar from '../../../shared/components/ui/SearchBar';
 import { useInventory } from '../hooks/useInventory';
-import { STATUS_MAP, PATH_CATEGORY_MAP, SUBCATEGORY_SLUG_MAP } from '../constants/inventory.constants';
+import { PATH_CATEGORY_MAP, SUBCATEGORY_SLUG_MAP, STATUS_MAP } from '../constants/inventory.constants';
 import InventoryDashboard from '../components/InventoryDashboard';
 import { InventoryFilter } from '../../../shared/types/inventory.types';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
@@ -45,8 +47,15 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   const [editingAsset, setEditingAsset] = useState<AssetWithDetails | undefined>();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectingAll, setSelectingAll] = useState(false);
+  const { selectionMode, setSelectionMode } = useSelectionMode();
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [showDashboard, setShowDashboard] = useState(false);
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) setSelectedIds(new Set());
+    setSelectionMode(!selectionMode);
+  };
 
   // Determinar los filtros de empresa/sede según el rol y accesos del usuario
   const multiEnterpriseFilters: InventoryFilter = (() => {
@@ -85,6 +94,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     setItemsPerPage,
     refresh,
     handleSort,
+    fetchAllFilteredIds,
   } = useInventory({ categoryFilter, subcategoryFilter });
 
   // Listen to TopHeader action events
@@ -154,10 +164,30 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     setShowDecoupleModal(true);
   };
 
+  // FIX: esta función se usaba en el checkbox "seleccionar todo" de la tabla
+  // de escritorio pero nunca estaba definida. Ahora marca TODOS los items que
+  // coinciden con los filtros actuales (no solo los de la página visible).
+  const handleSelectAll = async () => {
+    if (selectingAll) return;
+    const allSelected = totalCount > 0 && selectedIds.size === totalCount;
+    if (allSelected) {
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectingAll(true);
+    try {
+      const ids = await fetchAllFilteredIds();
+      setSelectedIds(new Set(ids));
+    } catch {
+      notifyError('Error al seleccionar todos los items');
+    } finally {
+      setSelectingAll(false);
+    }
+  };
 
   const handleExportExcel = async () => {
     try {
-      const itemsToExport = selectedIds.size > 0 
+      const itemsToExport = selectedIds.size > 0
         ? inventory.filter((a: any) => selectedIds.has(a.id))
         : inventory;
 
@@ -200,7 +230,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   };
 
   const handleExportPdf = () => {
-    const itemsToExport = selectedIds.size > 0 
+    const itemsToExport = selectedIds.size > 0
       ? inventory.filter((a: any) => selectedIds.has(a.id))
       : inventory;
 
@@ -228,19 +258,15 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     });
   };
 
-  // Map moved to top of file
-
-
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
-
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">
         <ActionToolbar
           totalItems={totalCount}
           label="Activos"
           searchComponent={
             <SearchBar
-              placeholder="BUSCAR POR CÓDIGO, NOMBRE, MARCA, SERIE O MODELO..."
+              placeholder="Buscar por código, nombre, marca, serie o modelo..."
               value={searchTerm}
               onChange={(value) => { setSearchTerm(value); setCurrentPage(1); }}
             />
@@ -248,13 +274,13 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', multiple: true, options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              { key: 'location', placeholder: 'Todas las ubicaciones', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', multiple: true, options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
               {
-                key: 'status', placeholder: 'TODOS LOS ESTADOS', icon: Circle, iconClassName: 'text-emerald-500', wrapperClassName: 'md:min-w-[170px]', options: [
-                  { value: 'Operativo', label: 'OPERATIVO' },
-                  { value: 'Inoperativo', label: 'INOPERATIVO' },
-                  { value: 'En Reparación', label: 'EN REPARACIÓN' },
-                  { value: 'Baja', label: 'DE BAJA' },
+                key: 'status', placeholder: 'Todos los estados', icon: Circle, iconClassName: 'text-emerald-500', wrapperClassName: 'md:min-w-[170px]', options: [
+                  { value: 'Operativo', label: 'Operativo' },
+                  { value: 'Inoperativo', label: 'Inoperativo' },
+                  { value: 'En Reparación', label: 'En Reparación' },
+                  { value: 'Baja', label: 'De Baja' },
                 ]
               },
             ]}
@@ -269,11 +295,19 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
           {canEdit() && (
             <button
               onClick={() => setShowAssetForm(true)}
-              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-black uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
             >
               <Plus size={14} />
               Agregar Activo
             </button>
+          )}
+
+          {canEdit() && (
+            <SelectionModeButton
+              active={selectionMode}
+              onClick={handleToggleSelectionMode}
+              selectedCount={selectedIds.size}
+            />
           )}
 
           <div className="flex bg-slate-100 p-1 border border-slate-200 w-full md:w-auto justify-center">
@@ -344,123 +378,254 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800"></div>
           </div>
         ) : viewMode === 'table' ? (
-          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
-            <div className="bg-slate-50/50 border-b border-slate-100 shrink-0">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={totalCount}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                onItemsPerPageChange={setItemsPerPage}
-                selectedCount={selectedIds.size}
-                onDeleteSelected={handleBulkDelete}
-              />
+          <>
+            <div className="md:hidden bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
+              <div className="bg-slate-50/50 border-b border-slate-100 shrink-0">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalCount}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                  selectedCount={selectionMode ? selectedIds.size : 0}
+                  onDeleteSelected={handleBulkDelete}
+                />
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-center w-12">
+                        {selectionMode && (
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200"
+                            checked={totalCount > 0 && selectedIds.size === totalCount}
+                            onChange={handleSelectAll}
+                            disabled={selectingAll}
+                          />
+                        )}
+                      </TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'item'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('item')} className="min-w-[280px] max-w-[360px]">Activo</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'category_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('category_id')} className="w-[180px]">Categoría</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'location_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location_id')} className="w-[180px]">Ubicación</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'cantidad'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('cantidad')} className="w-24">Cantidad</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'valor_estimado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('valor_estimado')} className="w-36">Costo</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'estado_uso'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('estado_uso')} className="w-36">Estado</TableHead>
+                      <TableHead className="text-center w-24">Acción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inventory.map((asset: any) => {
+                      return (
+                        <TableRow
+                          key={asset.id}
+                          className={selectedIds.has(asset.id) ? '!bg-blue-50/50' : ''}
+                          onClick={() => {
+                            if (!selectionMode) return;
+                            const newSelected = new Set(selectedIds);
+                            if (newSelected.has(asset.id)) newSelected.delete(asset.id);
+                            else newSelected.add(asset.id);
+                            setSelectedIds(newSelected);
+                          }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedAsset(asset);
+                            setShowAssetDetails(true);
+                          }}
+                        >
+                          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                            {selectionMode && (
+                              <input
+                                type="checkbox"
+                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200"
+                                checked={selectedIds.has(asset.id)}
+                                onChange={() => {
+                                  const newSelected = new Set(selectedIds);
+                                  if (newSelected.has(asset.id)) newSelected.delete(asset.id);
+                                  else newSelected.add(asset.id);
+                                  setSelectedIds(newSelected);
+                                }}
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell className="font-semibold min-w-[280px] max-w-[360px]">
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[13px] font-semibold text-slate-800 leading-none truncate">
+                                {asset.item || asset.descripcion || 'Sin descripción'}
+                              </span>
+                              {(asset.brand || asset.model) && (
+                                <span className="text-[10px] font-semibold text-slate-400 tracking-wider mt-1.5 truncate">
+                                  {asset.brand} {asset.model}
+                                </span>
+                              )}
+                              {asset.codigo_unico && (
+                                <span className="inline-flex items-center text-[9px] font-semibold text-slate-400 font-mono mt-1.5 bg-slate-100 px-2 py-0.5 rounded w-max">
+                                  CÓD: {asset.codigo_unico}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="w-[180px]">
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[12px] font-semibold text-slate-700 leading-none truncate">{asset.categories?.name}</span>
+                              <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1.5 truncate">{asset.subcategories?.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="w-[180px]">
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[12px] font-semibold text-slate-700 leading-none truncate">{asset.locations?.name || 'No asignada'}</span>
+                              <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1.5 truncate">{asset.areas?.name || 'Sin área'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="w-24 whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <span className="text-[12px] font-semibold text-slate-700 leading-none">{asset.cantidad || 1}</span>
+                              <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1 truncate">{asset.unidad_medida || 'UNIDAD(ES)'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="w-36 whitespace-nowrap">
+                            <span className="text-[12px] font-semibold text-slate-700 leading-none">
+                              {asset.valor_estimado != null ? `S/ ${Number(asset.valor_estimado).toFixed(2)}` : '—'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="w-36 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-semibold tracking-wide border rounded-none whitespace-nowrap ${asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              asset.estado_uso === 'Inoperativo' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                                asset.estado_uso === 'En Reparación' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                  asset.estado_uso === 'Baja' ? 'bg-slate-100 text-slate-500 border-slate-200' :
+                                    'bg-slate-50 text-slate-500 border-slate-200'
+                              }`}>
+                              {asset.estado_uso || 'Sin estado'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+                              {canEdit() && (
+                                <>
+                                  {(asset.cantidad || 1) > 1 && (
+                                    <button onClick={() => handleDecoupleAsset(asset)} className="text-[10px] font-bold text-emerald-600 hover:underline bg-emerald-50 px-2 py-1 rounded-sm w-full text-center" title="Desacoplar">Desacoplar</button>
+                                  )}
+                                  <button onClick={() => { setEditingAsset(asset); setShowAssetForm(true); }} className="text-[10px] font-bold text-[#002855] hover:underline bg-[#002855]/5 px-2 py-1 rounded-sm w-full text-center">Editar</button>
+                                  <button onClick={() => handleDeleteAsset(asset)} className="text-[10px] font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-1 rounded-sm w-full text-center">Eliminar</button>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-            <div className="overflow-x-auto">
+
+            <div className="hidden md:block bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
+              <div className="bg-slate-50/50 border-b border-slate-100 shrink-0">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalCount}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                  selectedCount={selectionMode ? selectedIds.size : 0}
+                  onDeleteSelected={handleBulkDelete}
+                />
+              </div>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-center w-12">
-                      <input
-                        type="checkbox"
-                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
-                        checked={inventory.length > 0 && inventory.every((a: any) => selectedIds.has(a.id))}
-                        onChange={(e) => {
-                          const newSelected = new Set(selectedIds);
-                          if (e.target.checked) {
-                            inventory.forEach((a: any) => newSelected.add(a.id));
-                          } else {
-                            inventory.forEach((a: any) => newSelected.delete(a.id));
-                          }
-                          setSelectedIds(newSelected);
-                        }}
-                      />
+                    <TableHead className="w-12 text-center">
+                      {canEdit() && selectionMode && (
+                        <input
+                          type="checkbox"
+                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200"
+                          checked={totalCount > 0 && selectedIds.size === totalCount}
+                          onChange={handleSelectAll}
+                          disabled={selectingAll}
+                        />
+                      )}
                     </TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'item'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('item')}>Activo</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'category_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('category_id')}>Categoría</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'location_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location_id')}>Ubicación</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'cantidad'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('cantidad')}>Cantidad</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'valor_estimado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('valor_estimado')}>Costo</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'condicion'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('condicion')}>Condición</TableHead>
-                    <TableHead className="text-center">Acción</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'item'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('item')} className="min-w-[280px] max-w-[360px]">Detalle / Códigos</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'category_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('category_id')} className="w-[180px]">Categoría</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'location_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location_id')} className="w-[180px]">Ubicación</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'cantidad'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('cantidad')} className="w-24">Stock</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'valor_estimado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('valor_estimado')} className="w-36">Valor Referencial</TableHead>
+                    <TableHead sortable isSorted={sortConfig?.key === 'estado_uso'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('estado_uso')} className="w-36">Estado</TableHead>
+                    <TableHead className="text-center w-24">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {inventory.map((asset: any) => {
                     return (
-                      <TableRow
-                        key={asset.id}
-                        className={selectedIds.has(asset.id) ? '!bg-blue-50/50' : ''}
-                        onClick={() => {
-                          const newSelected = new Set(selectedIds);
-                          if (newSelected.has(asset.id)) newSelected.delete(asset.id);
-                          else newSelected.add(asset.id);
-                          setSelectedIds(newSelected);
-                        }}
-                        onDoubleClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedAsset(asset);
-                          setShowAssetDetails(true);
-                        }}
-                      >
-                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
-                            checked={selectedIds.has(asset.id)}
-                            onChange={() => {
-                              const newSelected = new Set(selectedIds);
-                              if (newSelected.has(asset.id)) newSelected.delete(asset.id);
-                              else newSelected.add(asset.id);
-                              setSelectedIds(newSelected);
-                            }}
-                          />
+                      <TableRow key={asset.id} className="group hover:bg-slate-50 cursor-pointer" onClick={() => { setSelectedAsset(asset); setShowAssetDetails(true); }}>
+                        <TableCell className="w-12 text-center" onClick={(e) => e.stopPropagation()}>
+                          {canEdit() && selectionMode && (
+                            <input
+                              type="checkbox"
+                              className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200"
+                              checked={selectedIds.has(asset.id)}
+                              onChange={() => {
+                                const newSelected = new Set(selectedIds);
+                                if (newSelected.has(asset.id)) newSelected.delete(asset.id);
+                                else newSelected.add(asset.id);
+                                setSelectedIds(newSelected);
+                              }}
+                            />
+                          )}
                         </TableCell>
-                        <TableCell className="font-bold">
-                          <div className="flex flex-col">
-                            <span className="text-[13px] font-black text-slate-800 leading-none">
+                        <TableCell className="font-semibold min-w-[280px] max-w-[360px]">
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[13px] font-semibold text-slate-800 leading-none truncate">
                               {asset.item || asset.descripcion || 'Sin descripción'}
                             </span>
                             {(asset.brand || asset.model) && (
-                              <span className="text-[10px] font-semibold text-slate-400 tracking-wider mt-1.5">
+                              <span className="text-[10px] font-semibold text-slate-400 tracking-wider mt-1.5 truncate">
                                 {asset.brand} {asset.model}
                               </span>
                             )}
                             {asset.codigo_unico && (
-                              <span className="inline-flex items-center text-[9px] font-bold text-slate-400 font-mono mt-1.5 bg-slate-100 px-2 py-0.5 rounded w-max">
+                              <span className="inline-flex items-center text-[9px] font-semibold text-slate-400 font-mono mt-1.5 bg-slate-100 px-2 py-0.5 rounded w-max">
                                 CÓD: {asset.codigo_unico}
                               </span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="text-[12px] font-bold text-slate-700 leading-none">{asset.categories?.name}</span>
-                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1.5">{asset.subcategories?.name}</span>
+                        <TableCell className="w-[180px]">
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[12px] font-semibold text-slate-700 leading-none truncate">{asset.categories?.name}</span>
+                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1.5 truncate">{asset.subcategories?.name}</span>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="text-[12px] font-bold text-slate-700 leading-none">{asset.locations?.name || 'No asignada'}</span>
-                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1.5">{asset.areas?.name || 'Sin área'}</span>
+                        <TableCell className="w-[180px]">
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[12px] font-semibold text-slate-700 leading-none truncate">{asset.locations?.name || 'No asignada'}</span>
+                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1.5 truncate">{asset.areas?.name || 'Sin área'}</span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="w-24 whitespace-nowrap">
                           <div className="flex flex-col">
                             <span className="text-[12px] font-semibold text-slate-700 leading-none">{asset.cantidad || 1}</span>
-                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1">{asset.unidad_medida || 'UNIDAD(ES)'}</span>
+                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1 truncate">{asset.unidad_medida || 'UNIDAD(ES)'}</span>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <span className="text-[12px] font-bold text-slate-700 leading-none">
+                        <TableCell className="w-36 whitespace-nowrap">
+                          <span className="text-[12px] font-semibold text-slate-700 leading-none">
                             {asset.valor_estimado != null ? `S/ ${Number(asset.valor_estimado).toFixed(2)}` : '—'}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black tracking-wider border bg-slate-100 text-slate-700 border-slate-200 uppercase rounded-none">
-                            {asset.condicion || 'N/A'}
-                          </div>
+                        <TableCell className="w-36 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-semibold tracking-wide border rounded-none whitespace-nowrap ${asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            asset.estado_uso === 'Inoperativo' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                              asset.estado_uso === 'En Reparación' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                asset.estado_uso === 'Baja' ? 'bg-slate-100 text-slate-500 border-slate-200' :
+                                  'bg-slate-50 text-slate-500 border-slate-200'
+                            }`}>
+                            {asset.estado_uso || 'Sin estado'}
+                          </span>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
@@ -498,8 +663,9 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                   })}
                 </TableBody>
               </Table>
+              </div>
             </div>
-          </div>
+          </>
         ) : (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
@@ -510,7 +676,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
                 onItemsPerPageChange={setItemsPerPage}
-                selectedCount={selectedIds.size}
+                selectedCount={selectionMode ? selectedIds.size : 0}
                 onDeleteSelected={handleBulkDelete}
               />
             </div>
@@ -526,32 +692,33 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                     <div className="p-6 flex-1">
                       <div className="flex justify-between items-center mb-5">
                         <div className="flex items-center gap-3">
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
-                            checked={selectedIds.has(asset.id)}
-                            onChange={() => {
-                              const newSelected = new Set(selectedIds);
-                              if (newSelected.has(asset.id)) newSelected.delete(asset.id);
-                              else newSelected.add(asset.id);
-                              setSelectedIds(newSelected);
-                            }}
-                          />
-                          <span className="text-[10px] font-black text-[#002855] bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-none font-mono">
+                          {selectionMode && (
+                            <input
+                              type="checkbox"
+                              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200"
+                              checked={selectedIds.has(asset.id)}
+                              onChange={() => {
+                                const newSelected = new Set(selectedIds);
+                                if (newSelected.has(asset.id)) newSelected.delete(asset.id);
+                                else newSelected.add(asset.id);
+                                setSelectedIds(newSelected);
+                              }}
+                            />
+                          )}
+                          <span className="text-[10px] font-semibold text-[#002855] bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-none font-mono">
                             CÓD: {asset.codigo_unico || 'N/A'}
                           </span>
                         </div>
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black tracking-wider border rounded-none ${
-                            asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                            asset.estado_uso === 'Inoperativo' ? 'bg-slate-50 text-slate-700 border-slate-200' :
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-semibold tracking-wider border rounded-none ${asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          asset.estado_uso === 'Inoperativo' ? 'bg-slate-50 text-slate-700 border-slate-200' :
                             asset.estado_uso === 'En Reparación' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                            'bg-rose-50 text-rose-700 border-rose-200'}`}>
-                            {status.label}
-                          </span>
+                              'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                          {status.label}
+                        </span>
                       </div>
 
                       <div>
-                        <h3 className="text-[14px] font-black text-slate-800 leading-none truncate">{asset.brand}</h3>
+                        <h3 className="text-[14px] font-semibold text-slate-800 leading-none truncate">{asset.brand}</h3>
                         <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{asset.model}</p>
                       </div>
 
@@ -610,7 +777,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
 
       {showAssetDetails && selectedAsset && (
         <AssetDetails
-          asset={selectedAsset}
+          asset={selectedAsset!}
           onClose={() => {
             setShowAssetDetails(false);
             setSelectedAsset(undefined);

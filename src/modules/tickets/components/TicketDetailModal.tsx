@@ -346,8 +346,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                             <MessageCircle size={16} className="text-white" />
                         </div>
                         <div>
-                            <h3 className="text-[10px] font-black text-white uppercase tracking-[0.2em] leading-tight">CANAL DE SEGUIMIENTO</h3>
-                            <p className="text-[7px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Interacción en tiempo real</p>
+                            <h3 className="text-[10px] font-normal text-white uppercase tracking-[0.2em] leading-tight">CANAL DE SEGUIMIENTO</h3>
+                            <p className="text-[7px] font-normal text-blue-200 uppercase tracking-widest mt-0.5">Interacción en tiempo real</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -372,7 +372,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                 <div className="flex md:hidden border-b border-slate-100 bg-white">
                     <button
                         onClick={() => setActiveTab('details')}
-                        className={`flex-1 py-3 text-xs font-black uppercase tracking-widest transition-all ${
+                        className={`flex-1 py-3 text-xs font-normal uppercase tracking-widest transition-all ${
                             activeTab === 'details' 
                                 ? 'text-[#002855] border-b-2 border-[#002855] bg-[#F8FAFC]' 
                                 : 'text-slate-400 hover:text-slate-600'
@@ -382,7 +382,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                     </button>
                     <button
                         onClick={() => setActiveTab('feed')}
-                        className={`flex-1 py-3 text-xs font-black uppercase tracking-widest transition-all ${
+                        className={`flex-1 py-3 text-xs font-normal uppercase tracking-widest transition-all ${
                             activeTab === 'feed' 
                                 ? 'text-[#002855] border-b-2 border-[#002855] bg-[#F8FAFC]' 
                                 : 'text-slate-400 hover:text-slate-600'
@@ -399,17 +399,17 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                         activeTab === 'details' ? 'flex' : 'hidden'
                     } md:flex w-full md:w-[420px] bg-[#F8FAFC] border-r border-slate-100 p-4 sm:p-6 md:p-10 flex-col overflow-y-auto custom-scrollbar`}>
                         <div className="flex items-center justify-between mb-6 sm:mb-8 md:mb-10">
-                            <span className="text-[8px] sm:text-[9px] md:text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em]">#TK-{currentTicket.id.slice(0, 8)}</span>
-                            <div className={`px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[7px] sm:text-[8px] md:text-[9px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] border ${getPriorityStyle(currentTicket.priority)}`}>
+                            <span className="text-[8px] sm:text-[9px] md:text-[10px] font-normal text-slate-300 uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em]">#TK-{currentTicket.id.slice(0, 8)}</span>
+                            <div className={`px-2 sm:px-3 md:px-4 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[7px] sm:text-[8px] md:text-[9px] font-normal uppercase tracking-[0.15em] sm:tracking-[0.2em] border ${getPriorityStyle(currentTicket.priority)}`}>
                                 {getPriorityLabel(currentTicket.priority)}
                             </div>
                         </div>
 
-                        <h2 className="text-lg sm:text-xl md:text-2xl font-black text-[#002855] leading-tight mb-4 sm:mb-6 md:mb-8 uppercase italic">{currentTicket.title}</h2>
+                        <h2 className="text-lg sm:text-xl md:text-2xl font-normal text-[#002855] leading-tight mb-4 sm:mb-6 md:mb-8 uppercase italic">{currentTicket.title}</h2>
 
                         <div className="space-y-6 sm:space-y-8 md:space-y-10">
                             <div className="bg-white p-4 sm:p-5 md:p-6 rounded-[1rem] sm:rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-sm relative group">
-                                <span className="absolute -top-2 sm:-top-2.5 md:-top-3 left-3 sm:left-4 md:left-6 bg-[#002855] text-white px-2 sm:px-2.5 md:px-3 py-0.5 sm:py-1 rounded-lg text-[7px] sm:text-[8px] md:text-[9px] font-black uppercase tracking-widest">Detalle Inicial</span>
+                                <span className="absolute -top-2 sm:-top-2.5 md:-top-3 left-3 sm:left-4 md:left-6 bg-[#002855] text-white px-2 sm:px-2.5 md:px-3 py-0.5 sm:py-1 rounded-lg text-[7px] sm:text-[8px] md:text-[9px] font-normal uppercase tracking-widest">Detalle Inicial</span>
                                 <p className="text-[11px] sm:text-[12px] md:text-[13px] text-slate-500 leading-relaxed pt-1 sm:pt-1.5 md:pt-2">
                                     {currentTicket.description}
                                 </p>
@@ -423,9 +423,9 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                         ) : <User size={16} />}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[7px] sm:text-[8px] md:text-[9px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Reportado Por</p>
-                                        <p className="text-xs sm:text-xs md:text-xs font-black text-[#002855] uppercase truncate">{currentTicket.requester?.full_name}</p>
-                                        <p className="text-[8px] sm:text-[9px] md:text-[10px] font-bold text-blue-500 uppercase mt-0.5 truncate">{currentTicket.locations?.name || 'Sede Central'}</p>
+                                        <p className="text-[7px] sm:text-[8px] md:text-[9px] font-normal text-slate-300 uppercase tracking-widest mb-0.5">Reportado Por</p>
+                                        <p className="text-xs sm:text-xs md:text-xs font-normal text-[#002855] uppercase truncate">{currentTicket.requester?.full_name}</p>
+                                        <p className="text-[8px] sm:text-[9px] md:text-[10px] font-normal text-blue-500 uppercase mt-0.5 truncate">{currentTicket.locations?.name || 'Sede Central'}</p>
                                     </div>
                                 </div>
 
@@ -434,8 +434,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                         <Clock size={16} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[7px] sm:text-[8px] md:text-[9px] font-black text-slate-300 uppercase tracking-widest mb-0.5">Fecha de Apertura</p>
-                                        <p className="text-xs sm:text-xs md:text-xs font-black text-[#002855] truncate">{new Date(currentTicket.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                                        <p className="text-[7px] sm:text-[8px] md:text-[9px] font-normal text-slate-300 uppercase tracking-widest mb-0.5">Fecha de Apertura</p>
+                                        <p className="text-xs sm:text-xs md:text-xs font-normal text-[#002855] truncate">{new Date(currentTicket.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
                                     </div>
                                 </div>
 
@@ -447,22 +447,22 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                             ) : <ShieldCheck size={16} />}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[7px] sm:text-[8px] md:text-[9px] font-black text-white/50 uppercase tracking-widest mb-0.5">Técnico Asignado</p>
-                                            <p className="text-xs sm:text-xs md:text-xs font-black text-white uppercase truncate">{currentTicket.attendant?.full_name}</p>
+                                            <p className="text-[7px] sm:text-[8px] md:text-[9px] font-normal text-white/50 uppercase tracking-widest mb-0.5">Técnico Asignado</p>
+                                            <p className="text-xs sm:text-xs md:text-xs font-normal text-white uppercase truncate">{currentTicket.attendant?.full_name}</p>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
                             <div className="pt-6 sm:pt-8 md:pt-10 border-t border-slate-200">
-                                <p className="text-[8px] sm:text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] mb-3 sm:mb-4">Gestión de Estado</p>
+                                <p className="text-[8px] sm:text-[9px] md:text-[10px] font-normal text-slate-400 uppercase tracking-[0.2em] sm:tracking-[0.25em] md:tracking-[0.3em] mb-3 sm:mb-4">Gestión de Estado</p>
                                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                                     {['open', 'resolved', 'closed'].map(st => (
                                         <button
                                             key={st}
                                             onClick={() => handleStatusUpdate(st)}
                                             disabled={!canManageStatus || statusUpdating}
-                                            className={`px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[7px] sm:text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all ${
+                                            className={`px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[7px] sm:text-[8px] md:text-[9px] font-normal uppercase tracking-widest transition-all ${
                                                 currentTicket.status === st 
                                                     ? 'bg-[#002855] text-white shadow-lg sm:shadow-xl scale-105' 
                                                     : 'bg-white text-slate-300 border border-slate-100 hover:border-slate-300 hover:text-slate-500'
@@ -476,7 +476,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                             key="in_progress"
                                             onClick={() => handleStatusUpdate('in_progress')}
                                             disabled={statusUpdating}
-                                            className={`px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[7px] sm:text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all ${
+                                            className={`px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[7px] sm:text-[8px] md:text-[9px] font-normal uppercase tracking-widest transition-all ${
                                                 currentTicket.status === 'in_progress' 
                                                     ? 'bg-[#002855] text-white shadow-lg sm:shadow-xl scale-105' 
                                                     : 'bg-white text-slate-300 border border-slate-100 hover:border-slate-300 hover:text-slate-500'
@@ -501,8 +501,8 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                     <MessageCircle size={18} className="text-white" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">CANAL DE SEGUIMIENTO</h3>
-                                    <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Interacción directa en tiempo real</p>
+                                    <h3 className="text-sm font-normal text-white uppercase tracking-[0.2em] leading-tight">CANAL DE SEGUIMIENTO</h3>
+                                    <p className="text-[10px] font-normal text-blue-200 uppercase tracking-widest mt-0.5">Interacción directa en tiempo real</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -529,7 +529,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                     <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-slate-200 flex items-center justify-center">
                                         <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 opacity-20" />
                                     </div>
-                                    <p className="text-[9px] sm:text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] opacity-30 text-center px-4">Aún no hay mensajes</p>
+                                    <p className="text-[9px] sm:text-[10px] md:text-[11px] font-normal uppercase tracking-[0.3em] sm:tracking-[0.4em] opacity-30 text-center px-4">Aún no hay mensajes</p>
                                 </div>
                             ) : comments.map((c) => {
                                 const isMe = c.user_id === user?.id;
@@ -538,7 +538,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                 if (isSystem) {
                                     return (
                                         <div key={c.id} className="flex justify-center">
-                                            <div className="bg-white border border-slate-100 px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 rounded-full shadow-sm text-[7px] sm:text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] sm:tracking-[0.2em] flex items-center gap-2 sm:gap-3 animate-in fade-in zoom-in duration-500">
+                                            <div className="bg-white border border-slate-100 px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 rounded-full shadow-sm text-[7px] sm:text-[8px] md:text-[9px] font-normal text-slate-400 uppercase tracking-[0.15em] sm:tracking-[0.2em] flex items-center gap-2 sm:gap-3 animate-in fade-in zoom-in duration-500">
                                                 <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-blue-500" />
                                                 <span className="text-center">{c.content.replace(/\*\*/g, '')}</span>
                                             </div>
@@ -555,7 +555,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                                 {c.author?.avatar_url ? (
                                                     <img src={c.author.avatar_url} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-white font-black text-xs sm:text-sm">
+                                                    <div className="w-full h-full flex items-center justify-center text-white font-normal text-xs sm:text-sm">
                                                         {c.author?.full_name?.charAt(0)}
                                                     </div>
                                                 )}
@@ -588,9 +588,9 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                                 ) : c.content}
                                             </div>
                                             <div className="flex items-center gap-2 sm:gap-3 mt-2 sm:mt-3 px-1 sm:px-2">
-                                                <span className="text-[7px] sm:text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">{c.author?.full_name}</span>
+                                                <span className="text-[7px] sm:text-[8px] md:text-[9px] font-normal text-slate-400 uppercase tracking-widest">{c.author?.full_name}</span>
                                                 <span className="w-0.5 h-0.5 sm:w-1 sm:h-1 rounded-full bg-slate-200"></span>
-                                                <span className="text-[7px] sm:text-[8px] md:text-[9px] font-black text-slate-400 uppercase">{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span className="text-[7px] sm:text-[8px] md:text-[9px] font-normal text-slate-400 uppercase">{new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -624,7 +624,7 @@ export default function TicketDetailModal({ ticket: initialTicket, onClose, onUp
                                         onChange={(e) => setNewComment(e.target.value)}
                                         onPaste={handlePaste}
                                         placeholder={uploadingImage ? "Subiendo imagen..." : "Escribe un mensaje aquí (o pega una imagen)..."}
-                                        className="w-full h-10 sm:h-12 pl-4 sm:pl-6 pr-12 sm:pr-16 bg-[#F8FAFC] rounded-[1rem] sm:rounded-[1.5rem] border border-slate-200 outline-none focus:ring-3 sm:focus:ring-4 focus:ring-blue-100 text-[11px] sm:text-[13px] font-bold text-[#002855] placeholder:text-slate-400 transition-all"
+                                        className="w-full h-10 sm:h-12 pl-4 sm:pl-6 pr-12 sm:pr-16 bg-[#F8FAFC] rounded-[1rem] sm:rounded-[1.5rem] border border-slate-200 outline-none focus:ring-3 sm:focus:ring-4 focus:ring-blue-100 text-[11px] sm:text-[13px] font-normal text-[#002855] placeholder:text-slate-400 transition-all"
                                     />
                                     <button
                                         type="submit"

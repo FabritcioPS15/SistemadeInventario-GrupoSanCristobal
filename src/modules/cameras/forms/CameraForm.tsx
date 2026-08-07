@@ -247,7 +247,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
       <div className="space-y-4">
         <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
           <div className="w-1 h-4 bg-blue-600 shrink-0" />
-          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-wider">Información General</h3>
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Información General</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Nombre de la Cámara" required error={errors.name}>
@@ -289,7 +289,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
           </FormField>
           <FormField label="Inicio de Grabación" error={errors.recording_start_date}>
             <FormInput type="date" name="recording_start_date" value={formData.recording_start_date} onChange={handleChange} error={errors.recording_start_date} />
-            <p className="text-[10px] text-blue-500 font-bold mt-1 uppercase">Fecha cuando empezó el registro</p>
+            <p className="text-[10px] text-blue-500 font-normal mt-1 uppercase">Fecha cuando empezó el registro</p>
           </FormField>
         </div>
       </div>
@@ -298,7 +298,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
       <div className="space-y-4">
         <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
           <div className="w-1 h-4 bg-blue-600 shrink-0" />
-          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-wider">Red y Acceso</h3>
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Red y Acceso</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Dirección IP" error={errors.ip_address}>
@@ -314,7 +314,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
 
         <div className="border-b border-slate-100 pb-2 flex items-center gap-2 mt-6">
           <div className="w-1 h-4 bg-blue-600 shrink-0" />
-          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-wider">Credenciales</h3>
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Credenciales</h3>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <FormField label="Usuario" error={errors.username}>
@@ -345,7 +345,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
       <div className="space-y-4">
         <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
           <div className="w-1 h-4 bg-blue-600 shrink-0" />
-          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-wider">Notas</h3>
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Notas</h3>
         </div>
         <FormField label="Notas y Observaciones" error={errors.notes}>
           <FormTextarea name="notes" value={formData.notes} onChange={handleChange} placeholder="Detalles adicionales sobre la cámara, configuraciones especiales, etc..." rows={4} error={errors.notes} />
@@ -353,7 +353,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
 
         <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
           <div className="w-1 h-4 bg-blue-600 shrink-0" />
-          <h3 className="text-[11px] font-black text-[#002855] uppercase tracking-wider">Discos Duros (DVR/NVR)</h3>
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Discos Duros (DVR/NVR)</h3>
         </div>
         <div className="bg-slate-50 p-4 border border-slate-200">
           <CameraDiskManager disks={disks} onChange={setDisks} />

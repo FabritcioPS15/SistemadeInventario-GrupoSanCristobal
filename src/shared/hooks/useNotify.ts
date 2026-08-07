@@ -13,9 +13,9 @@ const COLORS = {
 const baseConfig = {
   customClass: {
     popup: 'rounded-2xl',
-    title: 'text-xl font-bold text-slate-800',
-    confirmButton: 'rounded-xl font-bold tracking-wide px-6',
-    cancelButton: 'rounded-xl font-bold tracking-wide px-6',
+    title: 'text-xl font-normal text-slate-800',
+    confirmButton: 'rounded-xl font-normal tracking-wide px-6',
+    cancelButton: 'rounded-xl font-normal tracking-wide px-6',
   }
 };
 
@@ -36,7 +36,7 @@ export function useNotify() {
       text: message,
       customClass: {
         popup: 'rounded-xl shadow-2xl border border-slate-100',
-        title: 'text-sm font-bold text-slate-800',
+        title: 'text-sm font-normal text-slate-800',
       }
     });
   };

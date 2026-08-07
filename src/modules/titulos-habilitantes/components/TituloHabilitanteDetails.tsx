@@ -47,7 +47,7 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
   const renderStatusBanner = () => {
     const targetDate = titulo.vigencia_al || titulo.fecha_vencimiento;
     if (!targetDate) return (
-      <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-current bg-opacity-10 bg-slate-500 text-slate-700 border-slate-200">
+      <span className="px-2 py-1 text-[9px] font-semibold uppercase tracking-widest border border-current bg-opacity-10 bg-slate-500 text-slate-700 border-slate-200">
         SIN VENCIMIENTO
       </span>
     );
@@ -56,7 +56,7 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
 
     if (daysLeft <= 0) {
       return (
-        <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-current bg-opacity-10 bg-rose-500 text-rose-700 border-rose-200">
+        <span className="px-2 py-1 text-[9px] font-semibold uppercase tracking-widest border border-current bg-opacity-10 bg-rose-500 text-rose-700 border-rose-200">
           VENCIDO ({Math.abs(daysLeft)}D)
         </span>
       );
@@ -64,14 +64,14 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
 
     if (daysLeft <= 30) {
       return (
-        <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-current bg-opacity-10 bg-amber-500 text-amber-700 border-amber-200">
+        <span className="px-2 py-1 text-[9px] font-semibold uppercase tracking-widest border border-current bg-opacity-10 bg-amber-500 text-amber-700 border-amber-200">
           POR VENCER ({daysLeft}D)
         </span>
       );
     }
 
     return (
-      <span className="px-2 py-1 text-[9px] font-black uppercase tracking-widest border border-current bg-opacity-10 bg-emerald-500 text-emerald-700 border-emerald-200">
+      <span className="px-2 py-1 text-[9px] font-semibold uppercase tracking-widest border border-current bg-opacity-10 bg-emerald-500 text-emerald-700 border-emerald-200">
         VIGENTE ({daysLeft}D)
       </span>
     );
@@ -89,7 +89,7 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
             <AlertTriangle className="h-5 w-5 text-rose-500" />
           </div>
           <div>
-            <h3 className="text-[12px] font-black text-rose-800 uppercase tracking-widest">Documento Vencido</h3>
+            <h3 className="text-[12px] font-semibold text-rose-800 uppercase tracking-widest">Documento Vencido</h3>
             <p className="mt-1 text-[11px] font-medium text-rose-700">Este título habilitante ha expirado. Se requiere renovación inmediata.</p>
           </div>
         </div>
@@ -103,7 +103,7 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
             <AlertTriangle className="h-5 w-5 text-amber-500" />
           </div>
           <div>
-            <h3 className="text-[12px] font-black text-amber-800 uppercase tracking-widest">Documento por Vencer</h3>
+            <h3 className="text-[12px] font-semibold text-amber-800 uppercase tracking-widest">Documento por Vencer</h3>
             <p className="mt-1 text-[11px] font-medium text-amber-700">Este título habilitante vencerá en menos de 30 días. Por favor iniciar proceso de renovación.</p>
           </div>
         </div>
@@ -143,18 +143,18 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
               <section>
                 <div className="flex items-center gap-2 mb-4 text-blue-600 border-b border-blue-100 pb-2">
                   <FileText size={16} strokeWidth={3} />
-                  <h3 className="text-[11px] font-black uppercase tracking-widest">Detalles del Documento</h3>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-widest">Detalles del Documento</h3>
                 </div>
                 <div className="bg-white p-6 border border-slate-200 shadow-sm space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="sm:col-span-2">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Tipo de Título</label>
-                      <p className="text-[13px] font-bold text-slate-700 uppercase">{titulo.tipo || 'Sin tipo'}</p>
+                      <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest block mb-1">Tipo de Título</label>
+                      <p className="text-[13px] font-semibold text-slate-700 uppercase">{titulo.tipo || 'Sin tipo'}</p>
                     </div>
                   </div>
                   <div className="pt-4 border-t border-slate-50">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Vigencia del Documento (Tiempo)</label>
-                    <p className="text-[11px] font-bold text-slate-700 uppercase">{titulo.vigencia_documento || 'No especificada'}</p>
+                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest block mb-1">Vigencia del Documento (Tiempo)</label>
+                    <p className="text-[11px] font-semibold text-slate-700 uppercase">{titulo.vigencia_documento || 'No especificada'}</p>
                   </div>
                 </div>
               </section>
@@ -163,7 +163,7 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
                 <section>
                   <div className="flex items-center gap-2 mb-4 text-slate-400 border-b border-slate-100 pb-2">
                     <Info size={16} strokeWidth={3} />
-                    <h3 className="text-[11px] font-black uppercase tracking-widest">Observaciones</h3>
+                    <h3 className="text-[11px] font-semibold uppercase tracking-widest">Observaciones</h3>
                   </div>
                   <div className="bg-white p-6 border border-slate-200 shadow-sm italic text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
                     "{titulo.notas}"
@@ -177,16 +177,16 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
               <section>
                 <div className="flex items-center gap-2 mb-4 text-emerald-600 border-b border-emerald-100 pb-2">
                   <Calendar size={16} strokeWidth={3} />
-                  <h3 className="text-[11px] font-black uppercase tracking-widest">Control de Fechas</h3>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-widest">Control de Fechas</h3>
                 </div>
                 <div className="bg-white p-6 border border-slate-200 shadow-sm space-y-6">
                   <div>
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Fecha de Emisión / Vigencia Del</label>
-                    <p className="text-[13px] font-bold text-slate-700">{startDateStr}</p>
+                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest block mb-1">Fecha de Emisión / Vigencia Del</label>
+                    <p className="text-[13px] font-semibold text-slate-700">{startDateStr}</p>
                   </div>
                   <div className="pt-4 border-t border-slate-50">
-                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Fecha de Vencimiento / Vigencia Al</label>
-                    <p className="text-[13px] font-bold text-slate-700">{endDateStr}</p>
+                    <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest block mb-1">Fecha de Vencimiento / Vigencia Al</label>
+                    <p className="text-[13px] font-semibold text-slate-700">{endDateStr}</p>
                   </div>
                 </div>
               </section>
@@ -197,11 +197,11 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
               <section>
                 <div className="flex items-center gap-2 mb-4 text-rose-500 border-b border-rose-100 pb-2">
                   <MapPin size={16} strokeWidth={3} />
-                  <h3 className="text-[11px] font-black uppercase tracking-widest">Ubicación Asignada</h3>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-widest">Ubicación Asignada</h3>
                 </div>
                 <div className="bg-white p-6 border border-slate-200 shadow-sm">
-                  <p className="text-[13px] font-black text-[#002855] uppercase mb-1">{titulo.locations?.name || 'Sede N/A'}</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Sede principal / CITV</p>
+                  <p className="text-[13px] font-semibold text-[#002855] uppercase mb-1">{titulo.locations?.name || 'Sede N/A'}</p>
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Sede principal / CITV</p>
                 </div>
               </section>
             </div>

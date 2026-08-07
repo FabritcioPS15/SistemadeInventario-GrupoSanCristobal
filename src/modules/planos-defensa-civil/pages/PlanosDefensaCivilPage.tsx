@@ -224,7 +224,7 @@ export default function PlanosDefensaCivil() {
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              { key: 'location', multiple: false, placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
             ]}
             values={{ location: selectedLocations[0] || '' }}
             onChange={(_, value) => {
@@ -296,7 +296,32 @@ export default function PlanosDefensaCivil() {
                 onItemsPerPageChange={setItemsPerPage}
               />
             </div>
-            <div className="overflow-x-auto">
+            {/* Mobile card view */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {paginatedData.map((plano) => (
+                <div key={plano.id} className="p-3 cursor-pointer hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-black text-[#002855] truncate leading-tight">{plano.nombre}</p>
+                      <p className="text-[10px] font-semibold text-slate-500">{plano.tipo}</p>
+                    </div>
+                    {renderStatus(plano)}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 flex-wrap">
+                    <span className="flex items-center gap-0.5">
+                      <MapPin size={10} className="text-rose-400 shrink-0" />
+                      {plano.locations?.name || 'Sede N/A'}
+                    </span>
+                    <span className="flex items-center gap-0.5">
+                      <Calendar size={10} className="text-blue-400 shrink-0" />
+                      {plano.fecha_actualizacion ? new Date(String(plano.fecha_actualizacion).includes('T') ? String(plano.fecha_actualizacion) : `${plano.fecha_actualizacion}T12:00:00`).toLocaleDateString('es-PE') : '—'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <tr>

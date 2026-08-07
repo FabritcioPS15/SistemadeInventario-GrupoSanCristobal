@@ -214,12 +214,12 @@ export default function FilterSelect({
 
         {Icon && <Icon size={15} className={`shrink-0 ${iconClassName}`} />}
 
-        <span className={`flex-1 text-left text-[12px] font-black text-[#002855] uppercase tracking-[0.08em] truncate ${className}`}>
+        <span className={`flex-1 text-left text-[12px] font-semibold text-[#002855] tracking-[0.03em] truncate ${className}`}>
           {triggerLabel}
         </span>
 
         {multiple && selectedValues.length > 0 && (
-          <span className="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1 bg-[#002855] text-white text-[11px] font-black rounded-none">
+          <span className="shrink-0 flex items-center justify-center min-w-[20px] h-5 px-1 bg-[#002855] text-white text-[11px] font-semibold rounded-none">
             {selectedValues.length}
           </span>
         )}
@@ -250,7 +250,7 @@ export default function FilterSelect({
             className="bg-white border border-slate-200 shadow-[0_10px_28px_rgba(0,40,85,0.14)] max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150"
           >
             {rows.length === 0 && (
-              <li className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-300">Sin opciones</li>
+              <li className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-300">Sin opciones</li>
             )}
             {rows.map((row, i) => {
               const isPlaceholder = row.value === '';
@@ -272,7 +272,7 @@ export default function FilterSelect({
                   onClick={() => commit(i)}
                   className={`
                     relative flex items-center gap-2.5 pl-3 pr-3 py-2.5 cursor-pointer
-                    text-[12px] font-black uppercase tracking-[0.08em]
+                    text-[12px] font-semibold tracking-[0.02em]
                     transition-colors duration-100
                     ${isChecked ? 'text-[#002855]' : 'text-slate-500'}
                     ${isHighlighted ? 'bg-slate-50' : 'bg-white'}
@@ -298,13 +298,13 @@ export default function FilterSelect({
 
           {multiple && selectedValues.length > 0 && (
             <div className="flex items-center justify-between bg-slate-50 border border-t-0 border-slate-200 px-2.5 py-1.5">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+              <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">
                 {selectedValues.length} marcada{selectedValues.length > 1 ? 's' : ''}
               </span>
               <button
                 type="button"
                 onClick={() => onChange?.({ target: { value: [] } })}
-                className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-700 transition-colors"
+                className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-widest text-rose-500 hover:text-rose-700 transition-colors"
               >
                 <X size={11} strokeWidth={3} /> Limpiar
               </button>

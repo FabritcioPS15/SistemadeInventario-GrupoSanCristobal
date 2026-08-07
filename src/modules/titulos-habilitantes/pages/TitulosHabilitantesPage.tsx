@@ -9,6 +9,8 @@ import { useAuth } from '../../../app/providers/AuthContext';
 import TituloHabilitanteForm from '../forms/TituloHabilitanteForm';
 import TituloHabilitanteDetails from '../components/TituloHabilitanteDetails';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
+import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
@@ -47,6 +49,12 @@ export default function TitulosHabilitantes() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { selectionMode, toggleSelectionMode } = useSelectionMode();
+
+  const handleToggleSelectionMode = () => {
+    setSelectedIds([]);
+    toggleSelectionMode();
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -198,9 +206,9 @@ export default function TitulosHabilitantes() {
       cancelButtonText: 'Cancelar',
       customClass: {
         popup: 'rounded-2xl',
-        title: 'text-xl font-bold text-slate-800',
-        confirmButton: 'rounded-xl font-bold tracking-wide',
-        cancelButton: 'rounded-xl font-bold tracking-wide'
+        title: 'text-xl font-normal text-slate-800',
+        confirmButton: 'rounded-xl font-normal tracking-wide',
+        cancelButton: 'rounded-xl font-normal tracking-wide'
       }
     });
 
@@ -239,11 +247,11 @@ export default function TitulosHabilitantes() {
     if (daysLeft <= 0) {
       return (
         <div className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-sm">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-sm">
             <AlertTriangle size={11} className="text-rose-500 shrink-0" />
             Vencido ({Math.abs(daysLeft)}d)
           </span>
-          <span className="text-[10px] font-black text-rose-600/80 ml-1">{dateStr}</span>
+          <span className="text-[10px] font-semibold text-rose-600/80 ml-1">{dateStr}</span>
         </div>
       );
     }
@@ -251,22 +259,22 @@ export default function TitulosHabilitantes() {
     if (daysLeft <= 30) {
       return (
         <div className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
             <AlertTriangle size={11} className="text-amber-500 shrink-0" />
             Vence {daysLeft}d
           </span>
-          <span className="text-[10px] font-black text-amber-600/80 ml-1">{dateStr}</span>
+          <span className="text-[10px] font-semibold text-amber-600/80 ml-1">{dateStr}</span>
         </div>
       );
     }
 
     return (
       <div className="flex flex-col items-start gap-1">
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm">
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm">
           <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
           Vigente ({daysLeft}d)
         </span>
-        <span className="text-[10px] font-bold text-slate-500 ml-1">{dateStr}</span>
+        <span className="text-[10px] font-semibold text-slate-500 ml-1">{dateStr}</span>
       </div>
     );
   };
@@ -349,14 +357,14 @@ export default function TitulosHabilitantes() {
                 placeholder="Buscar por título, tipo o número..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-semibold text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              { key: 'location', multiple: false, placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
             ]}
             values={{ location: selectedLocations[0] || '' }}
             onChange={(_key, value) => {
@@ -368,6 +376,14 @@ export default function TitulosHabilitantes() {
           <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
           {canEdit() && (
+            <SelectionModeButton
+              active={selectionMode}
+              onClick={handleToggleSelectionMode}
+              selectedCount={selectedIds.length}
+            />
+          )}
+
+          {canEdit() && (
             <PrimaryButton icon={Plus} onClick={() => { setEditingTitulo(undefined); setIsFormOpen(true); }}>
               Nuevo Título
             </PrimaryButton>
@@ -375,10 +391,10 @@ export default function TitulosHabilitantes() {
 
           <ExportButtons onExportExcel={downloadReport} onExportPDF={downloadReportPdf} />
 
-          {canEdit() && selectedIds.length > 0 && viewMode === 'table' && (
+          {canEdit() && selectionMode && selectedIds.length > 0 && viewMode === 'table' && (
             <button
               onClick={handleBulkDelete}
-              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-black uppercase tracking-wider"
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 hover:text-rose-700 transition-all text-[10px] font-semibold uppercase tracking-wider"
             >
               <Trash2 size={14} />
               Eliminar ({selectedIds.length})
@@ -392,7 +408,7 @@ export default function TitulosHabilitantes() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {paginatedData.map(titulo => (
               <div key={titulo.id} className={`bg-white rounded-2xl shadow-sm border transition-all p-6 flex flex-col group overflow-hidden hover:-translate-y-0.5 duration-200 relative ${selectedIds.includes(titulo.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-200/80 hover:shadow-xl'}`}>
-                {canEdit() && (
+                {canEdit() && selectionMode && (
                   <div className="absolute top-4 right-4 z-10">
                     <input
                       type="checkbox"
@@ -411,7 +427,7 @@ export default function TitulosHabilitantes() {
                 </div>
 
                 <div className="mb-4">
-                  <h4 className="text-[14px] font-black text-slate-800 uppercase leading-none">{titulo.titulo}</h4>
+                  <h4 className="text-[14px] font-semibold text-slate-800 uppercase leading-none">{titulo.titulo}</h4>
                   <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{titulo.tipo}</p>
                 </div>
 
@@ -422,22 +438,22 @@ export default function TitulosHabilitantes() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Número</label>
-                      <span className="text-[11px] font-black text-slate-600 uppercase truncate">{titulo.numero || '—'}</span>
+                      <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Número</label>
+                      <span className="text-[11px] font-semibold text-slate-600 uppercase truncate">{titulo.numero || '—'}</span>
                     </div>
                     <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Vigencia Doc.</label>
-                      <span className="text-[11px] font-black text-slate-600 uppercase truncate">{titulo.vigencia_documento || '—'}</span>
+                      <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Vigencia Doc.</label>
+                      <span className="text-[11px] font-semibold text-slate-600 uppercase truncate">{titulo.vigencia_documento || '—'}</span>
                     </div>
                     <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Vigencia Del</label>
-                      <span className="text-[11px] font-black text-slate-600 uppercase truncate">
+                      <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Vigencia Del</label>
+                      <span className="text-[11px] font-semibold text-slate-600 uppercase truncate">
                         {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
                       </span>
                     </div>
                     <div className="bg-slate-50/50 p-2 rounded-xl border border-slate-100 flex flex-col gap-0.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Vigencia Al</label>
-                      <span className="text-[11px] font-black text-slate-600 uppercase truncate">
+                      <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Vigencia Al</label>
+                      <span className="text-[11px] font-semibold text-slate-600 uppercase truncate">
                         {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
                       </span>
                     </div>
@@ -466,11 +482,51 @@ export default function TitulosHabilitantes() {
                 onItemsPerPageChange={setItemsPerPage}
               />
             </div>
-            <div className="overflow-x-auto">
+            {/* Mobile card view */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {paginatedData.map((titulo) => (
+                <div key={titulo.id} className={`p-3 cursor-pointer hover:bg-slate-50 transition-colors ${selectedIds.includes(titulo.id) ? 'bg-blue-50/40' : ''}`} onClick={() => { setSelectedTitulo(titulo); setShowDetails(true); }}>
+                  <div className="flex items-center gap-2">
+                    {canEdit() && selectionMode && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(titulo.id)}
+                        onChange={() => toggleSelect(titulo.id)}
+                        onClick={e => e.stopPropagation()}
+                        className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-semibold text-[#002855] truncate leading-tight">{titulo.titulo}</p>
+                      <p className="text-[10px] font-semibold text-slate-500 uppercase">{titulo.tipo}</p>
+                    </div>
+                    {renderStatus(titulo)}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 flex-wrap">
+                    <span>Del: {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}</span>
+                    <span>Al: {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+                    <MapPin size={10} className="text-rose-400 shrink-0" />
+                    <span className="truncate">{titulo.locations?.name || 'Ubicación N/A'}</span>
+                    <span className="ml-auto">{titulo.vigencia_documento || '—'}</span>
+                  </div>
+                  {canEdit() && (
+                    <div className="flex gap-1.5 mt-1.5" onClick={e => e.stopPropagation()}>
+                      <button onClick={(e) => { e.stopPropagation(); setEditingTitulo(titulo); setIsFormOpen(true); }} className="text-[10px] font-semibold text-slate-600 hover:underline">Editar</button>
+                      <span className="text-slate-300">|</span>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(titulo.id); }} className="text-[10px] font-semibold text-rose-500 hover:underline">Eliminar</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <tr>
-                    {canEdit() && (
+                    {canEdit() && selectionMode && (
                       <TableHead className="text-center w-12">
                         <input
                           type="checkbox"
@@ -486,7 +542,7 @@ export default function TitulosHabilitantes() {
                         onClick={() => handleSort('titulo')}
                         className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
                       >
-                        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Título</span>
+                        <span className="text-[12px] font-semibold text-[#002855] tracking-[0.2em]">Título</span>
                         {sortField === 'titulo' && (
                           sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
                         )}
@@ -497,27 +553,27 @@ export default function TitulosHabilitantes() {
                         onClick={() => handleSort('tipo')}
                         className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
                       >
-                        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Tipo</span>
+                        <span className="text-[12px] font-semibold text-[#002855] tracking-[0.2em]">Tipo</span>
                         {sortField === 'tipo' && (
                           sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
                         )}
                       </button>
                     </TableHead>
                     <TableHead>
-                      <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Vigencia Del</span>
+                      <span className="text-[12px] font-semibold text-[#002855] tracking-[0.2em]">Vigencia Del</span>
                     </TableHead>
                     <TableHead>
-                      <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Vigencia Al</span>
+                      <span className="text-[12px] font-semibold text-[#002855] tracking-[0.2em]">Vigencia Al</span>
                     </TableHead>
                     <TableHead>
-                      <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Vigencia Doc.</span>
+                      <span className="text-[12px] font-semibold text-[#002855] tracking-[0.2em]">Vigencia Doc.</span>
                     </TableHead>
                     <TableHead>
                       <button
                         onClick={() => handleSort('fecha_vencimiento')}
                         className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
                       >
-                        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Días para Vencer</span>
+                        <span className="text-[12px] font-semibold text-[#002855] tracking-[0.2em]">Días para Vencer</span>
                         {sortField === 'fecha_vencimiento' && (
                           sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
                         )}
@@ -528,14 +584,14 @@ export default function TitulosHabilitantes() {
                         onClick={() => handleSort('ubicacion')}
                         className="flex items-center justify-start gap-2 hover:text-blue-600 transition-colors"
                       >
-                        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Ubicación</span>
+                        <span className="text-[12px] font-semibold text-[#002855] tracking-[0.2em]">Ubicación</span>
                         {sortField === 'ubicacion' && (
                           sortDirection === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
                         )}
                       </button>
                     </TableHead>
                     <TableHead className="text-center">
-                      <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Acciones</span>
+                      <span className="text-[12px] font-semibold text-[#002855] tracking-[0.2em]">Acciones</span>
                     </TableHead>
                   </tr>
                 </TableHeader>
@@ -546,7 +602,7 @@ export default function TitulosHabilitantes() {
                       className={`cursor-pointer ${selectedIds.includes(titulo.id) ? 'bg-blue-50/40' : ''}`}
                       onClick={() => { setSelectedTitulo(titulo); setShowDetails(true); }}
                     >
-                      {canEdit() && (
+                      {canEdit() && selectionMode && (
                         <TableCell className="text-center w-12">
                           <input
                             type="checkbox"
@@ -558,23 +614,23 @@ export default function TitulosHabilitantes() {
                         </TableCell>
                       )}
                       <TableCell>
-                        <span className="text-[13px] font-black text-[#002855] leading-tight">{titulo.titulo}</span>
+                        <span className="text-[13px] font-semibold text-[#002855] leading-tight">{titulo.titulo}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-[12px] font-bold text-slate-700 uppercase">{titulo.tipo}</span>
+                        <span className="text-[12px] font-semibold text-slate-700 uppercase">{titulo.tipo}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-[12px] font-bold text-slate-700">
+                        <span className="text-[12px] font-semibold text-slate-700">
                           {(titulo.vigencia_del || titulo.fecha_emision) ? new Date((titulo.vigencia_del || titulo.fecha_emision) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-[12px] font-bold text-slate-700">
+                        <span className="text-[12px] font-semibold text-slate-700">
                           {(titulo.vigencia_al || titulo.fecha_vencimiento) ? new Date((titulo.vigencia_al || titulo.fecha_vencimiento) as string).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '—'}
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-[12px] font-bold text-slate-700 uppercase">{titulo.vigencia_documento || '—'}</span>
+                        <span className="text-[12px] font-semibold text-slate-700 uppercase">{titulo.vigencia_documento || '—'}</span>
                       </TableCell>
                       <TableCell>
                         {renderStatus(titulo)}
@@ -582,7 +638,7 @@ export default function TitulosHabilitantes() {
                       <TableCell>
                         <div className="flex items-center gap-1.5 text-slate-700">
                           <MapPin size={14} className="text-rose-500 shrink-0" />
-                          <span className="text-[12px] font-bold uppercase truncate max-w-xs block">{titulo.locations?.name || 'Ubicación N/A'}</span>
+                          <span className="text-[12px] font-semibold uppercase truncate max-w-xs block">{titulo.locations?.name || 'Ubicación N/A'}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">

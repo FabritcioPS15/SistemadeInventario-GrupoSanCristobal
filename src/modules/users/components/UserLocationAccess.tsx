@@ -105,8 +105,8 @@ export default function UserLocationAccess({ userId, userName, isOpen, onClose }
               <Shield size={18} className="text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">Accesos a Sedes</h2>
-              <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">{userName}</p>
+              <h2 className="text-sm font-normal text-white uppercase tracking-[0.2em] leading-tight">Accesos a Sedes</h2>
+              <p className="text-[10px] font-normal text-blue-200 uppercase tracking-widest mt-0.5">{userName}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-none transition-all">
@@ -122,14 +122,14 @@ export default function UserLocationAccess({ userId, userName, isOpen, onClose }
             </div>
           ) : (
             <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-1">
+              <p className="text-[10px] font-normal text-slate-400 uppercase tracking-widest mb-3 ml-1">
                 Selecciona las sedes a las que este usuario tiene acceso:
               </p>
               
               {locations.length === 0 ? (
                 <div className="text-center py-8 text-slate-400">
                   <MapPin className="mx-auto mb-2 opacity-50" size={32} />
-                  <p className="text-sm font-semibold">No hay sedes disponibles</p>
+                  <p className="text-sm font-normal">No hay sedes disponibles</p>
                 </div>
               ) : (
                 locations.map((location) => {
@@ -149,9 +149,9 @@ export default function UserLocationAccess({ userId, userName, isOpen, onClose }
                           <MapPin className={hasAccess ? 'text-white' : 'text-slate-500'} size={16} />
                         </div>
                         <div className="text-left">
-                          <p className="text-xs font-black text-slate-800 uppercase">{location.name}</p>
+                          <p className="text-xs font-normal text-slate-800 uppercase">{location.name}</p>
                           {location.address && (
-                            <p className="text-[9px] font-bold text-slate-500 mt-0.5">{location.address}</p>
+                            <p className="text-[9px] font-normal text-slate-500 mt-0.5">{location.address}</p>
                           )}
                         </div>
                       </div>
@@ -168,19 +168,19 @@ export default function UserLocationAccess({ userId, userName, isOpen, onClose }
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-white border-t px-4 py-3 flex items-center justify-between gap-3 z-10">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+          <span className="text-[10px] font-normal text-slate-400 uppercase tracking-widest">
             {userLocationIds.size} sede(s) seleccionada(s)
           </span>
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all"
+              className="px-6 py-2 text-[10px] font-normal uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all"
             >
               Cancelar
             </button>
             <button
               onClick={handleSave}
-              className="px-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all shadow-lg"
+              className="px-8 py-2 text-[10px] font-normal uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all shadow-lg"
             >
               Guardar
             </button>

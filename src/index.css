@@ -4,19 +4,19 @@
 
 @layer base {
   :root {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-family: 'Exo 2', system-ui, -apple-system, sans-serif;
   }
 
   body {
     margin: 0;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Exo 2', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-color: #f8f9fc;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: 'Exo 2', sans-serif;
   }
 
   .page-fade-in {

@@ -476,7 +476,7 @@ export default function Dashboard() {
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <div className="flex items-center gap-2 mb-4">
             <AlertCircle className="text-red-600" size={20} />
-            <h3 className="text-lg font-semibold text-red-800">Error de Conexión</h3>
+            <h3 className="text-lg font-normal text-red-800">Error de Conexión</h3>
           </div>
           <p className="text-red-700 mb-4">{error}</p>
           <button
@@ -499,10 +499,10 @@ export default function Dashboard() {
         {/* Date and Time Display */}
         <div className="bg-[#002855] rounded-none shadow-sm p-5 sm:p-8 text-white border border-[#002855]">
           <div className="text-center">
-            <div className="text-3xl sm:text-4xl lg:text-5xl font-black mb-2 tracking-wider">
+            <div className="text-3xl sm:text-4xl lg:text-5xl font-normal mb-2 tracking-wider">
               {currentTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </div>
-            <div className="text-[12px] font-bold opacity-90 uppercase tracking-[0.2em]">
+            <div className="text-[12px] font-normal opacity-90 uppercase tracking-[0.2em]">
               {currentTime.toLocaleDateString('es-ES', {
                 weekday: 'long',
                 year: 'numeric',
@@ -523,18 +523,18 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Package className="text-[#002855]" size={20} />
-                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[12px]">Inventario General</span>
+                  <span className="text-[#002855] font-normal uppercase tracking-[0.2em] text-[12px]">Inventario General</span>
                 </div>
                 <ArrowRight size={18} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
             </div>
             <div className="p-6">
-              <h3 className="text-[#002855] text-4xl font-black mb-2">{stats.totalAssets}</h3>
+              <h3 className="text-[#002855] text-4xl font-normal mb-2">{stats.totalAssets}</h3>
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats.activeAssets} activos</span>
+                <span className="text-[10px] font-normal text-slate-500 uppercase tracking-widest">{stats.activeAssets} activos</span>
               </div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Equipos y activos operativos</p>
+              <p className="text-[9px] font-normal text-slate-400 uppercase tracking-widest">Equipos y activos operativos</p>
             </div>
           </div>
 
@@ -546,25 +546,25 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <CheckSquare className="text-[#002855]" size={20} />
-                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[12px]">Mesa de ayuda</span>
+                  <span className="text-[#002855] font-normal uppercase tracking-[0.2em] text-[12px]">Mesa de ayuda</span>
                 </div>
                 <ArrowRight size={18} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
             </div>
             <div className="p-6">
-              <h3 className="text-[#002855] text-3xl font-black mb-3">{stats.totalTickets}</h3>
+              <h3 className="text-[#002855] text-3xl font-normal mb-3">{stats.totalTickets}</h3>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats.openTickets} Tickets abiertos</span>
+                  <span className="text-[10px] font-normal text-slate-500 uppercase tracking-widest">{stats.openTickets} Tickets abiertos</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats.attendedTickets} Tickets en atención</span>
+                  <span className="text-[10px] font-normal text-slate-500 uppercase tracking-widest">{stats.attendedTickets} Tickets en atención</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stats.resolvedTickets} Tickets resueltos</span>
+                  <span className="text-[10px] font-normal text-slate-500 uppercase tracking-widest">{stats.resolvedTickets} Tickets resueltos</span>
                 </div>
               </div>
             </div>
@@ -577,29 +577,29 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Camera className="text-[#002855]" size={20} />
-                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[12px]">Accesos a cámaras de videovigilancia</span>
+                  <span className="text-[#002855] font-normal uppercase tracking-[0.2em] text-[12px]">Accesos a cámaras de videovigilancia</span>
                 </div>
                 <ArrowRight size={18} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
             </div>
             <div className="p-6">
-              <h3 className="text-[#002855] text-3xl font-black mb-2">{stats.totalCameras} accesos</h3>
+              <h3 className="text-[#002855] text-3xl font-normal mb-2">{stats.totalCameras} accesos</h3>
               <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <div className="flex justify-between items-center text-[10px] font-normal text-slate-500 uppercase tracking-wider">
                   <span>Escuelas:</span>
-                  <span className="text-[#002855] font-black">
+                  <span className="text-[#002855] font-normal">
                     {stats.camerasByCategory.escuela.active} Accesos ({stats.camerasByCategory.escuela.views} cámaras)
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <div className="flex justify-between items-center text-[10px] font-normal text-slate-500 uppercase tracking-wider">
                   <span>Revisiones:</span>
-                  <span className="text-[#002855] font-black">
+                  <span className="text-[#002855] font-normal">
                     {stats.camerasByCategory.revision.active} Accesos ({stats.camerasByCategory.revision.views} cámaras)
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                <div className="flex justify-between items-center text-[10px] font-normal text-slate-500 uppercase tracking-wider">
                   <span>ECSAL:</span>
-                  <span className="text-[#002855] font-black">
+                  <span className="text-[#002855] font-normal">
                     {stats.camerasByCategory.ecsal.active} Accesos ({stats.camerasByCategory.ecsal.views} cámaras)
                   </span>
                 </div>
@@ -617,7 +617,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Truck className="text-[#002855]" size={18} />
-                  <span className="text-[#002855] font-black uppercase tracking-[0.2em] text-[12px]">Flota presentada para escuelas</span>
+                  <span className="text-[#002855] font-normal uppercase tracking-[0.2em] text-[12px]">Flota presentada para escuelas</span>
                 </div>
                 <ArrowRight size={16} className="text-[#002855]/40 group-hover:text-[#002855] transition-colors" />
               </div>
@@ -632,17 +632,17 @@ export default function Dashboard() {
                   <div className="bg-slate-50 border-b border-slate-200 px-3 py-2">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="text-[#002855]" size={12} />
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#002855]">SOAT</span>
+                      <span className="text-[9px] font-normal uppercase tracking-[0.2em] text-[#002855]">SOAT</span>
                     </div>
                   </div>
                   <div className="p-3 space-y-2">
                     <div>
                       <span className="text-[9px] text-slate-400 block">Vencidos</span>
-                      <span className="text-2xl font-black text-red-600">{stats.vehiclesByDocument.soat.expired}</span>
+                      <span className="text-2xl font-normal text-red-600">{stats.vehiclesByDocument.soat.expired}</span>
                     </div>
                     <div>
                       <span className="text-[9px] text-slate-400 block">Por vencer</span>
-                      <span className="text-2xl font-black text-yellow-600">{stats.vehiclesByDocument.soat.warning}</span>
+                      <span className="text-2xl font-normal text-yellow-600">{stats.vehiclesByDocument.soat.warning}</span>
                     </div>
                   </div>
                 </div>
@@ -654,17 +654,17 @@ export default function Dashboard() {
                   <div className="bg-slate-50 border-b border-slate-200 px-3 py-2">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="text-[#002855]" size={12} />
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#002855]">Rev. Técnica</span>
+                      <span className="text-[9px] font-normal uppercase tracking-[0.2em] text-[#002855]">Rev. Técnica</span>
                     </div>
                   </div>
                   <div className="p-3 space-y-2">
                     <div>
                       <span className="text-[9px] text-slate-400 block">Vencidas</span>
-                      <span className="text-2xl font-black text-red-600">{stats.vehiclesByDocument.citv.expired}</span>
+                      <span className="text-2xl font-normal text-red-600">{stats.vehiclesByDocument.citv.expired}</span>
                     </div>
                     <div>
                       <span className="text-[9px] text-slate-400 block">Por vencer</span>
-                      <span className="text-2xl font-black text-yellow-600">{stats.vehiclesByDocument.citv.warning}</span>
+                      <span className="text-2xl font-normal text-yellow-600">{stats.vehiclesByDocument.citv.warning}</span>
                     </div>
                   </div>
                 </div>
@@ -676,17 +676,17 @@ export default function Dashboard() {
                   <div className="bg-slate-50 border-b border-slate-200 px-3 py-2">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="text-[#002855]" size={12} />
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#002855]">Póliza</span>
+                      <span className="text-[9px] font-normal uppercase tracking-[0.2em] text-[#002855]">Póliza</span>
                     </div>
                   </div>
                   <div className="p-3 space-y-2">
                     <div>
                       <span className="text-[9px] text-slate-400 block">Vencidas</span>
-                      <span className="text-2xl font-black text-red-600">{stats.vehiclesByDocument.poliza.expired}</span>
+                      <span className="text-2xl font-normal text-red-600">{stats.vehiclesByDocument.poliza.expired}</span>
                     </div>
                     <div>
                       <span className="text-[9px] text-slate-400 block">Por vencer</span>
-                      <span className="text-2xl font-black text-yellow-600">{stats.vehiclesByDocument.poliza.warning}</span>
+                      <span className="text-2xl font-normal text-yellow-600">{stats.vehiclesByDocument.poliza.warning}</span>
                     </div>
                   </div>
                 </div>
@@ -704,17 +704,17 @@ export default function Dashboard() {
                   <AlertTriangle className={stats.nextSutranVisit.days <= 5 ? 'text-red-600' : 'text-orange-600'} size={20} />
                 </div>
                 <div>
-                  <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#002855]">Próxima Visita SUTRAN</h3>
-                  <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Sede: {stats.nextSutranVisit.location}</p>
+                  <h3 className="text-[12px] font-normal uppercase tracking-[0.2em] text-[#002855]">Próxima Visita SUTRAN</h3>
+                  <p className="text-[9px] font-normal text-slate-500 uppercase tracking-widest mt-0.5">Sede: {stats.nextSutranVisit.location}</p>
                 </div>
               </div>
               <div className="text-right">
-                <div className={`text-lg font-black ${stats.nextSutranVisit.days <= 5 ? 'text-red-600 animate-pulse' : 'text-orange-600'}`}>
+                <div className={`text-lg font-normal ${stats.nextSutranVisit.days <= 5 ? 'text-red-600 animate-pulse' : 'text-orange-600'}`}>
                   {stats.nextSutranVisit.days < 0
                     ? `VENCIDO (hace ${Math.abs(stats.nextSutranVisit.days)} días)`
                     : `${stats.nextSutranVisit.days} ${stats.nextSutranVisit.days === 1 ? 'DÍA' : 'DÍAS'}`}
                 </div>
-                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                <div className="text-[9px] font-normal text-slate-400 uppercase tracking-widest">
                   ESTIMADO: {format(new Date(stats.nextSutranVisit.date), "dd MMM yyyy", { locale: es })}
                 </div>
               </div>
@@ -725,7 +725,7 @@ export default function Dashboard() {
         {/* Notificaciones Importantes */}
         {stats.recentNotifications && stats.recentNotifications.length > 0 && (
           <div className="bg-white shadow-sm border border-slate-200 rounded-none p-4">
-            <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#002855] mb-3">Notificaciones Importantes</h3>
+            <h3 className="text-[12px] font-normal uppercase tracking-[0.2em] text-[#002855] mb-3">Notificaciones Importantes</h3>
             <div className="space-y-3">
               {stats.recentNotifications.map((notif: any) => (
                 <div key={notif.id} className="flex items-start gap-3 p-3 bg-slate-50 border border-slate-100">
@@ -733,9 +733,9 @@ export default function Dashboard() {
                     <AlertCircle size={14} />
                   </div>
                   <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-700">{notif.title}</h4>
+                    <h4 className="text-[10px] font-normal uppercase tracking-wider text-slate-700">{notif.title}</h4>
                     <p className="text-[10px] text-slate-600">{notif.message}</p>
-                    <span className="text-[9px] font-bold text-slate-400 mt-1 block">
+                    <span className="text-[9px] font-normal text-slate-400 mt-1 block">
                       {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true, locale: es })}
                     </span>
                   </div>
@@ -760,9 +760,9 @@ export default function Dashboard() {
                     <Icon className={`text-${alert.color}-600`} size={20} />
                   </div>
                   <div className="flex-1">
-                    <h3 className={`text-${alert.color}-600 text-xl font-black mb-1`}>{alert.count}</h3>
-                    <p className={`text-${alert.color}-900 text-[10px] uppercase font-black tracking-widest`}>{alert.title}</p>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{alert.description}</p>
+                    <h3 className={`text-${alert.color}-600 text-xl font-normal mb-1`}>{alert.count}</h3>
+                    <p className={`text-${alert.color}-900 text-[10px] uppercase font-normal tracking-widest`}>{alert.title}</p>
+                    <p className="text-[9px] font-normal text-slate-400 uppercase tracking-widest mt-1">{alert.description}</p>
                   </div>
                   <ArrowRight size={18} className={`text-${alert.color}-300 group-hover:text-${alert.color}-500 transition-colors`} />
                 </div>
@@ -773,35 +773,35 @@ export default function Dashboard() {
 
         {/* Quick Actions */}
         <div className="bg-white rounded-none shadow-sm border border-slate-200 p-6">
-          <h3 className="text-[12px] font-black uppercase tracking-[0.2em] text-[#002855] mb-4">Acciones Rápidas</h3>
+          <h3 className="text-[12px] font-normal uppercase tracking-[0.2em] text-[#002855] mb-4">Acciones Rápidas</h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <button
               onClick={() => navigate('/inventory')}
               className="flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 hover:border-[#002855] hover:text-[#002855] text-slate-700 rounded-none transition-colors"
             >
               <Package size={14} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Ver Inventario</span>
+              <span className="text-[10px] font-normal uppercase tracking-widest">Ver Inventario</span>
             </button>
             <button
               onClick={() => navigate('/tickets')}
               className="flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 hover:border-orange-600 hover:text-orange-600 text-slate-700 rounded-none transition-colors"
             >
               <CheckSquare size={14} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Tickets</span>
+              <span className="text-[10px] font-normal uppercase tracking-widest">Tickets</span>
             </button>
             <button
               onClick={() => navigate('/flota-vehicular')}
               className="flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 hover:border-indigo-600 hover:text-indigo-600 text-slate-700 rounded-none transition-colors"
             >
               <Truck size={14} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Flota</span>
+              <span className="text-[10px] font-normal uppercase tracking-widest">Flota</span>
             </button>
             <button
               onClick={() => navigate('/cameras')}
               className="flex items-center justify-center gap-2 p-3 bg-slate-50 border border-slate-200 hover:border-emerald-600 hover:text-emerald-600 text-slate-700 rounded-none transition-colors"
             >
               <Camera size={14} />
-              <span className="text-[10px] font-black uppercase tracking-widest">Cámaras</span>
+              <span className="text-[10px] font-normal uppercase tracking-widest">Cámaras</span>
             </button>
           </div>
         </div>
@@ -822,12 +822,12 @@ export default function Dashboard() {
                   <FileText size={18} className="text-white" />
                 </div>
                 <div>
-                  <h2 className="text-sm font-black text-white uppercase tracking-[0.2em] leading-tight">
+                  <h2 className="text-sm font-normal text-white uppercase tracking-[0.2em] leading-tight">
                     {showDocumentPopup === 'soat' ? 'SOAT' :
                       showDocumentPopup === 'citv' ? 'Revisión Técnica' :
                         'Póliza de Seguro'}
                   </h2>
-                  <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mt-0.5">Estado de documentos vehiculares</p>
+                  <p className="text-[10px] font-normal text-blue-200 uppercase tracking-widest mt-0.5">Estado de documentos vehiculares</p>
                 </div>
               </div>
               <button
@@ -853,14 +853,14 @@ export default function Dashboard() {
                     : 'bg-red-50 border-red-200 hover:bg-red-100'
                     }`}
                 >
-                  <p className="text-2xl font-bold text-red-600">
+                  <p className="text-2xl font-normal text-red-600">
                     {showDocumentPopup === 'soat' ? stats.vehiclesByDocument.soat.expired :
                       showDocumentPopup === 'citv' ? stats.vehiclesByDocument.citv.expired :
                         stats.vehiclesByDocument.poliza.expired}
                   </p>
-                  <p className="text-sm text-red-700 font-medium">Vencidos</p>
+                  <p className="text-sm text-red-700 font-normal">Vencidos</p>
                   {documentFilter === 'expired' && (
-                    <div className="mt-2 text-xs text-red-600 font-medium">
+                    <div className="mt-2 text-xs text-red-600 font-normal">
                       ✓ Filtrando
                     </div>
                   )}
@@ -872,14 +872,14 @@ export default function Dashboard() {
                     : 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100'
                     }`}
                 >
-                  <p className="text-2xl font-bold text-yellow-600">
+                  <p className="text-2xl font-normal text-yellow-600">
                     {showDocumentPopup === 'soat' ? stats.vehiclesByDocument.soat.warning :
                       showDocumentPopup === 'citv' ? stats.vehiclesByDocument.citv.warning :
                         stats.vehiclesByDocument.poliza.warning}
                   </p>
-                  <p className="text-sm text-yellow-700 font-medium">Por vencer</p>
+                  <p className="text-sm text-yellow-700 font-normal">Por vencer</p>
                   {documentFilter === 'warning' && (
-                    <div className="mt-2 text-xs text-yellow-600 font-medium">
+                    <div className="mt-2 text-xs text-yellow-600 font-normal">
                       ✓ Filtrando
                     </div>
                   )}
@@ -891,13 +891,13 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-black uppercase tracking-widest text-blue-700">
+                    <span className="text-xs font-normal uppercase tracking-widest text-blue-700">
                       Mostrando: {documentFilter === 'expired' ? 'Vencidos' : 'Por vencer'}
                     </span>
                   </div>
                   <button
                     onClick={() => setDocumentFilter('all')}
-                    className="text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-800"
+                    className="text-[10px] font-normal uppercase tracking-widest text-blue-600 hover:text-blue-800"
                   >
                     Limpiar filtro
                   </button>
@@ -908,7 +908,7 @@ export default function Dashboard() {
               {loadingExpired && documentFilter === 'expired' ? (
                 <div className="text-center py-8">
                   <div className="w-8 h-8 border-4 border-red-200 border-t-red-600 rounded-none animate-spin mx-auto mb-4"></div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Cargando vehículos vencidos...</p>
+                  <p className="text-[10px] font-normal uppercase tracking-widest text-slate-500">Cargando vehículos vencidos...</p>
                 </div>
               ) : (
                 (() => {
@@ -920,7 +920,7 @@ export default function Dashboard() {
                         <div className="w-14 h-14 bg-slate-100 border border-slate-200 flex items-center justify-center mx-auto mb-4">
                           <Truck className="text-slate-400" size={28} />
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        <p className="text-[10px] font-normal uppercase tracking-widest text-slate-500">
                           {documentFilter === 'expired'
                             ? 'No hay vehículos con documentos vencidos'
                             : 'No hay vehículos próximos a vencer'}
@@ -931,7 +931,7 @@ export default function Dashboard() {
 
                   return (
                     <div>
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#002855] mb-4 flex items-center gap-2">
+                      <h4 className="text-[10px] font-normal uppercase tracking-[0.2em] text-[#002855] mb-4 flex items-center gap-2">
                         <div className={`w-2 h-2 animate-pulse ${documentFilter === 'expired' ? 'bg-red-500' : 'bg-orange-500'}`}></div>
                         {documentFilter === 'expired' ? 'Vehículos Vencidos' : 'Próximos a Vencer'}
                       </h4>
@@ -947,9 +947,9 @@ export default function Dashboard() {
                                 <Truck size={12} className={`${documentFilter === 'expired' ? 'text-red-600' :
                                   Math.abs(vehicle.days) <= 7 ? 'text-orange-600' : 'text-yellow-600'
                                   }`} />
-                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-700">{vehicle.plate}</span>
+                                <span className="text-[10px] font-normal uppercase tracking-wider text-slate-700">{vehicle.plate}</span>
                               </div>
-                              <span className={`text-[9px] font-black uppercase tracking-widest ${documentFilter === 'expired' ? 'text-red-600' :
+                              <span className={`text-[9px] font-normal uppercase tracking-widest ${documentFilter === 'expired' ? 'text-red-600' :
                                 Math.abs(vehicle.days) <= 7 ? 'text-orange-600' : 'text-yellow-600'
                                 }`}>
                                 {documentFilter === 'expired' ? '¡Vencido!' :
@@ -962,7 +962,7 @@ export default function Dashboard() {
                                 <MapPin size={10} />
                                 <span>{getSchoolName(vehicle.location)}</span>
                               </div>
-                              <div className={`text-[12px] font-black ${documentFilter === 'expired' ? 'text-red-600' :
+                              <div className={`text-[12px] font-normal ${documentFilter === 'expired' ? 'text-red-600' :
                                 Math.abs(vehicle.days) <= 7 ? 'text-orange-600' : 'text-yellow-600'
                                 }`}>
                                 {documentFilter === 'expired'
@@ -990,7 +990,7 @@ export default function Dashboard() {
               <div className="sticky bottom-0 bg-white border-t px-4 py-3 flex items-center justify-between gap-3 z-10">
                 <button
                   onClick={() => setShowDocumentPopup(null)}
-                  className="px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all"
+                  className="px-6 py-2 text-[10px] font-normal uppercase tracking-[0.2em] text-slate-600 bg-white border border-slate-200 rounded-none hover:bg-slate-50 transition-all"
                 >
                   Cerrar
                 </button>
@@ -999,7 +999,7 @@ export default function Dashboard() {
                     navigate('/flota-vehicular');
                     setShowDocumentPopup(null);
                   }}
-                  className="px-8 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all shadow-lg"
+                  className="px-8 py-2 text-[10px] font-normal uppercase tracking-[0.2em] text-white bg-blue-600 rounded-none hover:bg-blue-700 transition-all shadow-lg"
                 >
                   Ver Flota Completa
                 </button>

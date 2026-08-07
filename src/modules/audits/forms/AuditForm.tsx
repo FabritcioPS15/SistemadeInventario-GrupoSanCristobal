@@ -234,7 +234,7 @@ export default function AuditForm({ onClose, onSave, editAudit }: AuditFormProps
                             <div key={question.id} className="bg-white border rounded-lg p-4">
                                 <div className="flex items-start gap-4">
                                     <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                        <span className="text-sm font-bold text-blue-600">{index + 1}</span>
+                                        <span className="text-sm font-normal text-blue-600">{index + 1}</span>
                                     </div>
                                     <div className="flex-1">
                                         <h4 className="font-medium text-gray-900 mb-2">{question.text}</h4>
@@ -292,7 +292,7 @@ export default function AuditForm({ onClose, onSave, editAudit }: AuditFormProps
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <div className="flex justify-between items-center">
                                 <span className="font-medium text-blue-900">Puntuación Estimada:</span>
-                                <span className="text-2xl font-bold text-blue-900">{calculateScore()}%</span>
+                                <span className="text-2xl font-normal text-blue-900">{calculateScore()}%</span>
                             </div>
                         </div>
                     </div>

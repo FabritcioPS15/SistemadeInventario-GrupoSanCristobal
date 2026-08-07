@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        'sans': ['"Plus Jakarta Sans"', 'sans-serif'],
+        'sans': ['"Exo 2"', 'system-ui', '-apple-system', 'sans-serif'],
       },
     },
   },

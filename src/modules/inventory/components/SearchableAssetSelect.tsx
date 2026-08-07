@@ -74,7 +74,7 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
               <span className="p-1 bg-blue-100 text-blue-700 rounded-none">
                 {getIcon(selectedAsset.asset_types?.name)}
               </span>
-              <span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.1em] truncate">
+              <span className="text-[11px] font-semibold text-[#002855] uppercase tracking-[0.1em] truncate">
                 {(selectedAsset as any).item ||
                   (selectedAsset as any).descripcion ||
                   (selectedAsset as any).name ||
@@ -84,12 +84,12 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
                       selectedAsset.model ||
                       'Sin nombre')}
               </span>
-              <span className="text-[9px] font-bold text-slate-400 uppercase">
+              <span className="text-[9px] font-semibold text-slate-400 uppercase">
                 {selectedAsset.locations?.name}
               </span>
             </div>
           ) : (
-            <span className="text-[11px] font-black text-slate-300 uppercase tracking-[0.1em]">{placeholder}</span>
+            <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-[0.1em]">{placeholder}</span>
           )}
         </div>
         <ChevronDown size={16} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-600' : ''}`} />
@@ -106,7 +106,7 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
                 placeholder="Marca, modelo, descripción o serie..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-[10px] font-black text-slate-700 uppercase tracking-widest bg-white border border-slate-200 focus:border-blue-500 outline-none"
+                className="w-full pl-9 pr-4 py-2 text-[10px] font-semibold text-slate-700 uppercase tracking-widest bg-white border border-slate-200 focus:border-blue-500 outline-none"
               />
             </div>
           </div>
@@ -115,7 +115,7 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
             {filteredAssets.length === 0 ? (
               <div className="px-4 py-8 text-center">
                 <Search size={24} className="mx-auto text-slate-200 mb-2" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No se encontraron activos</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">No se encontraron activos</p>
               </div>
             ) : (
               filteredAssets.map((asset) => (
@@ -136,7 +136,7 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
                       {getIcon(asset.asset_types?.name)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className={`text-[11px] font-black uppercase tracking-tight leading-none mb-1 truncate ${value === asset.id ? 'text-blue-700' : 'text-slate-800'}`}>
+                      <h4 className={`text-[11px] font-semibold uppercase tracking-tight leading-none mb-1 truncate ${value === asset.id ? 'text-blue-700' : 'text-slate-800'}`}>
                         {(asset as any).item ||
                           (asset as any).descripcion ||
                           (asset as any).name ||
@@ -152,9 +152,9 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
                         </p>
                       )}
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{asset.asset_types?.name}</span>
+                        <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest truncate">{asset.asset_types?.name}</span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full shrink-0"></span>
-                        <div className="flex items-center gap-1 text-[9px] font-bold text-rose-500 uppercase italic truncate">
+                        <div className="flex items-center gap-1 text-[9px] font-semibold text-rose-500 uppercase italic truncate">
                           <MapPin size={10} />
                           {asset.locations?.name}
                         </div>
@@ -168,7 +168,7 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
           </div>
         </div>
       )}
-      {error && <p className="mt-1 text-[10px] font-black text-rose-500 uppercase tracking-widest">{error}</p>}
+      {error && <p className="mt-1 text-[10px] font-semibold text-rose-500 uppercase tracking-widest">{error}</p>}
     </div>
   );
 }

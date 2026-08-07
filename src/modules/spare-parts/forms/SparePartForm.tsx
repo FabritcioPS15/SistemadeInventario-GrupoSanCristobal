@@ -305,7 +305,7 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex justify-between items-center">
             <span className="font-medium text-blue-900">Valor Total del Inventario:</span>
-            <span className="text-xl font-bold text-blue-900">
+            <span className="text-xl font-normal text-blue-900">
               S/. {(formData.quantity * formData.unit_price).toFixed(2)}
             </span>
           </div>

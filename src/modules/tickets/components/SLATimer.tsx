@@ -48,7 +48,7 @@ export default function SLATimer({ createdAt, priority }: SLATimerProps) {
   };
 
   return (
-    <div className={`flex items-center gap-1.5 px-2 py-1 text-[9px] font-black uppercase tracking-wider border ${colors[status]}`}>
+    <div className={`flex items-center gap-1.5 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider border ${colors[status]}`}>
       <Clock size={10} />
       <span>{timeLeft}</span>
     </div>

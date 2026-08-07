@@ -74,7 +74,7 @@ export function TableHead({
     <th className={`px-4 py-5 text-left whitespace-nowrap ${className}`}>
       {sortable ? (
         <button onClick={onClick} className="flex items-center gap-1.5 hover:text-[#002855] transition-colors">
-          <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">{children}</span>
+          <span className="text-[12px] font-semibold text-[#002855] uppercase tracking-[0.2em]">{children}</span>
           {isSorted ? (
             <span className="text-[#002855] text-[10px]">{sortDirection === 'asc' ? '▲' : '▼'}</span>
           ) : (
@@ -82,7 +82,7 @@ export function TableHead({
           )}
         </button>
       ) : (
-        <span className="text-[12px] font-black text-[#002855] uppercase tracking-[0.2em]">{children}</span>
+        <span className="text-[12px] font-semibold text-[#002855] uppercase tracking-[0.2em]">{children}</span>
       )}
     </th>
   );
@@ -129,7 +129,7 @@ export function TableCellIcon({
   );
 }
 
-/** Texto principal: 13px font-black #002855 uppercase */
+/** Texto principal: 13px font-semibold #002855 uppercase */
 export function TableCellPrimary({
   children,
   className = ''
@@ -138,13 +138,13 @@ export function TableCellPrimary({
   className?: string;
 }) {
   return (
-    <span className={`text-[13px] font-black text-[#002855] uppercase leading-tight tracking-tight ${className}`}>
+    <span className={`text-[13px] font-semibold text-[#002855] uppercase leading-tight tracking-tight ${className}`}>
       {children}
     </span>
   );
 }
 
-/** Texto secundario/subtítulo: 10px font-bold slate-400 uppercase */
+/** Texto secundario/subtítulo: 10px font-semibold slate-400 uppercase */
 export function TableCellSecondary({
   children,
   className = ''
@@ -153,7 +153,7 @@ export function TableCellSecondary({
   className?: string;
 }) {
   return (
-    <span className={`text-[10px] font-bold text-slate-400 uppercase tracking-widest ${className}`}>
+    <span className={`text-[10px] font-semibold text-slate-400 uppercase tracking-widest ${className}`}>
       {children}
     </span>
   );
@@ -168,7 +168,7 @@ export function TableCellBadge({
   className?: string;
 }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest border ${className}`}>
       {children}
     </span>
   );

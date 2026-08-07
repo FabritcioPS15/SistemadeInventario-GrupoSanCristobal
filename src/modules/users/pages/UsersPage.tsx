@@ -1,6 +1,8 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Edit, Trash2, Mail, MapPin, X, Users as UsersIcon, Shield, Crown, Lock, Settings, TrendingUp, User as UserIcon, Search, Scale } from 'lucide-react';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
+import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
+import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
@@ -63,6 +65,12 @@ export default function Users() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { selectionMode, setSelectionMode } = useSelectionMode();
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) setSelectedIds([]);
+    setSelectionMode(!selectionMode);
+  };
 
   const canEditValue = canEdit();
   const { success: notifySuccess, error: notifyError, warning: notifyWarning, confirm } = useNotify();
@@ -201,6 +209,38 @@ export default function Users() {
       case 'area_contable': return 'Área Contable';
       default: return role;
     }
+  };
+
+  const MODULE_LABELS: Record<string, string> = {
+    dashboard: 'Dashboard',
+    tickets: 'Mesa de Ayuda',
+    checklist: 'Checklist',
+    inventory: 'Inventario',
+    cameras: 'Cámaras',
+    maintenance: 'Mantenimiento',
+    flota: 'Flota Vehicular',
+    requests: 'Solicitudes',
+    quotations: 'Cotizaciones',
+    'spare-parts': 'Repuestos',
+    users: 'Usuarios',
+    locations: 'Sedes',
+    sutran: 'Sutran',
+    mtc: 'MTC Accesos',
+    servers: 'Servidores',
+    painpoint: 'Painpoints',
+    sent: 'Enviados',
+    audit: 'Auditoría',
+    reports: 'Reportes',
+    cvs: "CV's",
+    'titulos-habilitantes': 'Títulos Habilitantes',
+    'planos-defensa-civil': 'Planos Defensa Civil',
+    vacations: 'Vacaciones',
+  };
+
+  const getPermissionModuleLabel = (permissionId: string): string => {
+    const base = permissionId.replace(/-(view|edit|create|delete|export)$/, '');
+    const moduleKey = base.split('-')[0];
+    return MODULE_LABELS[moduleKey] || base;
   };
 
   const statusColors = { active: 'bg-emerald-50 text-emerald-700 border border-emerald-200', inactive: 'bg-slate-50 text-slate-500 border border-slate-200' };
@@ -437,8 +477,16 @@ export default function Users() {
           <ViewToggle viewMode={viewMode} onChange={v => setViewMode(v as 'grid' | 'table')} />
 
           {canEditValue && (
+            <SelectionModeButton
+              active={selectionMode}
+              onClick={handleToggleSelectionMode}
+              selectedCount={selectedIds.length}
+            />
+          )}
+
+          {canEditValue && (
             <div className="flex gap-2">
-              {selectedIds.length > 0 && (
+              {selectionMode && selectedIds.length > 0 && (
                 <button
                   onClick={handleBulkDelete}
                   className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-none hover:bg-rose-100 transition-colors border border-rose-200"
@@ -543,11 +591,55 @@ export default function Users() {
                 onItemsPerPageChange={setItemsPerPage}
               />
             </div>
-            <div className="overflow-x-auto">
+            {/* Mobile card view */}
+            <div className="block md:hidden divide-y divide-slate-100">
+              {paginatedUsers.map((u) => (
+                <div key={u.id} className="p-3 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => handleViewUser(u)}>
+                  <div className="flex items-center gap-2">
+                    {canEditValue && selectionMode && (
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(u.id)}
+                        onChange={() => toggleSelect(u.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[12px] font-black text-slate-800 truncate leading-tight">{u.full_name}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 truncate">{u.email}</p>
+                    </div>
+                    <span className={`shrink-0 text-[9px] font-semibold ${u.status === 'active' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                      {statusLabels[u.status]}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span className={`text-[9px] font-semibold px-1.5 py-0.5 border ${getRoleColor(u.role)}`}>
+                      {getRoleLabel(u.role)}
+                    </span>
+                    <span className="flex items-center gap-0.5 text-[10px] text-slate-500">
+                      <MapPin size={10} className="text-rose-400 shrink-0" />
+                      {u.locations?.name || 'Sin asignar'}
+                    </span>
+                  </div>
+                  {canEdit() && u.role !== 'super_admin' && (
+                    <div className="flex gap-1.5 mt-1.5" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={(e) => { e.stopPropagation(); handleLocationAccess(u); }} className="text-[10px] font-semibold text-blue-600 hover:underline">Accesos</button>
+                      <span className="text-slate-300">|</span>
+                      <button onClick={(e) => { e.stopPropagation(); handleEditUser(u); }} className="text-[10px] font-semibold text-slate-600 hover:underline">Editar</button>
+                      <span className="text-slate-300">|</span>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeleteUser(u); }} className="text-[10px] font-semibold text-rose-500 hover:underline">Eliminar</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <tr>
-                    {canEditValue && (
+                    {canEditValue && selectionMode && (
                       <th className="px-4 py-5 w-12 text-center">
                         <input
                           type="checkbox"
@@ -572,7 +664,7 @@ export default function Users() {
                       onDoubleClick={() => handleViewUser(u)}
                       onClick={() => handleViewUser(u)}
                     >
-                      {canEditValue && (
+                      {canEditValue && selectionMode && (
                         <td className="px-4 py-4 text-center">
                           <input
                             type="checkbox"
@@ -661,19 +753,20 @@ export default function Users() {
       )}
 
       {showDetails && selectedUser && (
-        <DetailModal maxWidth="5xl" onClose={() => setShowDetails(false)} closeOnBackdrop>
+        <DetailModal maxWidth="3xl" onClose={() => setShowDetails(false)} closeOnBackdrop>
           <DetailModalHeader>
-            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
             <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
               <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
                 {getRoleIcon(selectedUser.role)}
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="text-xs sm:text-base md:text-[18px] font-black text-white uppercase tracking-tight leading-snug line-clamp-2 sm:line-clamp-1">
+                <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white uppercase tracking-tight leading-snug truncate">
                   {selectedUser.full_name}
                 </h2>
-                <p className="text-[9px] sm:text-[10px] font-bold text-blue-200 uppercase tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
-                  <span className="line-clamp-2 sm:truncate">{getRoleLabel(selectedUser.role)}</span>
+                <p className="text-[9px] sm:text-[10px] font-normal text-slate-300 uppercase tracking-wide mt-0.5 flex items-center gap-1.5 truncate">
+                  <span>{getRoleLabel(selectedUser.role)}</span>
+                  <span>•</span>
+                  <span>{selectedUser.email}</span>
                 </p>
               </div>
             </div>
@@ -682,65 +775,88 @@ export default function Users() {
               className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
               aria-label="Cerrar detalle"
             >
-              <X size={22} />
+              <X size={20} />
             </button>
           </DetailModalHeader>
 
           <DetailModalBody>
-            <DetailModalGrid layout="stack-until-xl">
-              <DetailModalSection title="Información del Usuario">
-                <DetailModalCard className="space-y-2.5 sm:space-y-3">
-                  <DetailModalRow label="Nombre Completo">
-                    <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
-                      {selectedUser.full_name}
-                    </span>
-                  </DetailModalRow>
-                  <DetailModalRow label="Email">
-                    <span className="text-[10px] sm:text-[11px] font-mono font-black text-slate-700 break-all">
-                      {selectedUser.email}
-                    </span>
-                  </DetailModalRow>
-                  <DetailModalRow label="Rol">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-wider border rounded-none ${getRoleColor(selectedUser.role)}`}>
-                      {getRoleIcon(selectedUser.role)}{getRoleLabel(selectedUser.role)}
-                    </span>
-                  </DetailModalRow>
-                  <DetailModalRow label="Estado">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-black tracking-wider border rounded-none ${statusColors[selectedUser.status]}`}>
-                      {statusLabels[selectedUser.status]}
-                    </span>
-                  </DetailModalRow>
-                </DetailModalCard>
+            <div className="space-y-4">
+              {/* Badges de Rol y Estado */}
+              <div className="flex items-center gap-2 flex-wrap pb-2 border-b border-slate-100">
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider border ${getRoleColor(selectedUser.role)}`}>
+                  {getRoleIcon(selectedUser.role)} {getRoleLabel(selectedUser.role)}
+                </span>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider border ${statusColors[selectedUser.status]}`}>
+                  {statusLabels[selectedUser.status]}
+                </span>
+              </div>
 
-                <DetailModalCard className="space-y-2.5 sm:space-y-3">
-                  <DetailModalRow label="Ubicación">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin size={14} className="text-rose-500 shrink-0" />
-                      <span className="text-[10px] sm:text-[11px] font-black text-[#002855] uppercase">
-                        {selectedUser.locations?.name || 'N/A'}
-                      </span>
+              {/* Grilla principal de 2 columnas bien distribuida */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-slate-50 border border-slate-200 p-3 space-y-2">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200/60 pb-1">
+                    Información Personal
+                  </p>
+                  <div className="space-y-1.5">
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Nombre Completo</span>
+                      <p className="text-[11px] font-semibold text-[#002855] uppercase">{selectedUser.full_name}</p>
                     </div>
-                  </DetailModalRow>
-                  {selectedUser.phone && (
-                    <DetailModalRow label="Teléfono">
-                      <span className="text-[10px] sm:text-[11px] font-mono font-black text-slate-700">
-                        {selectedUser.phone}
-                      </span>
-                    </DetailModalRow>
-                  )}
-                </DetailModalCard>
-              </DetailModalSection>
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Correo Electrónico</span>
+                      <p className="text-[11px] font-mono text-slate-700 break-all">{selectedUser.email}</p>
+                    </div>
+                    {selectedUser.phone && (
+                      <div>
+                        <span className="text-[9px] text-slate-400 uppercase font-semibold">Teléfono</span>
+                        <p className="text-[11px] font-mono text-slate-700">{selectedUser.phone}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
+                <div className="bg-slate-50 border border-slate-200 p-3 space-y-2">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-200/60 pb-1">
+                    Asignación y Sistema
+                  </p>
+                  <div className="space-y-1.5">
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Sede Principal</span>
+                      <p className="text-[11px] font-medium text-[#002855] uppercase flex items-center gap-1.5">
+                        <MapPin size={12} className="text-rose-500 shrink-0" />
+                        {selectedUser.locations?.name || 'Todas / No asignado'}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold">Permisos de Acceso</span>
+                      {selectedUser.role === 'super_admin' ? (
+                        <p className="text-[11px] text-slate-700">Acceso Total (Administrador del Sistema)</p>
+                      ) : Array.isArray(selectedUser.permissions) && selectedUser.permissions.length > 0 ? (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {Array.from(new Set(selectedUser.permissions.map(getPermissionModuleLabel))).map((label) => (
+                            <span key={label} className="inline-flex items-center px-1.5 py-0.5 text-[8px] font-semibold text-[#002855] bg-[#002855]/5 border border-[#002855]/15 rounded-full uppercase tracking-wider">
+                              {label}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-slate-700">
+                          Acceso según rol: {getRoleLabel(selectedUser.role)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notas si existen */}
               {selectedUser.notes && (
-                <DetailModalSection title="Notas">
-                  <DetailModalCard className="bg-amber-50 border-amber-100">
-                    <p className="text-[10px] sm:text-[11px] font-medium text-amber-900 leading-relaxed">
-                      {selectedUser.notes}
-                    </p>
-                  </DetailModalCard>
-                </DetailModalSection>
+                <div className="bg-slate-50 border border-slate-200 p-3">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Notas Adicionales</p>
+                  <p className="text-[10px] text-slate-700 leading-relaxed whitespace-pre-wrap">{selectedUser.notes}</p>
+                </div>
               )}
-            </DetailModalGrid>
+            </div>
           </DetailModalBody>
 
           <StandardModalFooter

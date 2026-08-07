@@ -256,21 +256,21 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
       <div className="absolute top-4 right-4 z-10 bg-slate-50 border border-slate-200 rounded-none px-3 py-2 shadow-sm">
         <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 bg-[#002855] rounded-none"></div>
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Usuario:</span>
-          <span className="text-[10px] font-black text-[#002855] uppercase tracking-tight">{user?.full_name}</span>
+          <span className="text-[10px] font-normal text-slate-400 uppercase tracking-widest">Usuario:</span>
+          <span className="text-[10px] font-normal text-[#002855] uppercase tracking-tight">{user?.full_name}</span>
         </div>
         {user?.location_id ? (
           <div className="flex items-center gap-2 mt-1">
             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-none"></div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sede:</span>
-            <span className="text-[10px] font-black text-[#002855] uppercase tracking-tight">
+            <span className="text-[10px] font-normal text-slate-400 uppercase tracking-widest">Sede:</span>
+            <span className="text-[10px] font-normal text-[#002855] uppercase tracking-tight">
               {locations.find(loc => loc.id === user.location_id)?.name || 'Cargando...'}
             </span>
           </div>
         ) : (
           <div className="flex items-center gap-2 mt-1">
             <div className="w-1.5 h-1.5 bg-orange-500 rounded-none"></div>
-            <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Sin sede asignada</span>
+            <span className="text-[10px] font-normal text-orange-600 uppercase tracking-widest">Sin sede asignada</span>
           </div>
         )}
       </div>
@@ -309,10 +309,10 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
                       className="w-full text-left px-5 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between border-b border-slate-100 last:border-0"
                     >
                       <div className="flex flex-col">
-                        <span className="text-[12px] font-black text-[#002855] uppercase">{issue.title}</span>
-                        <span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{issue.description.slice(0, 60)}...</span>
+                        <span className="text-[12px] font-normal text-[#002855] uppercase">{issue.title}</span>
+                        <span className="text-[12px] font-normal text-slate-400 uppercase tracking-widest mt-0.5">{issue.description.slice(0, 60)}...</span>
                       </div>
-                      <span className="text-[12px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-none uppercase tracking-widest">{issue.category}</span>
+                      <span className="text-[12px] font-normal bg-slate-100 text-slate-500 px-2 py-0.5 rounded-none uppercase tracking-widest">{issue.category}</span>
                     </button>
                   ))}
                 </div>
@@ -367,7 +367,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
       {/* Section: Información de Ubicación */}
       <FormSection title="Origen del Reporte" color="emerald">
         <FormField label="Sede de la Incidencia">
-          <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-black text-[#002855] uppercase tracking-tight">
+          <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-normal text-[#002855] uppercase tracking-tight">
             {locations.find(loc => loc.id === formData.location_id)?.name || 'ASIGNANDO SEDE...'}
           </div>
         </FormField>

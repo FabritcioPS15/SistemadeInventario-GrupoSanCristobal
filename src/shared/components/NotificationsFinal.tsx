@@ -454,7 +454,7 @@ export default function NotificationsFinal() {
       >
         <Bell className="w-5 h-5 text-black group-hover:text-gray-700 transition-colors" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-normal rounded-full flex items-center justify-center animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
@@ -470,17 +470,17 @@ export default function NotificationsFinal() {
           <div className="absolute left-1/2 sm:right-0 top-12 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 max-h-96 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 sm:left-auto left-1/2 sm:translate-x-0 -translate-x-1/2">
             <div className="p-3 sm:p-4 border-b border-slate-200 bg-[#001529]">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-black text-white text-sm sm:text-base">Notificaciones</h3>
+                <h3 className="font-normal text-white text-sm sm:text-base">Notificaciones</h3>
                 <div className="flex items-center gap-2">
                   {unreadCount > 0 && (
-                    <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    <span className="bg-blue-600 text-white text-xs font-normal px-2 py-1 rounded-full">
                       {unreadCount} nuevas
                     </span>
                   )}
                   {/* Botón de prueba de sonido — también desbloquea el AudioContext */}
                   <button
                     onClick={handleUnlockAndPlay}
-                    className="flex items-center gap-1 px-2 py-1 rounded-lg border border-yellow-400 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 transition-all text-xs font-bold"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg border border-yellow-400 bg-yellow-400 hover:bg-yellow-300 text-yellow-900 transition-all text-xs font-normal"
                     title={audioUnlocked ? 'Probar sonido de alerta' : 'Activar y probar sonido'}
                   >
                     <span>{audioUnlocked ? '🔊' : '🔇'}</span>
@@ -489,7 +489,7 @@ export default function NotificationsFinal() {
                   {notifications.length > 0 && (
                     <button
                       onClick={clearAllNotifications}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all text-xs font-bold"
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all text-xs font-normal"
                       title="Limpiar todas las notificaciones"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -580,7 +580,7 @@ export default function NotificationsFinal() {
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-black text-xs sm:text-sm text-slate-900 truncate">
+                            <h4 className="font-normal text-xs sm:text-sm text-slate-900 truncate">
                               {notification.title}
                             </h4>
                             {!notification.read && (
@@ -631,7 +631,7 @@ export default function NotificationsFinal() {
               <div className="p-2 sm:p-3 border-t border-slate-200">
                 <button
                   onClick={() => setShowDropdown(false)}
-                  className="w-full text-center text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors py-1 sm:py-2"
+                  className="w-full text-center text-xs font-normal text-blue-600 hover:text-blue-700 transition-colors py-1 sm:py-2"
                 >
                   Cerrar notificaciones
                 </button>

@@ -6,6 +6,8 @@ import { useAuth } from '../../../app/providers/AuthContext';
 import AuditForm from '../forms/AuditForm';
 import HeaderSearch from '../../../app/layouts/HeaderSearch';
 import FilterBar from '../../../shared/components/ui/FilterBar';
+import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
+import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../../shared/components/ui/Table';
 
@@ -22,7 +24,13 @@ export default function Audit() {
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [editingAudit, setEditingAudit] = useState<BranchAudit | undefined>();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { selectionMode, setSelectionMode } = useSelectionMode();
   const isHeaderVisible = useHeaderVisible(localStorage.getItem('header_pinned') === 'true');
+
+  const handleToggleSelectionMode = () => {
+    if (selectionMode) setSelectedIds([]);
+    setSelectionMode(!selectionMode);
+  };
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -142,7 +150,15 @@ export default function Audit() {
             </button>
           </div>
 
-          {canEdit() && selectedIds.length > 0 && view === 'history' && (
+          {canEdit() && (
+            <SelectionModeButton
+              active={selectionMode}
+              onClick={handleToggleSelectionMode}
+              selectedCount={selectedIds.length}
+            />
+          )}
+
+          {canEdit() && selectionMode && selectedIds.length > 0 && view === 'history' && (
             <button
               onClick={handleBulkDelete}
               className="px-4 py-2 bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition-all shadow-sm flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest"
@@ -198,7 +214,7 @@ export default function Audit() {
                   const statusCfg = getStatusConfig(audit.status);
                   return (
                     <div key={audit.id} className={`bg-white border hover:shadow-xl transition-all duration-300 relative group overflow-hidden flex flex-col ${selectedIds.includes(audit.id) ? 'border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10' : 'border-slate-200 hover:border-blue-200 shadow-sm'}`}>
-                      {canEdit() && (
+                      {canEdit() && selectionMode && (
                         <div className="absolute top-4 right-4 z-20">
                           <input
                             type="checkbox"
@@ -244,73 +260,117 @@ export default function Audit() {
               </div>
             ) : (
               <div className="bg-white border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                <Table>
-                  <TableHeader>
-                    <tr>
-                      {canEdit() && (
-                        <TableHead className="text-center w-12">
-                          <input
-                            type="checkbox"
-                            checked={filteredAudits.length > 0 && selectedIds.length === filteredAudits.length}
-                            onChange={() => toggleSelectAll(filteredAudits)}
-                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
-                          />
-                        </TableHead>
-                      )}
-                      <TableHead>Auditoría / Auditor</TableHead>
-                      <TableHead>Ubicación</TableHead>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead className="text-center">Score</TableHead>
-                      <TableHead className="text-center">Estado</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </tr>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAudits.map(audit => {
-                      const statusCfg = getStatusConfig(audit.status);
-                      return (
-                        <TableRow key={audit.id} className={`cursor-pointer ${selectedIds.includes(audit.id) ? 'bg-blue-50/40' : ''}`} onClick={() => handleEdit(audit)}>
-                          {canEdit() && (
-                            <TableCell className="text-center w-12">
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.includes(audit.id)}
-                                onChange={() => toggleSelect(audit.id)}
-                                onClick={e => e.stopPropagation()}
-                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
-                              />
-                            </TableCell>
+                {/* Mobile card view */}
+                <div className="block md:hidden divide-y divide-slate-100">
+                  {filteredAudits.map(audit => {
+                    const statusCfg = getStatusConfig(audit.status);
+                    return (
+                      <div key={audit.id} className={`p-3 cursor-pointer hover:bg-slate-50 transition-colors ${selectedIds.includes(audit.id) ? 'bg-blue-50/40' : ''}`} onClick={() => handleEdit(audit)}>
+                        <div className="flex items-center gap-2">
+                          {canEdit() && selectionMode && (
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(audit.id)}
+                              onChange={() => toggleSelect(audit.id)}
+                              onClick={e => e.stopPropagation()}
+                              className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer shrink-0"
+                            />
                           )}
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="text-[12px] font-black text-[#002855] uppercase tracking-tight group-hover/row:text-blue-600 transition-colors">{audit.id.slice(0, 8)}</span>
-                              <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1 italic">{audit.auditor_name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell><span className="font-black text-[12px] text-[#002855] uppercase tracking-widest">{audit.locations?.name || 'N/A'}</span></TableCell>
-                          <TableCell><span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">{formatDate(audit.audit_date)}</span></TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex flex-col items-center">
-                              <span className={`text-[16px] font-black ${audit.score >= 90 ? 'text-emerald-600' : audit.score >= 70 ? 'text-[#002855]' : 'text-rose-600'}`}>{audit.score}%</span>
-                              <div className="w-16 h-1 bg-slate-100 mt-1">
-                                <div className="h-full bg-blue-500" style={{ width: `${audit.score}%` }} />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[12px] font-black text-[#002855] uppercase tracking-tight truncate leading-tight">{audit.id.slice(0, 8)}</p>
+                            <p className="text-[10px] font-semibold text-slate-400 italic">{audit.auditor_name}</p>
+                          </div>
+                          <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 border ${statusCfg.color}`}>{statusCfg.label}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 flex-wrap">
+                          <span className="flex items-center gap-0.5">
+                            <MapPin size={10} className="text-rose-400 shrink-0" />
+                            {audit.locations?.name || 'N/A'}
+                          </span>
+                          <span>{formatDate(audit.audit_date)}</span>
+                          <span className={`ml-auto font-black ${audit.score >= 90 ? 'text-emerald-600' : audit.score >= 70 ? 'text-[#002855]' : 'text-rose-600'}`}>{audit.score}%</span>
+                        </div>
+                        {canEdit() && (
+                          <div className="flex gap-1.5 mt-1.5" onClick={e => e.stopPropagation()}>
+                            <button onClick={(e) => { e.stopPropagation(); handleEdit(audit); }} className="text-[10px] font-semibold text-slate-600 hover:underline">Editar</button>
+                            <span className="text-slate-300">|</span>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(audit.id); }} className="text-[10px] font-semibold text-rose-500 hover:underline">Eliminar</button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Desktop table */}
+                <div className="hidden md:block">
+                  <Table>
+                    <TableHeader>
+                      <tr>
+                        {canEdit() && selectionMode && (
+                          <TableHead className="text-center w-12">
+                            <input
+                              type="checkbox"
+                              checked={filteredAudits.length > 0 && selectedIds.length === filteredAudits.length}
+                              onChange={() => toggleSelectAll(filteredAudits)}
+                              className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                            />
+                          </TableHead>
+                        )}
+                        <TableHead>Auditoría / Auditor</TableHead>
+                        <TableHead>Ubicación</TableHead>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead className="text-center">Score</TableHead>
+                        <TableHead className="text-center">Estado</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </tr>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAudits.map(audit => {
+                        const statusCfg = getStatusConfig(audit.status);
+                        return (
+                          <TableRow key={audit.id} className={`cursor-pointer ${selectedIds.includes(audit.id) ? 'bg-blue-50/40' : ''}`} onClick={() => handleEdit(audit)}>
+                            {canEdit() && selectionMode && (
+                              <TableCell className="text-center w-12">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.includes(audit.id)}
+                                  onChange={() => toggleSelect(audit.id)}
+                                  onClick={e => e.stopPropagation()}
+                                  className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="text-[12px] font-black text-[#002855] uppercase tracking-tight group-hover/row:text-blue-600 transition-colors">{audit.id.slice(0, 8)}</span>
+                                <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1 italic">{audit.auditor_name}</span>
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className={`px-4 py-1.5 text-[10px] font-black tracking-wider border ${statusCfg.color}`}>{statusCfg.label}</span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button onClick={(e) => { e.stopPropagation(); handleEdit(audit); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-none border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
-                              <button onClick={(e) => { e.stopPropagation(); handleDelete(audit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-200 transition-all shadow-sm"><Trash2 size={14} /></button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                            </TableCell>
+                            <TableCell><span className="font-black text-[12px] text-[#002855] uppercase tracking-widest">{audit.locations?.name || 'N/A'}</span></TableCell>
+                            <TableCell><span className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">{formatDate(audit.audit_date)}</span></TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex flex-col items-center">
+                                <span className={`text-[16px] font-black ${audit.score >= 90 ? 'text-emerald-600' : audit.score >= 70 ? 'text-[#002855]' : 'text-rose-600'}`}>{audit.score}%</span>
+                                <div className="w-16 h-1 bg-slate-100 mt-1">
+                                  <div className="h-full bg-blue-500" style={{ width: `${audit.score}%` }} />
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <span className={`px-4 py-1.5 text-[10px] font-black tracking-wider border ${statusCfg.color}`}>{statusCfg.label}</span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button onClick={(e) => { e.stopPropagation(); handleEdit(audit); }} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-none border border-slate-200 transition-all shadow-sm"><Edit size={14} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleDelete(audit.id); }} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-none border border-slate-200 transition-all shadow-sm"><Trash2 size={14} /></button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             )}
           </div>

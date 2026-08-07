@@ -29,7 +29,7 @@ export default function ActionToolbar({ searchComponent, children, totalItems, l
     <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
       {totalItems !== undefined && (
         <div className="absolute -top-3 -left-3 hidden md:block">
-          <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-black uppercase tracking-tight shadow-xl">
+          <div className="bg-[#002855] text-white px-3 py-1 text-[10px] font-semibold uppercase tracking-tight shadow-xl">
             {totalItems} {label || 'Registros'}
           </div>
         </div>

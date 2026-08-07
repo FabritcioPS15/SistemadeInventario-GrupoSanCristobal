@@ -1,158 +1,82 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 
 import { supabase } from '../../shared/services/supabase';
-
-
+import { ROLE_PERMISSIONS } from '../../shared/roles';
 
 type User = {
-
   id: string;
-
   full_name: string;
-
   email: string;
-
   username?: string;
-
   password?: string;
-
   role: string;
-
   location_id?: string;
-
   location_ids?: string[]; // Array de sedes a las que tiene acceso el usuario
-
   phone?: string;
-
   status: 'active' | 'inactive';
-
   notes?: string;
-
   permissions?: string[];
-
   avatar_url?: string;
-
   created_at: string;
-
   updated_at: string;
-
 };
-
-
 
 type AuthContextType = {
-
   user: User | null;
-
   login: (user: User, remember?: boolean) => void;
-
   logout: () => void;
-
   loading: boolean;
-
   hasPermission: (permission: string) => boolean;
-
   canEdit: () => boolean;
-
   needsPasswordSetup: boolean;
-
   updateProfile: (updates: { full_name?: string; avatar_url?: string }) => Promise<void>;
-
 };
-
-
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-
-
 export function useAuth() {
-
   const context = useContext(AuthContext);
-
   if (context === undefined) {
-
     throw new Error('useAuth must be used within an AuthProvider');
-
   }
-
   return context;
-
 }
 
-
-
 type AuthProviderProps = {
-
   children: ReactNode;
-
 };
 
-
-
 export function AuthProvider({ children }: AuthProviderProps) {
-
   const mountedRef = useRef(true);
-
   const [user, setUser] = useState<User | null>(null);
-
   const [loading, setLoading] = useState(true);
-
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
 
-
-
   useEffect(() => {
-
     mountedRef.current = true;
-
     return () => {
-
       mountedRef.current = false;
-
     };
-
   }, []);
-
-
 
   useEffect(() => {
-
     // Verificar si hay una sesión activa al cargar la app
-
     checkSession();
-
   }, []);
-
-
 
   // Update localStorage when user changes (if they opted in)
-
   useEffect(() => {
-
     if (user) {
-
       const saved = localStorage.getItem('auth_user');
-
       if (saved) {
-
         localStorage.setItem('auth_user', JSON.stringify(user));
-
       }
-
     }
-
   }, [user]);
 
-
-
   // Subscribe to realtime changes for the current user
-
   useEffect(() => {
-
     if (!user?.id) return;
-
-
 
     const userSubscription = supabase
       .channel(`user-${user.id}`)
@@ -207,31 +131,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       })
       .subscribe();
 
-
-
     return () => {
-
       supabase.removeChannel(userSubscription);
-
     };
-
   }, [user?.id]);
 
-
-
   const checkSession = async () => {
-
     try {
-
       // 1. Verificar si hay usuario en localStorage
-
       const savedUser = localStorage.getItem('auth_user');
 
       if (savedUser) {
-
         const parsedUser = JSON.parse(savedUser);
-
-
 
         // Refrescar datos desde la DB para asegurar que tenemos location_id y permisos actualizados
         // También cargar las sedes a las que tiene acceso el usuario
@@ -261,537 +172,134 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } else if (mountedRef.current) {
           setUser(parsedUser);
         }
-
       }
-
-
 
       // 2. Verificar si hay usuarios sin contraseñas configuradas (lógica original)
-
       const { data: usersData } = await supabase
-
         .from('users')
-
         .select('id, password')
-
         .eq('status', 'active');
 
-
-
       if (usersData && usersData.length > 0 && mountedRef.current) {
-
         const hasPasswordUsers = usersData.some(user => user.password && user.password.trim() !== '');
-
         if (!hasPasswordUsers) {
-
           setNeedsPasswordSetup(true);
-
         }
-
       }
-
     } catch (error) {
-
       console.error('Error checking session:', error);
-
     } finally {
-
       if (mountedRef.current) {
-
         setLoading(false);
-
       }
-
     }
-
   };
-
-
 
   const login = (userData: User, remember: boolean = false) => {
-
     if (mountedRef.current) {
-
       setUser(userData);
-
       if (remember) {
-
         localStorage.setItem('auth_user', JSON.stringify(userData));
-
       } else {
-
         localStorage.removeItem('auth_user');
-
       }
-
     }
-
   };
-
-
 
   const logout = () => {
-
     if (mountedRef.current) {
-
       setUser(null);
-
       localStorage.removeItem('auth_user');
-
     }
-
   };
 
-
+  /**
+   * Permisos efectivos de un usuario:
+   * - Super Admin: acceso absoluto.
+   * - Si el usuario tiene permisos personalizados (permissions no vacío),
+   *   estos tienen prioridad sobre los permisos del rol.
+   * - De lo contrario, se usan los permisos por defecto del rol.
+   */
+  const getEffectivePermissions = (): string[] => {
+    if (!user) return [];
+    if (user.role === 'super_admin') return ['*'];
+    if (Array.isArray(user.permissions) && user.permissions.length > 0) {
+      return user.permissions;
+    }
+    // El rol personalizado requiere permisos explícitos
+    if (user.role === 'personalizado') return [];
+    return ROLE_PERMISSIONS[user.role] || [];
+  };
 
   const hasPermission = (permission: string): boolean => {
-
     if (!user) return false;
 
-
-
     // Super Administrador tiene acceso absoluto a todo
+    if (user.role === 'super_admin') return true;
 
-    if (user.role === 'super_admin') {
+    const perms = getEffectivePermissions();
+    if (perms.length === 0) return false;
 
-      return true;
+    // Verificar permiso exacto (ej: 'tickets-view', 'tickets-edit')
+    if (perms.includes(permission)) return true;
 
-    }
-
-
-
-    // Para rol personalizado, usar permisos específicos definidos
-
-    if (user.role === 'personalizado') {
-
-      if (!user.permissions || user.permissions.length === 0) {
-
-        return false;
-
-      }
-
-
-
-      // Verificar permiso exacto (ej: 'tickets-view', 'tickets-edit')
-
-      if (user.permissions.includes(permission)) {
-
-        return true;
-
-      }
-
-
-
-      // Si solicita un permiso de submenú (ej: 'tickets-dashboard'), verificar si tiene acceso al módulo principal
-
-      const modulePermission = permission.includes('-') ? permission.split('-')[0] : permission;
-
-      if (user.permissions.includes(`${modulePermission}-view`) || user.permissions.includes(`${modulePermission}-edit`)) {
-
-        return true;
-
-      }
-
-
-
-      return false;
-
-    }
-
-
-
-    // Para roles predefinidos, usar los permisos del rol
-
-    const rolePermissions: Record<string, string[]> = {
-
-      // Super Admin: Acceso absoluto a todo
-
-      super_admin: [
-
-        'dashboard-view', 'dashboard-edit',
-
-        'tickets-view', 'tickets-create', 'tickets-edit', 'tickets-delete',
-
-        'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
-
-        'checklist-view', 'checklist-edit', 'checklist-create',
-
-        'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
-
-        'checklist-interactive-view',
-
-        'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
-
-        'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
-
-        'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
-
-        'inventory-chip-view', 'inventory-tinte-view', 'inventory-fuente-view', 'inventory-ram-view', 'inventory-disco-view',
-
-        'inventory-disco-extraido-view', 'inventory-maquinaria-view',
-
-        'cameras-view', 'cameras-edit',
-
-        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
-
-        'maintenance-view', 'maintenance-create', 'maintenance-edit',
-
-        'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
-
-        'flota-vehicular-view', 'flota-vehicular-edit',
-
-        'users-view', 'users-create', 'users-edit', 'users-delete',
-
-        'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
-
-        'sutran-view', 'sutran-edit',
-
-        'mtc-view', 'mtc-edit',
-
-        'servers-view', 'servers-edit',
-
-        'painpoint-view', 'painpoint-create', 'painpoint-edit',
-
-        'titulos-habilitantes-view', 'titulos-habilitantes-edit',
-
-        'planos-defensa-civil-view', 'planos-defensa-civil-edit',
-
-        'sent-view', 'sent-create', 'sent-edit',
-
-        'sent-lima-view', 'sent-provincias-view',
-
-        'audit-view', 'audit-export', 'cvs-view'
-
-      ],
-
-
-
-      // Gerencia: Acceso completo a todo excepto configuración crítica del sistema
-
-      gerencia: [
-
-        'dashboard-view', 'dashboard-edit',
-
-        'tickets-view', 'tickets-create', 'tickets-edit', 'tickets-delete',
-
-        'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
-
-        'checklist-view', 'checklist-edit', 'checklist-create',
-
-        'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
-
-        'checklist-interactive-view',
-
-        'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
-
-        'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
-
-        'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
-
-        'inventory-chip-view', 'inventory-tinte-view', 'inventory-fuente-view', 'inventory-ram-view', 'inventory-disco-view',
-
-        'inventory-disco-extraido-view', 'inventory-maquinaria-view',
-
-        'cameras-view', 'cameras-edit',
-
-        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
-
-        'maintenance-view', 'maintenance-create', 'maintenance-edit',
-
-        'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
-
-        'flota-vehicular-view', 'flota-vehicular-edit',
-
-        'users-view', 'users-create', 'users-edit', 'users-delete',
-
-        'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
-
-        'sutran-view', 'sutran-edit',
-
-        'mtc-view', 'mtc-edit',
-
-        'painpoint-view', 'painpoint-create', 'painpoint-edit',
-
-        'sent-view', 'sent-create', 'sent-edit',
-
-        'sent-lima-view', 'sent-provincias-view',
-
-        'audit-view', 'audit-export', 'cvs-view',
-        'titulos-habilitantes-view',
-
-      ],
-
-
-
-      // Sistemas: Acceso completo a todo lo técnico y configuración
-
-      sistemas: [
-
-        'dashboard-view', 'dashboard-edit',
-
-        'tickets-view', 'tickets-create', 'tickets-edit', 'tickets-delete',
-
-        'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
-
-        'checklist-view', 'checklist-edit', 'checklist-create',
-
-        'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
-
-        'checklist-interactive-view',
-
-        'inventory-view', 'inventory-create', 'inventory-edit', 'inventory-delete',
-
-        'spare-parts-view', 'inventory-pc-view', 'inventory-celular-view', 'inventory-dvr-view', 'inventory-impresora-view',
-
-        'inventory-escaner-view', 'inventory-monitor-view', 'inventory-laptop-view', 'inventory-proyector-view', 'inventory-switch-view',
-
-        'inventory-chip-view', 'inventory-tinte-view', 'inventory-fuente-view', 'inventory-ram-view', 'inventory-disco-view',
-
-        'inventory-disco-extraido-view', 'inventory-maquinaria-view',
-
-        'cameras-view', 'cameras-edit',
-
-        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
-
-        'maintenance-view', 'maintenance-create', 'maintenance-edit',
-
-        'maintenance-pending-view', 'maintenance-in-progress-view', 'maintenance-completed-view',
-
-        'flota-vehicular-view', 'flota-vehicular-edit',
-
-        'users-view', 'users-create', 'users-edit', 'users-delete',
-
-        'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
-
-        'sutran-view', 'sutran-edit',
-
-        'mtc-view', 'mtc-edit',
-
-        'servers-view', 'servers-edit',
-
-        'painpoint-view', 'painpoint-create', 'painpoint-edit',
-
-        'sent-view', 'sent-create', 'sent-edit',
-
-        'sent-lima-view', 'sent-provincias-view',
-
-        'audit-view', 'audit-export', 'cvs-view',
-        'titulos-habilitantes-view',
-        'planos-defensa-civil-view',
-
-      ],
-
-
-
-      // Supervisores: Acceso limitado (sin Usuarios, Sedes, Servidores, Painpoints, Enviados, Inventario y Mantenimiento)
-
-      supervisores: [
-        'dashboard-view', 'dashboard-edit',
-        'tickets-view', 'tickets-create', 'tickets-edit', 'tickets-delete',
-        'tickets-dashboard-view', 'tickets-mine-view', 'tickets-reports-view', 'tickets-history-view',
-        'checklist-view', 'checklist-edit', 'checklist-create',
-        'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
-        'checklist-interactive-view',
-        'cameras-view', 'cameras-edit',
-        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
-        'flota-vehicular-view', 'flota-vehicular-edit',
-        'sutran-view', 'sutran-edit',
-        'mtc-view', 'mtc-edit',
-        'audit-view', 'audit-export', 'cvs-view'
-      ],
-      
-      // Administradores: Acceso limitado - solo visualización y gestión básica
-      administradores: [
-        'dashboard-view',
-        'tickets-view', 'tickets-create', 'tickets-edit',
-        'tickets-dashboard-view', 'tickets-mine-view',
-        'checklist-view', 'checklist-edit',
-        'checklist-escon-view', 'checklist-ecsal-view', 'checklist-citv-view',
-        'spare-parts-view',
-        'cameras-view', // Solo ver cámaras de su sede
-        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', // Solo cámaras de su sede
-        'flota-vehicular-view', // Solo ver flota
-        'locations-view', // Solo ver sedes, no editar
-        'sutran-view', // Solo ver sutran
-        'sent-lima-view', 'sent-provincias-view',
-        'cvs-view'
-      ],
-
-
-
-      // Área Legal: Acceso a legal, flota, sutran, mtc, etc.
-
-      area_legal: [
-
-        'dashboard-view',
-
-        'tickets-view', 'tickets-create', 'tickets-edit',
-
-        'tickets-dashboard-view', 'tickets-mine-view',
-
-        'locations-view',
-
-        'sutran-view', 'sutran-edit',
-
-        'mtc-view', 'mtc-edit',
-
-        'flota-vehicular-view', 'flota-vehicular-edit',
-
-        'audit-view'
-
-      ],
-
-
-
-      // Área Contable: Cámaras, tickets, flota, sedes
-
-      area_contable: [
-
-        'dashboard-view',
-
-        'tickets-view', 'tickets-create', 'tickets-edit',
-
-        'tickets-dashboard-view', 'tickets-mine-view',
-
-        'cameras-view',
-
-        'cameras-revision-view', 'cameras-escuela-view', 'cameras-policlinico-view', 'cameras-circuito-view',
-
-        'flota-vehicular-view',
-
-        'locations-view',
-
-      ],
-
-
-
-      // Personalizado: Permisos básicos de tickets por defecto
-
-      personalizado: ['tickets-view', 'tickets-edit']
-
-    };
-
-
-
-    // Para permisos base del sidebar (ej: 'dashboard', 'tickets'), verificar si tiene acceso al módulo
-
-    const rolePerms = rolePermissions[user.role as keyof typeof rolePermissions] || [];
-
-    const hasModuleAccess = rolePerms.some(p =>
-
-      p === `${permission}-view` ||
-
-      p === `${permission}-create` ||
-
-      p === `${permission}-edit` ||
-
-      p === `${permission}-delete` ||
-
-      p === permission
-
-    );
-
-
-
-    if (hasModuleAccess) return true;
-
-
-
-    // Fallback: Si es un sub-permiso (contiene guion o empieza con 'sub-'), 
-
-    // verificar si tiene acceso al módulo principal
-
+    // Si solicita un permiso de sub-módulo (ej: 'tickets-dashboard', 'inventory-pc'),
+    // verificar si tiene acceso al módulo principal (ej: 'tickets-view', 'inventory-view')
     const modulePrefix = permission.startsWith('sub-') ? 'inventory' : permission.split('-')[0];
-
-    return rolePerms.some(p => p.startsWith(`${modulePrefix}-`));
-
+    return perms.some(p => p.startsWith(`${modulePrefix}-`));
   };
-
-
-
-
 
   const canEdit = (): boolean => {
+    if (!user) return false;
 
-    if (!user) {
+    // Super Admin siempre puede editar
+    if (user.role === 'super_admin') return true;
 
-      return false;
+    // Roles que pueden editar según la jerarquía
+    const baseRoles = ['gerencia', 'sistemas', 'supervisores', 'area_legal', 'area_contable'];
+    if (!baseRoles.includes(user.role)) return false;
 
+    // Si el usuario tiene permisos personalizados, respetarlos:
+    // solo puede editar si tiene al menos un permiso de escritura (edit/create/delete/export)
+    if (Array.isArray(user.permissions) && user.permissions.length > 0) {
+      return user.permissions.some(p =>
+        p.endsWith('-edit') ||
+        p.endsWith('-create') ||
+        p.endsWith('-delete') ||
+        p.endsWith('-export')
+      );
     }
 
-
-
-    // Roles que pueden editar según la nueva jerarquía
-
-    const allowedRoles = ['super_admin', 'gerencia', 'sistemas', 'supervisores', 'area_legal', 'area_contable'];
-
-    const hasPermission = allowedRoles.includes(user.role);
-
-
-
-    return hasPermission;
-
+    return true;
   };
 
-
-
   const updateProfile = async (updates: { full_name?: string; avatar_url?: string }) => {
-
     if (!user) return;
 
-
-
     const { error } = await supabase
-
       .from('users')
-
       .update(updates)
-
       .eq('id', user.id);
-
-
 
     if (error) throw error;
 
-
-
     // El estado se actualizará automáticamente vía Realtime subscription
-
   };
-
-
 
   const value = {
-
     user,
-
     login,
-
     logout,
-
     loading,
-
     hasPermission,
-
     canEdit,
-
     needsPasswordSetup,
-
     updateProfile,
-
   };
 
-
-
   return (
-
     <AuthContext.Provider value={value}>
-
       {children}
-
     </AuthContext.Provider>
-
   );
-
 }
-

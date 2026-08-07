@@ -107,7 +107,7 @@ export default function ConnectionTest() {
   return (
     <div className="p-8">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Prueba de Conexión</h2>
+        <h2 className="text-2xl font-normal text-gray-900 mb-2">Prueba de Conexión</h2>
         <p className="text-gray-600">Verificación detallada de la conexión con Supabase</p>
         <button
           onClick={runTests}
@@ -136,7 +136,7 @@ export default function ConnectionTest() {
               }`}>
                 {result.status === 'success' ? '✅' : result.status === 'error' ? '❌' : '⚠️'}
               </span>
-              <h3 className="font-semibold text-gray-900">{result.test}</h3>
+              <h3 className="font-normal text-gray-900">{result.test}</h3>
             </div>
             <p className="text-gray-700 mb-2">{result.message}</p>
             {result.details && (
@@ -153,7 +153,7 @@ export default function ConnectionTest() {
 
       {results.length > 0 && (
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-semibold text-blue-900 mb-2">Instrucciones de Solución</h3>
+          <h3 className="font-normal text-blue-900 mb-2">Instrucciones de Solución</h3>
           <div className="text-sm text-blue-800 space-y-1">
             <p>1. Si hay errores de RLS, verifica que las políticas estén configuradas para usuarios anónimos</p>
             <p>2. Si hay errores de conexión, verifica las variables de entorno</p>
