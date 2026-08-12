@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, Wrench, X, MapPin, ShieldCheck, Search, TrendingUp, DollarSign, Clock, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { Plus, Wrench, X, MapPin, ShieldCheck, Search, TrendingUp, DollarSign, Clock, AlertCircle, Edit, Trash2, Calendar } from 'lucide-react';
+import { FaFilePdf } from 'react-icons/fa6';
+import { RiFileExcel2Fill } from 'react-icons/ri';
 import { supabase, Location } from '../../../shared/services/supabase';
 import MaintenanceForm from '../forms/MaintenanceForm';
 import { useAuth } from '../../../app/providers/AuthContext';
@@ -12,16 +14,14 @@ import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableCellPrimary, TableCellSecondary, TableCellBadge, TableActionButton } from '../../../shared/components/ui/Table';
+import { generatePDF, generateExcel } from '../../../shared/utils/exportUtils';
 import DetailModal, {
   DetailModalHeader,
   DetailModalBody,
   StandardModalFooter,
-  DetailModalGrid,
-  DetailModalSection,
-  DetailModalCard,
-  DetailModalRow,
+
 } from '../../../shared/components/ui/DetailModal';
-import { MaintenanceRecord, AssetWithMaintenanceHistory, PRIORITY_LABELS, PRIORITY_COLORS } from '../../../shared/types/inventory.types';
+import { MaintenanceRecord, AssetWithMaintenanceHistory, PRIORITY_LABELS } from '../../../shared/types/inventory.types';
 
 type MaintenanceProps = {
   categoryFilter?: string;
@@ -44,6 +44,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState<string[]>([]);
   const [machineTypeFilter, setMachineTypeFilter] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -245,7 +247,15 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
       const matchesAsset = !assetFilter || assetHistory.asset.id === assetFilter;
       const matchesMachineType = machineTypeFilter.length === 0 || machineTypeFilter.includes(assetHistory.asset.asset_type_id ?? '');
 
-      return matchesSearch && matchesCategory && matchesStatus && matchesType && matchesLocation && matchesAsset && matchesMachineType;
+      let matchesDate = true;
+      if (startDate) {
+        matchesDate = matchesDate && new Date(assetHistory.latestDate) >= new Date(`${startDate}T00:00:00`);
+      }
+      if (endDate) {
+        matchesDate = matchesDate && new Date(assetHistory.latestDate) <= new Date(`${endDate}T23:59:59.999`);
+      }
+
+      return matchesSearch && matchesCategory && matchesStatus && matchesType && matchesLocation && matchesAsset && matchesMachineType && matchesDate;
     });
 
     if (!sortConfig) return filtered;
@@ -287,7 +297,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
       const result = aValue < bValue ? -1 : 1;
       return sortConfig.direction === 'asc' ? result : -result;
     });
-  }, [assetsWithHistory, searchTerm, locationFilter, statusFilter, typeFilter, categoryFilter, machineTypeFilter, assetFilter, sortConfig]);
+  }, [assetsWithHistory, searchTerm, locationFilter, statusFilter, typeFilter, categoryFilter, machineTypeFilter, assetFilter, sortConfig, startDate, endDate]);
 
   const totalPages = Math.ceil(sortedRecords.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -330,7 +340,77 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   };
 
 
-  const hasActiveFilters = searchTerm || statusFilter.length > 0 || typeFilter.length > 0 || locationFilter.length > 0 || machineTypeFilter.length > 0 || categoryFilter || assetFilter;
+  const hasActiveFilters = searchTerm || statusFilter.length > 0 || typeFilter.length > 0 || locationFilter.length > 0 || machineTypeFilter.length > 0 || categoryFilter || assetFilter || startDate || endDate;
+
+  const handleExportPDF = () => {
+    const data = sortedRecords.map((ah, i) => ({
+      nro: i + 1,
+      activo: (ah.asset as any).item || ah.asset.descripcion || `${ah.asset.brand || ''} ${ah.asset.model || ''}`.trim() || 'Activo',
+      codigo: ah.asset.codigo_unico || 'N/A',
+      tipo: typeLabels[ah.latestMaintenanceType] || ah.latestMaintenanceType,
+      estado: statusLabels[ah.latestStatus] || ah.latestStatus,
+      ubicacion: ah.asset.locations?.name || 'N/A',
+      responsable: ah.maintenanceRecords[0]?.technician || 'S.A.',
+      total_registros: ah.totalRecords,
+      costo_total: `S/ ${ah.maintenanceRecords.reduce((sum, r) => sum + (r.total_cost || 0), 0).toFixed(2)}`,
+      ultima_fecha: new Date(String(ah.latestDate).includes('T') ? String(ah.latestDate) : `${ah.latestDate}T12:00:00`).toLocaleDateString('es-PE'),
+    }));
+
+    generatePDF({
+      title: 'Reporte de Mantenimientos',
+      filename: 'Mantenimientos',
+      columns: [
+        { header: 'N°', key: 'nro' },
+        { header: 'Activo', key: 'activo' },
+        { header: 'Código', key: 'codigo' },
+        { header: 'Tipo', key: 'tipo' },
+        { header: 'Estado', key: 'estado' },
+        { header: 'Ubicación', key: 'ubicacion' },
+        { header: 'Responsable', key: 'responsable' },
+        { header: 'N° Registros', key: 'total_registros' },
+        { header: 'Costo Total', key: 'costo_total' },
+        { header: 'Última Fecha', key: 'ultima_fecha' },
+      ],
+      data,
+    });
+  };
+
+  const handleExportExcel = async () => {
+    const data = sortedRecords.map((ah, i) => ({
+      nro: i + 1,
+      activo: (ah.asset as any).item || ah.asset.descripcion || `${ah.asset.brand || ''} ${ah.asset.model || ''}`.trim() || 'Activo',
+      codigo: ah.asset.codigo_unico || 'N/A',
+      serie: ah.asset.serial_number || 'N/A',
+      tipo: typeLabels[ah.latestMaintenanceType] || ah.latestMaintenanceType,
+      estado: statusLabels[ah.latestStatus] || ah.latestStatus,
+      ubicacion: ah.asset.locations?.name || 'N/A',
+      responsable: ah.maintenanceRecords[0]?.technician || 'S.A.',
+      total_registros: ah.totalRecords,
+      horas_totales: ah.maintenanceRecords.reduce((sum, r) => sum + (r.work_hours || 0), 0).toFixed(1),
+      costo_total: ah.maintenanceRecords.reduce((sum, r) => sum + (r.total_cost || 0), 0).toFixed(2),
+      ultima_fecha: new Date(String(ah.latestDate).includes('T') ? String(ah.latestDate) : `${ah.latestDate}T12:00:00`).toLocaleDateString('es-PE'),
+    }));
+
+    await generateExcel({
+      title: 'Reporte de Mantenimientos',
+      filename: 'Mantenimientos',
+      columns: [
+        { header: 'N°', key: 'nro', width: 6 },
+        { header: 'Activo', key: 'activo', width: 35 },
+        { header: 'Código', key: 'codigo', width: 18 },
+        { header: 'N° Serie', key: 'serie', width: 22 },
+        { header: 'Tipo', key: 'tipo', width: 18 },
+        { header: 'Estado', key: 'estado', width: 20 },
+        { header: 'Ubicación', key: 'ubicacion', width: 22 },
+        { header: 'Responsable', key: 'responsable', width: 25 },
+        { header: 'N° Registros', key: 'total_registros', width: 14 },
+        { header: 'Horas Totales', key: 'horas_totales', width: 14 },
+        { header: 'Costo Total (S/)', key: 'costo_total', width: 18 },
+        { header: 'Última Fecha', key: 'ultima_fecha', width: 18 },
+      ],
+      data,
+    });
+  };
 
   // Calcular estadísticas de mantenimiento
   const maintenanceStats = useMemo(() => {
@@ -460,7 +540,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
               { key: 'type', placeholder: 'TODOS LOS TIPOS', options: Object.entries(typeLabels).map(([key, label]) => ({ value: key, label })) },
               { key: 'status', placeholder: 'TODOS LOS ESTADOS', options: Object.entries(statusLabels).map(([key, label]) => ({ value: key, label })) },
-              { key: 'asset', multiple: false, placeholder: 'TODOS', wrapperClassName: 'md:max-w-[220px]', options: assetsWithHistory.map(h => ({ value: h.asset.id, label: `${(h.asset as any).item || h.asset.descripcion || h.asset.brand || 'SIN NOMBRE'} ${h.asset.model ? `(${h.asset.model})` : ''}` })) },
             ]}
             values={{ location: locationFilter, type: typeFilter, status: statusFilter, asset: assetFilter }}
             onChange={(key, value) => {
@@ -476,11 +555,52 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               setLocationFilter([]);
               setMachineTypeFilter([]);
               setAssetFilter('');
+              setStartDate('');
+              setEndDate('');
               setCurrentPage(1);
             }}
           />
 
+          <div className="flex flex-col sm:flex-row items-center gap-2 bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+            <div className="flex items-center pl-2 pr-1 text-slate-400">
+              <Calendar size={14} />
+            </div>
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => { setStartDate(e.target.value); setCurrentPage(1); }}
+              className="px-2 py-1.5 h-8 text-xs font-medium text-slate-600 bg-transparent outline-none transition-all cursor-pointer hover:text-[#002855] focus:text-[#002855]"
+              title="Fecha Inicial"
+            />
+            <span className="text-slate-300 text-xs hidden sm:block">-</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => { setEndDate(e.target.value); setCurrentPage(1); }}
+              className="px-2 py-1.5 h-8 text-xs font-medium text-slate-600 bg-transparent outline-none transition-all cursor-pointer hover:text-[#002855] focus:text-[#002855]"
+              title="Fecha Final"
+            />
+          </div>
+
           <ViewToggle viewMode={viewMode} onChange={setViewMode} />
+
+          <button
+            onClick={handleExportExcel}
+            disabled={sortedRecords.length === 0}
+            className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm disabled:opacity-50"
+            title="Exportar a Excel"
+          >
+            <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+          </button>
+
+          <button
+            onClick={handleExportPDF}
+            disabled={sortedRecords.length === 0}
+            className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm disabled:opacity-50"
+            title="Exportar a PDF"
+          >
+            <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
+          </button>
 
           {canEdit() && (
             <SelectionModeButton
@@ -1099,7 +1219,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               />
             </DetailModal>
           )
-            }
+        }
       </div>
     </div>
   );

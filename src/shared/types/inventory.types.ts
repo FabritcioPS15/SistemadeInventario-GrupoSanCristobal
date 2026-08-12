@@ -86,6 +86,7 @@ export interface Asset {
   cantidad?: number;
   unidad_medida?: string;
   status: AssetStatus;
+  estado_uso?: string;
   purchase_date?: string;
   purchase_price?: number;
   supplier?: string;
@@ -237,7 +238,7 @@ export interface DashboardMetrics {
   total_assets: number;
   total_companies: number;
   total_locations: number;
-  assets_by_status: Record<AssetStatus, number>;
+  assets_by_status: Record<string, number>;
   assets_by_category: AssetStatistics[];
   recent_maintenance: MaintenanceRecord[];
   assets_needing_maintenance: AssetWithDetails[];

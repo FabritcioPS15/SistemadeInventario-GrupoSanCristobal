@@ -11,7 +11,22 @@ import {
   MaintenanceRecord,
   Company 
 } from '../../../shared/types/inventory.types';
-import { ASSET_STATUS_LABELS, ASSET_STATUS_COLORS } from '../../../shared/types/inventory.types';
+
+// Estados reales de la columna assets.estado_uso (la app no usa el campo
+// legacy `status` con valores en inglés).
+const ESTADO_USO_LABELS: Record<string, string> = {
+  Operativo: 'Operativo',
+  Inoperativo: 'Inoperativo',
+  'En Reparación': 'En Reparación',
+  Baja: 'De Baja',
+};
+
+const ESTADO_USO_COLORS: Record<string, string> = {
+  Operativo: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  Inoperativo: 'bg-slate-100 text-slate-800 border-slate-200',
+  'En Reparación': 'bg-amber-100 text-amber-800 border-amber-200',
+  Baja: 'bg-rose-100 text-rose-800 border-rose-200',
+};
 
 interface InventoryDashboardProps {
   companyId?: string;
@@ -60,8 +75,8 @@ export default function InventoryDashboard({ companyId, locationId }: InventoryD
 
       // Calculate assets by status
       const assetsByStatus: Record<string, number> = {};
-      Object.keys(ASSET_STATUS_LABELS).forEach(status => {
-        assetsByStatus[status] = filteredAssets.filter(a => a.status === status).length;
+      Object.keys(ESTADO_USO_LABELS).forEach(status => {
+        assetsByStatus[status] = filteredAssets.filter(a => a.estado_uso === status).length;
       });
 
       // Fetch asset statistics by category
@@ -101,8 +116,8 @@ export default function InventoryDashboard({ companyId, locationId }: InventoryD
         };
       }).filter(item => item.asset_count > 0);
 
-      // Find assets needing maintenance (status = maintenance)
-      const assetsNeedingMaintenance = filteredAssets.filter(a => a.status === 'maintenance');
+      // Find assets needing maintenance (en reparación)
+      const assetsNeedingMaintenance = filteredAssets.filter(a => a.estado_uso === 'En Reparación');
 
       const dashboardMetrics: DashboardMetrics = {
         total_assets: filteredAssets.length,
@@ -230,13 +245,13 @@ export default function InventoryDashboard({ companyId, locationId }: InventoryD
           <PieChart size={20} className="text-blue-600" />
           Activos por Estado
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Object.entries(metrics.assets_by_status).map(([status, count]) => (
             <div key={status} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
               <div className="flex items-center gap-2 mb-2">
-                <div className={`w-3 h-3 rounded-full ${ASSET_STATUS_COLORS[status as keyof typeof ASSET_STATUS_COLORS]?.split(' ')[0]}`} />
+                <div className={`w-3 h-3 rounded-full ${ESTADO_USO_COLORS[status]?.split(' ')[0] || 'bg-slate-300'}`} />
                 <span className="text-[10px] font-semibold text-slate-600 uppercase">
-                  {ASSET_STATUS_LABELS[status as keyof typeof ASSET_STATUS_LABELS]}
+                  {ESTADO_USO_LABELS[status] || status}
                 </span>
               </div>
               <p className="text-2xl font-semibold text-slate-800">{count as number}</p>
@@ -262,7 +277,7 @@ export default function InventoryDashboard({ companyId, locationId }: InventoryD
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-blue-600 rounded-full transition-all"
-                    style={{ width: `${(stat.total_assets / metrics.total_assets) * 100}%` }}
+                    style={{ width: `${metrics.total_assets > 0 ? (stat.total_assets / metrics.total_assets) * 100 : 0}%` }}
                   />
                 </div>
               </div>
@@ -357,7 +372,7 @@ export default function InventoryDashboard({ companyId, locationId }: InventoryD
             ) : (
               <div className="text-center py-8">
                 <CheckCircle className="mx-auto mb-3 text-emerald-600" size={32} />
-                <p className="text-emerald-600 font-semibold text-sm">Todos los activos están operativos</p>
+                <p className="text-emerald-600 font-semibold text-sm">No hay activos en reparación</p>
               </div>
             )}
           </div>

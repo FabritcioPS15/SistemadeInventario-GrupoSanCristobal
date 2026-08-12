@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit, Trash2, ExternalLink, Eye, EyeOff, X, Copy, Check, Globe, Database, Terminal, Server, Shield, List } from 'lucide-react';
-import ExcelJS from 'exceljs';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
 import { supabase } from '../../../shared/services/supabase';
+import { generatePDF, generateExcel } from '../../../shared/utils/exportUtils';
 import MTCAccesoForm from '../forms/MTCAccesoForm';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
@@ -248,74 +245,60 @@ export default function MTCAccesos() {
     }
   };
 
-  const handleExportExcel = async () => {
-    try {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Accesos MTC');
 
-      worksheet.columns = [
-        { header: 'Nombre', key: 'name', width: 30 },
-        { header: 'URL', key: 'url', width: 40 },
-        { header: 'Usuario', key: 'username', width: 20 },
-        { header: 'Tipo', key: 'access_type', width: 15 },
-        { header: 'Notas', key: 'notes', width: 30 }
-      ];
-
-      worksheet.getRow(1).font = { bold: true, size: 12 };
-      worksheet.getRow(1).fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: 'FFE0E0E0' }
-      };
-
-      filteredAccesos.forEach(acceso => {
-        worksheet.addRow({
-          name: acceso.name || '',
-          url: acceso.url || '',
-          username: acceso.username || '',
-          access_type: acceso.access_type || '',
-          notes: acceso.notes || ''
-        });
-      });
-
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `accesos_mtc_${new Date().toISOString().split('T')[0]}.xlsx`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error exportando Excel:', error);
-      alert('Error al exportar a Excel');
-    }
-  };
 
   const handleExportPDF = () => {
-    try {
-      const doc = new jsPDF();
-      const tableData = filteredAccesos.map(acceso => [
-        acceso.name || '',
-        acceso.url || '',
-        acceso.username || '',
-        acceso.access_type || '',
-        acceso.notes || 'Sin notas'
-      ]);
+    const data = filteredAccesos.map((acceso, i) => ({
+      nro: i + 1,
+      name: acceso.name || '',
+      url: acceso.url || '',
+      username: acceso.username || '—',
+      access_type: acceso.access_type || '',
+      notes: acceso.notes || '—'
+    }));
 
-      autoTable(doc, {
-        head: [['Nombre', 'URL', 'Usuario', 'Tipo', 'Notas']],
-        body: tableData,
-        theme: 'grid',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [0, 40, 85] }
-      });
+    generatePDF({
+      title: 'Reporte de Accesos MTC',
+      filename: 'Accesos MTC',
+      columns: [
+        { header: 'N°', key: 'nro' },
+        { header: 'Nombre', key: 'name' },
+        { header: 'URL de Acceso', key: 'url' },
+        { header: 'Usuario', key: 'username' },
+        { header: 'Tipo Acceso', key: 'access_type' },
+        { header: 'Notas', key: 'notes' }
+      ],
+      data
+    });
+  };
 
-      doc.save(`accesos_mtc_${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error('Error exportando PDF:', error);
-      alert('Error al exportar a PDF');
-    }
+  const handleExportExcel = async () => {
+    const data = filteredAccesos.map((acceso, i) => ({
+      nro: i + 1,
+      name: acceso.name || '',
+      url: acceso.url || '',
+      username: acceso.username || '',
+      password: acceso.password || '',
+      access_type: acceso.access_type || '',
+      location: acceso.locations?.name || 'N/A',
+      notes: acceso.notes || ''
+    }));
+
+    await generateExcel({
+      title: 'Reporte de Accesos MTC',
+      filename: 'Accesos MTC',
+      columns: [
+        { header: 'N°', key: 'nro', width: 6 },
+        { header: 'Nombre', key: 'name', width: 30 },
+        { header: 'URL de Acceso', key: 'url', width: 40 },
+        { header: 'Usuario', key: 'username', width: 22 },
+        { header: 'Contraseña', key: 'password', width: 22 },
+        { header: 'Tipo Acceso', key: 'access_type', width: 15 },
+        { header: 'Ubicación', key: 'location', width: 25 },
+        { header: 'Notas', key: 'notes', width: 30 }
+      ],
+      data
+    });
   };
 
   const filteredAccesos = accesos.filter(acceso => {

@@ -208,7 +208,7 @@ export default function TicketHistory() {
 
         generatePDF({
             title: 'Historial de Tickets Archivados',
-            filename: `Historial_Tickets_${new Date().toISOString().split('T')[0]}`,
+            filename: 'Historial Tickets',
             columns: [
                 { header: 'N°', key: 'nro' },
                 { header: 'ID', key: 'id' },
@@ -246,7 +246,7 @@ export default function TicketHistory() {
 
         await generateExcel({
             title: 'Historial de Tickets Archivados',
-            filename: `Historial_Tickets_${new Date().toISOString().split('T')[0]}`,
+            filename: 'Historial Tickets',
             columns: [
                 { header: 'N°', key: 'nro', width: 6 },
                 { header: 'ID', key: 'id', width: 16 },

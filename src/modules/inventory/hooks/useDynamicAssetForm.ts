@@ -81,7 +81,7 @@ function buildInitialFields(editAsset?: AssetWithDetails, initialCategoryId?: st
     fields.image_url = editAsset.image_url || '';
     fields.descripcion = editAsset.descripcion || '';
     fields.category_id = editAsset.category_id || '';
-    
+
     // Get fields from the new columns or fallbacks from old ones if mapping them, here we map the flat ones that correspond
     const anyAsset = editAsset as any;
     fields.area_ubicacion = anyAsset.area_ubicacion || anyAsset.area || '';
@@ -107,7 +107,7 @@ function buildInitialFields(editAsset?: AssetWithDetails, initialCategoryId?: st
 function buildInitialCamposEspecificos(editAsset?: AssetWithDetails): Record<string, any> {
   if (editAsset && (editAsset as any).campos_especificos) {
     try {
-      return typeof (editAsset as any).campos_especificos === 'string' 
+      return typeof (editAsset as any).campos_especificos === 'string'
         ? JSON.parse((editAsset as any).campos_especificos)
         : (editAsset as any).campos_especificos;
     } catch (e) {
@@ -124,12 +124,12 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId }: UseDynamic
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
+
   const [formData, setFormData] = useState<DynamicAssetFormData>(() =>
     buildInitialFields(editAsset, initialCategoryId)
   );
 
-  const [camposEspecificos, setCamposEspecificos] = useState<Record<string, any>>(() => 
+  const [camposEspecificos, setCamposEspecificos] = useState<Record<string, any>>(() =>
     buildInitialCamposEspecificos(editAsset)
   );
 
@@ -178,7 +178,7 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId }: UseDynamic
   const handleSubmit = useCallback(async () => {
     setLoading(true);
     setErrors({});
-    
+
     try {
       if (!formData.item) throw new Error('El nombre del activo es obligatorio');
       if (!formData.location_id) throw new Error('La sede es obligatoria');
@@ -187,7 +187,7 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId }: UseDynamic
 
       const finalTipoActivo = formData.tipo_activo === 'Otro' ? formData.tipo_activo_custom : formData.tipo_activo;
 
-      const dataToSave: Record<string, any> = { 
+      const dataToSave: Record<string, any> = {
         updated_at: new Date().toISOString(),
         codigo_unico: formData.codigo_unico || 'ACT-' + Math.floor(100000 + Math.random() * 900000).toString(),
         item: formData.item,

@@ -1,4 +1,4 @@
-﻿// Página principal de Mesa de Ayuda
+// Página principal de Mesa de Ayuda
 // Muestra dashboard de tickets, reportes y gestión de tickets
 // Incluye automatización de estados y exportación a PDF/Excel
 import { useState, useEffect, useMemo } from 'react';
@@ -78,10 +78,10 @@ export default function Tickets() {
 
         const channel = supabase
             .channel('tickets_realtime')
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
-                table: 'tickets' 
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'tickets'
             }, async (payload) => {
                 if (payload.eventType === 'INSERT') {
                     // For inserts, we fetch the single new ticket with its relations
@@ -90,7 +90,7 @@ export default function Tickets() {
                         .select(`*, requester:requester_id(full_name, avatar_url), attendant:assigned_to(full_name, avatar_url), locations(name)`)
                         .eq('id', (payload.new as any).id)
                         .single();
-                    
+
                     if (data) {
                         setTickets(prev => [data, ...prev]);
                     }
@@ -99,7 +99,7 @@ export default function Tickets() {
                     // But some changes might need new relation data (e.g. assigned_to changed)
                     // For now, let's update the ticket in state
                     setTickets(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
-                    
+
                     // If assigned_to or requester_id changed, we might want to refresh relations
                     // but most updates are status changes.
                 } else if (payload.eventType === 'DELETE') {
@@ -108,8 +108,8 @@ export default function Tickets() {
             })
             .subscribe();
 
-        return () => { 
-            supabase.removeChannel(channel); 
+        return () => {
+            supabase.removeChannel(channel);
         };
     }, []);
 
@@ -120,12 +120,12 @@ export default function Tickets() {
         const onNew = () => setShowForm(true);
         const onExportExcel = () => generateExcel();
         const onExportPdf = () => generatePDF();
-        
+
         window.addEventListener('tickets:search', onSearch);
         window.addEventListener('tickets:new', onNew);
         window.addEventListener('tickets:export', onExportExcel);
         window.addEventListener('tickets:export-pdf', onExportPdf);
-        
+
         return () => {
             window.removeEventListener('tickets:search', onSearch);
             window.removeEventListener('tickets:new', onNew);
@@ -218,7 +218,7 @@ export default function Tickets() {
         return () => clearInterval(interval);
     }, [tickets]);
 
-    
+
     // Función principal de automatización de estados
     // Se ejecuta cada minuto y procesa tickets que cumplen criterios de tiempo
     const handleAutomation = async (ticketsData: any[] = tickets) => {
@@ -238,13 +238,13 @@ export default function Tickets() {
         const toArchive = ticketsData.filter(t => {
             const isClosed = t.status === 'closed';
             const hasClosedAt = t.closed_at;
-            
+
             if (isClosed && hasClosedAt) {
                 const closedTime = new Date(t.closed_at);
                 const timeDiff = now.getTime() - closedTime.getTime();
                 const minutesDiff = Math.floor(timeDiff / 60000);
-                
-                
+
+
                 return minutesDiff >= 10;
             }
             return false;
@@ -254,19 +254,19 @@ export default function Tickets() {
         // Procesar cierre automático de tickets resueltos
         // Itera sobre cada ticket y actualiza su estado a 'closed'
         if (toClose.length > 0) {
-            
+
             for (const ticket of toClose) {
                 try {
                     const { error } = await supabase.from('tickets').update({
                         status: 'closed',
                         closed_at: new Date().toISOString()
                     }).eq('id', ticket.id);
-                    
+
                     if (error) {
                         console.error('❌ Error cerrando ticket:', error);
                         continue;
                     }
-                    
+
                 } catch (error) {
                     console.error(`❌ Error procesando ticket ${ticket.id}:`, error);
                 }
@@ -277,13 +277,13 @@ export default function Tickets() {
         // Además de cambiar el estado, limpia archivos adjuntos del storage
         // para liberar espacio y mantener el sistema organizado
         if (toArchive.length > 0) {
-            
+
             for (const ticket of toArchive) {
                 try {
-                    const { error } = await supabase.from('tickets').update({ 
-                        status: 'archived' 
+                    const { error } = await supabase.from('tickets').update({
+                        status: 'archived'
                     }).eq('id', ticket.id);
-                    
+
                     if (error) {
                         console.error('❌ Error archivando ticket:', error);
                         console.error('Detalles:', {
@@ -306,27 +306,27 @@ export default function Tickets() {
                         }
                     } catch (storageError) {
                     }
-                    
-                    
+
+
                 } catch (error) {
                     console.error(`❌ Error procesando archivado del ticket ${ticket.id}:`, error);
                 }
             }
         }
-        
+
         // Refrescar datos si hubo cambios
         if (toClose.length > 0 || toArchive.length > 0) {
             fetchTickets();
         }
     };
- 
-    
+
+
     // Filtra y categoriza los tickets según la vista activa
     // Aplica filtros de búsqueda, rango de fechas y estado
     // Retorna un objeto con listas separadas para cada columna del Kanban
     const filteredTickets = useMemo(() => {
         let active = tickets.filter(t => t.status !== 'archived');
-        
+
         // Filter by date range if provided
         if (startDate) {
             const [y, m, d] = startDate.split('-').map(Number);
@@ -479,7 +479,7 @@ export default function Tickets() {
 
     // Genera un reporte Excel con todos los datos de los tickets
     // Incluye más detalles que el PDF (descripción, fechas, etc.)
-// Usa la librería xlsx para crear el archivo con múltiples columnas
+    // Usa la librería xlsx para crear el archivo con múltiples columnas
     const generateExcel = () => {
         // Filter tickets for report
         let reportTickets = [...tickets];
@@ -529,7 +529,7 @@ export default function Tickets() {
                                         REPORTES DE TICKETS
                                     </div>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 mt-4">
                                     <div className="flex flex-col p-6 bg-slate-50 border border-slate-200 rounded-none">
                                         <div className="text-[12px] font-semibold text-[#002855] tracking-[0.2em] mb-2">Total Tickets</div>
@@ -548,8 +548,8 @@ export default function Tickets() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                     <div className="space-y-2">
                                         <label className="text-[12px] font-semibold text-[#002855] tracking-[0.2em] px-2">Fecha Inicio</label>
-                                        <input 
-                                            type="date" 
+                                        <input
+                                            type="date"
                                             value={startDate}
                                             onChange={(e) => setStartDate(e.target.value)}
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-semibold text-[#002855] focus:outline-none focus:border-[#002855]/30 transition-all"
@@ -557,8 +557,8 @@ export default function Tickets() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[12px] font-semibold text-[#002855] tracking-[0.2em] px-2">Fecha Fin</label>
-                                        <input 
-                                            type="date" 
+                                        <input
+                                            type="date"
                                             value={endDate}
                                             onChange={(e) => setEndDate(e.target.value)}
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-none text-[11px] font-semibold text-[#002855] focus:outline-none focus:border-[#002855]/30 transition-all"
@@ -671,7 +671,7 @@ export default function Tickets() {
                                                                             t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
                                                                                 t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
                                                                                     'text-slate-600 bg-slate-100 border-slate-200'
-                                                                        }`}>
+                                                                            }`}>
                                                                             <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                                                                             {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                                         </span>
@@ -775,7 +775,7 @@ export default function Tickets() {
                                                                         t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
                                                                             t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
                                                                                 'text-slate-600 bg-slate-100 border-slate-200'
-                                                                    }`}>
+                                                                        }`}>
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                                                                         {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                                     </span>
@@ -859,7 +859,7 @@ export default function Tickets() {
                                                                 <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-blue-50 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-blue-600 border border-blue-100 uppercase shadow-inner">
                                                                     {t.attendant?.avatar_url ? (
                                                                         <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
-                                                                ) : t.attendant?.full_name?.charAt(0)}
+                                                                    ) : t.attendant?.full_name?.charAt(0)}
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Atendido por</p>
@@ -980,7 +980,7 @@ export default function Tickets() {
                                                             </div>
                                                             <div className="flex-1">
                                                                 <p className="text-[8px] sm:text-[9px] font-semibold text-emerald-600 uppercase tracking-tight">Solicitante</p>
-                                                                 <p className="text-[9px] sm:text-[10px] font-semibold text-emerald-800">{t.requester?.full_name}</p>
+                                                                <p className="text-[9px] sm:text-[10px] font-semibold text-emerald-800">{t.requester?.full_name}</p>
                                                             </div>
                                                         </div>
                                                         {t.attendant && (
@@ -991,8 +991,8 @@ export default function Tickets() {
                                                                     ) : t.attendant?.full_name?.charAt(0)}
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                     <p className="text-[8px] sm:text-[9px] font-semibold text-emerald-600 uppercase tracking-tight">Atendido por</p>
-                                                                     <p className="text-[9px] sm:text-[10px] font-semibold text-emerald-800">{t.attendant?.full_name}</p>
+                                                                    <p className="text-[8px] sm:text-[9px] font-semibold text-emerald-600 uppercase tracking-tight">Atendido por</p>
+                                                                    <p className="text-[9px] sm:text-[10px] font-semibold text-emerald-800">{t.attendant?.full_name}</p>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1020,14 +1020,14 @@ export default function Tickets() {
                                             {filteredTickets.closed.map(t => {
                                                 const createdDate = new Date(t.created_at);
                                                 const closedDate = new Date(t.closed_at || t.updated_at);
-                                                
+
                                                 // Calcular diferencia en milisegundos
                                                 const diffMs = closedDate.getTime() - createdDate.getTime();
                                                 const diffSeconds = Math.floor(diffMs / 1000);
                                                 const diffMinutes = Math.floor(diffSeconds / 60);
                                                 const diffHours = Math.floor(diffMinutes / 60);
                                                 const diffDays = Math.floor(diffHours / 24);
-                                                
+
                                                 // Formato legible del tiempo
                                                 let timeToCloseText = '';
                                                 if (diffDays > 0) {
@@ -1050,57 +1050,57 @@ export default function Tickets() {
                                                 }
 
                                                 return (
-                                                <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-slate-50/30 p-4 sm:p-5 rounded-none border border-slate-200 hover:border-slate-400 shadow-sm transition-all cursor-pointer group">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <span className="text-[8px] sm:text-[9px] font-semibold text-slate-400 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
-                                                        <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-semibold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
-                                                            {PRIORITY_STYLES[t.priority]?.label || 'P4'}
-                                                        </span>
-                                                    </div>
-                                                    <h4 className="text-xs sm:text-sm font-semibold text-slate-700 leading-tight mb-3 sm:mb-4 line-clamp-2 uppercase">{t.title}</h4>
-                                                    <div className="space-y-2 sm:space-y-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-orange-600 border border-orange-100 uppercase shadow-inner">
-                                                                {t.requester?.avatar_url ? (
-                                                                    <img src={t.requester.avatar_url} alt="" className="w-full h-full object-cover" />
-                                                                ) : t.requester?.full_name?.charAt(0)}
-                                                            </div>
-                                                            <div className="flex-1">
-                                                                <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Solicitante</p>
-                                                                <p className="text-[9px] sm:text-[10px] font-semibold text-slate-700">{t.requester?.full_name}</p>
-                                                            </div>
+                                                    <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-slate-50/30 p-4 sm:p-5 rounded-none border border-slate-200 hover:border-slate-400 shadow-sm transition-all cursor-pointer group">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <span className="text-[8px] sm:text-[9px] font-semibold text-slate-400 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
+                                                            <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-semibold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                                {PRIORITY_STYLES[t.priority]?.label || 'P4'}
+                                                            </span>
                                                         </div>
-                                                        {t.attendant && (
+                                                        <h4 className="text-xs sm:text-sm font-semibold text-slate-700 leading-tight mb-3 sm:mb-4 line-clamp-2 uppercase">{t.title}</h4>
+                                                        <div className="space-y-2 sm:space-y-3">
                                                             <div className="flex items-center gap-2">
-                                                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-slate-200 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-slate-600 border border-slate-300 uppercase shadow-inner">
-                                                                    {t.attendant?.avatar_url ? (
-                                                                        <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
-                                                                    ) : t.attendant?.full_name?.charAt(0)}
+                                                                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-orange-50 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-orange-600 border border-orange-100 uppercase shadow-inner">
+                                                                    {t.requester?.avatar_url ? (
+                                                                        <img src={t.requester.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                    ) : t.requester?.full_name?.charAt(0)}
                                                                 </div>
                                                                 <div className="flex-1">
-                                                                    <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Atendido por</p>
-                                                                    <p className="text-[9px] sm:text-[10px] font-semibold text-slate-700">{t.attendant?.full_name}</p>
+                                                                    <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Solicitante</p>
+                                                                    <p className="text-[9px] sm:text-[10px] font-semibold text-slate-700">{t.requester?.full_name}</p>
                                                                 </div>
                                                             </div>
-                                                        )}
-                                                        <div className="border-t border-slate-200 pt-2 sm:pt-3 space-y-1 sm:space-y-2">
-                                                            <div className="flex justify-between items-center">
-                                                                <span className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Creado:</span>
-                                                                <span className="text-[8px] sm:text-[9px] font-semibold text-slate-600">
-                                                                    {createdDate && !isNaN(createdDate.getTime()) 
-                                                                        ? createdDate.toLocaleString('es-PE', { 
-                                                                            day: '2-digit', 
-                                                                            month: 'short', 
-                                                                            year: 'numeric',
-                                                                            hour: '2-digit',
-                                                                            minute: '2-digit'
-                                                                          }) 
-                                                                        : 'N/A'}
-                                                                </span>
+                                                            {t.attendant && (
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-none bg-slate-200 flex items-center justify-center text-[8px] sm:text-[9px] font-semibold text-slate-600 border border-slate-300 uppercase shadow-inner">
+                                                                        {t.attendant?.avatar_url ? (
+                                                                            <img src={t.attendant.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                                        ) : t.attendant?.full_name?.charAt(0)}
+                                                                    </div>
+                                                                    <div className="flex-1">
+                                                                        <p className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Atendido por</p>
+                                                                        <p className="text-[9px] sm:text-[10px] font-semibold text-slate-700">{t.attendant?.full_name}</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            <div className="border-t border-slate-200 pt-2 sm:pt-3 space-y-1 sm:space-y-2">
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-[8px] sm:text-[9px] font-semibold text-slate-500 uppercase tracking-tight">Creado:</span>
+                                                                    <span className="text-[8px] sm:text-[9px] font-semibold text-slate-600">
+                                                                        {createdDate && !isNaN(createdDate.getTime())
+                                                                            ? createdDate.toLocaleString('es-PE', {
+                                                                                day: '2-digit',
+                                                                                month: 'short',
+                                                                                year: 'numeric',
+                                                                                hour: '2-digit',
+                                                                                minute: '2-digit'
+                                                                            })
+                                                                            : 'N/A'}
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
                                                 );
                                             })}
                                         </div>
@@ -1193,7 +1193,7 @@ export default function Tickets() {
                                                                         t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
                                                                             t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
                                                                                 'text-slate-600 bg-slate-100 border-slate-200'
-                                                                    }`}>
+                                                                        }`}>
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
                                                                         {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                                     </span>

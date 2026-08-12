@@ -247,24 +247,72 @@ export default function FlotaVehicular() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Vencimientos_Flota_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `Reporte Vencimientos Flota.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
       setShowVencimientoMenu(false);
     } catch (e) { console.error(e); }
   };
 
-  const handleExportVencimientosPdf = () => {
+  const handleExportVencimientosPdf = async () => {
     try {
       const reporte = getVencimientoReport();
       const doc = new jsPDF('l', 'mm', 'a4');
+      const pageW = doc.internal.pageSize.width;
 
-      doc.setFontSize(16);
-      doc.setTextColor(0, 40, 85);
-      doc.text('Reporte de Vencimientos — Flota Vehicular', 14, 18);
-      doc.setFontSize(9);
-      doc.setTextColor(100);
-      doc.text(`Generado: ${new Date().toLocaleDateString('es-PE')} | Vehículos con documentos vencidos o por vencer en 30 días`, 14, 25);
+      // Cargar logo ANTES del autoTable (síncrono en el header)
+      let logoBase64 = '';
+      try {
+        const res = await fetch('/Enblanco.png');
+        const blob = await res.blob();
+        logoBase64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      } catch { /* sin logo */ }
+
+      // drawHeader SÍNCRONO (didDrawPage no soporta async)
+      const drawHeader = () => {
+        doc.setFillColor(0, 0, 0);
+        doc.rect(0, 0, pageW, 24, 'F');
+
+        doc.setFillColor(250, 140, 0);
+        doc.rect(0, 24, pageW, 3, 'F');
+
+        doc.setFillColor(180, 180, 180);
+        doc.rect(0, 27, pageW, 1, 'F');
+
+        if (logoBase64) {
+          try {
+            const logoH = 16;
+            const logoW = logoH * 3.5;
+            doc.addImage(logoBase64, 'PNG', pageW - logoW - 6, 4, logoW, logoH);
+          } catch (_) { /* ignorar */ }
+        }
+
+        doc.setFontSize(17);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text('Reporte de Vencimientos — Flota Vehicular', 10, 13);
+
+        const now = new Date();
+        const fechaHora = now.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })
+          + '  •  ' + now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(200, 200, 200);
+        doc.text(fechaHora, 10, 18);
+      };
+
+      // Dibujar encabezado en primera página
+      drawHeader();
+
+      // Subtexto
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Vehículos con documentos vencidos o por vencer en los próximos 30 días  |  Total: ${reporte.length} vehículos`, 10, 34);
 
       const tableData = reporte.map(v => {
         const fmtDate = (f?: string) => f ? new Date(String(f + 'T00:00:00').includes('T') ? String(f + 'T00:00:00') : `${f + 'T00:00:00'}T12:00:00`).toLocaleDateString('es-PE') : '—';
@@ -288,13 +336,36 @@ export default function FlotaVehicular() {
       });
 
       autoTable(doc, {
-        startY: 30,
+        startY: 38,
+        margin: { top: 36 },
         head: [['Placa', 'Vehículo', 'Ubicación', 'CITV Vence', 'CITV Estado', 'SOAT Vence', 'SOAT Estado', 'Póliza Vence', 'Póliza Estado']],
         body: tableData,
         theme: 'grid',
-        headStyles: { fillColor: [0, 40, 85], textColor: 255, fontSize: 8, fontStyle: 'bold' },
-        styles: { fontSize: 7.5, cellPadding: 2 },
+        headStyles: {
+          fillColor: [30, 30, 30],
+          textColor: 255,
+          fontSize: 8,
+          fontStyle: 'bold',
+          halign: 'center',
+          valign: 'middle',
+          cellPadding: 3,
+        },
+        styles: { fontSize: 7.5, cellPadding: 2.5, valign: 'middle' },
+        columnStyles: {
+          0: { halign: 'center', fontStyle: 'bold', cellWidth: 22 },
+          1: { halign: 'left', cellWidth: 50 },
+          2: { halign: 'left', cellWidth: 42 },
+          3: { halign: 'center', cellWidth: 26 },
+          4: { halign: 'center', cellWidth: 28 },
+          5: { halign: 'center', cellWidth: 26 },
+          6: { halign: 'center', cellWidth: 28 },
+          7: { halign: 'center', cellWidth: 26 },
+          8: { halign: 'center', cellWidth: 28 },
+        },
         didParseCell: (data) => {
+          if (data.section === 'head' && data.column.index >= 3) {
+            data.cell.styles.fillColor = [154, 52, 18];
+          }
           if (data.section === 'body') {
             const v = reporte[data.row.index];
             const minDias = Math.min(
@@ -302,15 +373,26 @@ export default function FlotaVehicular() {
               getDaysUntil(v.soat_vencimiento),
               getDaysUntil(v.poliza_vencimiento),
             );
-            if (minDias <= 7) data.cell.styles.fillColor = [253, 232, 232]; // rojo claro
-            else if (minDias <= 30) data.cell.styles.fillColor = [255, 243, 205]; // amarillo
-            else if (minDias >= 270) data.cell.styles.fillColor = [209, 250, 229]; // verde claro
-            // else: sin color
+            if (minDias <= 0) {
+              data.cell.styles.fillColor = [254, 202, 202];
+              data.cell.styles.textColor = [153, 0, 0];
+              data.cell.styles.fontStyle = 'bold';
+            } else if (minDias <= 7) {
+              data.cell.styles.fillColor = [254, 202, 202];
+              data.cell.styles.textColor = [153, 0, 0];
+            } else if (minDias <= 30) {
+              data.cell.styles.fillColor = [253, 224, 71];
+              data.cell.styles.textColor = [133, 77, 14];
+            }
           }
-        }
+        },
+        didDrawPage: () => {
+          // Síncrono: redibuja encabezado en CADA página
+          drawHeader();
+        },
       });
 
-      doc.save(`Vencimientos_Flota_${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`Reporte Vencimientos Flota.pdf`);
       setShowVencimientoMenu(false);
     } catch (e) { console.error(e); }
   };
@@ -468,7 +550,7 @@ export default function FlotaVehicular() {
       const titleCell = ws.getCell('A1');
       titleCell.value = 'REPORTE GENERAL DE FLOTA VEHICULAR — GRUPO SAN CRISTÓBAL';
       titleCell.font = { name: 'Arial', family: 2, size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
-      titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002855' } };
+      titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } };
       titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
       ws.getRow(1).height = 40;
 
@@ -623,7 +705,7 @@ export default function FlotaVehicular() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Reporte_General_Flota_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `Reporte Flota Vehicular.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -631,7 +713,7 @@ export default function FlotaVehicular() {
     }
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     try {
       const doc = new jsPDF('l', 'mm', 'a4');
 
@@ -642,28 +724,59 @@ export default function FlotaVehicular() {
         return sedeA.localeCompare(sedeB);
       });
 
-      // 1. Encabezado Premium con branding
-      doc.setFillColor(0, 40, 85); // Azul Marino Principal
-      doc.rect(0, 0, 297, 24, 'F');
+      // Cargar logo corporativo
+      const logoBase64 = await fetch('/Enblanco.png')
+        .then(r => r.blob())
+        .then(blob => new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        }))
+        .catch(() => '');
 
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(255, 255, 255);
-      doc.text('REPORTE GENERAL DE FLOTA VEHICULAR', 14, 15);
+      const pageW = doc.internal.pageSize.width;
 
-      // Línea de acento rojo (Branding)
-      doc.setFillColor(220, 38, 38);
-      doc.rect(0, 24, 297, 2, 'F');
+      // Helper: dibuja el encabezado unificado en la página actual
+      const drawHeader = (titulo: string) => {
+        doc.setFillColor(0, 0, 0);
+        doc.rect(0, 0, pageW, 24, 'F');
 
-      // Fecha y conteo de unidades
+        doc.setFillColor(255, 140, 0);
+        doc.rect(0, 24, pageW, 3, 'F');
+
+        doc.setFillColor(180, 180, 180);
+        doc.rect(0, 27, pageW, 1, 'F');
+
+        if (logoBase64) {
+          try {
+            const logoH = 16;
+            const logoW = logoH * 3.5;
+            doc.addImage(logoBase64, 'PNG', pageW - logoW - 6, 4, logoW, logoH);
+          } catch (_) { /* ignorar */ }
+        }
+
+        doc.setFontSize(17);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(255, 255, 255);
+        doc.text(titulo, 10, 13);
+
+        const now = new Date();
+        const fechaHora = `${now.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}  •  ${now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(200, 200, 200);
+        doc.text(fechaHora, 10, 18);
+      };
+
+      // 1. Dibujar encabezado en primera página
+      drawHeader('REPORTE GENERAL DE FLOTA VEHICULAR');
+
+      // Subtexto
       doc.setFontSize(8.5);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 116, 139); // Slate-500
-      doc.text(`Generado por: Sistema de Inventario GSC | Fecha: ${new Date().toLocaleString('es-PE')} | Ordenado por Ubicación`, 14, 32);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(15, 23, 42);
-      doc.text(`Total de Unidades: ${sortedData.length}`, 245, 32);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Total de Unidades: ${sortedData.length}  |  Ordenado por Ubicación`, 10, 34);
 
       // 2. Preparar Datos de la Tabla
       const tableData = sortedData.map(v => {
@@ -683,12 +796,13 @@ export default function FlotaVehicular() {
 
       // 3. Renderizar la tabla con estilos avanzados
       autoTable(doc, {
-        startY: 36,
+        startY: 38,
+        margin: { top: 36 },
         head: [['Placa', 'Vehículo (Datos Generales)', 'Estado', 'Ubicación', 'CITV Vence', 'SOAT Vence', 'Póliza Vence', 'Contrato Vence', 'Últ. Mant.']],
         body: tableData,
         theme: 'grid',
         headStyles: {
-          fillColor: [15, 23, 42], // Pizarra oscuro por defecto
+          fillColor: [30, 30, 30],
           textColor: 255,
           fontSize: 8,
           fontStyle: 'bold',
@@ -702,28 +816,27 @@ export default function FlotaVehicular() {
           valign: 'middle'
         },
         columnStyles: {
-          0: { halign: 'center', fontStyle: 'bold', cellWidth: 22 }, // Placa
-          1: { halign: 'left', cellWidth: 55 }, // Vehículo
-          2: { halign: 'center', fontStyle: 'bold', cellWidth: 24 }, // Estado
-          3: { halign: 'left', cellWidth: 42 }, // Ubicación
-          4: { halign: 'center', cellWidth: 26 }, // CITV
-          5: { halign: 'center', cellWidth: 26 }, // SOAT
-          6: { halign: 'center', cellWidth: 26 }, // Póliza
-          7: { halign: 'center', cellWidth: 26 }, // Contrato
-          8: { halign: 'center', cellWidth: 26 }  // Últ. Mant.
+          0: { halign: 'center', fontStyle: 'bold', cellWidth: 22 },
+          1: { halign: 'left', cellWidth: 55 },
+          2: { halign: 'center', fontStyle: 'bold', cellWidth: 24 },
+          3: { halign: 'left', cellWidth: 42 },
+          4: { halign: 'center', cellWidth: 26 },
+          5: { halign: 'center', cellWidth: 26 },
+          6: { halign: 'center', cellWidth: 26 },
+          7: { halign: 'center', cellWidth: 26 },
+          8: { halign: 'center', cellWidth: 26 }
         },
         didParseCell: (data) => {
-          // Fila de encabezado: colorear según grupo
           if (data.section === 'head') {
             const colIdx = data.column.index;
             if (colIdx < 2) {
-              data.cell.styles.fillColor = [0, 40, 85]; // Azul Marino para placa y vehículo
+              data.cell.styles.fillColor = [30, 30, 30];
             } else if (colIdx >= 2 && colIdx < 4) {
-              data.cell.styles.fillColor = [51, 65, 85]; // Gris pizarra para Estado y Ubicación
+              data.cell.styles.fillColor = [50, 50, 50];
             } else if (colIdx >= 4 && colIdx < 8) {
-              data.cell.styles.fillColor = [154, 52, 18]; // Naranja óxido para documentos de vencimiento
+              data.cell.styles.fillColor = [154, 52, 18];
             } else {
-              data.cell.styles.fillColor = [30, 41, 59]; // Slate oscuro para último mant.
+              data.cell.styles.fillColor = [30, 30, 30];
             }
           }
 
@@ -731,22 +844,19 @@ export default function FlotaVehicular() {
             const v = sortedData[data.row.index];
             const colIndex = data.column.index;
 
-            // 1. Colorear la columna "Estado" (Índice 2)
             if (colIndex === 2) {
               if (v.estado === 'activa') {
-                data.cell.styles.fillColor = [209, 250, 229]; // Verde claro
-                data.cell.styles.textColor = [6, 95, 70]; // Verde oscuro
+                data.cell.styles.fillColor = [209, 250, 229];
+                data.cell.styles.textColor = [6, 95, 70];
               } else if (v.estado === 'inactiva') {
-                data.cell.styles.fillColor = [254, 226, 226]; // Rojo claro
-                data.cell.styles.textColor = [153, 27, 27]; // Rojo oscuro
+                data.cell.styles.fillColor = [254, 226, 226];
+                data.cell.styles.textColor = [153, 27, 27];
               } else {
-                data.cell.styles.fillColor = [254, 243, 199]; // Amarillo claro
-                data.cell.styles.textColor = [146, 64, 14]; // Amarillo oscuro
+                data.cell.styles.fillColor = [254, 243, 199];
+                data.cell.styles.textColor = [146, 64, 14];
               }
             }
 
-            // 2. Colorear alertas de vencimientos de documentos importantes
-            // CITV (4), SOAT (5), Póliza (6), Contrato (7)
             const dateFieldsMap: Record<number, string | undefined> = {
               4: v.citv_vencimiento,
               5: v.soat_vencimiento,
@@ -759,21 +869,25 @@ export default function FlotaVehicular() {
               if (val) {
                 const daysLeft = getDaysUntil(val);
                 if (daysLeft <= 0) {
-                  data.cell.styles.fillColor = [254, 202, 202]; // Rojo intenso
+                  data.cell.styles.fillColor = [254, 202, 202];
                   data.cell.styles.textColor = [153, 0, 0];
                   data.cell.styles.fontStyle = 'bold';
                 } else if (daysLeft <= 30) {
-                  data.cell.styles.fillColor = [253, 224, 71]; // Amarillo intenso
+                  data.cell.styles.fillColor = [253, 224, 71];
                   data.cell.styles.textColor = [133, 77, 14];
                   data.cell.styles.fontStyle = 'bold';
                 }
               }
             }
           }
+        },
+        didDrawPage: () => {
+          // Redibujar encabezado en TODAS las páginas
+          drawHeader('REPORTE GENERAL DE FLOTA VEHICULAR');
         }
       });
 
-      doc.save(`Reporte_General_Flota_${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`Reporte Flota Vehicular.pdf`);
     } catch (e) {
       console.error(e);
     }

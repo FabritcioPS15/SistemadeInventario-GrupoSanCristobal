@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, AssetWithDetails, Category, Subcategory, Location, Area } from '../../../shared/services/supabase';
 import { PATH_CATEGORY_MAP } from '../constants/inventory.constants';
+import { useAuth } from '../../../app/providers/AuthContext';
 
 export interface UseInventoryProps {
   categoryFilter?: string;
@@ -16,7 +17,7 @@ export interface UseInventoryReturn {
   areas: Area[];
   loading: boolean;
   totalCount: number;
-  
+
   // Filters
   searchTerm: string;
   filterCategory: string;
@@ -25,15 +26,15 @@ export interface UseInventoryReturn {
   filterStatus: string[];
   filterRubro: string;
   dropdownRef: React.RefObject<HTMLDivElement>;
-  
+
   // Pagination
   currentPage: number;
   itemsPerPage: number;
   totalPages: number;
-  
+
   // Sort
   sortConfig: { key: string; direction: 'asc' | 'desc' } | null;
-  
+
   // Setters
   setSearchTerm: (value: string) => void;
   setFilterCategory: (value: string) => void;
@@ -44,15 +45,20 @@ export interface UseInventoryReturn {
   setCurrentPage: (value: number) => void;
   setItemsPerPage: (value: number) => void;
   setSortConfig: (value: { key: string; direction: 'asc' | 'desc' } | null) => void;
-  
+
   // Actions
   fetchInventory: () => Promise<void>;
   refresh: () => Promise<void>;
   handleSort: (key: string) => void;
   fetchAllFilteredIds: () => Promise<string[]>;
+  fetchAllFilteredData: () => Promise<AssetWithDetails[]>;
 }
 
 export function useInventory({ categoryFilter, subcategoryFilter }: UseInventoryProps = {}): UseInventoryReturn {
+  const { user } = useAuth();
+  const isFullAccess = ['super_admin', 'gerencia', 'sistemas'].includes(user?.role || '');
+  const allowedLocationIds = user?.location_ids || [];
+
   // Data state
   const [rawInventory, setRawInventory] = useState<any[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -61,7 +67,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  
+
   // Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -70,14 +76,14 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterRubro, setFilterRubro] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(15);
-  
+
   // Sort state
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'created_at', direction: 'desc' });
-  
+
   // Fetch dropdown data
   const fetchDropdownData = async () => {
     await Promise.all([
@@ -87,19 +93,29 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       fetchAreas()
     ]);
   };
-  
+
   const fetchCategories = async () => {
     const { data } = await supabase.from('categories').select('*').order('name');
     if (data) setCategories(data);
   };
-  
+
   const fetchSubcategories = async () => {
     const { data } = await supabase.from('subcategories').select('*').order('name');
     if (data) setSubcategories(data);
   };
-  
+
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    let query = supabase.from('locations').select('*').order('name');
+    if (!isFullAccess) {
+      if (allowedLocationIds.length > 0) {
+        query = query.in('id', allowedLocationIds);
+      } else if (user?.location_id) {
+        query = query.eq('id', user.location_id);
+      } else {
+        query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+      }
+    }
+    const { data } = await query;
     if (data) setLocations(data);
   };
 
@@ -107,7 +123,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     const { data } = await supabase.from('areas').select('*').order('name');
     if (data) setAreas(data);
   };
-  
+
   const ensureCategoriesLoaded = async (): Promise<Category[]> => {
     if (categories.length > 0) return categories;
     const { data } = await supabase.from('categories').select('*').order('name');
@@ -159,6 +175,17 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     // Apply search filter
     if (searchTerm) {
       query = query.or(`codigo_unico.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,serial_number.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,item.ilike.%${searchTerm}%`);
+    }
+
+    // Apply access control location filter
+    if (!isFullAccess) {
+      if (allowedLocationIds.length > 0) {
+        query = query.in('location_id', allowedLocationIds);
+      } else if (user?.location_id) {
+        query = query.eq('location_id', user.location_id);
+      } else {
+        query = query.eq('location_id', '00000000-0000-0000-0000-000000000000');
+      }
     }
 
     // Apply category filter from URL
@@ -267,11 +294,45 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       return [];
     }
   };
-  
+
+  const fetchAllFilteredData = async (): Promise<AssetWithDetails[]> => {
+    try {
+      const currentCategories = await ensureCategoriesLoaded();
+      const rubro = await resolveRubroFilter();
+
+      const query = buildQuery('*, locations(name), areas(name)', currentCategories, rubro);
+      if (!query) return [];
+
+      let sortField = sortConfig?.key || 'created_at';
+      let sortAscending = sortConfig?.direction === 'asc';
+
+      if (sortField === 'item' || sortField === 'descripcion') {
+        sortField = 'item';
+      }
+
+      const { data, error } = await query.order(sortField, { ascending: sortAscending, nullsFirst: false });
+      if (error) throw error;
+
+      return (data || []).map((asset: any) => {
+        const category = currentCategories.find(c => c.id === asset.category_id);
+        const subcategory = subcategories.find(s => s.id === asset.subcategory_id);
+
+        return {
+          ...asset,
+          categories: category ? { id: category.id, name: category.name } : null,
+          subcategories: subcategory ? { id: subcategory.id, name: subcategory.name } : null,
+        } as AssetWithDetails;
+      });
+    } catch (error) {
+      console.error('Error fetching all filtered inventory data:', error);
+      return [];
+    }
+  };
+
   const refresh = async () => {
     await fetchInventory();
   };
-  
+
   const handleSort = (key: string) => {
     setSortConfig(prev => {
       if (prev?.key === key) {
@@ -281,7 +342,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     });
     setCurrentPage(1);
   };
-  
+
   // handleClickOutside for dropdown
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -292,12 +353,12 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  
+
   // Initial fetch
   useEffect(() => {
     fetchDropdownData();
   }, []);
-  
+
   // Fetch inventory when dependencies change
   useEffect(() => {
     fetchInventory();
@@ -316,12 +377,12 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       } as AssetWithDetails;
     });
   }, [rawInventory, categories, subcategories]);
-  
+
   // Computed values
   const totalPages = useMemo(() => {
     return Math.ceil(totalCount / itemsPerPage);
   }, [totalCount, itemsPerPage]);
-  
+
   return {
     // Data
     inventory,
@@ -331,7 +392,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     areas,
     loading,
     totalCount,
-    
+
     // Filters
     searchTerm,
     filterCategory,
@@ -340,15 +401,15 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     filterStatus,
     filterRubro,
     dropdownRef,
-    
+
     // Pagination
     currentPage,
     itemsPerPage,
     totalPages,
-    
+
     // Sort
     sortConfig,
-    
+
     // Setters
     setSearchTerm,
     setFilterCategory,
@@ -359,11 +420,12 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     setCurrentPage,
     setItemsPerPage,
     setSortConfig,
-    
+
     // Actions
     fetchInventory,
     refresh,
     handleSort,
     fetchAllFilteredIds,
+    fetchAllFilteredData,
   };
 }

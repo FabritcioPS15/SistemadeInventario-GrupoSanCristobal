@@ -2,9 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { Trash2, MapPin, X, Copy, ChevronDown, Search } from 'lucide-react';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 import { SiAnydesk } from "react-icons/si";
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { supabase, Server, Location } from '../../../shared/services/supabase';
+import { generatePDF, generateExcel } from '../../../shared/utils/exportUtils';
 import { useAuth } from '../../../app/providers/AuthContext';
 import ServerForm from '../forms/ServerForm';
 import Pagination from '../../../shared/components/ui/Pagination';
@@ -121,54 +120,67 @@ export default function Servers() {
   const openCreate = useCallback(() => { setEditing(undefined); setShowForm(true); }, []);
   const openEdit = (s: Server) => { setEditing(s); setShowForm(true); };
 
-  // FIX #2: useCallback para que el useEffect de eventos los detecte correctamente
-  const downloadServersReport = useCallback(() => {
-    const headers = ['Nombre', 'Ubicación', 'IP', 'AnyDesk', 'Usuario', 'Última Actualización'];
-    const csvContent = [
-      headers.join(','),
-      ...servers.map(server => [
-        `"${server.name || ''}"`,
-        `"${server.locations?.name || 'VIRTUAL'}"`,
-        `"${server.ip_address || ''}"`,
-        `"${server.anydesk_id || ''}"`,
-        `"${server.username || ''}"`,
-        `"${new Date(String(server.updated_at).includes('T') ? String(server.updated_at) : `${server.updated_at}T12:00:00`).toLocaleDateString()}"`
-      ].join(','))
-    ].join('\n');
+  const downloadServersReport = useCallback(async () => {
+    const data = servers.map((s, i) => ({
+      nro: i + 1,
+      name: s.name || '',
+      location: s.locations?.name || 'VIRTUAL',
+      ip: s.ip_address || '',
+      anydesk: s.anydesk_id || '',
+      username: s.username || '',
+      password: s.password || '',
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `servidores_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      notes: s.notes || '',
+      updated: new Date(s.updated_at).toLocaleString('es-PE')
+    }));
+
+    await generateExcel({
+      title: 'Reporte de Servidores',
+      filename: 'Servidores',
+      columns: [
+        { header: 'N°', key: 'nro', width: 6 },
+        { header: 'Nombre', key: 'name', width: 25 },
+        { header: 'Ubicación', key: 'location', width: 20 },
+        { header: 'Dirección IP', key: 'ip', width: 18 },
+        { header: 'AnyDesk ID', key: 'anydesk', width: 18 },
+        { header: 'Usuario Access', key: 'username', width: 20 },
+        { header: 'Contraseña', key: 'password', width: 20 },
+        { header: 'S.O.', key: 'os', width: 15 },
+        { header: 'CPU', key: 'cpu', width: 15 },
+        { header: 'RAM (GB)', key: 'ram', width: 12 },
+        { header: 'Disco (GB)', key: 'disk', width: 12 },
+        { header: 'Notas', key: 'notes', width: 30 },
+        { header: 'Última Modificación', key: 'updated', width: 22 }
+      ],
+      data
+    });
   }, [servers]);
 
   const downloadServersReportPdf = useCallback(() => {
-    const doc = new jsPDF();
-    const tableData = servers.map(s => [
-      s.name || '',
-      s.locations?.name || 'VIRTUAL',
-      s.ip_address || '',
-      s.anydesk_id || '',
-      new Date(String(s.updated_at).includes('T') ? String(s.updated_at) : `${s.updated_at}T12:00:00`).toLocaleDateString()
-    ]);
+    const data = servers.map((s, i) => ({
+      nro: i + 1,
+      name: s.name || '',
+      location: s.locations?.name || 'VIRTUAL',
+      ip: s.ip_address || '—',
+      anydesk: s.anydesk_id || '—',
+      updated: new Date(String(s.updated_at).includes('T') ? String(s.updated_at) : `${s.updated_at}T12:00:00`).toLocaleDateString('es-PE')
+    }));
 
-    autoTable(doc, {
-      head: [['Nombre', 'Ubicación', 'IP', 'AnyDesk', 'Última Actualización']],
-      body: tableData,
-      theme: 'grid',
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [0, 40, 85] }
+    generatePDF({
+      title: 'Reporte de Servidores',
+      filename: 'Servidores',
+      columns: [
+        { header: 'N°', key: 'nro' },
+        { header: 'Nombre', key: 'name' },
+        { header: 'Ubicación', key: 'location' },
+        { header: 'Dirección IP', key: 'ip' },
+        { header: 'AnyDesk ID', key: 'anydesk' },
+        { header: 'S.O.', key: 'os' },
+        { header: 'Modificado', key: 'updated' }
+      ],
+      data
     });
-
-    doc.save(`servidores_${new Date().toISOString().split('T')[0]}.pdf`);
-  }, [servers]);
-
-  // FIX #2: dependencias correctas en el useEffect de eventos
+  }, [servers]);  // FIX #2: dependencias correctas en el useEffect de eventos
   useEffect(() => {
     const handleDownload = () => downloadServersReport();
     const handleDownloadPdf = () => downloadServersReportPdf();
@@ -193,11 +205,11 @@ export default function Servers() {
     if (confirmed) {
       const { error } = await supabase.from('servers').delete().eq('id', s.id);
       if (error) {
-         notifyError('Error al eliminar el servidor: ' + error.message);
+        notifyError('Error al eliminar el servidor: ' + error.message);
       } else {
-         setSelectedIds(prev => prev.filter(id => id !== s.id));
-         await fetchServers();
-         notifySuccess('Servidor eliminado correctamente');
+        setSelectedIds(prev => prev.filter(id => id !== s.id));
+        await fetchServers();
+        notifySuccess('Servidor eliminado correctamente');
       }
     }
   };
@@ -322,18 +334,18 @@ export default function Servers() {
             </>
           }
         >
-  <FilterBar
-    filters={[
-      { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
-    ]}
-    values={{ location: selectedLocations }}
-    onChange={(key, value) => {
-      if (key === 'location') setSelectedLocations(value as string[]);
-      setCurrentPage(1);
-    }}
-  />
+          <FilterBar
+            filters={[
+              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+            ]}
+            values={{ location: selectedLocations }}
+            onChange={(key, value) => {
+              if (key === 'location') setSelectedLocations(value as string[]);
+              setCurrentPage(1);
+            }}
+          />
 
-  <ViewToggle viewMode={viewMode} onChange={v => setViewMode(v)} />
+          <ViewToggle viewMode={viewMode} onChange={v => setViewMode(v)} />
 
           {canEdit() && (
             <SelectionModeButton
@@ -546,118 +558,118 @@ export default function Servers() {
 
               {/* Vista Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
                       {canEdit() && selectionMode && (
-                        <input
-                          type="checkbox"
-                          checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length}
-                          onChange={toggleSelectAll}
-                          className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200"
-                        />
-                      )}
-                    </TableHead>
-                    <TableHead sortable isSorted={sortField === 'name'} sortDirection={sortDirection} onClick={() => handleSort('name')}>Servidor</TableHead>
-                    <TableHead sortable isSorted={sortField === 'location'} sortDirection={sortDirection} onClick={() => handleSort('location')}>Ubicación</TableHead>
-                    <TableHead sortable isSorted={sortField === 'ip'} sortDirection={sortDirection} onClick={() => handleSort('ip')}>IP</TableHead>
-                    <TableHead sortable isSorted={sortField === 'anydesk'} sortDirection={sortDirection} onClick={() => handleSort('anydesk')}>
-                      <div className="flex items-center gap-1.5"><SiAnydesk size={12} className="text-red-500" /> ANYDESK</div>
-                    </TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedData.map((srv) => {
-                    const hasIp = !!srv.ip_address;
-                    const hasAnydesk = !!srv.anydesk_id;
-
-                    return (
-                      <TableRow
-                        key={srv.id}
-                        className={selectedIds.includes(srv.id) ? 'bg-blue-50/50' : ''}
-                        onClick={() => { setSelectedServer(srv); setShowDetails(true); }}
-                      >
-                        <TableCell className="w-12">
-                          {canEdit() && selectionMode && (
+                        <TableHead className="w-12 animate-in fade-in slide-in-from-right-2 duration-200">
                           <input
                             type="checkbox"
-                            checked={selectedIds.includes(srv.id)}
-                            onChange={() => toggleSelect(srv.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200"
+                            checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length}
+                            onChange={toggleSelectAll}
+                            className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
                           />
+                        </TableHead>
+                      )}
+                      <TableHead sortable isSorted={sortField === 'name'} sortDirection={sortDirection} onClick={() => handleSort('name')}>Servidor</TableHead>
+                      <TableHead sortable isSorted={sortField === 'location'} sortDirection={sortDirection} onClick={() => handleSort('location')}>Ubicación</TableHead>
+                      <TableHead sortable isSorted={sortField === 'ip'} sortDirection={sortDirection} onClick={() => handleSort('ip')}>IP</TableHead>
+                      <TableHead sortable isSorted={sortField === 'anydesk'} sortDirection={sortDirection} onClick={() => handleSort('anydesk')}>
+                        <div className="flex items-center gap-1.5"><SiAnydesk size={12} className="text-red-500" /> ANYDESK</div>
+                      </TableHead>
+                      <TableHead className="text-center">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedData.map((srv) => {
+                      const hasIp = !!srv.ip_address;
+                      const hasAnydesk = !!srv.anydesk_id;
+
+                      return (
+                        <TableRow
+                          key={srv.id}
+                          className={selectedIds.includes(srv.id) ? 'bg-blue-50/50' : ''}
+                          onClick={() => { setSelectedServer(srv); setShowDetails(true); }}
+                        >
+                          {canEdit() && selectionMode && (
+                            <TableCell className="w-12 animate-in fade-in slide-in-from-right-2 duration-200">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(srv.id)}
+                                onChange={() => toggleSelect(srv.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-3.5 h-3.5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                              />
+                            </TableCell>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-start gap-3">
-                            <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
-                              <ServerIcon size={14} />
+                          <TableCell>
+                            <div className="flex items-center justify-start gap-3">
+                              <div className="w-9 h-9 rounded-none flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-md">
+                                <ServerIcon size={14} />
+                              </div>
+                              <div className="flex flex-col items-start">
+                                <span className="text-[13px] font-semibold text-[#002855] leading-tight">{srv.name}</span>
+                                <span className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1 md:hidden">{srv.locations?.name || 'VIRTUAL'}</span>
+                              </div>
                             </div>
+                          </TableCell>
+                          <TableCell>
                             <div className="flex flex-col items-start">
-                              <span className="text-[13px] font-semibold text-[#002855] leading-tight">{srv.name}</span>
-                              <span className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1 md:hidden">{srv.locations?.name || 'VIRTUAL'}</span>
+                              <div className="flex items-center gap-1.5">
+                                <MapPin size={14} className="text-rose-500 shrink-0" />
+                                <span className="text-[12px] font-semibold text-slate-700 tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
+                              </div>
+                              <span className="text-[11px] font-semibold text-slate-400 mt-1">Ubicación Física</span>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col items-start">
-                            <div className="flex items-center gap-1.5">
-                              <MapPin size={14} className="text-rose-500 shrink-0" />
-                              <span className="text-[12px] font-semibold text-slate-700 tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col items-start group/cell">
+                              <div className="flex items-center justify-start gap-2">
+                                <span className={`text-[11px] font-mono font-semibold ${hasIp ? 'text-[#002855]' : 'text-slate-300'}`}>{srv.ip_address || '—'}</span>
+                                {hasIp && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.ip_address!, 'IP'); }}
+                                    className="p-1.5 hover:bg-blue-50 rounded-lg text-slate-300 hover:text-blue-500 transition-all opacity-0 group-hover/cell:opacity-100"
+                                    title="Copiar IP"
+                                  >
+                                    <Copy size={13} />
+                                  </button>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-semibold text-slate-400 mt-1">Red Interna</span>
                             </div>
-                            <span className="text-[11px] font-semibold text-slate-400 mt-1">Ubicación Física</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col items-start group/cell">
-                            <div className="flex items-center justify-start gap-2">
-                              <span className={`text-[11px] font-mono font-semibold ${hasIp ? 'text-[#002855]' : 'text-slate-300'}`}>{srv.ip_address || '—'}</span>
-                              {hasIp && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.ip_address!, 'IP'); }}
-                                  className="p-1.5 hover:bg-blue-50 rounded-lg text-slate-300 hover:text-blue-500 transition-all opacity-0 group-hover/cell:opacity-100"
-                                  title="Copiar IP"
-                                >
-                                  <Copy size={13} />
-                                </button>
-                              )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col items-start group/cell">
+                              <div className="flex items-center justify-start gap-2">
+                                <span className={`text-[11px] font-mono font-semibold ${hasAnydesk ? 'text-red-600' : 'text-slate-300'}`}>{srv.anydesk_id || '—'}</span>
+                                {hasAnydesk && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.anydesk_id!, 'AnyDesk ID'); }}
+                                    className="p-1.5 hover:bg-red-50 rounded-lg text-slate-300 hover:text-red-500 transition-all opacity-0 group-hover/cell:opacity-100"
+                                    title="Copiar AnyDesk"
+                                  >
+                                    <Copy size={13} />
+                                  </button>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-semibold text-slate-400 mt-1">ID Remoto</span>
                             </div>
-                            <span className="text-[10px] font-semibold text-slate-400 mt-1">Red Interna</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col items-start group/cell">
-                            <div className="flex items-center justify-start gap-2">
-                              <span className={`text-[11px] font-mono font-semibold ${hasAnydesk ? 'text-red-600' : 'text-slate-300'}`}>{srv.anydesk_id || '—'}</span>
-                              {hasAnydesk && (
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); copyToClipboard(srv.anydesk_id!, 'AnyDesk ID'); }}
-                                  className="p-1.5 hover:bg-red-50 rounded-lg text-slate-300 hover:text-red-500 transition-all opacity-0 group-hover/cell:opacity-100"
-                                  title="Copiar AnyDesk"
-                                >
-                                  <Copy size={13} />
-                                </button>
-                              )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-1 group-hover:translate-x-0">
+                              <RowActions
+                                canEdit={canEdit()}
+                                onEdit={(e) => { e.stopPropagation(); openEdit(srv); }}
+                                onDelete={(e) => { e.stopPropagation(); del(srv); }}
+                              />
                             </div>
-                            <span className="text-[10px] font-semibold text-slate-400 mt-1">ID Remoto</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-1 group-hover:translate-x-0">
-                            <RowActions
-                              canEdit={canEdit()}
-                              onEdit={(e) => { e.stopPropagation(); openEdit(srv); }}
-                              onDelete={(e) => { e.stopPropagation(); del(srv); }}
-                            />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
 
             </div>
@@ -834,11 +846,11 @@ export default function Servers() {
               editLabel="Editar"
             />
           </DetailModal>
-          
+
         )}
 
       </div>
     </div>
-    
+
   );
 }

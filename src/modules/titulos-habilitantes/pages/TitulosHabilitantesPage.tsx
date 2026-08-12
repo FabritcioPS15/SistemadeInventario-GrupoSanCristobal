@@ -1,9 +1,8 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Trash2, MapPin, Search, FileText, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import Pagination from '../../../shared/components/ui/Pagination';
 import { supabase, Location } from '../../../shared/services/supabase';
+import { generatePDF, generateExcel } from '../../../shared/utils/exportUtils';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../../app/providers/AuthContext';
 import TituloHabilitanteForm from '../forms/TituloHabilitanteForm';
@@ -278,70 +277,79 @@ export default function TitulosHabilitantes() {
       </div>
     );
   };
-
-  const downloadReport = () => {
-    const headers = ['Título', 'Tipo', 'Número', 'Vigencia Del', 'Vigencia Al', 'Vigencia Documento', 'Días para Vencer', 'Ubicación', 'Estado'];
-    const csvContent = [
-      headers.join(','),
-      ...filtered.map(t => {
-        const startDate = t.vigencia_del || t.fecha_emision;
-        const targetDate = t.vigencia_al || t.fecha_vencimiento;
-        const daysLeft = targetDate ? getDaysUntil(targetDate) : '';
-        return [
-          `"${t.titulo || ''}"`,
-          `"${t.tipo || ''}"`,
-          `"${t.numero || ''}"`,
-          `"${startDate ? new Date(String(startDate).includes('T') ? String(startDate) : `${startDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : ''}"`,
-          `"${targetDate ? new Date(String(targetDate).includes('T') ? String(targetDate) : `${targetDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : ''}"`,
-          `"${t.vigencia_documento || ''}"`,
-          `"${daysLeft}"`,
-          `"${t.locations?.name || ''}"`,
-          `"${t.estado || ''}"`
-        ].join(',');
-      })
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `titulos_habilitantes_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const downloadReportPdf = () => {
-    const doc = new jsPDF();
-    const tableData = filtered.map(t => {
+  const downloadReport = async () => {
+    const data = filtered.map((t, i) => {
       const startDate = t.vigencia_del || t.fecha_emision;
       const targetDate = t.vigencia_al || t.fecha_vencimiento;
       const daysLeft = targetDate ? getDaysUntil(targetDate) : '';
-      return [
-        t.titulo || '',
-        t.tipo || '',
-        t.numero || '',
-        startDate ? new Date(String(startDate).includes('T') ? String(startDate) : `${startDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
-        targetDate ? new Date(String(targetDate).includes('T') ? String(targetDate) : `${targetDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
-        t.vigencia_documento || '',
-        daysLeft !== '' ? `${daysLeft} días` : '',
-        t.locations?.name || '',
-        t.estado || ''
-      ];
+      return {
+        nro: i + 1,
+        titulo: t.titulo || '',
+        tipo: t.tipo || '',
+        numero: t.numero || '',
+        vigencia_del: startDate ? new Date(String(startDate).includes('T') ? String(startDate) : `${startDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
+        vigencia_al: targetDate ? new Date(String(targetDate).includes('T') ? String(targetDate) : `${targetDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
+        vigencia_doc: t.vigencia_documento || '',
+        dias_vencer: daysLeft !== '' ? `${daysLeft} días` : '—',
+        ubicacion: t.locations?.name || '',
+        estado: t.estado || ''
+      };
     });
 
-    autoTable(doc, {
-      head: [['Título', 'Tipo', 'Número', 'Vigencia Del', 'Vigencia Al', 'Vigencia Doc.', 'Días Vencer', 'Ubicación', 'Estado']],
-      body: tableData,
-      theme: 'grid',
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [0, 40, 85] }
+    await generateExcel({
+      title: 'Reporte de Títulos Habilitantes',
+      filename: 'Títulos Habilitantes',
+      columns: [
+        { header: 'N°', key: 'nro', width: 6 },
+        { header: 'Título', key: 'titulo', width: 30 },
+        { header: 'Tipo', key: 'tipo', width: 22 },
+        { header: 'Número', key: 'numero', width: 18 },
+        { header: 'Vigencia Del', key: 'vigencia_del', width: 18 },
+        { header: 'Vigencia Al', key: 'vigencia_al', width: 18 },
+        { header: 'Vigencia Doc.', key: 'vigencia_doc', width: 18 },
+        { header: 'Días Vencer', key: 'dias_vencer', width: 15 },
+        { header: 'Ubicación', key: 'ubicacion', width: 22 },
+        { header: 'Estado', key: 'estado', width: 15 }
+      ],
+      data
     });
-
-    doc.save(`titulos_habilitantes_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
+  const downloadReportPdf = () => {
+    const data = filtered.map((t, i) => {
+      const startDate = t.vigencia_del || t.fecha_emision;
+      const targetDate = t.vigencia_al || t.fecha_vencimiento;
+      const daysLeft = targetDate ? getDaysUntil(targetDate) : '';
+      return {
+        nro: i + 1,
+        titulo: t.titulo || '',
+        tipo: t.tipo || '',
+        numero: t.numero || '',
+        vigencia_del: startDate ? new Date(String(startDate).includes('T') ? String(startDate) : `${startDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
+        vigencia_al: targetDate ? new Date(String(targetDate).includes('T') ? String(targetDate) : `${targetDate}T12:00:00`).toLocaleDateString('es-PE', { timeZone: 'UTC' }) : '',
+        dias_vencer: daysLeft !== '' ? `${daysLeft} días` : '—',
+        ubicacion: t.locations?.name || '',
+        estado: t.estado || ''
+      };
+    });
+
+    generatePDF({
+      title: 'Reporte de Títulos Habilitantes',
+      filename: 'Títulos Habilitantes',
+      columns: [
+        { header: 'N°', key: 'nro' },
+        { header: 'Título', key: 'titulo' },
+        { header: 'Tipo', key: 'tipo' },
+        { header: 'Número', key: 'numero' },
+        { header: 'Vigencia Del', key: 'vigencia_del' },
+        { header: 'Vigencia Al', key: 'vigencia_al' },
+        { header: 'Días Vencer', key: 'dias_vencer' },
+        { header: 'Ubicación', key: 'ubicacion' },
+        { header: 'Estado', key: 'estado' }
+      ],
+      data
+    });
+  };
   return (
     <div className="flex flex-col h-full bg-[#f8fafc]">
       <div className="p-6 space-y-6 flex-1 overflow-y-auto">

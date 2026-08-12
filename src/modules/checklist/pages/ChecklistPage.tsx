@@ -161,7 +161,7 @@ export default function Checklist({ type }: { type?: string }) {
 
          await generateExcel({
             title: 'Reporte de Ubicaciones — Checklist',
-            filename: `Checklist_Ubicaciones_${new Date().toISOString().split('T')[0]}`,
+            filename: 'Checklist Ubicaciones',
             columns: [
                { header: 'N°', key: 'nro', width: 6 },
                { header: 'UBICACIÓN / EMPRESA', key: 'name', width: 35 },
@@ -197,7 +197,7 @@ export default function Checklist({ type }: { type?: string }) {
 
       generatePDF({
          title: 'Reporte de Ubicaciones — Checklist',
-         filename: `Checklist_Ubicaciones_${new Date().toISOString().split('T')[0]}`,
+         filename: 'Checklist Ubicaciones',
          columns: [
             { header: 'N°', key: 'nro' },
             { header: 'Ubicación / Empresa', key: 'name' },

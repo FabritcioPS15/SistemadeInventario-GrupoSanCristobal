@@ -375,7 +375,7 @@ export default function Users() {
 
       await generateExcel({
         title: 'Reporte de Usuarios',
-        filename: `Usuarios_${new Date().toISOString().split('T')[0]}`,
+        filename: 'Usuarios',
         columns: [
           { header: 'NOMBRES', key: 'full_name', width: 25 },
           { header: 'EMAIL', key: 'email', width: 30 },
@@ -407,7 +407,7 @@ export default function Users() {
 
       generatePDF({
         title: 'Reporte de Usuarios',
-        filename: `Usuarios_${new Date().toISOString().split('T')[0]}`,
+        filename: 'Usuarios',
         columns: [
           { header: 'Nombres', key: 'full_name' },
           { header: 'Email', key: 'email' },

@@ -1,9 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, Star, Video, ArrowRight, Search, HardDrive } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, Star, Video, ArrowRight, Search } from 'lucide-react';
 import { GiCctvCamera } from 'react-icons/gi';
-import ExcelJS from 'exceljs';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
 import { supabase, Camera as CameraType, Location, StoredDisk } from '../../../shared/services/supabase';
 import CameraForm from '../forms/CameraForm';
 import { useAuth } from '../../../app/providers/AuthContext';
@@ -33,7 +31,6 @@ import {
   TableHead,
   TableBody,
   TableCell,
-  TableCellIcon,
   TableCellPrimary,
   TableCellSecondary,
   TableCellBadge,
@@ -346,173 +343,159 @@ export default function Cameras({ subview }: CamerasProps) {
 
 
 
+  const getSelectedSedeName = () => {
+    if (selectedLocations.length === 1) {
+      return locations.find(l => l.id === selectedLocations[0])?.name;
+    }
+    return undefined;
+  };
 
-  const handleExportPDF = async () => {
-    try {
-      const doc = new jsPDF('l', 'mm', 'a4');
-      const isDisksView = subview === 'cameras-disks';
-      const title = isDisksView
-        ? `Inventario de Discos Extraídos - ${new Date().toLocaleDateString()}`
-        : `Reporte Detallado de Cámaras - ${new Date().toLocaleDateString()}`;
+  const handleExportPDF = () => {
+    const isDisksView = subview === 'cameras-disks';
+    const sedeName = getSelectedSedeName();
 
-      doc.setFontSize(18);
-      doc.setTextColor(0, 40, 85);
-      doc.text(title, 14, 20);
+    if (isDisksView) {
+      const data = filteredDisks.map((d, i) => ({
+        nro: i + 1,
+        disco: `Disco #${d.disk_number}`,
+        serial: d.serial_number || '—',
+        marca: d.brand || '—',
+        camara: d.camera_name || '—',
+        ubicacion: d.location_name || '—',
+        capacidad: `${d.used_space_gb}/${d.total_capacity_gb} GB`,
+        periodo: d.stored_from ? `${new Date(String(d.stored_from).includes('T') ? String(d.stored_from) : `${d.stored_from}T12:00:00`).toLocaleDateString('es-PE')} - ${new Date(String(d.stored_to || '').includes('T') ? String(d.stored_to || '') : `${d.stored_to || ''}T12:00:00`).toLocaleDateString('es-PE')}` : '—',
+        notas: d.notes || '—'
+      }));
 
-      if (isDisksView) {
-        const tableData = filteredDisks.map(d => [
-          `Disco #${d.disk_number}`,
-          d.serial_number || '—',
-          d.brand || '—',
-          d.camera_name || '—',
-          d.location_name || '—',
-          d.stored_from ? `${new Date(String(d.stored_from).includes('T') ? String(d.stored_from) : `${d.stored_from}T12:00:00`).toLocaleDateString()} - ${new Date(String(d.stored_to || '').includes('T') ? String(d.stored_to || '') : `${d.stored_to || ''}T12:00:00`).toLocaleDateString()}` : '—',
-          `${d.used_space_gb}/${d.total_capacity_gb} GB`,
-          d.notes || '—'
-        ]);
+      generatePDF({
+        title: 'Inventario de Discos Extraídos',
+        filename: 'Discos Extraídos',
+        sede: sedeName,
+        columns: [
+          { header: 'N°', key: 'nro' },
+          { header: 'Disco', key: 'disco' },
+          { header: 'Serie', key: 'serial' },
+          { header: 'Marca', key: 'marca' },
+          { header: 'Cámara Origen', key: 'camara' },
+          { header: 'Ubicación', key: 'ubicacion' },
+          { header: 'Capacidad', key: 'capacidad' },
+          { header: 'Periodo Grabación', key: 'periodo' },
+          { header: 'Notas', key: 'notes' }
+        ],
+        data
+      });
+    } else {
+      const data = filteredCameras.map((c, i) => ({
+        nro: i + 1,
+        camara: c.name || '—',
+        ubicacion: (c as any).locations?.name || '—',
+        grabacion: c.recording_start_date ? new Date(String(c.recording_start_date + 'T00:00:00').includes('T') ? String(c.recording_start_date + 'T00:00:00') : `${c.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString('es-PE') : '—',
+        marca: c.brand || '—',
+        ip: `${c.ip_address || '—'}:${c.port || '—'}`,
+        discos: c.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join(', ') || 'Sin discos',
+        espacio: c.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join(', ') || '—'
+      }));
 
-        autoTable(doc, {
-          startY: 30,
-          head: [['Disco', 'Serie', 'Marca', 'Cámara Origen', 'Ubicación', 'Periodo Grabación', 'Capacidad', 'Notas']],
-          body: tableData,
-          theme: 'striped',
-          headStyles: { fillColor: [190, 18, 60], textColor: 255, fontSize: 10 },
-          styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-        });
-      } else {
-        const tableData = filteredCameras.map(c => [
-          c.name,
-          (c as any).locations?.name || '—',
-          c.recording_start_date ? new Date(String(c.recording_start_date + 'T00:00:00').includes('T') ? String(c.recording_start_date + 'T00:00:00') : `${c.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString() : '—',
-          c.brand || '—',
-          `${c.ip_address || '—'}:${c.port || '—'}`,
-          c.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
-          c.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join('\n') || '—'
-        ]);
-
-        autoTable(doc, {
-          startY: 30,
-          head: [['Cámara', 'Ubicación', 'Inicio Grabación', 'Marca', 'IP/Puerto', 'Discos Duros', 'Espacio Libre']],
-          body: tableData,
-          theme: 'striped',
-          headStyles: { fillColor: [0, 40, 85], textColor: 255, fontSize: 10 },
-          styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-          columnStyles: {
-            5: { halign: 'center', cellWidth: 15 }, // Capacidad
-            6: { fontSize: 7, cellWidth: 35 }, // Discos
-            7: { fontSize: 7, cellWidth: 25 } // Espacio Libre
-          }
-        });
-      }
-
-      doc.save(isDisksView
-        ? `Discos_Extraidos_${new Date().toISOString().split('T')[0]}.pdf`
-        : `Reporte_Camaras_${new Date().toISOString().split('T')[0]}.pdf`
-      );
-    } catch (error) {
-      console.error('Error al exportar PDF:', error);
-      alert('Error al generar el PDF');
+      generatePDF({
+        title: 'Reporte Detallado de Cámaras',
+        filename: 'Cámaras',
+        sede: sedeName,
+        columns: [
+          { header: 'N°', key: 'nro' },
+          { header: 'Cámara', key: 'camara' },
+          { header: 'Ubicación', key: 'ubicacion' },
+          { header: 'Inicio Grabación', key: 'grabacion' },
+          { header: 'Marca', key: 'marca' },
+          { header: 'IP / Puerto', key: 'ip' },
+          { header: 'Discos Duros', key: 'discos' },
+          { header: 'Espacio Libre', key: 'espacio' }
+        ],
+        data
+      });
     }
   };
 
   const handleExportExcel = async () => {
-    const workbook = new ExcelJS.Workbook();
     const isDisksView = subview === 'cameras-disks';
-    const worksheet = workbook.addWorksheet(isDisksView ? 'Discos Extraídos' : 'Cámaras');
+    const sedeName = getSelectedSedeName();
 
     if (isDisksView) {
-      worksheet.columns = [
-        { header: 'Disco', key: 'disk_number', width: 10 },
-        { header: 'Serie', key: 'serial', width: 20 },
-        { header: 'Marca', key: 'brand', width: 20 },
-        { header: 'Cámara Origen', key: 'camera_name', width: 25 },
-        { header: 'Ubicación', key: 'location_name', width: 25 },
-        { header: 'Grabación Desde', key: 'from', width: 15 },
-        { header: 'Grabación Hasta', key: 'to', width: 15 },
-        { header: 'Capacidad Total (GB)', key: 'total', width: 15 },
-        { header: 'Espacio Usado (GB)', key: 'used', width: 15 },
-        { header: 'Notas', key: 'notes', width: 40 }
-      ];
+      const data = filteredDisks.map((d, i) => ({
+        nro: i + 1,
+        disco: `Disco #${d.disk_number}`,
+        serial: d.serial_number || '',
+        marca: d.brand || '',
+        camara: d.camera_name || '',
+        ubicacion: d.location_name || '',
+        desde: d.stored_from || '',
+        hasta: d.stored_to || '',
+        total: d.total_capacity_gb || 0,
+        usado: d.used_space_gb || 0,
+        notas: d.notes || ''
+      }));
 
-      filteredDisks.forEach(disk => {
-        const row = worksheet.addRow({
-          disk_number: `Disco #${disk.disk_number}`,
-          serial: disk.serial_number || '',
-          brand: disk.brand || '',
-          camera_name: disk.camera_name,
-          location_name: disk.location_name,
-          from: disk.stored_from || '',
-          to: disk.stored_to || '',
-          total: disk.total_capacity_gb,
-          used: disk.used_space_gb,
-          notes: disk.notes || ''
-        });
-        row.eachCell(cell => {
-          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-          cell.alignment = { vertical: 'middle', wrapText: true };
-        });
+      await generateExcel({
+        title: 'Inventario de Discos Extraídos',
+        filename: 'Discos Extraídos',
+        sede: sedeName,
+        columns: [
+          { header: 'N°', key: 'nro', width: 6 },
+          { header: 'Disco', key: 'disco', width: 15 },
+          { header: 'Serie', key: 'serial', width: 22 },
+          { header: 'Marca', key: 'marca', width: 18 },
+          { header: 'Cámara Origen', key: 'camara', width: 25 },
+          { header: 'Ubicación', key: 'ubicacion', width: 25 },
+          { header: 'Grabación Desde', key: 'desde', width: 18 },
+          { header: 'Grabación Hasta', key: 'hasta', width: 18 },
+          { header: 'Capacidad Total (GB)', key: 'total', width: 22 },
+          { header: 'Espacio Usado (GB)', key: 'usado', width: 22 },
+          { header: 'Notas', key: 'notes', width: 40 }
+        ],
+        data
       });
     } else {
-      worksheet.columns = [
-        { header: 'Nombre', key: 'name', width: 25 },
-        { header: 'Ubicación', key: 'location', width: 25 },
-        { header: 'Inicio Grabación', key: 'recording_start', width: 20 },
-        { header: 'Marca', key: 'brand', width: 15 },
-        { header: 'Modelo', key: 'model', width: 20 },
-        { header: 'IP', key: 'ip', width: 15 },
-        { header: 'Puerto', key: 'port', width: 10 },
-        { header: 'Usuario', key: 'username', width: 20 },
-        { header: 'Contraseña', key: 'password', width: 20 },
-        { header: 'URL', key: 'url', width: 40 },
-        { header: 'Tipo Acceso', key: 'access_type', width: 15 },
-        { header: 'Estado', key: 'status', width: 15 },
-        { header: 'Discos Duros', key: 'disks', width: 35 },
-        { header: 'Espacio Libre', key: 'free_space', width: 25 },
-        { header: 'Notas', key: 'notes', width: 30 }
-      ];
+      const data = filteredCameras.map((c, i) => ({
+        nro: i + 1,
+        nombre: c.name || '',
+        ubicacion: (c as any).locations?.name || '',
+        grabacion: c.recording_start_date || '—',
+        marca: c.brand || '',
+        modelo: c.model || '',
+        ip: c.ip_address || '',
+        puerto: c.port || '',
+        usuario: c.username || '',
+        url: c.url || '',
+        tipo: humanAccess(c.access_type),
+        estado: c.status === 'active' ? 'Activo' : c.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo',
+        discos: c.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join(', ') || 'Sin discos',
+        espacio: c.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join(', ') || '—',
+        notas: c.notes || ''
+      }));
 
-      filteredCameras.forEach((camera) => {
-        const row = worksheet.addRow({
-          name: camera.name || '',
-          location: (camera as any).locations?.name || '',
-          recording_start: camera.recording_start_date || '—',
-          brand: camera.brand || '',
-          model: camera.model || '',
-          ip: camera.ip_address || '',
-          port: camera.port || '',
-          username: camera.username || '',
-          password: camera.password || '',
-          url: camera.url || '',
-          access_type: humanAccess(camera.access_type),
-          status: camera.status === 'active' ? 'Activo' : camera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo',
-          disks: camera.camera_disks?.map(d => `D${d.disk_number}: ${d.total_capacity_gb}GB (${d.disk_type})`).join('\n') || 'Sin discos',
-          free_space: camera.camera_disks?.map(d => `D${d.disk_number}: ${d.remaining_capacity_gb || 0}GB`).join('\n') || '—',
-          notes: camera.notes || ''
-        });
-        row.eachCell(cell => {
-          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-          cell.alignment = { vertical: 'middle', wrapText: true };
-        });
+      await generateExcel({
+        title: 'Reporte Detallado de Cámaras',
+        filename: 'Cámaras',
+        sede: sedeName,
+        columns: [
+          { header: 'N°', key: 'nro', width: 6 },
+          { header: 'Nombre', key: 'nombre', width: 25 },
+          { header: 'Ubicación', key: 'ubicacion', width: 25 },
+          { header: 'Inicio Grabación', key: 'grabacion', width: 20 },
+          { header: 'Marca', key: 'marca', width: 15 },
+          { header: 'Modelo', key: 'modelo', width: 20 },
+          { header: 'IP', key: 'ip', width: 15 },
+          { header: 'Puerto', key: 'puerto', width: 10 },
+          { header: 'Usuario', key: 'usuario', width: 20 },
+          { header: 'URL Acceso', key: 'url', width: 40 },
+          { header: 'Tipo Acceso', key: 'tipo', width: 15 },
+          { header: 'Estado', key: 'estado', width: 15 },
+          { header: 'Discos Duros', key: 'discos', width: 35 },
+          { header: 'Espacio Libre', key: 'espacio', width: 25 },
+          { header: 'Notas', key: 'notas', width: 30 }
+        ],
+        data
       });
     }
-
-    worksheet.getRow(1).font = { bold: true, size: 12 };
-    worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isDisksView ? 'FFF1F5F9' : 'FFE0E0E0' } };
-    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
-    worksheet.getRow(1).height = 25;
-    worksheet.getRow(1).eachCell(cell => {
-      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
-    });
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    const dateStr = new Date().toISOString().split('T')[0];
-    link.download = isDisksView ? `Discos_Extraidos_${dateStr}.xlsx` : `Reporte_Camaras_${dateStr}.xlsx`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
 
@@ -668,8 +651,7 @@ export default function Cameras({ subview }: CamerasProps) {
                       </div>
                       {/* Status badge */}
                       <div className="flex flex-col items-end gap-2">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-black uppercase border tracking-widest rounded-none shadow-sm ${
-                          cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-black uppercase border tracking-widest rounded-none shadow-sm ${cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                           cam.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                             'bg-slate-100 text-slate-600 border-slate-200'
                           }`}>
@@ -988,9 +970,178 @@ export default function Cameras({ subview }: CamerasProps) {
               </div>
             </div>
           ) : (
-          <>
-            <div className="hidden md:flex bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex-col">
-              <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
+            <>
+              <div className="hidden md:flex bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex-col">
+                <div className="bg-slate-50/50 border-b border-slate-100 relative z-20">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredCameras.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                    onItemsPerPageChange={setItemsPerPage}
+                  />
+                </div>
+
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        {canEdit() && selectionMode && !subview && (
+                          <TableHead className="w-12 text-center">
+                            <input
+                              type="checkbox"
+                              checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length}
+                              onChange={() => toggleSelectAll(paginatedData)}
+                              className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                            />
+                          </TableHead>
+                        )}
+                        <TableHead sortable isSorted={sortConfig?.key === 'name'} sortDirection={sortConfig?.direction} onClick={() => handleSort('name')}>Cámara</TableHead>
+                        <TableHead sortable isSorted={sortConfig?.key === 'location'} sortDirection={sortConfig?.direction} onClick={() => handleSort('location')}>Ubicación</TableHead>
+                        <TableHead sortable isSorted={sortConfig?.key === 'recording_start_date'} sortDirection={sortConfig?.direction} onClick={() => handleSort('recording_start_date')}>Inicio Grabación</TableHead>
+                        <TableHead sortable isSorted={sortConfig?.key === 'status'} sortDirection={sortConfig?.direction} onClick={() => handleSort('status')}>Estado</TableHead>
+                        <TableHead sortable isSorted={sortConfig?.key === 'disks'} sortDirection={sortConfig?.direction} onClick={() => handleSort('disks')}>Almacenamiento</TableHead>
+                        <TableHead className="text-center">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedData.map((cam) => (
+                        <TableRow
+                          key={cam.id}
+                          className={`cursor-pointer transition-colors duration-150 group/row relative ${selectedIds.includes(cam.id) ? 'bg-blue-50/40' : ''}`}
+                          onClick={() => handleView(cam)}
+                        >
+                          {canEdit() && selectionMode && !subview && (
+                            <TableCell className="text-center w-12">
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(cam.id)}
+                                onChange={() => toggleSelect(cam.id)}
+                                onClick={e => e.stopPropagation()}
+                                className="w-3.5 h-3.5 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="font-bold noTruncate">
+                            <div className="flex flex-col min-w-0">
+                              <TableCellPrimary className="truncate max-w-[350px]">{cam.name}</TableCellPrimary>
+                              <TableCellSecondary className="truncate max-w-[350px]">{cam.brand || ''} {cam.model || ''}</TableCellSecondary>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <TableCellPrimary className="text-slate-700 truncate max-w-xs block">{(cam as any).locations?.name || 'Ubicación N/A'}</TableCellPrimary>
+                          </TableCell>
+                          <TableCell>
+                            <TableCellPrimary>
+                              {cam.recording_start_date ? new Date(String(cam.recording_start_date + 'T00:00:00').includes('T') ? String(cam.recording_start_date + 'T00:00:00') : `${cam.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                            </TableCellPrimary>
+                          </TableCell>
+                          <TableCell>
+                            <TableCellBadge className={cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}>
+                              {cam.status === 'active' ? 'ACTIVO' : cam.status === 'maintenance' ? 'MANTENIMIENTO' : 'INACTIVO'}
+                            </TableCellBadge>
+                          </TableCell>
+                          <TableCell>
+                            {cam.camera_disks && cam.camera_disks.length > 0 ? (
+                              <div className="flex flex-col gap-1 min-w-[120px]">
+                                {(() => {
+                                  const activeDisks = cam.camera_disks!.filter(d => d.status !== 'extracted');
+                                  if (activeDisks.length === 0) return <TableCellSecondary>SIN DISCOS ACTIVOS</TableCellSecondary>;
+
+                                  const totals = activeDisks.reduce(
+                                    (acc, d) => {
+                                      const total = Number(d.total_capacity_gb) || 0;
+                                      const remaining = Number(d.remaining_capacity_gb) || 0;
+                                      const used = d.used_space_gb !== null && d.used_space_gb !== undefined
+                                        ? Number(d.used_space_gb)
+                                        : (total - remaining);
+                                      return {
+                                        total: acc.total + total,
+                                        used: acc.used + used
+                                      };
+                                    },
+                                    { total: 0, used: 0 }
+                                  );
+                                  const percent = totals.total > 0 ? Math.min(100, Math.round((totals.used / totals.total) * 100)) : 0;
+                                  return (
+                                    <>
+                                      <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-0.5">
+                                        <span>{totals.used}/{totals.total}GB</span>
+                                        <span>{percent}%</span>
+                                      </div>
+                                      <div className="w-full bg-slate-100 h-1.5 rounded-none overflow-hidden border border-slate-200">
+                                        <div
+                                          className={`h-full ${percent > 75 ? 'bg-rose-500' : percent > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                          style={{ width: `${percent}%` }}
+                                        />
+                                      </div>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <TableCellSecondary>SIN DISCOS</TableCellSecondary>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                              {canEdit() && (
+                                <>
+                                  <TableActionButton
+                                    icon={<Edit size={14} />}
+                                    onClick={e => { e.stopPropagation(); openEdit(cam); }}
+                                    title="Editar"
+                                  />
+                                  <TableActionButton
+                                    icon={<Trash2 size={14} />}
+                                    onClick={e => { e.stopPropagation(); del(cam); }}
+                                    title="Eliminar"
+                                    variant="danger"
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Mobile card view */}
+              <div className="md:hidden space-y-3 mt-4">
+                {paginatedData.map((cam) => (
+                  <div key={cam.id} className="bg-white border border-slate-200" onClick={() => handleView(cam)}>
+                    <div className="p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-black text-[#002855] uppercase truncate">{cam.name}</p>
+                          <p className="text-[9px] font-bold text-slate-400 truncate">{cam.brand || ''} {cam.model || ''}</p>
+                        </div>
+                        <span className={`shrink-0 px-2 py-0.5 text-[8px] font-black tracking-widest border ${cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                          {cam.status === 'active' ? 'ACTIVO' : cam.status === 'maintenance' ? 'MANTENIMIENTO' : 'INACTIVO'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 mt-1.5">
+                        <MapPin size={11} className="text-rose-500 shrink-0" />
+                        <span className="text-[9px] font-bold text-slate-500 truncate">{(cam as any).locations?.name || 'Ubicación N/A'}</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                        <span className="text-[8px] font-bold text-slate-400">
+                          {cam.recording_start_date ? new Date(String(cam.recording_start_date + 'T00:00:00').includes('T') ? String(cam.recording_start_date + 'T00:00:00') : `${cam.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) : '—'}
+                        </span>
+                        <span className="text-[8px] font-bold text-slate-400">
+                          {cam.camera_disks?.length || 0} disco(s)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="md:hidden mt-3">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
@@ -1000,176 +1151,7 @@ export default function Cameras({ subview }: CamerasProps) {
                   onItemsPerPageChange={setItemsPerPage}
                 />
               </div>
-
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {canEdit() && selectionMode && !subview && (
-                        <TableHead className="w-12 text-center">
-                          <input
-                            type="checkbox"
-                            checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length}
-                            onChange={() => toggleSelectAll(paginatedData)}
-                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
-                          />
-                        </TableHead>
-                      )}
-                      <TableHead sortable isSorted={sortConfig?.key === 'name'} sortDirection={sortConfig?.direction} onClick={() => handleSort('name')}>Cámara</TableHead>
-                      <TableHead sortable isSorted={sortConfig?.key === 'location'} sortDirection={sortConfig?.direction} onClick={() => handleSort('location')}>Ubicación</TableHead>
-                      <TableHead sortable isSorted={sortConfig?.key === 'recording_start_date'} sortDirection={sortConfig?.direction} onClick={() => handleSort('recording_start_date')}>Inicio Grabación</TableHead>
-                      <TableHead sortable isSorted={sortConfig?.key === 'status'} sortDirection={sortConfig?.direction} onClick={() => handleSort('status')}>Estado</TableHead>
-                      <TableHead sortable isSorted={sortConfig?.key === 'disks'} sortDirection={sortConfig?.direction} onClick={() => handleSort('disks')}>Almacenamiento</TableHead>
-                      <TableHead className="text-center">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedData.map((cam) => (
-                      <TableRow
-                        key={cam.id}
-                        className={`cursor-pointer transition-colors duration-150 group/row relative ${selectedIds.includes(cam.id) ? 'bg-blue-50/40' : ''}`}
-                        onClick={() => handleView(cam)}
-                      >
-                        {canEdit() && selectionMode && !subview && (
-                          <TableCell className="text-center w-12">
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(cam.id)}
-                              onChange={() => toggleSelect(cam.id)}
-                              onClick={e => e.stopPropagation()}
-                              className="w-3.5 h-3.5 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
-                            />
-                          </TableCell>
-                        )}
-                        <TableCell className="font-bold noTruncate">
-                          <div className="flex flex-col min-w-0">
-                            <TableCellPrimary className="truncate max-w-[350px]">{cam.name}</TableCellPrimary>
-                            <TableCellSecondary className="truncate max-w-[350px]">{cam.brand || ''} {cam.model || ''}</TableCellSecondary>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <TableCellPrimary className="text-slate-700 truncate max-w-xs block">{(cam as any).locations?.name || 'Ubicación N/A'}</TableCellPrimary>
-                        </TableCell>
-                        <TableCell>
-                          <TableCellPrimary>
-                            {cam.recording_start_date ? new Date(String(cam.recording_start_date + 'T00:00:00').includes('T') ? String(cam.recording_start_date + 'T00:00:00') : `${cam.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                          </TableCellPrimary>
-                        </TableCell>
-                        <TableCell>
-                          <TableCellBadge className={cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}>
-                            {cam.status === 'active' ? 'ACTIVO' : cam.status === 'maintenance' ? 'MANTENIMIENTO' : 'INACTIVO'}
-                          </TableCellBadge>
-                        </TableCell>
-                        <TableCell>
-                          {cam.camera_disks && cam.camera_disks.length > 0 ? (
-                            <div className="flex flex-col gap-1 min-w-[120px]">
-                              {(() => {
-                                const activeDisks = cam.camera_disks!.filter(d => d.status !== 'extracted');
-                                if (activeDisks.length === 0) return <TableCellSecondary>SIN DISCOS ACTIVOS</TableCellSecondary>;
-
-                                const totals = activeDisks.reduce(
-                                  (acc, d) => {
-                                    const total = Number(d.total_capacity_gb) || 0;
-                                    const remaining = Number(d.remaining_capacity_gb) || 0;
-                                    const used = d.used_space_gb !== null && d.used_space_gb !== undefined
-                                      ? Number(d.used_space_gb)
-                                      : (total - remaining);
-                                    return {
-                                      total: acc.total + total,
-                                      used: acc.used + used
-                                    };
-                                  },
-                                  { total: 0, used: 0 }
-                                );
-                                const percent = totals.total > 0 ? Math.min(100, Math.round((totals.used / totals.total) * 100)) : 0;
-                                return (
-                                  <>
-                                    <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-0.5">
-                                      <span>{totals.used}/{totals.total}GB</span>
-                                      <span>{percent}%</span>
-                                    </div>
-                                    <div className="w-full bg-slate-100 h-1.5 rounded-none overflow-hidden border border-slate-200">
-                                      <div
-                                        className={`h-full ${percent > 75 ? 'bg-rose-500' : percent > 50 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                                        style={{ width: `${percent}%` }}
-                                      />
-                                    </div>
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          ) : (
-                            <TableCellSecondary>SIN DISCOS</TableCellSecondary>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                            {canEdit() && (
-                              <>
-                                <TableActionButton
-                                  icon={<Edit size={14} />}
-                                  onClick={e => { e.stopPropagation(); openEdit(cam); }}
-                                  title="Editar"
-                                />
-                                <TableActionButton
-                                  icon={<Trash2 size={14} />}
-                                  onClick={e => { e.stopPropagation(); del(cam); }}
-                                  title="Eliminar"
-                                  variant="danger"
-                                />
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-
-          {/* Mobile card view */}
-          <div className="md:hidden space-y-3 mt-4">
-            {paginatedData.map((cam) => (
-              <div key={cam.id} className="bg-white border border-slate-200" onClick={() => handleView(cam)}>
-                <div className="p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[12px] font-black text-[#002855] uppercase truncate">{cam.name}</p>
-                      <p className="text-[9px] font-bold text-slate-400 truncate">{cam.brand || ''} {cam.model || ''}</p>
-                    </div>
-                    <span className={`shrink-0 px-2 py-0.5 text-[8px] font-black tracking-widest border ${cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
-                      {cam.status === 'active' ? 'ACTIVO' : cam.status === 'maintenance' ? 'MANTENIMIENTO' : 'INACTIVO'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 mt-1.5">
-                    <MapPin size={11} className="text-rose-500 shrink-0" />
-                    <span className="text-[9px] font-bold text-slate-500 truncate">{(cam as any).locations?.name || 'Ubicación N/A'}</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                    <span className="text-[8px] font-bold text-slate-400">
-                      {cam.recording_start_date ? new Date(String(cam.recording_start_date + 'T00:00:00').includes('T') ? String(cam.recording_start_date + 'T00:00:00') : `${cam.recording_start_date + 'T00:00:00'}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' }) : '—'}
-                    </span>
-                    <span className="text-[8px] font-bold text-slate-400">
-                      {cam.camera_disks?.length || 0} disco(s)
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="md:hidden mt-3">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredCameras.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-              onItemsPerPageChange={setItemsPerPage}
-            />
-          </div>
-          </>
+            </>
           )
         }
 

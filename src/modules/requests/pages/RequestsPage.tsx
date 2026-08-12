@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { FileText, Plus, Search, CheckCircle, XCircle, Trash2, Eye, MapPin, X } from 'lucide-react';
+import { FaFilePdf } from 'react-icons/fa6';
+import { RiFileExcel2Fill } from 'react-icons/ri';
 import { supabase } from '../../../shared/services/supabase';
 import RequestForm from '../forms/RequestForm';
 import { useAuth } from '../../../app/providers/AuthContext';
@@ -31,6 +33,7 @@ import DetailModal, {
   DetailModalCard,
   DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
+import { generatePDF, generateExcel } from '../../../shared/utils/exportUtils';
 
 
 const statusLabels: Record<RequestStatus, string> = {
@@ -84,6 +87,7 @@ export default function RequestsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  
   useEffect(() => {
     fetchRequests();
   }, []);
@@ -151,16 +155,17 @@ export default function RequestsPage() {
     setSortConfig({ key, direction });
   };
 
+  const getDisplayName = (name?: string) => {
+    if (!name) return '';
+    if (name.includes('@')) {
+      const parts = name.split('@')[0].split('.');
+      return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+    }
+    return name;
+  };
+
   const filteredRequests = useMemo(() => {
     return requests.filter(request => {
-      const getDisplayName = (name?: string) => {
-        if (!name) return '';
-        if (name.includes('@')) {
-          const parts = name.split('@')[0].split('.');
-          return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
-        }
-        return name;
-      };
       const requesterName = getDisplayName(request.requester?.full_name || request.requester_name);
       
       const matchesSearch =
@@ -280,6 +285,78 @@ export default function RequestsPage() {
     setShowDetails(true);
   };
 
+  const handleExportPDF = () => {
+    const data = sortedRequests.map((r, i) => ({
+      nro: i + 1,
+      titulo: r.title,
+      categoria: categoryLabels[r.category] || r.category,
+      prioridad: priorityLabels[r.priority] || r.priority,
+      estado: statusLabels[r.status] || r.status,
+      solicitante: getDisplayName(r.requester?.full_name || r.requester_name) || 'N/A',
+      departamento: r.department || 'N/A',
+      sede: r.location?.name || 'N/A',
+      costo: r.estimated_cost ? `S/ ${r.estimated_cost.toFixed(2)}` : 'N/A',
+      fecha: new Date(r.created_at).toLocaleDateString('es-PE'),
+    }));
+
+    generatePDF({
+      title: 'Reporte de Solicitudes',
+      filename: 'Solicitudes',
+      columns: [
+        { header: 'N°', key: 'nro' },
+        { header: 'Título', key: 'titulo' },
+        { header: 'Categoría', key: 'categoria' },
+        { header: 'Prioridad', key: 'prioridad' },
+        { header: 'Estado', key: 'estado' },
+        { header: 'Solicitante', key: 'solicitante' },
+        { header: 'Dpto.', key: 'departamento' },
+        { header: 'Sede', key: 'sede' },
+        { header: 'Costo Est.', key: 'costo' },
+        { header: 'Fecha', key: 'fecha' },
+      ],
+      data,
+    });
+  };
+
+  const handleExportExcel = async () => {
+    const data = sortedRequests.map((r, i) => ({
+      nro: i + 1,
+      titulo: r.title,
+      descripcion: r.description || '',
+      categoria: categoryLabels[r.category] || r.category,
+      prioridad: priorityLabels[r.priority] || r.priority,
+      estado: statusLabels[r.status] || r.status,
+      solicitante: getDisplayName(r.requester?.full_name || r.requester_name) || 'N/A',
+      correo: r.requester_email || 'N/A',
+      departamento: r.department || 'N/A',
+      sede: r.location?.name || 'N/A',
+      costo: r.estimated_cost || 0,
+      limite: r.due_date ? new Date(r.due_date).toLocaleDateString('es-PE') : 'N/A',
+      fecha: new Date(r.created_at).toLocaleString('es-PE'),
+    }));
+
+    await generateExcel({
+      title: 'Reporte de Solicitudes',
+      filename: 'Solicitudes',
+      columns: [
+        { header: 'N°', key: 'nro', width: 6 },
+        { header: 'Título', key: 'titulo', width: 35 },
+        { header: 'Descripción', key: 'descripcion', width: 50 },
+        { header: 'Categoría', key: 'categoria', width: 18 },
+        { header: 'Prioridad', key: 'prioridad', width: 15 },
+        { header: 'Estado', key: 'estado', width: 15 },
+        { header: 'Solicitante', key: 'solicitante', width: 25 },
+        { header: 'Correo', key: 'correo', width: 25 },
+        { header: 'Departamento', key: 'departamento', width: 20 },
+        { header: 'Sede', key: 'sede', width: 20 },
+        { header: 'Costo Estimado (S/)', key: 'costo', width: 18 },
+        { header: 'Fecha Límite', key: 'limite', width: 18 },
+        { header: 'Fecha Registro', key: 'fecha', width: 22 },
+      ],
+      data,
+    });
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#f8f9fc]">
       <div className="p-6 space-y-6">
@@ -331,6 +408,24 @@ export default function RequestsPage() {
               setCurrentPage(1);
             }}
           />
+
+          <button
+            onClick={handleExportExcel}
+            disabled={sortedRequests.length === 0}
+            className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 transition-all shadow-sm disabled:opacity-50"
+            title="Exportar a Excel"
+          >
+            <RiFileExcel2Fill size={20} className="text-slate-400 group-hover:text-emerald-600 transition-colors" />
+          </button>
+
+          <button
+            onClick={handleExportPDF}
+            disabled={sortedRequests.length === 0}
+            className="group flex items-center justify-center w-10 h-10 bg-white text-slate-400 border border-slate-200 hover:text-rose-700 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm disabled:opacity-50"
+            title="Exportar a PDF"
+          >
+            <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
+          </button>
 
           {canEdit() && (
             <button

@@ -1,9 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Trash2, MapPin, X, Building, ChevronDown, Search, Plus, Filter, Edit } from 'lucide-react';
 import FilterBar from '../../../shared/components/ui/FilterBar';
-import ExcelJS from 'exceljs';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
 import { supabase, Location } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
 import LocationForm from '../forms/LocationForm';
@@ -199,48 +197,64 @@ export default function Sedes() {
 
   const exportToExcel = async () => {
     try {
-      const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Sedes');
-      ws.columns = [
-        { header: 'NOMBRE', key: 'name', width: 30 },
-        { header: 'TIPO', key: 'type', width: 25 },
-        { header: 'DIRECCIÓN', key: 'address', width: 40 },
-        { header: 'CÁMARAS', key: 'cameras', width: 15 },
-        { header: 'NOTAS', key: 'notes', width: 40 },
-      ];
-      ws.getRow(1).font = { bold: true, size: 12 };
-      ws.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
-      filtered.forEach(loc => ws.addRow({
+      const locationsToExport = selectedIds.length > 0 
+        ? filtered.filter(loc => selectedIds.includes(loc.id))
+        : filtered;
+
+      const data = locationsToExport.map(loc => ({
         name: loc.name,
         type: typeLabels[loc.type] || loc.type,
         address: loc.address || '—',
-        cameras: cameraCounts[loc.id] || 0,
+        cameras: (cameraCounts[loc.id] || 0).toString(),
         notes: loc.notes || '—'
       }));
-      const buffer = await wb.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `Sedes_${new Date().toISOString().split('T')[0]}.xlsx`; a.click();
-    } catch (e) { console.error('Error exportando Excel:', e); }
+
+      await generateExcel({
+        title: 'Reporte de Sedes',
+        filename: 'Sedes',
+        columns: [
+          { header: 'Nombre', key: 'name', width: 30 },
+          { header: 'Tipo', key: 'type', width: 25 },
+          { header: 'Dirección', key: 'address', width: 40 },
+          { header: 'Cámaras', key: 'cameras', width: 15 },
+          { header: 'Notas', key: 'notes', width: 40 }
+        ],
+        data
+      });
+    } catch (e) {
+      console.error('Error exportando Excel:', e);
+      notifyError('Error al exportar Excel');
+    }
   };
 
-  const exportToPdf = () => {
+  const exportToPdf = async () => {
     try {
-      const doc = new jsPDF();
-      autoTable(doc, {
-        head: [['Nombre', 'Tipo', 'Dirección', 'Cámaras']],
-        body: filtered.map(loc => [
-          loc.name,
-          typeLabels[loc.type] || loc.type,
-          loc.address || '—',
-          (cameraCounts[loc.id] || 0).toString()
-        ]),
-        theme: 'grid',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [0, 40, 85] }
+      const locationsToExport = selectedIds.length > 0
+        ? filtered.filter(loc => selectedIds.includes(loc.id))
+        : filtered;
+
+      const data = locationsToExport.map(loc => ({
+        name: loc.name,
+        type: typeLabels[loc.type] || loc.type,
+        address: loc.address || '—',
+        cameras: (cameraCounts[loc.id] || 0).toString()
+      }));
+
+      await generatePDF({
+        title: 'Reporte de Sedes',
+        filename: 'Sedes',
+        columns: [
+          { header: 'Nombre', key: 'name' },
+          { header: 'Tipo', key: 'type' },
+          { header: 'Dirección', key: 'address' },
+          { header: 'Cámaras', key: 'cameras' }
+        ],
+        data
       });
-      doc.save(`Sedes_${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (e) { console.error('Error exportando PDF:', e); }
+    } catch (e) {
+      console.error('Error exportando PDF:', e);
+      notifyError('Error al exportar PDF');
+    }
   };
 
   const renderSortableHeader = (label: string, sortKey: 'name' | 'type' | 'cameras') => {
@@ -452,11 +466,11 @@ export default function Sedes() {
                     <Table>
                       <TableHeader>
                         <tr>
-                          <TableHead className="w-12">
-                            {canEdit() && selectionMode && (
-                              <input type="checkbox" checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length} onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200" />
-                            )}
-                          </TableHead>
+                          {canEdit() && selectionMode && (
+                            <TableHead className="w-12 animate-in fade-in slide-in-from-right-2 duration-200">
+                              <input type="checkbox" checked={paginatedData.length > 0 && selectedIds.length === paginatedData.length} onChange={toggleSelectAll} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
+                            </TableHead>
+                          )}
                           <TableHead>
                             {renderSortableHeader('SEDE', 'name')}
                           </TableHead>
@@ -483,11 +497,11 @@ export default function Sedes() {
                               className={`${selectedIds.includes(loc.id) ? 'bg-blue-50/40' : ''}`}
                               onClick={() => { setSelectedLocation(loc); setShowDetails(true); }}
                             >
-                              <TableCell className="w-12">
-                                {canEdit() && selectionMode && (
-                                <input type="checkbox" checked={selectedIds.includes(loc.id)} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer animate-in fade-in slide-in-from-right-2 duration-200" />
-                                )}
-                              </TableCell>
+                              {canEdit() && selectionMode && (
+                                <TableCell className="w-12 animate-in fade-in slide-in-from-right-2 duration-200">
+                                  <input type="checkbox" checked={selectedIds.includes(loc.id)} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-4 h-4 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 cursor-pointer" />
+                                </TableCell>
+                              )}
                               <TableCell>
                                 <div className="flex flex-col">
                                   <TableCellPrimary>{loc.name}</TableCellPrimary>
