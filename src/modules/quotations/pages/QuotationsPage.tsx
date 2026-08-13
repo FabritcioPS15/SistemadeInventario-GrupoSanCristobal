@@ -21,7 +21,7 @@ import DetailModal, {
 
 export default function QuotationsPage() {
   const { canEdit } = useAuth();
-  const { notify, confirm } = useNotify();
+  const { success: notifySuccess, error: notifyError, confirm } = useNotify();
   const [quotations, setQuotations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,7 +46,20 @@ export default function QuotationsPage() {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+
+    const channel = supabase
+      .channel('quotations-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quotations' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const filtered = useMemo(() => {
     let result = [...quotations];
@@ -87,7 +100,7 @@ export default function QuotationsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href = url; a.download = `cotizaciones_${new Date().toISOString().split('T')[0]}.xlsx`;
       a.click(); URL.revokeObjectURL(url);
-    } catch { notify('Error al exportar Excel', { type: 'error' }); }
+    } catch { notifyError('Error al exportar Excel'); }
     finally { setExporting(null); }
   };
 
@@ -102,7 +115,7 @@ export default function QuotationsPage() {
         headStyles: { fillColor: [0, 40, 85] },
       });
       doc.save(`cotizaciones_${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch { notify('Error al exportar PDF', { type: 'error' }); }
+    } catch { notifyError('Error al exportar PDF'); }
     finally { setExporting(null); }
   };
 
@@ -147,8 +160,8 @@ export default function QuotationsPage() {
       subject: `Cotización ${q.number} - ${q.title}`,
       html,
     });
-    if (result.success) notify('Cotización enviada por correo', { type: 'success' });
-    else notify('Error: ' + result.error, { type: 'error' });
+    if (result.success) notifySuccess('Cotización enviada por correo');
+    else notifyError('Error: ' + result.error);
   };
 
   const handleDelete = async (id: string) => {
@@ -158,9 +171,9 @@ export default function QuotationsPage() {
       const { error } = await supabase.from('quotations').delete().eq('id', id);
       if (error) throw error;
       fetchData();
-      notify('Cotización eliminada', { type: 'success' });
+      notifySuccess('Cotización eliminada');
     } catch (err: any) {
-      notify('Error: ' + err.message, { type: 'error' });
+      notifyError('Error: ' + err.message);
     }
   };
 
@@ -173,9 +186,11 @@ export default function QuotationsPage() {
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
             <div className="flex-1 relative group/search">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
-              <input type="text" placeholder="Buscar por N°, título o cliente..." value={searchTerm}
+              <input
+                type="text"
+                value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]" />
+                className="w-full pl-12 pr-4 py-3 text-[12px] text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]" />
             </div>
             <div className="flex items-center gap-2">
               <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
@@ -218,53 +233,53 @@ export default function QuotationsPage() {
           </div>
         ) : (
           <>
-          <div className="hidden md:flex bg-white border border-slate-200 shadow-sm overflow-hidden flex-col">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <tr>
-                    <TableHead><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">N°</span></TableHead>
-                    <TableHead><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Título / Cliente</span></TableHead>
-                    <TableHead><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Total</span></TableHead>
-                    <TableHead><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></TableHead>
-                    <TableHead className="text-right"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></TableHead>
-                  </tr>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((q: any) => (
-                    <TableRow key={q.id} className="cursor-pointer" onClick={() => { setSelected(q); setShowDetails(true); }}>
-                      <TableCell>
-                        <TableCellPrimary className="text-blue-600 font-mono text-[11px]">{q.number}</TableCellPrimary>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <TableCellPrimary className="truncate max-w-xs">{q.title}</TableCellPrimary>
-                          <TableCellSecondary>{q.client_name}</TableCellSecondary>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <TableCellPrimary>{currencySymbol(q.currency)} {q.total?.toFixed(2)}</TableCellPrimary>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={q.status || 'draft'} size="sm" />
-                      </TableCell>
-                      <TableCell className="text-right" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-end gap-1">
-                          <TableActionButton icon={<Eye size={14} />} onClick={() => { setSelected(q); setShowDetails(true); }} title="Ver detalle" />
-                          {canEdit() && (
-                            <TableActionButton icon={<FaFilePdf size={14} />} onClick={() => handleSendEmail(q)} title="Enviar por correo" />
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <div className="hidden md:flex bg-white border border-slate-200 shadow-sm overflow-hidden flex-col">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <tr>
+                      <TableHead><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">N°</span></TableHead>
+                      <TableHead><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Título / Cliente</span></TableHead>
+                      <TableHead><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Total</span></TableHead>
+                      <TableHead><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Estado</span></TableHead>
+                      <TableHead className="text-right"><span className="text-[11px] font-black text-[#002855] uppercase tracking-[0.2em]">Acciones</span></TableHead>
+                    </tr>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((q: any) => (
+                      <TableRow key={q.id} className="cursor-pointer" onClick={() => { setSelected(q); setShowDetails(true); }}>
+                        <TableCell>
+                          <TableCellPrimary className="text-blue-600 font-mono text-[11px]">{q.number}</TableCellPrimary>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <TableCellPrimary className="truncate max-w-xs">{q.title}</TableCellPrimary>
+                            <TableCellSecondary>{q.client_name}</TableCellSecondary>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <TableCellPrimary>{currencySymbol(q.currency)} {q.total?.toFixed(2)}</TableCellPrimary>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={q.status || 'draft'} size="sm" />
+                        </TableCell>
+                        <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                          <div className="flex justify-end gap-1">
+                            <TableActionButton icon={<Eye size={14} />} onClick={() => { setSelected(q); setShowDetails(true); }} title="Ver detalle" />
+                            {canEdit() && (
+                              <TableActionButton icon={<FaFilePdf size={14} />} onClick={() => handleSendEmail(q)} title="Enviar por correo" />
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
-          </div>
 
-          {/* Mobile card view */}
-          <div className="md:hidden space-y-3 mt-4">
+            {/* Mobile card view */}
+            <div className="md:hidden space-y-3 mt-4">
               {filtered.map((q: any) => (
                 <div key={q.id} className="bg-white border border-slate-200 relative">
                   <div className="p-4" onClick={() => { setSelected(q); setShowDetails(true); }}>

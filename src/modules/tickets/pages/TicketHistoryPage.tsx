@@ -9,21 +9,19 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {  ShieldCheck, Search, Calendar, RefreshCw, Ticket as TicketIcon, Clock, User } from 'lucide-react';
+import { ShieldCheck, Search, Calendar, RefreshCw, Ticket as TicketIcon, Clock, User } from 'lucide-react';
 import { FaFilePdf } from "react-icons/fa6";
 import { RiFileExcel2Fill } from "react-icons/ri";
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import { supabase } from '../../../shared/services/supabase';
 import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell,
+    Table,
+    TableHeader,
+    TableRow,
+    TableHead,
+    TableBody,
+    TableCell,
 } from '../../../shared/components/ui/Table';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
 
 
@@ -124,7 +122,7 @@ export default function TicketHistory() {
             // For history, we usually care about when it was closed
             const ticketDate = new Date(ticket.closed_at || ticket.created_at);
             const now = new Date();
-            
+
             const currentRange = filterDateRange.length > 0 ? filterDateRange[0] : 'all';
 
             if (currentRange !== 'all') {
@@ -283,7 +281,7 @@ export default function TicketHistory() {
         <div className="flex flex-col h-full bg-white font-sans min-h-screen relative overflow-hidden">
             <div className="flex-1 overflow-y-auto bg-[#f8fafc]">
                 <div className="w-full px-4 md:px-8 xl:px-12 py-8 space-y-4">
-                    
+
                     {/* Action Bar */}
                     <div className="bg-white border border-slate-200 rounded-none p-4 flex flex-col md:flex-row items-stretch md:items-center gap-4 shadow-sm hover:shadow-md transition-all relative">
                         <div className="absolute -top-3 -left-3">
@@ -297,7 +295,6 @@ export default function TicketHistory() {
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
                             <input
                                 type="text"
-                                placeholder="BUSCAR POR TÍTULO, SOLICITANTE O UBICACIÓN..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-12 pr-4 py-3 text-[12px] font-semibold text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
@@ -308,18 +305,22 @@ export default function TicketHistory() {
                         <div className="flex flex-wrap items-center gap-2">
                             <FilterBar
                                 filters={[
-                                    { key: 'priority', placeholder: 'Todas las prioridades', options: [
-                                        { value: 'critical', label: 'P1 - Crítica' },
-                                        { value: 'high', label: 'P2 - Alta' },
-                                        { value: 'medium', label: 'P3 - Media' },
-                                        { value: 'low', label: 'P4 - Baja' },
-                                    ]},
-                                    { key: 'dateRange', placeholder: 'Todo el tiempo', options: [
-                                        { value: '7days', label: 'Últimos 7 días' },
-                                        { value: '30days', label: 'Últimos 30 días' },
-                                        { value: '90days', label: 'Últimos 90 días' },
-                                        { value: 'custom', label: 'Rango Personalizado' },
-                                    ]},
+                                    {
+                                        key: 'priority', placeholder: 'Todas las prioridades', options: [
+                                            { value: 'critical', label: 'P1 - Crítica' },
+                                            { value: 'high', label: 'P2 - Alta' },
+                                            { value: 'medium', label: 'P3 - Media' },
+                                            { value: 'low', label: 'P4 - Baja' },
+                                        ]
+                                    },
+                                    {
+                                        key: 'dateRange', placeholder: 'Todo el tiempo', options: [
+                                            { value: '7days', label: 'Últimos 7 días' },
+                                            { value: '30days', label: 'Últimos 30 días' },
+                                            { value: '90days', label: 'Últimos 90 días' },
+                                            { value: 'custom', label: 'Rango Personalizado' },
+                                        ]
+                                    },
                                 ]}
                                 values={{ priority: filterPriority, dateRange: filterDateRange }}
                                 onChange={(key, value) => {
@@ -435,7 +436,7 @@ export default function TicketHistory() {
                                     );
                                 })}
                             </div>
-                            
+
                             <div className="hidden md:block overflow-x-auto">
                                 <Table>
                                     <TableHeader>

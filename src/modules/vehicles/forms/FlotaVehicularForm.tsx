@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Car } from 'lucide-react';
 import { supabase, Location, VehicleType } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect } from '../../../shared/components/forms/BaseForm';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type FlotaVehicularFormProps = {
   onClose: () => void;
@@ -10,6 +11,7 @@ type FlotaVehicularFormProps = {
 };
 
 export default function FlotaVehicularForm({ onClose, onSave, editVehicle }: FlotaVehicularFormProps) {
+  const { success: notifySuccess } = useNotify();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -124,6 +126,7 @@ export default function FlotaVehicularForm({ onClose, onSave, editVehicle }: Flo
       }
 
       setLoading(false);
+      notifySuccess(editVehicle ? 'Unidad actualizada correctamente' : 'Unidad creada correctamente', editVehicle ? 'Actualizada' : 'Creada');
       onSave();
     } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });

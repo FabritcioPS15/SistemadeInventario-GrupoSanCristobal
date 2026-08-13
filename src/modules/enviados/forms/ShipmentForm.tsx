@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Truck, Search } from 'lucide-react';
 import { supabase, AssetWithDetails, Location } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type ShipmentType = {
   id: string;
@@ -26,6 +27,7 @@ type ShipmentFormProps = {
 };
 
 export default function ShipmentForm({ onClose, onSave, editShipment }: ShipmentFormProps) {
+  const { success: notifySuccess } = useNotify();
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
   const [filteredAssets, setFilteredAssets] = useState<AssetWithDetails[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -184,6 +186,7 @@ export default function ShipmentForm({ onClose, onSave, editShipment }: Shipment
       }
 
       setLoading(false);
+      notifySuccess(editShipment ? 'Envío actualizado correctamente' : 'Envío creado correctamente', editShipment ? 'Actualizado' : 'Creado');
       onSave();
     } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });
@@ -234,7 +237,7 @@ export default function ShipmentForm({ onClose, onSave, editShipment }: Shipment
                   type="text"
                   value={assetSearch}
                   onChange={(e) => setAssetSearch(e.target.value)}
-                  placeholder="Buscar activo..."
+                  placeholder="Buscar..."
                   className="pr-10"
                 />
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />

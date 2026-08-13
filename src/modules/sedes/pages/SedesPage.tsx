@@ -139,7 +139,15 @@ export default function Sedes() {
     const confirmed = await confirm(`¿Eliminar sede "${loc.name}"?`, 'Eliminar Sede');
     if (!confirmed) return;
     const { error } = await supabase.from('locations').delete().eq('id', loc.id);
-    if (error) return notifyError('Error al eliminar: ' + error.message);
+    if (error) {
+      if (error.code === '23503') {
+        return notifyError(
+          `No se puede eliminar "${loc.name}" porque tiene tickets, activos u otros registros asociados. Reasígnalos primero.`,
+          'Sede en uso'
+        );
+      }
+      return notifyError('Error al eliminar: ' + error.message);
+    }
     setSelectedIds(prev => prev.filter(id => id !== loc.id));
     await Promise.all([fetchLocations(), fetchCameraCounts()]);
   };
@@ -158,7 +166,14 @@ export default function Sedes() {
     if (!confirmed) return;
     const { error } = await supabase.from('locations').delete().in('id', selectedIds);
     if (!error) { setSelectedIds([]); await Promise.all([fetchLocations(), fetchCameraCounts()]); }
-    else notifyError('Error al eliminar: ' + error.message);
+    else if (error.code === '23503') {
+      notifyError(
+        'Una o más sedes seleccionadas tienen registros asociados (tickets, activos, etc.). Reasígnalos antes de eliminar.',
+        'Sedes en uso'
+      );
+    } else {
+      notifyError('Error al eliminar: ' + error.message);
+    }
   };
 
   const handleSort = (field: 'name' | 'type' | 'cameras') => {
@@ -197,7 +212,7 @@ export default function Sedes() {
 
   const exportToExcel = async () => {
     try {
-      const locationsToExport = selectedIds.length > 0 
+      const locationsToExport = selectedIds.length > 0
         ? filtered.filter(loc => selectedIds.includes(loc.id))
         : filtered;
 
@@ -289,7 +304,6 @@ export default function Sedes() {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
                 <input
                   type="text"
-                  placeholder="Buscar por nombre, dirección o notas..."
                   value={search}
                   onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                   className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
@@ -417,9 +431,9 @@ export default function Sedes() {
                       <div key={loc.id} className={`bg-white border border-slate-200 p-4 transition-all duration-300 ${isSelected ? 'border-[#002855] bg-[#002855]/5' : ''}`}>
                         <div className={`flex items-center justify-between`}>
                           <div className="flex items-center gap-4">
-                    {canEdit() && selectionMode && (
-                        <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded border-slate-200 text-blue-600 focus:ring-blue-500 cursor-pointer shadow-sm animate-in fade-in slide-in-from-right-2 duration-200" />
-                    )}
+                            {canEdit() && selectionMode && (
+                              <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(loc.id)} onClick={e => e.stopPropagation()} className="w-3.5 h-3.5 rounded border-slate-200 text-blue-600 focus:ring-blue-500 cursor-pointer shadow-sm animate-in fade-in slide-in-from-right-2 duration-200" />
+                            )}
                             <div className="flex items-center gap-3 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : loc.id)}>
                               <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm bg-slate-50 border border-slate-100 text-slate-400">
                                 <MapPin size={18} />

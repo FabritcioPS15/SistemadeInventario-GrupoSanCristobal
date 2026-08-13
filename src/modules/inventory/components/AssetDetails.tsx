@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {  Monitor, MapPin, Package, Calendar, Tag, Info, ShoppingCart, AlertTriangle, Smartphone, Printer, Wrench } from 'lucide-react';
+import { Monitor, MapPin, Package, Calendar, Tag, Info, ShoppingCart, AlertTriangle, Smartphone, Printer, Wrench } from 'lucide-react';
 import { supabase, AssetWithDetails } from '../../../shared/services/supabase';
 import DetailModal, { DetailModalBody, StandardModalHeader, StandardModalBanner, StandardModalFooter } from '../../../shared/components/ui/DetailModal';
 

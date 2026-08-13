@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Shield, Eye, EyeOff } from 'lucide-react';
 import { supabase, Location } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type MTCAccesoType = {
   id: string;
@@ -26,6 +27,7 @@ type MTCAccesoFormProps = {
 };
 
 export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAccesoFormProps) {
+  const { success: notifySuccess } = useNotify();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
@@ -125,6 +127,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
       }
 
       setLoading(false);
+      notifySuccess(editAcceso ? 'Acceso MTC actualizado correctamente' : 'Acceso MTC creado correctamente', editAcceso ? 'Actualizado' : 'Creado');
       onSave();
     } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });

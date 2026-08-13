@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, ChevronDown, Check, Monitor, Smartphone, Wrench, Package, MapPin } from 'lucide-react';
+import { Search, ChevronDown, Check, Monitor, Smartphone, Wrench, Package, MapPin, Plus } from 'lucide-react';
 import { AssetWithDetails } from '../../../shared/services/supabase';
 
 interface SearchableAssetSelectProps {
@@ -8,9 +8,10 @@ interface SearchableAssetSelectProps {
   onChange: (value: string) => void;
   error?: string;
   placeholder?: string;
+  onCreateNew?: () => void;
 }
 
-export default function SearchableAssetSelect({ assets, value, onChange, error, placeholder = "Buscar activo..." }: SearchableAssetSelectProps) {
+export default function SearchableAssetSelect({ assets, value, onChange, error, placeholder = "Buscar activo...", onCreateNew }: SearchableAssetSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,8 +65,8 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
           if (!isOpen) setTimeout(() => inputRef.current?.focus(), 100);
         }}
         className={`
-          flex items-center justify-between px-3 py-2 h-10 bg-slate-50 border transition-all cursor-pointer rounded-none
-          ${isOpen ? 'border-blue-600 ring-1 ring-blue-500 bg-white' : error ? 'border-rose-300' : 'border-slate-200 hover:border-slate-300'}
+          flex items-center justify-between px-3 py-2 h-10 bg-white border rounded-md shadow-sm cursor-pointer transition-all
+          ${isOpen ? 'border-blue-600 ring-2 ring-blue-500/20' : error ? 'border-rose-300' : 'border-slate-300 hover:border-slate-400'}
         `}
       >
         <div className="flex-1 truncate">
@@ -89,14 +90,16 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
               </span>
             </div>
           ) : (
-            <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-[0.1em]">{placeholder}</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.1em]">{placeholder}</span>
           )}
         </div>
-        <ChevronDown size={16} className={`text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180 text-blue-600' : ''}`} />
+        <div className={`h-6 w-6 flex items-center justify-center rounded-md shrink-0 transition-colors ${isOpen ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+          <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
       </div>
 
       {isOpen && (
-        <div className="absolute z-[100] mt-2 w-full bg-white border border-slate-200 shadow-2xl overflow-hidden scale-in-center origin-top">
+        <div className="absolute z-[100] mt-2 w-full bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden scale-in-center origin-top">
           <div className="p-2 border-b border-slate-100 bg-slate-50/50">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -106,16 +109,29 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
                 placeholder="Marca, modelo, descripción o serie..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-[10px] font-semibold text-slate-700 uppercase tracking-widest bg-white border border-slate-200 focus:border-blue-500 outline-none"
+                className="w-full pl-9 pr-4 py-2 text-[10px] font-semibold text-slate-700 uppercase tracking-widest bg-white border border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
               />
             </div>
           </div>
 
           <div className="max-h-[300px] overflow-y-auto py-2 custom-scrollbar">
             {filteredAssets.length === 0 ? (
-              <div className="px-4 py-8 text-center">
+              <div className="px-4 py-6 text-center">
                 <Search size={24} className="mx-auto text-slate-200 mb-2" />
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">No se encontraron activos</p>
+                {onCreateNew && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      onCreateNew();
+                    }}
+                    className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm transition-colors"
+                  >
+                    <Plus size={14} />
+                    Crear nuevo activo
+                  </button>
+                )}
               </div>
             ) : (
               filteredAssets.map((asset) => (

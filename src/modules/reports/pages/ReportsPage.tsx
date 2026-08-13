@@ -265,7 +265,7 @@ export default function ReportsPage() {
                     placeholder="Buscar..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="pl-9 pr-3 py-2 text-[11px] font-bold bg-slate-50 border border-slate-200 outline-none focus:border-[#002855]/30 w-full md:w-64"
+                    className="pl-9 pr-3 py-2 text-[11px] bg-slate-50 border border-slate-200 outline-none focus:border-[#002855]/30 w-full md:w-64"
                   />
                   {searchTerm && (
                     <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">

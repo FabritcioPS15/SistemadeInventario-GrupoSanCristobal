@@ -45,6 +45,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
 
     'users-view', 'users-create', 'users-edit', 'users-delete',
     'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
+    'companies-view', 'companies-create', 'companies-edit', 'companies-delete',
     'sutran-view', 'sutran-edit',
     'mtc-view', 'mtc-edit',
     'servers-view', 'servers-edit',
@@ -92,6 +93,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
 
     'users-view', 'users-create', 'users-edit', 'users-delete',
     'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
+    'companies-view', 'companies-create', 'companies-edit', 'companies-delete',
     'sutran-view', 'sutran-edit',
     'mtc-view', 'mtc-edit',
     'painpoint-view', 'painpoint-create', 'painpoint-edit',
@@ -137,6 +139,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
 
     'users-view', 'users-create', 'users-edit', 'users-delete',
     'locations-view', 'locations-create', 'locations-edit', 'locations-delete',
+    'companies-view', 'companies-create', 'companies-edit', 'companies-delete',
     'sutran-view', 'sutran-edit',
     'mtc-view', 'mtc-edit',
     'servers-view', 'servers-edit',

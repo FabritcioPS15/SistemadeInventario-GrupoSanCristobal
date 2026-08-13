@@ -364,6 +364,20 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     fetchInventory();
   }, [currentPage, itemsPerPage, searchTerm, filterCategory, selectedLocations, filterStatus, filterRubro, categoryFilter, subcategoryFilter, sortConfig]);
 
+  // Realtime subscription for assets table
+  useEffect(() => {
+    const channel = supabase
+      .channel('inventory-assets-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'assets' }, () => {
+        fetchInventory();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // Compute inventory with in-memory mapping of categories and subcategories
   const inventory = useMemo(() => {
     return rawInventory.map((asset: any) => {

@@ -102,12 +102,14 @@ export function DetailModalGrid({
 export function DetailModalSection({
   title,
   children,
+  className = '',
 }: {
   title: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="space-y-3 sm:space-y-4 min-w-0">
+    <section className={`space-y-3 sm:space-y-4 min-w-0 ${className}`}>
       <div className="border-b border-slate-100 pb-1.5 sm:pb-2 flex items-center gap-2">
         <div className="w-1 h-3.5 sm:h-4 bg-blue-600 shrink-0" />
         <h3 className="text-[10px] sm:text-[12px] font-normal text-[#002855] uppercase tracking-wide sm:tracking-widest">

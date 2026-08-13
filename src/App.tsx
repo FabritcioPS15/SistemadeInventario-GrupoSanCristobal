@@ -48,6 +48,8 @@ import SutranFutureVisits from './modules/sutran/pages/SutranFutureVisitsPage';
 
 import Sedes from './modules/sedes/pages/SedesPage';
 
+import Companies from './modules/companies/pages/CompaniesPage';
+
 import MTCAccesos from './modules/mtc-accesos/pages/MTCAccesosPage';
 
 import Users from './modules/users/pages/UsersPage';
@@ -432,6 +434,7 @@ function AppContent() {
             <Route path="/sutran" element={<ProtectedRoute permission="sutran"><Sutran /></ProtectedRoute>} />
             <Route path="/sutran/future-visits" element={<ProtectedRoute permission="sutran"><SutranFutureVisits /></ProtectedRoute>} />
             <Route path="/locations" element={<ProtectedRoute permission="locations"><Sedes /></ProtectedRoute>} />
+            <Route path="/companies" element={<ProtectedRoute permission="companies"><Companies /></ProtectedRoute>} />
             <Route path="/mtc" element={<ProtectedRoute permission="mtc"><MTCAccesos /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute permission="users"><Users /></ProtectedRoute>} />
             <Route path="/servers" element={<ProtectedRoute permission="servers"><Servers /></ProtectedRoute>} />

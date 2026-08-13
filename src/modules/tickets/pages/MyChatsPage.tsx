@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // MyChatsPage.tsx — Página "Mis Chats" del usuario actual
 // Funcionalidades:
 //   - Muestra tickets creados por el usuario y tickets que atiende
@@ -136,7 +136,7 @@ export default function MyChats() {
                     <div className="flex-1">
                         <input
                             type="text"
-                            placeholder="Buscar tickets..."
+                            placeholder="Buscar..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

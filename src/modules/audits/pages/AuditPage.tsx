@@ -1,5 +1,5 @@
-﻿import { useState, useEffect } from 'react';
-import { Trash2, Edit, List, ClipboardCheck, LayoutGrid, X, User, Calendar, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trash2, Edit, List, ClipboardCheck, LayoutGrid, X, User, Calendar, Plus, MapPin } from 'lucide-react';
 import { useHeaderVisible } from '../../../shared/hooks/useHeaderVisible';
 import { supabase, BranchAudit } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
@@ -15,7 +15,7 @@ type ViewType = 'history' | 'form';
 
 export default function Audit() {
   const { canEdit } = useAuth();
-  const { confirm, error: notifyError } = useNotify();
+  const { confirm, success: notifySuccess, error: notifyError } = useNotify();
   const [view, setView] = useState<ViewType>('history');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [audits, setAudits] = useState<BranchAudit[]>([]);
@@ -52,6 +52,7 @@ export default function Audit() {
     if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchAudits();
     setSelectedIds([]);
+    notifySuccess(`${selectedIds.length} auditorías eliminadas correctamente`, 'Eliminadas');
   };
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export default function Audit() {
     const { error } = await supabase.from('branch_audits').delete().eq('id', id);
     if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchAudits();
+    notifySuccess('Auditoría eliminada correctamente', 'Eliminada');
   };
 
   const handleEdit = (audit: BranchAudit) => { setEditingAudit(audit); setView('form'); };
@@ -115,18 +117,20 @@ export default function Audit() {
           <HeaderSearch
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
-            placeholder="Buscar auditoría..."
+            placeholder="Buscar..."
             variant="light"
           />
 
           <FilterBar
             filters={[
-              { key: 'status', placeholder: 'TODOS LOS ESTADOS', wrapperClassName: 'md:min-w-[200px]', options: [
-                { value: 'excellent', label: 'EXCELENTE' },
-                { value: 'good', label: 'BUENO' },
-                { value: 'regular', label: 'REGULAR' },
-                { value: 'critical', label: 'CRÍTICO' },
-              ]},
+              {
+                key: 'status', placeholder: 'TODOS LOS ESTADOS', wrapperClassName: 'md:min-w-[200px]', options: [
+                  { value: 'excellent', label: 'EXCELENTE' },
+                  { value: 'good', label: 'BUENO' },
+                  { value: 'regular', label: 'REGULAR' },
+                  { value: 'critical', label: 'CRÍTICO' },
+                ]
+              },
             ]}
             values={{ status: filterStatus }}
             onChange={(key, value) => setFilterStatus(value as string[])}

@@ -443,7 +443,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
       <div className="p-6 space-y-6">
         {/* Statistics Dashboard & Status Breakdown */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
           <div className="bg-white rounded-none border border-slate-200 p-3 shadow-sm">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate" title="Total Mantenimientos">Total Mants.</span>
@@ -459,15 +459,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
             </div>
             <p className="text-base font-black text-slate-800 truncate">S/ {maintenanceStats.totalCost.toFixed(2)}</p>
           </div>
-
-          <div className="bg-white rounded-none border border-slate-200 p-3 shadow-sm">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate" title="Costo Promedio">Costo Prom.</span>
-              <TrendingUp size={14} className="text-purple-600 shrink-0" />
-            </div>
-            <p className="text-base font-black text-slate-800 truncate">S/ {maintenanceStats.averageCost.toFixed(2)}</p>
-          </div>
-
           <div className="bg-white rounded-none border border-slate-200 p-3 shadow-sm">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate" title="Horas Totales">Horas</span>
@@ -527,7 +518,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Buscar por equipo, técnico o tarea..."
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"

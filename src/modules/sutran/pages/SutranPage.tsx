@@ -203,7 +203,7 @@ export default function Sutran() {
         onClick={() => handleSort(sortKey)}
         className="flex items-center gap-1.5 hover:text-[#002855] text-slate-400 transition-colors"
       >
-        <span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">{label}</span>
+        <span className="text-[12px] font-medium text-[#002855] tracking-[0.2em]">{label}</span>
         {isSorted ? (
           <span className="text-[#002855] text-[10px]">
             {sortConfig.direction === 'asc' ? '?' : '?'}
@@ -296,10 +296,9 @@ export default function Sutran() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Buscar por inspector, ubicación o hallazgos..."
                 value={searchTerm}
                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
@@ -450,7 +449,7 @@ export default function Sutran() {
                       <TableHead>{renderSortableHeader('UBICACIÓN', 'location_name')}</TableHead>
                       <TableHead>{renderSortableHeader('TIPO', 'visit_type')}</TableHead>
                       <TableHead>{renderSortableHeader('PRINCIPALES HALLAZGOS', 'findings')}</TableHead>
-                      <TableHead className="text-center"><span className="text-[12px] font-black text-[#002855] tracking-[0.2em]">Acciones</span></TableHead>
+                      <TableHead className="text-center"><span className="text-[12px] font-medium text-[#002855] tracking-[0.2em]">Acciones</span></TableHead>
                     </tr>
                   </TableHeader>
                   <TableBody>

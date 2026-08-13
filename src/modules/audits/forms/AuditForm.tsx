@@ -3,6 +3,7 @@ import { ClipboardList } from 'lucide-react';
 import { supabase, Location, BranchAudit } from '../../../shared/services/supabase';
 import { AUDIT_QUESTIONS } from '../../../shared/services/auditQuestions';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type AuditFormProps = {
     onClose: () => void;
@@ -11,6 +12,7 @@ type AuditFormProps = {
 };
 
 export default function AuditForm({ onClose, onSave, editAudit }: AuditFormProps) {
+    const { success: notifySuccess } = useNotify();
     const [loading, setLoading] = useState(false);
     const [locations, setLocations] = useState<Location[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -139,6 +141,7 @@ export default function AuditForm({ onClose, onSave, editAudit }: AuditFormProps
             }
 
             setLoading(false);
+            notifySuccess(editAudit ? 'Auditoría actualizada correctamente' : 'Auditoría creada correctamente', editAudit ? 'Actualizada' : 'Creada');
             onSave();
         } catch (err: any) {
             setErrors({ submit: 'Error inesperado: ' + err });

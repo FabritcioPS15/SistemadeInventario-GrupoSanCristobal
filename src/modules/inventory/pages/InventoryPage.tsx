@@ -27,6 +27,10 @@ import {
   TableHead,
   TableBody,
   TableCell,
+  TableCellPrimary,
+  TableCellSecondary,
+  TableCellBadge,
+  TableActionButton,
 } from '../../../shared/components/ui/Table';
 
 type InventoryProps = {
@@ -280,7 +284,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
           label="Activos"
           searchComponent={
             <SearchBar
-              placeholder="Buscar por código, nombre, marca, serie o modelo..."
+              placeholder="Buscar..."
               value={searchTerm}
               onChange={(value) => { setSearchTerm(value); setCurrentPage(1); }}
             />
@@ -511,7 +515,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
               </div>
             </div>
 
-            <div className="hidden md:block bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
+            <div className="hidden md:block bg-white border border-slate-200 rounded-none shadow-sm overflow-hidden flex flex-col animate-in fade-in duration-300">
               <div className="bg-slate-50/50 border-b border-slate-100 shrink-0">
                 <Pagination
                   currentPage={currentPage}
@@ -525,134 +529,124 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                 />
               </div>
               <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    {canEdit() && selectionMode && (
-                      <TableHead className="w-12 text-center animate-in fade-in slide-in-from-right-2 duration-200">
-                        <input
-                          type="checkbox"
-                          className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
-                          checked={totalCount > 0 && selectedIds.size === totalCount}
-                          onChange={handleSelectAll}
-                          disabled={selectingAll}
-                        />
-                      </TableHead>
-                    )}
-                    <TableHead sortable isSorted={sortConfig?.key === 'item'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('item')} className="min-w-[280px] max-w-[360px]">Detalle / Códigos</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'category_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('category_id')} className="w-[180px]">Categoría</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'location_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location_id')} className="w-[180px]">Ubicación</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'cantidad'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('cantidad')} className="w-24">Stock</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'valor_estimado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('valor_estimado')} className="w-36">Valor Referencial</TableHead>
-                    <TableHead sortable isSorted={sortConfig?.key === 'estado_uso'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('estado_uso')} className="w-36">Estado</TableHead>
-                    <TableHead className="text-center w-24">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {inventory.map((asset: any) => {
-                    return (
-                      <TableRow key={asset.id} className="group hover:bg-slate-50 cursor-pointer" onClick={() => { setSelectedAsset(asset); setShowAssetDetails(true); }}>
-                        {canEdit() && selectionMode && (
-                          <TableCell className="w-12 text-center animate-in fade-in slide-in-from-right-2 duration-200" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-colors cursor-pointer"
-                              checked={selectedIds.has(asset.id)}
-                              onChange={() => {
-                                const newSelected = new Set(selectedIds);
-                                if (newSelected.has(asset.id)) newSelected.delete(asset.id);
-                                else newSelected.add(asset.id);
-                                setSelectedIds(newSelected);
-                              }}
-                            />
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {canEdit() && selectionMode && (
+                        <TableHead className="w-12 text-center animate-in fade-in slide-in-from-right-2 duration-200">
+                          <input
+                            type="checkbox"
+                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                            checked={totalCount > 0 && selectedIds.size === totalCount}
+                            onChange={handleSelectAll}
+                            disabled={selectingAll}
+                          />
+                        </TableHead>
+                      )}
+                      <TableHead sortable isSorted={sortConfig?.key === 'item'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('item')}>Detalle / Códigos</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'category_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('category_id')}>Categoría</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'location_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location_id')}>Ubicación</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'cantidad'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('cantidad')}>Stock</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'valor_estimado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('valor_estimado')}>Valor Referencial</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'estado_uso'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('estado_uso')}>Estado</TableHead>
+                      <TableHead className="text-center">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inventory.map((asset: any) => {
+                      return (
+                        <TableRow key={asset.id} className={`cursor-pointer transition-colors duration-150 group/row relative ${selectedIds.has(asset.id) ? 'bg-blue-50/40' : ''}`} onClick={() => { setSelectedAsset(asset); setShowAssetDetails(true); }}>
+                          {canEdit() && selectionMode && (
+                            <TableCell className="text-center w-12 animate-in fade-in slide-in-from-right-2 duration-200" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                className="w-3.5 h-3.5 rounded-none border-slate-300 text-[#002855] focus:ring-[#002855]/30 transition-all cursor-pointer"
+                                checked={selectedIds.has(asset.id)}
+                                onChange={() => {
+                                  const newSelected = new Set(selectedIds);
+                                  if (newSelected.has(asset.id)) newSelected.delete(asset.id);
+                                  else newSelected.add(asset.id);
+                                  setSelectedIds(newSelected);
+                                }}
+                              />
+                            </TableCell>
+                          )}
+                          <TableCell className="font-bold">
+                            <div className="flex flex-col min-w-0">
+                              <TableCellPrimary className="truncate max-w-[350px]">
+                                {asset.item || asset.descripcion || 'Sin descripción'}
+                              </TableCellPrimary>
+                              {(asset.brand || asset.model) && (
+                                <TableCellSecondary className="truncate max-w-[350px] mt-1">
+                                  {asset.brand} {asset.model}
+                                </TableCellSecondary>
+                              )}
+                            </div>
                           </TableCell>
-                        )}
-                        <TableCell className="font-semibold min-w-[280px] max-w-[360px]">
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[13px] font-semibold text-slate-800 leading-none truncate">
-                              {asset.item || asset.descripcion || 'Sin descripción'}
-                            </span>
-                            {(asset.brand || asset.model) && (
-                              <span className="text-[10px] font-semibold text-slate-400 tracking-wider mt-1.5 truncate">
-                                {asset.brand} {asset.model}
-                              </span>
-                            )}
-                            {asset.codigo_unico && (
-                              <span className="inline-flex items-center text-[9px] font-semibold text-slate-400 font-mono mt-1.5 bg-slate-100 px-2 py-0.5 rounded w-max">
-                                CÓD: {asset.codigo_unico}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="w-[180px]">
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[12px] font-semibold text-slate-700 leading-none truncate">{asset.categories?.name}</span>
-                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1.5 truncate">{asset.subcategories?.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="w-[180px]">
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-[12px] font-semibold text-slate-700 leading-none truncate">{asset.locations?.name || 'No asignada'}</span>
-                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1.5 truncate">{asset.areas?.name || 'Sin área'}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="w-24 whitespace-nowrap">
-                          <div className="flex flex-col">
-                            <span className="text-[12px] font-semibold text-slate-700 leading-none">{asset.cantidad || 1}</span>
-                            <span className="text-[12px] font-semibold text-slate-400 tracking-wider mt-1 truncate">{asset.unidad_medida || 'UNIDAD(ES)'}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="w-36 whitespace-nowrap">
-                          <span className="text-[12px] font-semibold text-slate-700 leading-none">
-                            {asset.valor_estimado != null ? `S/ ${Number(asset.valor_estimado).toFixed(2)}` : '—'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="w-36 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-1 text-[10px] font-semibold tracking-wide border rounded-none whitespace-nowrap ${asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                            asset.estado_uso === 'Inoperativo' ? 'bg-rose-50 text-rose-600 border-rose-200' :
-                              asset.estado_uso === 'En Reparación' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                asset.estado_uso === 'Baja' ? 'bg-slate-100 text-slate-500 border-slate-200' :
-                                  'bg-slate-50 text-slate-500 border-slate-200'
-                            }`}>
-                            {asset.estado_uso || 'Sin estado'}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-150" onClick={(e) => e.stopPropagation()}>
-                            {canEdit() && (
-                              <>
-                                {(asset.cantidad || 1) > 1 && (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); handleDecoupleAsset(asset); }}
-                                    className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                                    title="Desacoplar Activos"
-                                  >
-                                    <Layers size={14} />
-                                  </button>
-                                )}
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setShowAssetForm(true); }}
-                                  className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-[#002855] hover:bg-slate-100 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                                  title="Editar Activo"
-                                >
-                                  <Edit size={14} />
-                                </button>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset); }}
-                                  className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 bg-white rounded-lg border border-slate-200 transition-all shadow-sm"
-                                  title="Eliminar Activo"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          <TableCell>
+                            <div className="flex flex-col min-w-0">
+                              <TableCellPrimary className="truncate max-w-[180px]">{asset.categories?.name}</TableCellPrimary>
+                              <TableCellSecondary className="truncate max-w-[180px] mt-1">{asset.subcategories?.name}</TableCellSecondary>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col min-w-0">
+                              <TableCellPrimary className="truncate max-w-[180px]">{asset.locations?.name || 'No asignada'}</TableCellPrimary>
+                              <TableCellSecondary className="truncate max-w-[180px] mt-1">{asset.areas?.name || 'Sin área'}</TableCellSecondary>
+                            </div>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <div className="flex flex-col">
+                              <TableCellPrimary>{asset.cantidad || 1}</TableCellPrimary>
+                              <TableCellSecondary className="truncate max-w-[120px] mt-1">{asset.unidad_medida || 'UNIDAD(ES)'}</TableCellSecondary>
+                            </div>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <TableCellPrimary>
+                              {asset.valor_estimado != null ? `S/ ${Number(asset.valor_estimado).toFixed(2)}` : '—'}
+                            </TableCellPrimary>
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <TableCellBadge className={asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                              asset.estado_uso === 'Inoperativo' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                                asset.estado_uso === 'En Reparación' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                  asset.estado_uso === 'Baja' ? 'bg-slate-100 text-slate-500 border-slate-200' :
+                                    'bg-slate-50 text-slate-500 border-slate-200'
+                            }>
+                              {asset.estado_uso || 'Sin estado'}
+                            </TableCellBadge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                              {canEdit() && (
+                                <>
+                                  {(asset.cantidad || 1) > 1 && (
+                                    <TableActionButton
+                                      icon={<Layers size={14} />}
+                                      onClick={(e) => { e.stopPropagation(); handleDecoupleAsset(asset); }}
+                                      title="Desacoplar Activos"
+                                    />
+                                  )}
+                                  <TableActionButton
+                                    icon={<Edit size={14} />}
+                                    onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setShowAssetForm(true); }}
+                                    title="Editar Activo"
+                                  />
+                                  <TableActionButton
+                                    icon={<Trash2 size={14} />}
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteAsset(asset); }}
+                                    title="Eliminar Activo"
+                                    variant="danger"
+                                  />
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             </div>
           </>

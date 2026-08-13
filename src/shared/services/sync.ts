@@ -336,7 +336,7 @@ export async function generateIntegrityReport(): Promise<{
       shipmentsResult
     ] = await Promise.all([
       supabase.from('assets').select('id, location_id, status', { count: 'exact' }),
-      supabase.from('locations').select('id', { count: 'exact' }),
+      supabase.from('locations').select('id', { count: 'exact' }).neq('type', 'circuito'),
       supabase.from('users').select('id', { count: 'exact' }),
       supabase.from('cameras').select('id', { count: 'exact' }),
       supabase.from('maintenance_records').select('id, asset_id', { count: 'exact' }),

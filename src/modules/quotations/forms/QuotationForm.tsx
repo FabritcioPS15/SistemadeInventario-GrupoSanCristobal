@@ -68,7 +68,7 @@ function createEmptyItem(): QuotationItem {
 
 export default function QuotationForm({ onClose, onSave, editRecord }: QuotationFormProps) {
   const { user } = useAuth();
-  const { notify } = useNotify();
+  const { success: notifySuccess, error: notifyError } = useNotify();
   const [loading, setLoading] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -229,11 +229,11 @@ export default function QuotationForm({ onClose, onSave, editRecord }: Quotation
       if (editRecord?.id) {
         const { error } = await supabase.from('quotations').update(dataToSave).eq('id', editRecord.id);
         if (error) throw error;
-        notify('Cotización actualizada', { type: 'success' });
+        notifySuccess('Cotización actualizada');
       } else {
         const { error } = await supabase.from('quotations').insert([dataToSave]);
         if (error) throw error;
-        notify('Cotización creada', { type: 'success' });
+        notifySuccess('Cotización creada');
       }
 
       if (sendEmail) {
@@ -243,15 +243,15 @@ export default function QuotationForm({ onClose, onSave, editRecord }: Quotation
           subject: `Cotización ${formData.number} - ${formData.title}`,
           html: renderQuotationHTML(),
         });
-        if (!result.success) notify('Error al enviar correo: ' + result.error, { type: 'error' });
-        else notify('Cotización enviada por correo', { type: 'success' });
+        if (!result.success) notifyError('Error al enviar correo: ' + result.error);
+        else notifySuccess('Cotización enviada por correo');
         setSendingEmail(false);
       }
 
       onSave();
     } catch (err: any) {
       setErrors(prev => ({ ...prev, submit: err.message }));
-      notify('Error al guardar: ' + err.message, { type: 'error' });
+      notifyError('Error al guardar: ' + err.message);
     } finally {
       setLoading(false);
     }

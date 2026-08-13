@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { HardDrive } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 interface StoredDiskFormProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ interface StoredDiskFormProps {
 }
 
 export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredDiskFormProps) {
+  const { success: notifySuccess, error: notifyError } = useNotify();
   const [cameras, setCameras] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -86,10 +88,12 @@ export default function StoredDiskForm({ onClose, onSuccess, editDisk }: StoredD
         if (error) throw error;
       }
 
+      notifySuccess(editDisk ? 'Disco actualizado correctamente' : 'Disco creado correctamente', editDisk ? 'Actualizado' : 'Creado');
       onSuccess();
       onClose();
     } catch (error: any) {
       console.error('Error saving disk:', error);
+      notifyError('Error al guardar el disco: ' + error.message, 'Error');
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import { supabase, Location } from '../../../shared/services/supabase';
 import { ROLE_PERMISSIONS } from '../../../shared/roles';
 import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
 import { FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type UserType = {
   id: string;
@@ -29,6 +30,7 @@ type UserFormProps = {
 };
 
 export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
+  const { success: notifySuccess } = useNotify();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -758,6 +760,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
       }
 
       setLoading(false);
+      notifySuccess(editUser ? 'Usuario actualizado correctamente' : 'Usuario creado correctamente', editUser ? 'Actualizado' : 'Creado');
       onSave();
     } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });
@@ -814,8 +817,8 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
               type="button"
               onClick={() => setShowRoleInfo(!showRoleInfo)}
               className={`p-1.5 rounded-lg border transition-colors ${showRoleInfo
-                  ? 'bg-blue-50 border-blue-200 text-blue-600'
-                  : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-blue-600 hover:border-blue-200'
+                ? 'bg-blue-50 border-blue-200 text-blue-600'
+                : 'bg-gray-50 border-gray-200 text-gray-400 hover:text-blue-600 hover:border-blue-200'
                 }`}
               title={showRoleInfo ? "Cerrar información de roles" : "Ver información de roles y accesos"}
             >

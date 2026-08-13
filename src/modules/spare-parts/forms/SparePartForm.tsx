@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Package } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type SparePartType = {
   id?: string;
@@ -27,6 +28,7 @@ type SparePartFormProps = {
 };
 
 export default function SparePartForm({ onClose, onSave, editRecord }: SparePartFormProps) {
+  const { success: notifySuccess } = useNotify();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -147,6 +149,7 @@ export default function SparePartForm({ onClose, onSave, editRecord }: SparePart
       }
 
       setLoading(false);
+      notifySuccess(editRecord?.id ? 'Repuesto actualizado correctamente' : 'Repuesto creado correctamente', editRecord?.id ? 'Actualizado' : 'Creado');
       onSave();
     } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });

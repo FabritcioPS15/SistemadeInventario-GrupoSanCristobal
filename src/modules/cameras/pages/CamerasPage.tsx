@@ -44,7 +44,7 @@ type CamerasProps = {
 };
 export default function Cameras({ subview }: CamerasProps) {
   const { canEdit, user } = useAuth();
-  const { error: notifyError, confirm } = useNotify();
+  const { success: notifySuccess, error: notifyError, confirm } = useNotify();
   const [loading, setLoading] = useState(true);
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -147,6 +147,7 @@ export default function Cameras({ subview }: CamerasProps) {
     const { error } = await supabase.from('stored_disks').delete().eq('id', id);
     if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchStoredDisks();
+    notifySuccess('Registro de disco almacenado eliminado correctamente', 'Eliminado');
   };
 
   const openCreate = () => {
@@ -166,6 +167,7 @@ export default function Cameras({ subview }: CamerasProps) {
     if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchCameras();
     setSelectedIds(prev => prev.filter(selectedId => selectedId !== cam.id));
+    notifySuccess(`Cámara "${cam.name}" eliminada correctamente`, 'Eliminada');
   };
 
   const handleBulkDelete = async () => {
@@ -176,6 +178,7 @@ export default function Cameras({ subview }: CamerasProps) {
     if (error) return notifyError('Error al eliminar por lote: ' + error.message);
     await fetchCameras();
     setSelectedIds([]);
+    notifySuccess(`${selectedIds.length} cámaras eliminadas correctamente`, 'Eliminadas');
   };
 
   const toggleSelect = (id: string) => {
@@ -512,10 +515,10 @@ export default function Cameras({ subview }: CamerasProps) {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Buscar cámara por nombre, IP, marca..."
+                placeholder="Buscar..."
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }

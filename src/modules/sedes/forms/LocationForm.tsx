@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { MapPin } from 'lucide-react';
 import { supabase, Location } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type LocationFormProps = {
   onClose: () => void;
@@ -10,8 +11,10 @@ type LocationFormProps = {
 };
 
 export default function LocationForm({ onClose, onSave, editLocation }: LocationFormProps) {
+  const { success: notifySuccess, error: notifyError } = useNotify();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([]);
 
   const [formData, setFormData] = useState({
     name: editLocation?.name || '',
@@ -19,9 +22,17 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
     address: editLocation?.address || '',
     notes: editLocation?.notes || '',
     region: editLocation?.region || 'lima',
+    company_id: editLocation?.company_id || '',
     checklist_url: editLocation?.checklist_url || '',
     history_url: editLocation?.history_url || '',
   });
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.from('companies').select('id, name').eq('is_active', true).order('name');
+      if (!error && data) setCompanies(data as Array<{ id: string; name: string }>);
+    })();
+  }, []);
 
   useEffect(() => {
     // Validar nombre de ubicación en tiempo real
@@ -81,6 +92,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
       address: formData.address.trim() || null,
       notes: formData.notes.trim() || null,
       region: formData.region,
+      company_id: formData.company_id || null,
     };
 
     // Solo agregar URLs si tienen contenido
@@ -122,9 +134,11 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
       }
 
       setLoading(false);
+      notifySuccess(editLocation ? 'Sede actualizada correctamente' : 'Sede creada correctamente', editLocation ? 'Actualizada' : 'Creada');
       onSave();
     } catch (err: any) {
       console.error('Error saving location:', err);
+      notifyError(err.message || 'Error al procesar la sede', 'Error');
       setErrors({ submit: err.message || 'Error al procesar la sede' });
       setLoading(false);
     }
@@ -194,6 +208,19 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
             >
               <option value="lima">Lima</option>
               <option value="provincia">Provincia</option>
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Unidad de Negocio">
+            <FormSelect
+              name="company_id"
+              value={formData.company_id}
+              onChange={handleChange}
+            >
+              <option value="">Seleccionar Unidad de Negocio...</option>
+              {companies.map(company => (
+                <option key={company.id} value={company.id}>{company.name}</option>
+              ))}
             </FormSelect>
           </FormField>
 

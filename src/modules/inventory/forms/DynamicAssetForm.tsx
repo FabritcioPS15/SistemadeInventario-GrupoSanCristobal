@@ -2,7 +2,7 @@ import { Package, Monitor, Shield, Wrench, Home, Briefcase, ClipboardCheck, Stet
 import { useState, useMemo } from 'react';
 import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
 import { FormField, FormInput, FormSelect, FormTextarea, FormSection, FormGrid } from '../../../shared/components/forms/BaseForm';
-import FilterSelect from '../../../shared/components/ui/FilterSelect';
+import DateTimePicker from '../../../shared/components/forms/DateTimePicker';
 import { useDynamicAssetForm, UseDynamicAssetFormProps } from '../hooks/useDynamicAssetForm';
 import { CATEGORIAS_CONFIG, CampoConfig } from '../config/inventarioConfig';
 
@@ -23,10 +23,24 @@ const CATEGORY_ICONS: Record<string, any> = {
   'otros-activos': Box,
 };
 
-export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId }: DynamicAssetFormProps) {
-  const form = useDynamicAssetForm({ editAsset, initialCategoryId });
+const AREAS_POR_TIPO: Record<string, string[]> = {
+  'revision': ['Línea 1', 'Línea 2', 'Counter', 'Recepción', 'Oficina Administrativa', 'Almacén'],
+  'policlinico': ['Consultorio', 'Recepción', 'Oficina Administrativa'],
+  'escuela_conductores': ['Aula', 'Oficina Administrativa'],
+  'central': ['Oficina', 'Counter / Recepción', 'Contabilidad', 'RRHH', 'Sala de Reuniones', 'Almacén'],
+  'circuito': ['Circuito', 'Módulo de Control', 'Oficina', 'Cámaras', 'DVR'],
+};
+
+export default function DynamicAssetForm({ onClose, onSaved, editAsset, initialCategoryId }: DynamicAssetFormProps) {
+  const form = useDynamicAssetForm({ editAsset, initialCategoryId, onSaved });
   const [tipoActivoSearch, setTipoActivoSearch] = useState('');
   const [tieneGarantia, setTieneGarantia] = useState(!!(editAsset && form.formData.garantia_hasta));
+  const [areaEsOtro, setAreaEsOtro] = useState(false);
+
+  const selectedLocation = form.locations.find(loc => loc.id === form.formData.location_id);
+  const areaOptions = (selectedLocation && AREAS_POR_TIPO[selectedLocation.type]) || [];
+  const areaValue = form.formData.area_ubicacion;
+  const areaEsCustom = !!areaValue && areaValue !== '__otro__' && !areaOptions.includes(areaValue);
 
   const currentCategoryObj = form.categories.find(cat => cat.id === form.formData.category_id) as any;
   const currentCategory = CATEGORIAS_CONFIG.find(c => c.key === currentCategoryObj?.slug);
@@ -132,7 +146,7 @@ export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId
     >
       {/* Paso 1: Categoría */}
       <div className="space-y-8 min-h-[350px]">
-        
+
         <div>
           <h3 className="text-[13px] font-normal text-[#002855] tracking-widest uppercase mb-3 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-blue-600"></span>
@@ -143,7 +157,7 @@ export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId
               const slug = (cat as any).slug;
               const Icon = CATEGORY_ICONS[slug] || Package;
               const isSelected = form.formData.category_id === cat.id;
-              
+
               return (
                 <button
                   key={cat.id}
@@ -153,20 +167,18 @@ export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId
                     form.setField('tipo_activo', ''); // Reset tipo_activo al cambiar categoría
                     setTipoActivoSearch('');
                   }}
-                  className={`flex flex-col items-center justify-center p-4 border transition-all duration-200 text-left ${
-                    isSelected 
-                      ? 'border-blue-600 bg-blue-50/50 shadow-[0_0_0_1px_rgba(37,99,235,1)] rounded-xl' 
+                  className={`flex flex-col items-center justify-center p-4 border transition-all duration-200 text-left ${isSelected
+                      ? 'border-blue-600 bg-blue-50/50 shadow-[0_0_0_1px_rgba(37,99,235,1)] rounded-xl'
                       : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50/50 rounded-xl'
-                  }`}
+                    }`}
                 >
-                  <Icon 
-                    size={28} 
-                    strokeWidth={1.5} 
-                    className={`mb-3 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} 
+                  <Icon
+                    size={28}
+                    strokeWidth={1.5}
+                    className={`mb-3 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`}
                   />
-                  <span className={`text-[11px] font-normal uppercase tracking-wider text-center line-clamp-2 leading-snug ${
-                    isSelected ? 'text-[#002855]' : 'text-slate-500'
-                  }`}>
+                  <span className={`text-[11px] font-normal uppercase tracking-wider text-center line-clamp-2 leading-snug ${isSelected ? 'text-[#002855]' : 'text-slate-500'
+                    }`}>
                     {cat.name}
                   </span>
                 </button>
@@ -184,16 +196,16 @@ export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId
               </div>
               <div className="relative">
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Buscar tipo..." 
+                <input
+                  type="text"
+                  placeholder="Buscar..."
                   value={tipoActivoSearch}
                   onChange={(e) => setTipoActivoSearch(e.target.value)}
                   className="pl-8 pr-3 py-1.5 text-[11px] font-normal border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white w-48"
                 />
               </div>
             </h3>
-            
+
             <div className="bg-slate-50/50 border border-slate-200 p-4 rounded-xl">
               <div className="flex flex-wrap gap-2">
                 {filteredTiposActivo.map(tipo => {
@@ -206,11 +218,10 @@ export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId
                         form.setField('tipo_activo', tipo);
                         form.setField('tipo_activo_custom', '');
                       }}
-                      className={`px-3 py-1.5 text-[11px] font-normal uppercase tracking-wider rounded-lg transition-all duration-200 border ${
-                        isSelected 
-                          ? 'bg-emerald-500 border-emerald-600 text-white shadow-sm' 
+                      className={`px-3 py-1.5 text-[11px] font-normal uppercase tracking-wider rounded-lg transition-all duration-200 border ${isSelected
+                          ? 'bg-emerald-500 border-emerald-600 text-white shadow-sm'
                           : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300 hover:bg-emerald-50'
-                      }`}
+                        }`}
                     >
                       {tipo}
                     </button>
@@ -220,17 +231,16 @@ export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId
                   <button
                     type="button"
                     onClick={() => form.setField('tipo_activo', 'Otro')}
-                    className={`px-3 py-1.5 text-[11px] font-normal uppercase tracking-wider rounded-lg transition-all duration-200 border ${
-                      form.formData.tipo_activo === 'Otro'
-                        ? 'bg-amber-500 border-amber-600 text-white shadow-sm' 
+                    className={`px-3 py-1.5 text-[11px] font-normal uppercase tracking-wider rounded-lg transition-all duration-200 border ${form.formData.tipo_activo === 'Otro'
+                        ? 'bg-amber-500 border-amber-600 text-white shadow-sm'
                         : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300 hover:bg-amber-50'
-                    }`}
+                      }`}
                   >
                     Otro...
                   </button>
                 )}
               </div>
-              
+
               {filteredTiposActivo.length === 0 && tipoActivoSearch && (
                 <div className="text-center py-4 text-[12px] font-normal text-slate-400">
                   No se encontraron resultados para "{tipoActivoSearch}".
@@ -261,16 +271,17 @@ export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId
       <div className="space-y-6">
         <FormSection title="IDENTIFICACIÓN" color="blue" columns={2}>
           <FormField label="Código Único">
-            <FormInput name="codigo_unico" value={form.formData.codigo_unico} onChange={form.handleChange} readOnly className="bg-slate-100 font-mono" />
+            <FormInput name="codigo_unico" value={form.formData.codigo_unico} onChange={form.handleChange} disabled className="bg-slate-100 text-slate-500 font-mono cursor-not-allowed" />
           </FormField>
           <FormField label="Nombre del Activo" required>
             <FormInput name="item" value={form.formData.item} onChange={form.handleChange} placeholder="Ej. Laptop Dell Latitude" required />
           </FormField>
         </FormSection>
 
-        <FormSection title="UBICACIÓN Y ASIGNACIÓN" color="emerald" columns={2}>
+        <FormSection title="UBICACIÓN Y ASIGNACIÓN" color="emerald" columns={1}>
           <FormField label="Sede" required>
-            <FilterSelect
+            <FormSelect
+              name="location_id"
               value={form.formData.location_id}
               onChange={(e) => form.setField('location_id', e.target.value as string)}
             >
@@ -278,10 +289,33 @@ export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId
               {form.locations.map(loc => (
                 <option key={loc.id} value={loc.id}>{loc.name}</option>
               ))}
-            </FilterSelect>
+            </FormSelect>
           </FormField>
           <FormField label="Área de Ubicación">
-            <FormInput name="area_ubicacion" value={form.formData.area_ubicacion} onChange={form.handleChange} placeholder="Ej. Oficina 204" />
+            <FormSelect
+              name="area_ubicacion"
+              value={areaEsOtro || areaEsCustom ? '__otro__' : areaValue}
+              onChange={(e) => {
+                const v = e.target.value;
+                setAreaEsOtro(v === '__otro__');
+                if (v !== '__otro__') form.setField('area_ubicacion', v);
+              }}
+            >
+              <option value="">Seleccionar...</option>
+              {areaOptions.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+              <option value="__otro__">Otro...</option>
+            </FormSelect>
+            {(areaEsOtro || areaEsCustom) && (
+              <FormInput
+                name="area_ubicacion_custom"
+                value={areaEsCustom ? areaValue : ''}
+                onChange={(e) => form.setField('area_ubicacion', e.target.value)}
+                placeholder="Escribir área..."
+                className="mt-2"
+              />
+            )}
           </FormField>
         </FormSection>
       </div>
@@ -302,18 +336,24 @@ export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId
 
         <FormSection title="ESTADO Y ADQUISICIÓN" color="indigo" columns={3}>
           <FormField label="Estado" required>
-            <FilterSelect
+            <FormSelect
+              name="estado_uso"
               value={form.formData.estado_uso}
               onChange={(e) => form.setField('estado_uso', e.target.value as string)}
             >
+              <option value="">Seleccionar Estado...</option>
               <option value="Operativo">Operativo</option>
               <option value="En reparación">En reparación</option>
               <option value="De baja">De baja</option>
               <option value="En almacén">En almacén</option>
-            </FilterSelect>
+            </FormSelect>
           </FormField>
           <FormField label="Fecha de Adquisición">
-            <FormInput type="date" name="fecha_adquisicion" value={form.formData.fecha_adquisicion} onChange={form.handleChange} />
+            <DateTimePicker
+              value={form.formData.fecha_adquisicion || ''}
+              onChange={(val) => form.setField('fecha_adquisicion', val)}
+              placeholder="Seleccionar fecha"
+            />
           </FormField>
           <FormField label="Valor de Adquisición (S/.)">
             <FormInput type="number" step="0.01" name="valor_estimado" value={form.formData.valor_estimado} onChange={form.handleChange} placeholder="0.00" />
@@ -337,7 +377,11 @@ export default function DynamicAssetForm({ onClose, editAsset, initialCategoryId
           </FormField>
           {tieneGarantia && (
             <FormField label="Garantía Hasta" gridCols={2}>
-              <FormInput type="date" name="garantia_hasta" value={form.formData.garantia_hasta} onChange={form.handleChange} />
+              <DateTimePicker
+                value={form.formData.garantia_hasta || ''}
+                onChange={(val) => form.setField('garantia_hasta', val)}
+                placeholder="Seleccionar fecha"
+              />
             </FormField>
           )}
         </FormSection>

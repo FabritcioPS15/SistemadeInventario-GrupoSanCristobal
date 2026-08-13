@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
 import { supabase, Category, Subcategory, Location, AssetWithDetails } from '../../../shared/services/supabase';
 
 export type AssetFormData = Record<string, string>;
@@ -118,6 +119,7 @@ function buildInitialFields(editAsset?: AssetWithDetails, defaultFields?: AssetF
 
 export function useAssetForm({ editAsset, initialCategoryId, initialSubcategoryId, defaultFields }: UseAssetFormProps): UseAssetFormReturn {
   const { success: notifySuccess, error: notifyError } = useNotify();
+  const allowedLocations = useAllowedLocations();
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -146,7 +148,12 @@ export function useAssetForm({ editAsset, initialCategoryId, initialSubcategoryI
 
       setCategories(catRes.data || []);
       setSubcategories(subRes.data || []);
-      if (locRes.data) setLocations(locRes.data);
+      if (locRes.data) {
+        const filtered = allowedLocations
+          ? locRes.data.filter(l => allowedLocations.includes(l.id))
+          : locRes.data;
+        setLocations(filtered);
+      }
     } catch {
       setErrors(prev => ({ ...prev, submit: 'Error de conexión con la base de datos' }));
     }

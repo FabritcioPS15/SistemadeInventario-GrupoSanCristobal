@@ -1,7 +1,7 @@
 
 
-import { ReactNode } from 'react';
-import { X, AlertCircle, Loader2 } from 'lucide-react';
+import { ReactNode, Children, isValidElement, useRef, useState, useEffect, useMemo } from 'react';
+import { X, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
 import ModalOverlay from '../ui/ModalOverlay';
 import { DetailModalHeader, DetailModalBody } from '../ui/DetailModal';
 
@@ -88,7 +88,7 @@ export default function BaseForm({
             {error && (
               <div className="bg-rose-50 border border-rose-100 p-4 flex items-center gap-3 text-rose-800">
                 <AlertCircle size={20} />
-                <p className="text-[11px] font-normal tracking-widest">{error}</p>
+                <p className="text-[11px] font-normal tracking-wide">{error}</p>
               </div>
             )}
             {children}
@@ -98,7 +98,7 @@ export default function BaseForm({
             {showChangesWarning && (
               <div className="flex items-center gap-2 text-amber-600">
                 <AlertCircle size={14} />
-                <span className="text-[10px] font-normal tracking-widest">Cambios sin guardar</span>
+                <span className="text-[10px] font-normal tracking-wide">Cambios sin guardar</span>
               </div>
             )}
             <div className="flex items-center gap-3 ml-auto">
@@ -106,14 +106,14 @@ export default function BaseForm({
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="px-6 py-3 sm:py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-[0.2em] text-slate-700 bg-slate-200 hover:bg-slate-300 transition-all disabled:opacity-50"
+                className="px-6 py-3 sm:py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wide text-slate-700 bg-slate-200 hover:bg-slate-300 transition-all disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-3 sm:py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-[0.2em] text-white bg-emerald-600 hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg"
+                className="px-6 py-3 sm:py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wide text-white bg-blue-600 hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2 shadow-lg"
               >
                 {loading && <Loader2 size={14} className="animate-spin" />}
                 {loading ? 'Procesando...' : 'Guardar Cambios'}
@@ -140,10 +140,10 @@ export function FormGrid({
   className?: string;
 }) {
   const gridClass: Record<1 | 2 | 3 | 4, string> = {
-    1: 'grid grid-cols-1 gap-4',
-    2: 'grid grid-cols-1 sm:grid-cols-2 gap-4',
-    3: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4',
-    4: 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4',
+    1: 'grid grid-cols-1 gap-3',
+    2: 'grid grid-cols-1 sm:grid-cols-2 gap-3',
+    3: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3',
+    4: 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3',
   };
   return <div className={`${gridClass[columns]} ${className}`}>{children}</div>;
 }
@@ -184,7 +184,7 @@ export function FormSection({
         <div className="flex items-center gap-3">
           <div className={`w-1 h-5 ${colorClasses[color]}`}></div>
           {icon && <span className="text-slate-400">{icon}</span>}
-          <h3 className="text-[11px] font-normal text-blue-900 tracking-[0.2em]">{title}</h3>
+          <h3 className="text-[11px] font-normal text-blue-900 tracking-wide uppercase">{title}</h3>
         </div>
         {titleRight && (
           <div className="flex items-center">
@@ -222,7 +222,7 @@ export function FormField({
 
   return (
     <div data-label={label} className={`flex flex-col ${className} ${gridClass}`}>
-      <label className="flex items-end text-[9px] font-normal text-gray-400 mb-1.5 ml-1 min-h-[24px]">
+      <label className="flex items-end text-[10px] font-semibold text-slate-600 mb-1.5 ml-1 min-h-[24px]">
         <span className="line-clamp-2 leading-tight">
           {label} {required && <span className="text-red-500 ml-0.5">*</span>}
         </span>
@@ -244,7 +244,7 @@ export function FormInput({
   error,
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { error?: string }) {
-  const baseClasses = 'w-full px-3 py-2 h-10 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-[11px] font-normal text-[#002855] tracking-[0.1em] placeholder:text-slate-300';
+  const baseClasses = 'w-full px-3 py-2 h-10 bg-white border border-slate-300 rounded-md shadow-sm hover:border-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-[11px] font-normal text-[#002855] tracking-normal placeholder:text-slate-300';
   const errorClasses = error ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : '';
   return (
     <input
@@ -255,29 +255,113 @@ export function FormInput({
 }
 
 // ─── FormSelect ───────────────────────────────────────────────────────────────
-// Select Component
+// Custom dropdown select with styled options panel
 export function FormSelect({
   className = '',
   error,
   children,
+  onChange,
+  value,
+  defaultValue,
   ...props
 }: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: string }) {
-  const baseClasses = 'w-full px-3 py-2 h-10 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-[11px] font-normal text-[#002855] tracking-[0.1em] appearance-none cursor-pointer';
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const options = useMemo(() => {
+    return Children.toArray(children)
+      .filter(isValidElement)
+      .filter((el) => (el as React.ReactElement).type === 'option')
+      .map((el) => {
+        const option = el as React.ReactElement<React.OptionHTMLAttributes<HTMLOptionElement>>;
+        return {
+          value: String(option.props.value ?? ''),
+          label: option.props.children
+            ? String(option.props.children)
+            : String(option.props.label ?? ''),
+          disabled: !!option.props.disabled,
+        };
+      });
+  }, [children]);
+
+  const currentValue = value ?? defaultValue ?? '';
+  const selected = options.find((o) => o.value === String(currentValue));
+  const hasValue = String(currentValue) !== '';
+  const displayValue = selected?.label ?? (hasValue ? String(currentValue) : 'Seleccionar...');
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (optionValue: string) => {
+    setIsOpen(false);
+    if (onChange) {
+      onChange({
+        target: { name: props.name, value: optionValue },
+      } as React.ChangeEvent<HTMLSelectElement>);
+    }
+  };
+
+  const baseClasses = 'w-full px-3 py-2 h-10 bg-white border border-slate-300 rounded-md shadow-sm hover:border-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none transition-all text-[11px] font-normal text-[#002855] tracking-normal cursor-pointer flex items-center justify-between text-left disabled:opacity-50 disabled:cursor-not-allowed';
   const errorClasses = error ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : '';
 
   return (
-    <div className="relative">
-      <select
-        className={`${baseClasses} ${errorClasses} ${className}`}
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => !props.disabled && setIsOpen(o => !o)}
         {...props}
+        className={`${baseClasses} ${errorClasses} ${isOpen ? 'border-blue-600 ring-2 ring-blue-500/20' : ''} ${className}`}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
       >
-        {children}
-      </select>
-      <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-        <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
+        <span className={`truncate ${hasValue ? 'text-[#002855]' : 'text-slate-400'}`}>
+          {displayValue}
+        </span>
+        <div className={`h-6 w-6 flex items-center justify-center rounded-md shrink-0 transition-colors ${isOpen ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
+          <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-[100] mt-2 w-full bg-white border border-slate-200 rounded-md shadow-2xl overflow-hidden animate-fadeIn origin-top">
+          <div className="max-h-[260px] overflow-y-auto py-1.5 custom-scrollbar">
+            {options.length === 0 && (
+              <p className="px-4 py-6 text-center text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Sin opciones</p>
+            )}
+            {options.map((option, index) => {
+              const isSelected = option.value === String(currentValue);
+              const isPlaceholder = option.value === '';
+              return (
+                <button
+                  key={`${option.value}-${index}`}
+                  type="button"
+                  disabled={option.disabled}
+                  onClick={() => handleSelect(option.value)}
+                  className={`
+                    w-full px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide truncate transition-colors
+                    ${option.disabled
+                      ? 'text-slate-300 cursor-not-allowed'
+                      : isSelected
+                        ? 'bg-blue-600 text-white'
+                        : isPlaceholder
+                          ? 'text-slate-400 hover:bg-blue-50'
+                          : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}
+                  `}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -290,7 +374,7 @@ export function FormTextarea({
   rows = 3,
   ...props
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { error?: string }) {
-  const baseClasses = 'w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-none focus:ring-1 focus:ring-blue-500 focus:bg-white outline-none transition-all text-[11px] font-normal text-[#002855] tracking-[0.1em] placeholder:text-slate-300 resize-none';
+  const baseClasses = 'w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm hover:border-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 focus:bg-white outline-none transition-all text-[11px] font-normal text-[#002855] tracking-normal placeholder:text-slate-300 resize-none';
   const errorClasses = error ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : '';
 
   return (

@@ -33,7 +33,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
         { key: 'almacenamiento', label: 'Almacenamiento', type: 'text' },
         { key: 'sistema_operativo', label: 'Sistema Operativo', type: 'text' },
         { key: 'direccion_ip', label: 'Dirección IP', type: 'text' },
-        { key: 'usuario_anydesk', label: 'Usuario Anydesk', type: 'text' }
+        { key: 'usuario_anydesk', label: 'Acceso Anydesk', type: 'text' }
       ],
       'Laptop': [
         { key: 'procesador', label: 'Procesador', type: 'text' },
@@ -41,7 +41,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
         { key: 'almacenamiento', label: 'Almacenamiento', type: 'text' },
         { key: 'sistema_operativo', label: 'Sistema Operativo', type: 'text' },
         { key: 'direccion_ip', label: 'Dirección IP', type: 'text' },
-        { key: 'usuario_anydesk', label: 'Usuario Anydesk', type: 'text' }
+        { key: 'usuario_anydesk', label: 'Acceso Anydesk', type: 'text' }
       ],
       'Servidor': [
         { key: 'procesador', label: 'Procesador', type: 'text' },
@@ -49,7 +49,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
         { key: 'almacenamiento', label: 'Almacenamiento', type: 'text' },
         { key: 'sistema_operativo', label: 'Sistema Operativo', type: 'text' },
         { key: 'direccion_ip', label: 'Dirección IP', type: 'text' },
-        { key: 'usuario_anydesk', label: 'Usuario Anydesk', type: 'text' }
+        { key: 'usuario_anydesk', label: 'Acceso Anydesk', type: 'text' }
       ],
       'Celular': [
         { key: 'imei', label: 'IMEI', type: 'text' },

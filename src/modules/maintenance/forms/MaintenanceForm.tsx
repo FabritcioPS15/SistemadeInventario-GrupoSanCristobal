@@ -1,11 +1,53 @@
-import { useState, useEffect } from 'react';
-import { Wrench, Mail, Plus, X } from 'lucide-react';
+import { useState, useEffect, ReactNode } from 'react';
+import { Wrench, Mail, Plus, X, ChevronDown, Check } from 'lucide-react';
 import { supabase, AssetWithDetails } from '../../../shared/services/supabase';
-import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
-import { FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea, FormGrid } from '../../../shared/components/forms/BaseForm';
+import DateTimePicker from '../../../shared/components/forms/DateTimePicker';
 import SearchableAssetSelect from '../../inventory/components/SearchableAssetSelect';
-import { PartUsed } from '../../../shared/types/inventory.types';
+import AssetForm from '../../inventory/forms/AssetForm';
 import { emailService } from '../../../shared/services/emailService';
+import { useNotify } from '../../../shared/hooks/useNotify';
+import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
+
+const PRESET_EMAILS = [
+  { email: 'centraldecontrollima@gmail.com', label: 'sistemas' },
+  { email: 'cquispe@rtpsancristobal.pe', label: '' },
+];
+
+function CollapsibleSection({
+  title,
+  color = 'blue',
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  color?: 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'indigo';
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <FormSection
+      title={title}
+      color={color}
+      titleRight={
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          className="flex items-center gap-1 px-2 py-1 text-slate-400 hover:text-[#002855] hover:bg-slate-100 transition-all"
+          aria-label={open ? 'Colapsar sección' : 'Expandir sección'}
+        >
+          <span className={`text-[9px] font-bold uppercase tracking-widest ${open ? 'text-slate-400' : 'text-blue-600'}`}>
+            {open ? 'Ocultar' : 'Mostrar'}
+          </span>
+          <ChevronDown size={14} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        </button>
+      }
+    >
+      {open && children}
+    </FormSection>
+  );
+}
 
 type MaintenanceRecord = {
   id: string;
@@ -27,7 +69,6 @@ type MaintenanceRecord = {
   service_provider?: string;
   invoice_number?: string;
   other_costs?: number;
-  parts_used?: PartUsed[];
   total_cost?: number;
   warranty_claim?: boolean;
   warranty_details?: string;
@@ -44,7 +85,10 @@ type MaintenanceFormProps = {
 };
 
 export default function MaintenanceForm({ onClose, onSave, editMaintenance, assetId }: MaintenanceFormProps) {
+  const { success: notifySuccess } = useNotify();
+  const allowedLocations = useAllowedLocations();
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
+  const [showAssetForm, setShowAssetForm] = useState(false);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -55,7 +99,6 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
   });
   const [newEmailTo, setNewEmailTo] = useState('');
   const [newEmailCc, setNewEmailCc] = useState('');
-  const [partsUsed, setPartsUsed] = useState<PartUsed[]>(editMaintenance?.parts_used || []);
 
   const [formData, setFormData] = useState({
     asset_id: editMaintenance?.asset_id || assetId || '',
@@ -95,8 +138,13 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
         locations(name)
       `)
       .order('created_at', { ascending: false });
-    
-    if (data) setAssets(data as AssetWithDetails[]);
+
+    if (data) {
+      const filtered = allowedLocations
+        ? (data as AssetWithDetails[]).filter(a => a.location_id && allowedLocations.includes(a.location_id))
+        : data as AssetWithDetails[];
+      setAssets(filtered);
+    }
   };
 
   const fetchLocations = async () => {
@@ -104,42 +152,24 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
       .from('locations')
       .select('id, name')
       .order('name');
-    
-    if (data) setLocations(data);
+
+    if (data) {
+      const filtered = allowedLocations
+        ? data.filter(l => allowedLocations.includes(l.id))
+        : data;
+      setLocations(filtered);
+    }
   };
 
   const calculateTotalCost = () => {
     const labor = parseFloat(formData.labor_cost) || 0;
-    const parts = partsUsed.reduce((sum, p) => sum + (p.total_cost || 0), 0);
     const other = parseFloat(formData.other_costs) || 0;
-    return labor + parts + other;
+    return labor + other;
   };
 
-  const calculatePartTotal = (part: PartUsed) => {
-    return (part.quantity || 0) * (part.unit_price || 0);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const addPart = () => {
-    setPartsUsed(prev => [...prev, { name: '', quantity: 1, unit: 'unidad', unit_price: 0, total_cost: 0 }]);
-  };
-
-  const removePart = (index: number) => {
-    setPartsUsed(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const updatePart = (index: number, field: keyof PartUsed, value: string | number) => {
-    setPartsUsed(prev => {
-      const updated = [...prev];
-      const part = { ...updated[index], [field]: value };
-      if (field === 'quantity' || field === 'unit_price') {
-        part.total_cost = calculatePartTotal(part);
-      }
-      updated[index] = part;
-      return updated;
-    });
-  };
-
-  const handleSubmit = async () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.asset_id) {
@@ -194,7 +224,6 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
       service_provider: formData.service_provider.trim() || null,
       invoice_number: formData.invoice_number.trim() || null,
       other_costs: formData.other_costs ? parseFloat(formData.other_costs) : null,
-      parts_used: partsUsed.length > 0 ? partsUsed : null,
       next_maintenance_date: formData.next_maintenance_date || null,
       maintenance_frequency: formData.maintenance_frequency ? parseInt(formData.maintenance_frequency) : null,
       total_cost: calculateTotalCost(),
@@ -230,7 +259,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
 
       if (sendEmail && emailRecipients.to.length > 0) {
         const selectedAsset = assets.find(a => a.id === formData.asset_id);
-        const assetName = selectedAsset 
+        const assetName = selectedAsset
           ? `${selectedAsset.brand || ''} ${selectedAsset.model || ''} ${selectedAsset.descripcion || ''}`.trim()
           : 'Activo no especificado';
 
@@ -261,6 +290,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
       }
 
       setLoading(false);
+      notifySuccess(editMaintenance ? 'Registro de mantenimiento actualizado correctamente' : 'Registro de mantenimiento creado correctamente', editMaintenance ? 'Actualizado' : 'Creado');
       onSave();
     } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });
@@ -282,28 +312,21 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
   };
 
   return (
-    <MultiStepForm
-      title={editMaintenance ? 'Editar Mantenimiento' : 'Nuevo Mantenimiento'}
+    <>
+      <BaseForm
+        title={editMaintenance ? 'Editar Mantenimiento' : 'Nuevo Mantenimiento'}
       subtitle="Módulo de Gestión de Mantenimiento"
       onClose={onClose}
       onSubmit={handleSubmit}
       loading={loading}
       error={errors.submit}
       icon={<Wrench size={20} />}
-      steps={[
-        { title: 'Información', description: 'Activo, tipo, estado, costos, proveedor, recibo' },
-        { title: 'Descripción', description: 'Trabajo realizado, causa, solución, repuestos' },
-        { title: 'Seguimiento', description: 'Próx. mantenimiento, notas, garantía, correo' },
-      ]}
+      maxWidth="6xl"
     >
-      {/* Step 1: Información del Mantenimiento */}
-      <div className="space-y-4">
-        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
-          <div className="w-1 h-4 bg-blue-600 shrink-0" />
-          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Información del Mantenimiento</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <FormField label="Activo" required error={errors.asset_id}>
+      {/* Sección: Información del Mantenimiento */}
+      <FormSection title="Información del Mantenimiento" color="blue">
+        <FormGrid columns={4}>
+          <FormField label="Activo" required error={errors.asset_id} gridCols={2}>
             <SearchableAssetSelect
               assets={assets}
               value={formData.asset_id}
@@ -313,6 +336,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
               }}
               error={errors.asset_id}
               placeholder="Escribe marca, modelo o serie..."
+              onCreateNew={() => setShowAssetForm(true)}
             />
           </FormField>
 
@@ -385,22 +409,26 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
           </FormField>
 
           <FormField label="Fecha Programada" error={errors.scheduled_date}>
-            <FormInput
-              type="datetime-local"
-              name="scheduled_date"
+            <DateTimePicker
               value={formData.scheduled_date}
-              onChange={handleChange}
+              onChange={(val) => {
+                setFormData(prev => ({ ...prev, scheduled_date: val }));
+                if (errors.scheduled_date) setErrors(prev => ({ ...prev, scheduled_date: '' }));
+              }}
               error={errors.scheduled_date}
+              placeholder="Seleccionar fecha y hora"
             />
           </FormField>
 
           <FormField label="Fecha de Completado" error={errors.completed_date}>
-            <FormInput
-              type="datetime-local"
-              name="completed_date"
+            <DateTimePicker
               value={formData.completed_date}
-              onChange={handleChange}
+              onChange={(val) => {
+                setFormData(prev => ({ ...prev, completed_date: val }));
+                if (errors.completed_date) setErrors(prev => ({ ...prev, completed_date: '' }));
+              }}
               error={errors.completed_date}
+              placeholder="Seleccionar fecha y hora"
             />
           </FormField>
 
@@ -464,27 +492,39 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
             />
           </FormField>
 
-          <FormField label="Reclamo de Garantía">
-            <div className="flex items-center gap-3 mt-2">
-              <input
-                type="checkbox"
-                name="warranty_claim"
-                checked={formData.warranty_claim}
-                onChange={(e) => setFormData(prev => ({ ...prev, warranty_claim: e.target.checked }))}
-                className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-              />
-              <label className="text-sm text-gray-700">Activar reclamo de garantía</label>
-            </div>
-          </FormField>
-        </div>
-      </div>
+        </FormGrid>
 
-      {/* Step 2: Descripción del Trabajo */}
-      <div className="space-y-4">
         <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
           <div className="w-1 h-4 bg-blue-600 shrink-0" />
-          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Descripción del Trabajo</h3>
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Reclamo de Garantía</h3>
         </div>
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            name="warranty_claim"
+            checked={formData.warranty_claim}
+            onChange={(e) => setFormData(prev => ({ ...prev, warranty_claim: e.target.checked }))}
+            className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+          />
+          <label className="text-sm text-gray-700">Activar reclamo de garantía</label>
+        </div>
+
+        {formData.warranty_claim && (
+          <FormField label="Detalles del Reclamo de Garantía" error={errors.warranty_details}>
+            <FormTextarea
+              name="warranty_details"
+              value={formData.warranty_details}
+              onChange={handleChange}
+              placeholder="Describir los detalles del reclamo de garantía, proveedor, tiempo restante..."
+              rows={3}
+              error={errors.warranty_details}
+            />
+          </FormField>
+        )}
+      </FormSection>
+
+      {/* Sección: Descripción del Trabajo */}
+      <CollapsibleSection title="Descripción del Trabajo" color="blue">
         <FormField label="Descripción" required error={errors.description}>
           <FormTextarea
             name="description"
@@ -498,7 +538,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
         </FormField>
 
         {(formData.maintenance_type === 'corrective' || formData.maintenance_type === 'repair') && (
-          <>
+          <FormGrid columns={2}>
             <FormField label="Causa del Fallo" error={errors.failure_cause}>
               <FormTextarea
                 name="failure_cause"
@@ -520,146 +560,41 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
                 error={errors.solution_applied}
               />
             </FormField>
-          </>
+          </FormGrid>
         )}
 
-        {/* Repuestos Utilizados */}
         <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
-          <div className="w-1 h-4 bg-amber-600 shrink-0" />
-          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Repuestos Utilizados</h3>
+          <div className="w-1 h-4 bg-blue-600 shrink-0" />
+          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Resumen de Costos</h3>
         </div>
-
-        <div className="space-y-3">
-          {partsUsed.map((part, index) => (
-            <div key={index} className="grid grid-cols-12 gap-3 items-end p-3 bg-slate-50 border border-slate-200">
-              <div className="col-span-4">
-                <FormField label="Nombre">
-                  <FormInput
-                    type="text"
-                    value={part.name}
-                    onChange={(e) => updatePart(index, 'name', e.target.value)}
-                    placeholder="Nombre del repuesto"
-                  />
-                </FormField>
-              </div>
-              <div className="col-span-2">
-                <FormField label="Cantidad">
-                  <FormInput
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={part.quantity}
-                    onChange={(e) => updatePart(index, 'quantity', parseFloat(e.target.value) || 0)}
-                  />
-                </FormField>
-              </div>
-              <div className="col-span-2">
-                <FormField label="Unidad">
-                  <FormSelect
-                    value={part.unit}
-                    onChange={(e) => updatePart(index, 'unit', e.target.value)}
-                  >
-                    <option value="unidad">Unidad</option>
-                    <option value="litro">Litro</option>
-                    <option value="kg">Kg</option>
-                    <option value="metro">Metro</option>
-                    <option value="galon">Galón</option>
-                    <option value="par">Par</option>
-                    <option value="juego">Juego</option>
-                  </FormSelect>
-                </FormField>
-              </div>
-              <div className="col-span-2">
-                <FormField label="Precio Unit.">
-                  <FormInput
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={part.unit_price}
-                    onChange={(e) => updatePart(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                  />
-                </FormField>
-              </div>
-              <div className="col-span-1">
-                <FormField label="Total">
-                  <p className="text-[11px] font-normal text-emerald-600 font-mono mt-2">
-                    S/ {part.total_cost.toFixed(2)}
-                  </p>
-                </FormField>
-              </div>
-              <div className="col-span-1 flex items-end pb-2">
-                <button
-                  type="button"
-                  onClick={() => removePart(index)}
-                  className="p-2 text-rose-500 hover:bg-rose-50 border border-rose-200 transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
-
-          <button
-            type="button"
-            onClick={addPart}
-            className="flex items-center gap-2 px-4 py-2 text-[10px] font-normal uppercase tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all"
-          >
-            <Plus size={14} />
-            Agregar Repuesto
-          </button>
-
-          {partsUsed.length > 0 && (
-            <div className="flex justify-end p-3 bg-slate-50 border border-slate-200">
-              <div className="text-right">
-                <span className="text-[9px] font-normal text-slate-400 uppercase tracking-wider">Costo de Repuestos</span>
-                <p className="text-sm font-normal text-emerald-600 font-mono">
-                  S/ {partsUsed.reduce((sum, p) => sum + (p.total_cost || 0), 0).toFixed(2)}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Resumen de Costos */}
-          <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
-            <div className="w-1 h-4 bg-emerald-600 shrink-0" />
-            <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Resumen de Costos</h3>
+        <FormGrid columns={3}>
+          <div className="p-3 bg-slate-50 border border-slate-200">
+            <p className="text-[9px] font-normal text-slate-400 uppercase tracking-wider">Mano de Obra</p>
+            <p className="text-sm font-normal text-blue-600 font-mono">S/ {parseFloat(formData.labor_cost || '0').toFixed(2)}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="p-3 bg-slate-50 border border-slate-200">
-              <p className="text-[9px] font-normal text-slate-400 uppercase tracking-wider">Mano de Obra</p>
-              <p className="text-sm font-normal text-blue-600 font-mono">S/ {parseFloat(formData.labor_cost || '0').toFixed(2)}</p>
-            </div>
-            <div className="p-3 bg-slate-50 border border-slate-200">
-              <p className="text-[9px] font-normal text-slate-400 uppercase tracking-wider">Repuestos</p>
-              <p className="text-sm font-normal text-emerald-600 font-mono">S/ {partsUsed.reduce((sum, p) => sum + (p.total_cost || 0), 0).toFixed(2)}</p>
-            </div>
-            <div className="p-3 bg-slate-50 border border-slate-200">
-              <p className="text-[9px] font-normal text-slate-400 uppercase tracking-wider">Otros Gastos</p>
-              <p className="text-sm font-normal text-amber-600 font-mono">S/ {parseFloat(formData.other_costs || '0').toFixed(2)}</p>
-            </div>
-            <div className="p-3 bg-[#002855] border border-[#002855]">
-              <p className="text-[9px] font-normal text-blue-200 uppercase tracking-wider">Costo Total</p>
-              <p className="text-sm font-normal text-white font-mono">S/ {calculateTotalCost().toFixed(2)}</p>
-            </div>
+          <div className="p-3 bg-slate-50 border border-slate-200">
+            <p className="text-[9px] font-normal text-slate-400 uppercase tracking-wider">Otros Gastos</p>
+            <p className="text-sm font-normal text-blue-600 font-mono">S/ {parseFloat(formData.other_costs || '0').toFixed(2)}</p>
           </div>
-        </div>
-      </div>
+          <div className="p-3 bg-[#002855] border border-[#002855]">
+            <p className="text-[9px] font-normal text-blue-200 uppercase tracking-wider">Costo Total</p>
+            <p className="text-sm font-normal text-white font-mono">S/ {calculateTotalCost().toFixed(2)}</p>
+          </div>
+        </FormGrid>
+      </CollapsibleSection>
 
-      {/* Step 3: Seguimiento */}
-      <div className="space-y-4">
-        {/* Próximo Mantenimiento */}
-        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
-          <div className="w-1 h-4 bg-purple-600 shrink-0" />
-          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Próximo Mantenimiento</h3>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Sección: Seguimiento */}
+      <CollapsibleSection title="Seguimiento y Próximo Mantenimiento" color="blue">
+        <FormGrid columns={4}>
           <FormField label="Fecha Próximo Mantenimiento" error={errors.next_maintenance_date}>
-            <FormInput
-              type="datetime-local"
-              name="next_maintenance_date"
+            <DateTimePicker
               value={formData.next_maintenance_date}
-              onChange={handleChange}
+              onChange={(val) => {
+                setFormData(prev => ({ ...prev, next_maintenance_date: val }));
+                if (errors.next_maintenance_date) setErrors(prev => ({ ...prev, next_maintenance_date: '' }));
+              }}
               error={errors.next_maintenance_date}
+              placeholder="Seleccionar fecha y hora"
             />
           </FormField>
           <FormField label="Frecuencia (días)" error={errors.maintenance_frequency}>
@@ -674,12 +609,8 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
               error={errors.maintenance_frequency}
             />
           </FormField>
-        </div>
+        </FormGrid>
 
-        <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
-          <div className="w-1 h-4 bg-blue-600 shrink-0" />
-          <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Notas Adicionales</h3>
-        </div>
         <FormField label="Notas y Observaciones" error={errors.notes}>
           <FormTextarea
             name="notes"
@@ -690,26 +621,6 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
             error={errors.notes}
           />
         </FormField>
-
-        {/* Garantía */}
-        {formData.warranty_claim && (
-          <>
-            <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
-              <div className="w-1 h-4 bg-indigo-600 shrink-0" />
-              <h3 className="text-[11px] font-normal text-[#002855] uppercase tracking-wider">Detalles de Garantía</h3>
-            </div>
-            <FormField label="Detalles del Reclamo de Garantía" error={errors.warranty_details}>
-              <FormTextarea
-                name="warranty_details"
-                value={formData.warranty_details}
-                onChange={handleChange}
-                placeholder="Describir los detalles del reclamo de garantía, proveedor, tiempo restante..."
-                rows={3}
-                error={errors.warranty_details}
-              />
-            </FormField>
-          </>
-        )}
 
         <div className="border-b border-slate-100 pb-2 flex items-center gap-2">
           <div className="w-1 h-4 bg-blue-600 shrink-0" />
@@ -724,7 +635,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
             className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
           />
           <label htmlFor="sendEmail" className="flex items-center gap-2 text-sm font-normal text-gray-700">
-            <Mail size={16} className="text-indigo-600" />
+            <Mail size={16} className="text-blue-600" />
             Enviar notificación por correo
           </label>
         </div>
@@ -735,13 +646,41 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
               <label className="block text-sm font-normal text-gray-700 mb-2">
                 Destinatarios Principales (Para)
               </label>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Opciones rápidas:</span>
+                {PRESET_EMAILS.map(({ email, label }) => {
+                  const added = emailRecipients.to.includes(email);
+                  return (
+                    <button
+                      key={email}
+                      type="button"
+                      disabled={added}
+                      onClick={() => {
+                        if (!added) {
+                          setEmailRecipients(prev => ({ ...prev, to: [...prev.to, email] }));
+                        }
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold border rounded-md transition-all ${
+                        added
+                          ? 'bg-blue-600 border-blue-600 text-white cursor-default'
+                          : 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                      }`}
+                    >
+                      <Mail size={12} />
+                      {email}
+                      {label && <span className={`font-normal ${added ? 'text-blue-200' : 'text-blue-400'}`}>({label})</span>}
+                      {added && <Check size={12} />}
+                    </button>
+                  );
+                })}
+              </div>
               <div className="flex gap-2 mb-2">
                 <input
                   type="email"
                   value={newEmailTo}
                   onChange={(e) => setNewEmailTo(e.target.value)}
                   placeholder="correo@ejemplo.com"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
                 <button
                   type="button"
@@ -754,7 +693,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
                       setNewEmailTo('');
                     }
                   }}
-                  className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
                   <Plus size={16} />
                 </button>
@@ -763,7 +702,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
                 {emailRecipients.to.map((email, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm"
+                    className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
                   >
                     {email}
                     <button
@@ -772,7 +711,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
                         ...prev,
                         to: prev.to.filter((_, i) => i !== index)
                       }))}
-                      className="hover:text-indigo-600"
+                      className="hover:text-blue-600"
                     >
                       <X size={14} />
                     </button>
@@ -791,7 +730,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
                   value={newEmailCc}
                   onChange={(e) => setNewEmailCc(e.target.value)}
                   placeholder="correo@ejemplo.com"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
                 <button
                   type="button"
@@ -804,7 +743,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
                       setNewEmailCc('');
                     }
                   }}
-                  className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
                   <Plus size={16} />
                 </button>
@@ -832,13 +771,23 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
             </div>
 
             {emailRecipients.to.length === 0 && (
-              <p className="text-sm text-amber-600 mt-2">
+              <p className="text-sm text-blue-600 mt-2">
                 Debe agregar al menos un destinatario principal para enviar el correo.
               </p>
             )}
           </div>
         )}
-      </div>
-    </MultiStepForm>
+      </CollapsibleSection>
+    </BaseForm>
+    {showAssetForm && (
+      <AssetForm
+        onClose={() => setShowAssetForm(false)}
+        onSave={async () => {
+          setShowAssetForm(false);
+          await fetchAssets();
+        }}
+      />
+    )}
+    </>
   );
 }

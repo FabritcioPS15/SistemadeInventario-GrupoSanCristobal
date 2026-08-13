@@ -25,6 +25,7 @@ export default function AssetForm({ onClose, onSave, editAsset, initialCategoryI
   return (
     <DynamicAssetForm
       onClose={onClose}
+      onSaved={onSave}
       editAsset={editAsset}
       initialCategoryId={initialCategoryId}
     />

@@ -29,6 +29,7 @@ import {
   TableHead,
   TableBody,
   TableCell,
+  TableCellPrimary,
 } from '../../../shared/components/ui/Table';
 
 type Vehiculo = {
@@ -910,10 +911,9 @@ export default function FlotaVehicular() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="BUSCAR POR PLACA, MARCA O MODELO..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[12px] font-semibold text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 uppercase tracking-[0.1em]"
               />
             </>
           }
@@ -1072,7 +1072,7 @@ export default function FlotaVehicular() {
                           )}
                           <span className="font-mono text-[13px] font-black text-slate-900 tracking-wider">{v.placa}</span>
                         </div>
-                        <span className={`text-[9px] font-semibold px-2 py-0.5 border ${v.estado === 'en_proceso' ? 'text-blue-700 bg-blue-50 border-blue-200' : v.estado === 'activa' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
+                        <span className={`text-[9px] font-medium px-2 py-0.5 border ${v.estado === 'en_proceso' ? 'text-blue-700 bg-blue-50 border-blue-200' : v.estado === 'activa' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
                           {v.estado === 'en_proceso' ? 'En Proceso' : v.estado === 'activa' ? 'Activa' : 'Inactiva'}
                         </span>
                       </div>
@@ -1113,7 +1113,7 @@ export default function FlotaVehicular() {
                           </TableHead>
                         )}
                         <TableHead sortable isSorted={sortConfig?.key === 'placa'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('placa')}>Unidad / Placa</TableHead>
-                        <TableHead sortable isSorted={sortConfig?.key === 'estado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('estado')}>Estado</TableHead>
+
                         <TableHead sortable isSorted={sortConfig?.key === 'ubicacion_actual'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('ubicacion_actual')}>Ubicación</TableHead>
                         <TableHead sortable isSorted={sortConfig?.key === 'citv_vencimiento'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('citv_vencimiento')}>CITV (Vence)</TableHead>
                         <TableHead sortable isSorted={sortConfig?.key === 'soat_vencimiento'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('soat_vencimiento')}>SOAT (Vence)</TableHead>
@@ -1148,16 +1148,10 @@ export default function FlotaVehicular() {
                               </div>
                             </div>
                           </TableCell>
+
                           <TableCell>
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-black tracking-wider border rounded-none ${statusColors[v.estado]}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${v.estado === 'en_proceso' ? 'bg-blue-500' : v.estado === 'activa' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                              {v.estado === 'en_proceso' ? 'En Proceso' : v.estado === 'activa' ? 'Activa' : 'Inactiva'}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1.5 text-slate-700">
-                              <MapPin size={14} className="text-rose-500 shrink-0" />
-                              <span className="text-[12px] font-bold truncate max-w-xs block">{getEscuelaNombre(v.ubicacion_actual)}</span>
+                            <div className="flex flex-col min-w-0">
+                              <TableCellPrimary className="truncate max-w-[180px]">{getEscuelaNombre(v.ubicacion_actual)}</TableCellPrimary>
                             </div>
                           </TableCell>
                           <TableCell>

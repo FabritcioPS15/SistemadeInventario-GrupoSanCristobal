@@ -26,6 +26,7 @@ export type DynamicAssetFormData = {
 export type UseDynamicAssetFormProps = {
   editAsset?: AssetWithDetails;
   initialCategoryId?: string;
+  onSaved?: () => void;
 };
 
 export type UseDynamicAssetFormReturn = {
@@ -118,7 +119,7 @@ function buildInitialCamposEspecificos(editAsset?: AssetWithDetails): Record<str
   return {};
 }
 
-export function useDynamicAssetForm({ editAsset, initialCategoryId }: UseDynamicAssetFormProps): UseDynamicAssetFormReturn {
+export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: UseDynamicAssetFormProps): UseDynamicAssetFormReturn {
   const { success: notifySuccess, error: notifyError } = useNotify();
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -218,13 +219,14 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId }: UseDynamic
         if (error) throw error;
         notifySuccess('El activo se creó correctamente', '¡Buen trabajo!');
       }
+      onSaved?.();
     } catch (error: any) {
       setErrors({ submit: error.message });
       notifyError(error.message, 'Error');
     } finally {
       setLoading(false);
     }
-  }, [formData, camposEspecificos, editAsset]);
+  }, [formData, camposEspecificos, editAsset, onSaved]);
 
   return {
     formData,

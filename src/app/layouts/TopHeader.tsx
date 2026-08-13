@@ -1,25 +1,13 @@
 ﻿import { useState, useEffect, useRef } from 'react';
-
 import { useNavigate, useLocation } from 'react-router-dom';
-
 // Forzar importación para evitar caché
-
 import { Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle, MapPin } from 'lucide-react';
 import { FaTerminal } from "react-icons/fa";
-
 import { supabase, SutranVisit } from '../../shared/services/supabase';
-
 import { useAuth } from '../providers/AuthContext';
-
 import NotificationsFinal from '../../shared/components/NotificationsFinal';
-
 import { RiFileExcel2Fill } from 'react-icons/ri';
-
 import { FaFilePdf } from 'react-icons/fa6';
-
-
-
-
 
 const ROUTE_LABELS: Record<string, string> = {
     'inventory': 'Inventario',
@@ -42,67 +30,38 @@ const ROUTE_LABELS: Record<string, string> = {
     'reports': 'Reportes',
     'painpoint': 'Puntos Críticos',
     'checklist': 'Checklist',
-
     'vacations': 'Vacaciones',
-
     'servers': 'Servidores',
-
     'flota-vehicular': 'Flota Vehicular',
-
     'spare-parts': 'Repuestos',
-
     'all': 'Ver Todo',
-
     'escon': 'ESCON',
-
     'ecsal': 'ECSAL',
-
     'citv': 'CITV',
-
     'lima': 'Lima',
-
     'provincias': 'Provincias',
-
     'pending': 'Pendientes',
-
     'in-progress': 'En Progreso',
-
     'completed': 'Completados',
-
 };
 
 
-
 type TopHeaderProps = {
-
     onMobileMenuClick?: () => void;
-
     sidebarCollapsed?: boolean;
-
 };
 
 
 
 export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHeaderProps) {
-
     const { user, updateProfile, logout } = useAuth();
-
     const navigate = useNavigate();
-
     const location = useLocation();
-
     const pathnames = location.pathname.split('/').filter(x => x);
-
     const showBreadcrumbs = location.pathname !== '/login'; // Mostrar breadcrumb siempre excepto en login
-
     const isTicketsRoute = location.pathname.startsWith('/tickets');
-
     const currentPath = location.pathname;
-
-
-
     // Detectar página actual para acciones específicas
-
     const getPageActions = () => {
 
         if (currentPath === '/' || currentPath === '/dashboard') {
@@ -220,23 +179,13 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
         if (currentPath.startsWith('/flota-vehicular')) {
 
             return {
-
                 show: true,
-
                 title: 'Acciones Flota',
-
-                searchPlaceholder: 'Buscar vehículos...',
-
                 actions: [
-
                     { icon: <Plus size={16} />, label: 'Agregar Vehículo', action: () => window.dispatchEvent(new CustomEvent('flota:new')) },
-
                     { icon: <FaFilePdf size={16} />, label: 'Reporte PDF', action: () => window.dispatchEvent(new CustomEvent('flota:report')) },
-
                     { icon: <RiFileExcel2Fill size={16} />, label: 'Exportar Excel', action: () => window.dispatchEvent(new CustomEvent('flota:export')) },
-
                     { icon: <Wrench size={16} />, label: 'Mantenimiento', action: () => navigate('/maintenance') }
-
                 ]
 
             };
@@ -300,27 +249,15 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
         if (currentPath.startsWith('/cameras')) {
 
             return {
-
                 show: true,
-
                 showSearch: false,
-
                 title: 'Control de Cámaras',
-
-                searchPlaceholder: 'Buscar cámaras...',
-
                 actions: [
-
                     { icon: <Plus size={16} />, label: 'Agregar Cámara', action: () => window.dispatchEvent(new CustomEvent('cameras:new')) },
-
                     { icon: <RiFileExcel2Fill size={16} />, label: 'Descargar en Excel', action: () => window.dispatchEvent(new CustomEvent('cameras:export')) },
-
                     { icon: <FaFilePdf size={16} />, label: 'Descargar en PDF', action: () => window.dispatchEvent(new CustomEvent('cameras:export-pdf')) },
-
                     { icon: <LayoutGrid size={16} />, label: 'Cambiar de vista', action: () => window.dispatchEvent(new CustomEvent('cameras:toggle-view')) },
-
                     { icon: <FaTerminal size={16} />, label: 'Descargar Automatización', action: () => { const a = document.createElement('a'); a.href = '/camera_automation.bat'; a.download = 'camera_automation.bat'; document.body.appendChild(a); a.click(); document.body.removeChild(a); } },
-
                 ]
 
             };
@@ -350,6 +287,30 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                     { icon: <Camera size={16} />, label: 'Cámaras', action: () => navigate('/cameras') },
 
                     { icon: <UsersIcon size={16} />, label: 'Usuarios', action: () => navigate('/users') }
+
+                ]
+
+            };
+
+        }
+
+
+
+        if (currentPath.startsWith('/companies')) {
+
+            return {
+
+                show: true,
+
+                title: 'Acciones Unidades de Negocio',
+
+                actions: [
+
+                    { icon: <Plus size={16} />, label: 'Nueva Unidad', action: () => window.dispatchEvent(new CustomEvent('companies:new')) },
+
+                    { icon: <RiFileExcel2Fill size={16} />, label: 'Exportar Excel', action: () => window.dispatchEvent(new CustomEvent('companies:export')) },
+
+                    { icon: <FaFilePdf size={16} />, label: 'Exportar PDF', action: () => window.dispatchEvent(new CustomEvent('companies:export-pdf')) },
 
                 ]
 

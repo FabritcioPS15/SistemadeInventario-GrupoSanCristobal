@@ -28,6 +28,7 @@ import {
   Ticket,
   ClipboardList,
   Building2,
+  Building,
   Key,
   Car,
   Send,
@@ -215,6 +216,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
         { id: 'cvs', label: "CV's", icon: FileText, path: '/cvs' },
         { id: 'users', label: 'Usuarios', icon: Users, path: '/users' },
         { id: 'locations', label: 'Sedes', icon: MapPin, path: '/locations' },
+        { id: 'companies', label: 'Unidades de Negocio', icon: Building, path: '/companies' },
         { id: 'sutran', label: 'Sutran', icon: Building2, path: '/sutran' },
         { id: 'mtc', label: 'MTC Accesos', icon: Key, path: '/mtc' },
         { id: 'servers', label: 'Servidores', icon: GrServerCluster, path: '/servers' },
@@ -341,7 +343,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
 
                           {!collapsed && (
                             <>
-                              <span className="text-[16px] font-bold tracking-wide flex-1 truncate">
+                              <span className="text-[16px] font-medium tracking-wide flex-1 truncate">
                                 {item.label}
                               </span>
                               {item.hasSubmenu && (

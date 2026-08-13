@@ -33,6 +33,7 @@ import {
   TableHead,
   TableBody,
   TableCell,
+  TableCellPrimary,
 } from '../../../shared/components/ui/Table';
 
 // ─── Stats (tipado correcto) ─────────────────────────────────────────────────
@@ -326,10 +327,10 @@ export default function Servers() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Buscar servidor, IP, ID o ubicación..."
+                placeholder="Buscar..."
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); resetPagination(); }}
-                className="w-full pl-12 pr-4 py-3 text-[12px] font-semibold text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
@@ -614,12 +615,8 @@ export default function Servers() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex flex-col items-start">
-                              <div className="flex items-center gap-1.5">
-                                <MapPin size={14} className="text-rose-500 shrink-0" />
-                                <span className="text-[12px] font-semibold text-slate-700 tracking-wider">{srv.locations?.name || 'VIRTUAL'}</span>
-                              </div>
-                              <span className="text-[11px] font-semibold text-slate-400 mt-1">Ubicación Física</span>
+                            <div className="flex flex-col min-w-0">
+                              <TableCellPrimary className="truncate max-w-[180px]">{srv.locations?.name || 'VIRTUAL'}</TableCellPrimary>
                             </div>
                           </TableCell>
                           <TableCell>

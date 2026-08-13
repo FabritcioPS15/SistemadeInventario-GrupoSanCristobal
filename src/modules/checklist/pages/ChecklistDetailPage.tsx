@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, History, ExternalLink, GraduationCap, Stethoscope, Car, MapPin, Building2, Trash2 } from 'lucide-react';
 import { supabase, Location } from '../../../shared/services/supabase';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 export default function ChecklistDetail() {
   const { type, id } = useParams<{ type: string; id: string }>();
   const navigate = useNavigate();
+  const { confirm, success: notifySuccess, error: notifyError } = useNotify();
   const [location, setLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,15 +29,19 @@ export default function ChecklistDetail() {
   };
 
   const handleDelete = async () => {
+    const confirmed = await confirm('¿Estás seguro de eliminar esta sede y su checklist?', 'Eliminar Sede');
+    if (!confirmed) return;
     try {
       const { error } = await supabase
         .from('locations')
         .delete()
         .eq('id', id);
       if (error) throw error;
+      notifySuccess('Sede eliminada correctamente', 'Eliminada');
       navigate('/checklist');
     } catch (err) {
       console.error('Error deleting location:', err);
+      notifyError('Error al eliminar la sede: ' + (err instanceof Error ? err.message : String(err)), 'Error');
     }
   };
 

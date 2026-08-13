@@ -221,7 +221,7 @@ export default function Checklist({ type }: { type?: string }) {
                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
                      <input
                         type="text"
-                        placeholder="Buscar por ubicación o dirección..."
+                        placeholder="Buscar..."
                         value={searchTerm}
                         onChange={(e) => {
                            setSearchTerm(e.target.value);

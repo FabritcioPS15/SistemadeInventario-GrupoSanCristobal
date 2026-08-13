@@ -6,6 +6,7 @@ import { FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/
 import { emailService } from '../../../shared/services/emailService';
 import { RequestFormData, RequestCategory, RequestPriority } from '../../../shared/types/requests.types';
 import { useAuth } from '../../../app/providers/AuthContext';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type RequestFormProps = {
   onClose: () => void;
@@ -29,6 +30,7 @@ const priorityLabels: Record<RequestPriority, string> = {
 
 export default function RequestForm({ onClose, onSave }: RequestFormProps) {
   const { user } = useAuth();
+  const { success: notifySuccess } = useNotify();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sendEmail, setSendEmail] = useState(false);
@@ -39,6 +41,7 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
   const [newEmailTo, setNewEmailTo] = useState('');
   const [newEmailCc, setNewEmailCc] = useState('');
   const [locations, setLocations] = useState<any[]>([]);
+  const allowedLocations = user?.location_ids?.length ? user.location_ids : null;
 
   const [formData, setFormData] = useState<RequestFormData>({
     title: '',
@@ -70,7 +73,12 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
         .from('locations')
         .select('id, name')
         .order('name');
-      if (data) setLocations(data);
+      if (data) {
+        const filtered = allowedLocations
+          ? data.filter(l => allowedLocations.includes(l.id))
+          : data;
+        setLocations(filtered);
+      }
     } catch (err) {
       console.error('Error fetching locations:', err);
     }
@@ -154,6 +162,7 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
       }
 
       setLoading(false);
+      notifySuccess('Solicitud creada correctamente', 'Creada');
       onSave();
     } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });

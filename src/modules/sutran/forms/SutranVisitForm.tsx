@@ -4,6 +4,7 @@ import { supabase } from '../../../shared/services/supabase';
 import type { SutranVisit, Location } from '../../../shared/services/supabase';
 import { notifySutranVisitScheduled } from '../../../shared/services/notifications';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 interface SutranVisitFormProps {
   visit?: SutranVisit;
@@ -12,6 +13,7 @@ interface SutranVisitFormProps {
 }
 
 export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitFormProps) {
+  const { success: notifySuccess } = useNotify();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [locations, setLocations] = useState<Location[]>([]);
@@ -181,6 +183,7 @@ export default function SutranVisitForm({ visit, onSave, onClose }: SutranVisitF
         }
       }
 
+      notifySuccess(visit ? 'Visita SUTRAN actualizada correctamente' : 'Visita SUTRAN programada correctamente', visit ? 'Actualizada' : 'Programada');
       onSave();
     } catch (error: any) {
       console.error('Error al guardar visita:', error);

@@ -15,6 +15,7 @@ import { supabase } from '../../../shared/services/supabase';
 import { useAuth } from '../../../app/providers/AuthContext';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 import { notifyTicketCreated } from '../../../shared/services/notifications';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 // Props del componente
 // onClose: Función para cerrar el modal/formulario
@@ -38,6 +39,7 @@ const FREQUENT_ISSUES = [
 
 export default function TicketForm({ onClose, onSave }: TicketFormProps) {
   const { user } = useAuth(); // Usuario actual autenticado
+  const { success: notifySuccess } = useNotify();
   const [loading, setLoading] = useState(false); // Indicador de envío en progreso
   const [locations, setLocations] = useState<any[]>([]); // Lista de sedes disponibles
   const [errors, setErrors] = useState<Record<string, string>>({}); // Errores de validación por campo
@@ -222,6 +224,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
         );
       }
 
+      notifySuccess('Ticket creado correctamente', 'Creado');
       onSave();
       onClose();
     } catch (err: any) {

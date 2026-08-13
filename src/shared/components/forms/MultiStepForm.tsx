@@ -140,11 +140,11 @@ export default function MultiStepForm({
                 <button
                   type="button"
                   onClick={() => { if (i < currentStep || validateStep(currentStep)) setCurrentStep(i); }}
-                  className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-[8px] sm:text-[10px] font-normal uppercase tracking-wider transition-all shrink-0 ${
+                  className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-[8px] sm:text-[10px] font-normal uppercase tracking-wide transition-all shrink-0 ${
                     i === currentStep
                       ? 'bg-[#002855] text-white'
                       : i < currentStep
-                        ? 'bg-emerald-500 text-white'
+                        ? 'bg-blue-500 text-white'
                         : 'bg-slate-200 text-slate-400'
                   }`}
                 >
@@ -156,7 +156,7 @@ export default function MultiStepForm({
                   <span className="truncate max-w-[70px] sm:max-w-none">{step.title}</span>
                 </button>
                 {i < steps.length - 1 && (
-                  <div className={`w-4 sm:w-8 h-px ${i < currentStep ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                  <div className={`w-4 sm:w-8 h-px ${i < currentStep ? 'bg-blue-400' : 'bg-slate-300'}`} />
                 )}
               </div>
             ))}
@@ -195,7 +195,7 @@ export default function MultiStepForm({
                   type="button"
                   onClick={handlePrev}
                   disabled={loading || submitting}
-                  className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wider text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wide text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all disabled:opacity-50"
                 >
                   <ChevronLeft size={14} />
                   Anterior
@@ -208,7 +208,7 @@ export default function MultiStepForm({
                 <button
                   type="button"
                   onClick={handleNext}
-                  className="flex items-center gap-1.5 px-6 py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wider text-white bg-[#002855] hover:bg-blue-800 transition-all"
+                  className="flex items-center gap-1.5 px-6 py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wide text-white bg-[#002855] hover:bg-blue-800 transition-all"
                 >
                   Siguiente
                   <ChevronRight size={14} />
@@ -218,7 +218,7 @@ export default function MultiStepForm({
                   type="button"
                   onClick={handleSubmit}
                   disabled={loading || submitting}
-                  className="flex items-center gap-2 px-8 py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-lg"
+                  className="flex items-center gap-2 px-8 py-2.5 min-h-[44px] text-[10px] font-normal uppercase tracking-wide text-white bg-blue-600 hover:bg-blue-700 transition-all disabled:opacity-50 shadow-lg"
                 >
                   {(loading || submitting) && <Loader2 size={14} className="animate-spin" />}
                   {(loading || submitting) ? 'Guardando...' : 'Guardar'}

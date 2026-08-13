@@ -17,6 +17,7 @@ import { supabase, Location, Camera as CameraType } from '../../../shared/servic
 import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
 import { FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 import CameraDiskManager from '../components/CameraDiskManager';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 type CameraFormProps = {
   onClose: () => void;
@@ -25,6 +26,7 @@ type CameraFormProps = {
 };
 
 export default function CameraForm({ onClose, onSave, editCamera }: CameraFormProps) {
+  const { success: notifySuccess } = useNotify();
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -208,6 +210,7 @@ export default function CameraForm({ onClose, onSave, editCamera }: CameraFormPr
       }
 
       setLoading(false);
+      notifySuccess(editCamera ? 'Cámara actualizada correctamente' : 'Cámara creada correctamente', editCamera ? 'Actualizada' : 'Creada');
       onSave();
     } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });

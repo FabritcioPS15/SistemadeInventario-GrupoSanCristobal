@@ -6,6 +6,8 @@ import { supabase, Location, Server } from '../../../shared/services/supabase';
 
 import BaseForm, { FormSection, FormField, FormInput, FormSelect } from '../../../shared/components/forms/BaseForm';
 
+import { useNotify } from '../../../shared/hooks/useNotify';
+
 
 
 interface ServerFormProps {
@@ -21,6 +23,8 @@ interface ServerFormProps {
 
 
 export default function ServerForm({ editServer, onClose, onSave }: ServerFormProps) {
+
+  const { success: notifySuccess } = useNotify();
 
   const [loading, setLoading] = useState(false);
 
@@ -265,6 +269,8 @@ export default function ServerForm({ editServer, onClose, onSave }: ServerFormPr
 
 
       setLoading(false);
+
+      notifySuccess(editServer ? 'Servidor actualizado correctamente' : 'Servidor creado correctamente', editServer ? 'Actualizado' : 'Creado');
 
       onSave();
 

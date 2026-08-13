@@ -3,6 +3,7 @@ import { HardDrive } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
 import { FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
+import { useNotify } from '../../../shared/hooks/useNotify';
 
 interface DVRFormProps {
   editDVR?: any;
@@ -11,6 +12,7 @@ interface DVRFormProps {
 }
 
 export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
+  const { success: notifySuccess } = useNotify();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [locations, setLocations] = useState<any[]>([]);
@@ -183,6 +185,7 @@ export default function DVRForm({ editDVR, onClose, onSave }: DVRFormProps) {
       }
 
       setLoading(false);
+      notifySuccess(editDVR ? 'DVR actualizado correctamente' : 'DVR creado correctamente', editDVR ? 'Actualizado' : 'Creado');
       onSave();
     } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });
