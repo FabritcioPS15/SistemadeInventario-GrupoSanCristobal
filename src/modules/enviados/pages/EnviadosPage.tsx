@@ -167,18 +167,18 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
     setCurrentPage(1);
   };
 
-  const statusColors: Record<Shipment['status'], string> = {
-    shipped: 'bg-blue-50 text-blue-700 border-blue-200',
-    in_transit: 'bg-amber-50 text-amber-700 border-amber-200',
-    delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    returned: 'bg-rose-50 text-rose-700 border-rose-200',
-  };
-
   const statusLabels: Record<Shipment['status'], string> = {
     shipped: 'Enviado',
     in_transit: 'En Tránsito',
     delivered: 'Entregado',
     returned: 'Devuelto',
+  };
+
+  const statusColorClasses: Record<Shipment['status'], string> = {
+    shipped: 'bg-blue-100 text-blue-700',
+    in_transit: 'bg-blue-100 text-blue-700',
+    delivered: 'bg-emerald-100 text-emerald-700',
+    returned: 'bg-rose-100 text-rose-700',
   };
 
   const getStatusIcon = (status: string) => {
@@ -210,10 +210,9 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
                   <input
                     type="text"
-                    placeholder="Buscar..."
                     value={searchTerm}
                     onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                    className="w-full pl-12 pr-4 py-3 text-[12px] text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                    className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
                   />
                 </div>
 
@@ -301,14 +300,14 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                         <div className="p-6 flex-1">
                           <div className="flex items-start justify-between mb-6">
                             <div className="flex items-center gap-4">
-                              <div className={`w-12 h-12 rounded-none flex items-center justify-center ${statusColors[shipment.status]?.split(' ')[0] || 'bg-gray-50'}`}>
+                              <div className="w-12 h-12 rounded-none flex items-center justify-center bg-slate-50">
                                 {(() => {
                                   const Icon = getStatusIcon(shipment.status);
-                                  return <Icon className={statusColors[shipment.status]?.split(' ')[1] || 'text-gray-500'} size={24} />;
+                                  return <Icon className="text-slate-400" size={24} />;
                                 })()}
                               </div>
                               <div>
-                                <span className={`inline-flex px-2 py-0.5 rounded-none text-[8px] font-black uppercase tracking-widest border mb-1 ${statusColors[shipment.status]}`}>
+                                <span className={`text-[14px] font-semibold mb-1 ${statusColorClasses[shipment.status]}`}>
                                   {statusLabels[shipment.status]}
                                 </span>
                                 <h3 className="text-sm font-black text-[#002855] uppercase leading-tight truncate max-w-[150px]">
@@ -388,7 +387,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                           <TableRow key={shipment.id} className="cursor-pointer" onClick={() => handleViewShipment(shipment)}>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 flex items-center justify-center shadow-sm transition-all duration-300 ${statusColors[shipment.status]?.split(' ')[0] || 'bg-slate-100'} group-hover/row:bg-[#002855] group-hover/row:text-white`}>
+                                <div className="w-9 h-9 flex items-center justify-center shadow-sm transition-all duration-300 bg-slate-50 group-hover/row:bg-[#002855] group-hover/row:text-white">
                                   {(() => { const Icon = getStatusIcon(shipment.status); return <Icon size={18} />; })()}
                                 </div>
                                 <div className="flex flex-col">
@@ -412,7 +411,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                               </div>
                             </TableCell>
                             <TableCell>
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-1 text-[10px] font-black uppercase tracking-widest border ${statusColors[shipment.status]}`}>
+                              <span className={`text-[14px] font-semibold ${statusColorClasses[shipment.status]}`}>
                                 {statusLabels[shipment.status]}
                               </span>
                             </TableCell>
@@ -472,7 +471,7 @@ export default function Enviados({ locationFilter }: EnviadosProps) {
                 </div>
                 <div>
                   <h2 className="text-sm font-normal text-white uppercase tracking-[0.2em] leading-tight">Ficha de Envío</h2>
-                  <p className="text-[10px] font-normal text-blue-200 uppercase tracking-widest mt-0.5">{statusLabels[viewingShipment.status]}</p>
+                  <p className={`text-[10px] font-normal uppercase tracking-widest mt-0.5 ${statusColorClasses[viewingShipment.status]}`}>{statusLabels[viewingShipment.status]}</p>
                 </div>
               </div>
               <button

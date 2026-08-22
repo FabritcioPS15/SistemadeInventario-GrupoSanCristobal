@@ -74,17 +74,17 @@ export default function ReportsPage() {
   }, [currentReport, searchTerm, selectedSource]);
 
   const statusColors: Record<string, string> = {
-    active: 'bg-emerald-100 text-emerald-800',
-    inactive: 'bg-slate-100 text-slate-600',
-    maintenance: 'bg-amber-100 text-amber-800',
-    damaged: 'bg-red-100 text-red-800',
-    open: 'bg-blue-100 text-blue-800',
-    in_progress: 'bg-amber-100 text-amber-800',
-    resolved: 'bg-emerald-100 text-emerald-800',
-    closed: 'bg-slate-100 text-slate-600',
-    pending: 'bg-amber-100 text-amber-800',
-    in_transit: 'bg-purple-100 text-purple-800',
-    delivered: 'bg-emerald-100 text-emerald-800',
+    active: 'text-slate-500',
+    inactive: 'text-slate-500',
+    maintenance: 'text-slate-500',
+    damaged: 'text-slate-500',
+    open: 'text-slate-500',
+    in_progress: 'text-slate-500',
+    resolved: 'text-slate-500',
+    closed: 'text-slate-500',
+    pending: 'text-slate-500',
+    in_transit: 'text-slate-500',
+    delivered: 'text-slate-500',
   };
 
   const handleExportExcel = async () => {
@@ -237,7 +237,7 @@ export default function ReportsPage() {
                 <p className="text-2xl font-black text-[#002855]">{data?.count ?? 0}</p>
                 <div className="flex flex-wrap gap-1 mt-2">
                   {data && Object.entries(data.details).slice(0, 3).map(([status, count]) => (
-                    <span key={status} className="text-[8px] px-1.5 py-0.5 bg-slate-100 text-slate-500 font-bold uppercase">
+                    <span key={status} className="text-[14px] font-semibold text-slate-800">
                       {status}: {count}
                     </span>
                   ))}
@@ -284,7 +284,7 @@ export default function ReportsPage() {
                   <div key={status} className="bg-slate-50 p-3 border border-slate-100">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest truncate">{status}</span>
-                      <span className={`text-[9px] font-black px-1.5 py-0.5 ${statusColors[status] || 'bg-slate-100 text-slate-600'}`}>
+                      <span className={`text-[9px] font-black ${statusColors[status] || 'text-slate-500'}`}>
                         {count}
                       </span>
                     </div>

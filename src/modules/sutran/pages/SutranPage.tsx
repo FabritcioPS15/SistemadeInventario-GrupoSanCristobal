@@ -107,7 +107,7 @@ export default function Sutran() {
 
   const { data: locationsData } = useSupabaseQuery<any[]>(
     'locations:all',
-    async () => await supabase.from('locations').select('id, name, type, region').order('name')
+    async () => await supabase.from('locations').select('id, name, type, region').eq('is_active', true).order('name')
   );
 
   const paginatedVisits = visitsData?.data ?? [];
@@ -115,10 +115,10 @@ export default function Sutran() {
   const totalPages = Math.ceil((visitsData?.count ?? 0) / itemsPerPage);
 
   const statusColors: Record<string, string> = {
-    completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    pending: 'bg-amber-50 text-amber-700 border-amber-200',
-    in_progress: 'bg-blue-50 text-blue-700 border-blue-200',
-    cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
+    completed: 'bg-emerald-100 text-emerald-700',
+    pending: 'bg-amber-100 text-amber-700',
+    in_progress: 'bg-blue-100 text-blue-700',
+    cancelled: 'bg-slate-100 text-slate-600',
   };
 
   const statusLabels: Record<string, string> = {
@@ -129,9 +129,9 @@ export default function Sutran() {
   };
 
   const typeColors: Record<string, string> = {
-    programada: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
-    no_programada: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
-    de_gabinete: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
+    programada: 'text-slate-500',
+    no_programada: 'text-slate-500',
+    de_gabinete: 'text-slate-500',
   };
 
   const getVisitTypeLabel = (type: string) => {
@@ -400,7 +400,7 @@ export default function Sutran() {
                         <p className="text-[11px] font-black text-slate-800 leading-tight">
                           {new Date(String(visit.visit_date).includes('T') ? String(visit.visit_date) : `${visit.visit_date}T12:00:00`).toLocaleDateString()}
                         </p>
-                        <p className="text-[10px] font-semibold text-slate-500">{getVisitTypeLabel(visit.visit_type)}</p>
+                        <p className="text-[14px] font-semibold text-slate-800">{getVisitTypeLabel(visit.visit_type)}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-1">
@@ -557,10 +557,10 @@ export default function Sutran() {
                         <div className="flex-1">
                           <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors tracking-tight mb-2">Visita SUTRAN - {(visit as any).locations?.name}</h3>
                           <div className="flex flex-wrap gap-2">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wider border ${typeColors[visit.visit_type]}`}>
+                            <span className={`text-[10px] font-semibold ${typeColors[visit.visit_type]}`}>
                               {getVisitTypeLabel(visit.visit_type)}
                             </span>
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wider border ${statusColors[visit.status]}`}>
+                            <span className={`text-[10px] font-semibold ${statusColors[visit.status]}`}>
                               {statusLabels[visit.status]}
                             </span>
                           </div>
@@ -651,10 +651,10 @@ export default function Sutran() {
                 <div className="space-y-4">
                   {/* Badges de Tipo y Estado */}
                   <div className="flex items-center gap-2 flex-wrap pb-2 border-b border-slate-100">
-                    <span className={`px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider border ${statusColors[viewingVisit.status]}`}>
+                    <span className={`text-[11px] font-semibold ${statusColors[viewingVisit.status]}`}>
                       {statusLabels[viewingVisit.status]}
                     </span>
-                    <span className={`px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider border ${typeColors[viewingVisit.visit_type]}`}>
+                    <span className={`text-[11px] font-semibold ${typeColors[viewingVisit.visit_type]}`}>
                       {getVisitTypeLabel(viewingVisit.visit_type)}
                     </span>
                     <span className="ml-auto text-[9px] font-mono text-slate-500 flex items-center gap-1">
@@ -740,7 +740,7 @@ export default function Sutran() {
               <StandardModalFooter
                 onClose={() => setViewingVisit(undefined)}
                 onEdit={canEdit() ? () => { setViewingVisit(undefined); handleEditVisit(viewingVisit); } : undefined}
-                editLabel="Editar Reporte"
+                editLabel="Editar"
               />
             </DetailModal>
           )}

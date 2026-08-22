@@ -108,7 +108,7 @@ export default function Users() {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
     if (data) setLocations(data);
   };
 
@@ -194,8 +194,19 @@ export default function Users() {
     }
   };
 
-  // Uniform corporate palette — same for all roles
-  const getRoleColor = (_role: string) => 'bg-[#002855]/8 text-[#002855] border-[#002855]/20';
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'super_admin': return 'bg-violet-100 text-violet-700';
+      case 'gerencia': return 'bg-indigo-100 text-indigo-700';
+      case 'sistemas': return 'bg-teal-100 text-teal-700';
+      case 'supervisores': return 'bg-blue-100 text-blue-700';
+      case 'administradores': return 'bg-emerald-100 text-emerald-700';
+      case 'personalizado': return 'bg-slate-100 text-slate-600';
+      case 'area_legal': return 'bg-purple-100 text-purple-700';
+      case 'area_contable': return 'bg-amber-100 text-amber-700';
+      default: return 'bg-slate-100 text-slate-600';
+    }
+  };
 
   const getRoleLabel = (role: string) => {
     switch (role) {
@@ -243,7 +254,6 @@ export default function Users() {
     return MODULE_LABELS[moduleKey] || base;
   };
 
-  const statusColors = { active: 'bg-emerald-50 text-emerald-700 border border-emerald-200', inactive: 'bg-slate-50 text-slate-500 border border-slate-200' };
   const statusLabels = { active: 'Activo', inactive: 'Inactivo' };
 
   const handleSort = (key: string) => {
@@ -539,11 +549,11 @@ export default function Users() {
                       </div>
                       <div className="flex-1">
                         <h3 className="text-[13px] font-black text-[#002855] uppercase tracking-tight mb-2 truncate">{u.full_name}</h3>
-                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none text-[9px] font-black tracking-wider border ${getRoleColor(u.role)}`}>
+                        <span className={`text-[14px] font-semibold ${getRoleColor(u.role)}`}>
                           {getRoleIcon(u.role)}{getRoleLabel(u.role)}
-                        </div>
+                        </span>
                       </div>
-                      <span className={`px-2 py-0.5 rounded-none text-[9px] font-black uppercase tracking-wider ${statusColors[u.status]}`}>{statusLabels[u.status]}</span>
+                      <span className={`text-[14px] font-semibold ${u.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{statusLabels[u.status]}</span>
                     </div>
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 p-2 rounded-xl border border-gray-100">
@@ -608,12 +618,12 @@ export default function Users() {
                       <p className="text-[12px] font-black text-slate-800 truncate leading-tight">{u.full_name}</p>
                       <p className="text-[10px] font-semibold text-slate-400 truncate">{u.email}</p>
                     </div>
-                    <span className={`shrink-0 text-[9px] font-semibold ${u.status === 'active' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                    <span className={`shrink-0 text-[14px] font-semibold ${u.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                       {statusLabels[u.status]}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    <span className={`text-[9px] font-semibold px-1.5 py-0.5 border ${getRoleColor(u.role)}`}>
+                    <span className={`text-[14px] font-semibold ${getRoleColor(u.role)}`}>
                       {getRoleLabel(u.role)}
                     </span>
                     <span className="flex items-center gap-0.5 text-[10px] text-slate-500">
@@ -689,7 +699,7 @@ export default function Users() {
                         </TableCellBadge>
                       </TableCell>
                       <TableCell>
-                        <TableCellBadge className={u.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}>
+                        <TableCellBadge className={u.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
                           {statusLabels[u.status]}
                         </TableCellBadge>
                       </TableCell>
@@ -780,12 +790,13 @@ export default function Users() {
 
           <DetailModalBody>
             <div className="space-y-4">
-              {/* Badges de Rol y Estado */}
+              {/* Rol y Estado */}
               <div className="flex items-center gap-2 flex-wrap pb-2 border-b border-slate-100">
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider border ${getRoleColor(selectedUser.role)}`}>
+                <span className={`text-[14px] font-semibold ${getRoleColor(selectedUser.role)}`}>
                   {getRoleIcon(selectedUser.role)} {getRoleLabel(selectedUser.role)}
                 </span>
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider border ${statusColors[selectedUser.status]}`}>
+                <span className="text-slate-300">•</span>
+                <span className={`text-[11px] font-medium ${selectedUser.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
                   {statusLabels[selectedUser.status]}
                 </span>
               </div>
@@ -833,7 +844,7 @@ export default function Users() {
                       ) : Array.isArray(selectedUser.permissions) && selectedUser.permissions.length > 0 ? (
                         <div className="mt-1 flex flex-wrap gap-1">
                           {Array.from(new Set(selectedUser.permissions.map(getPermissionModuleLabel))).map((label) => (
-                            <span key={label} className="inline-flex items-center px-1.5 py-0.5 text-[8px] font-semibold text-[#002855] bg-[#002855]/5 border border-[#002855]/15 rounded-full uppercase tracking-wider">
+                            <span key={label} className="text-[14px] font-semibold text-slate-800">
                               {label}
                             </span>
                           ))}

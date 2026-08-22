@@ -32,26 +32,50 @@ export const generateExcel = async ({ title, filename, sede, columns, data }: Ex
   titleCell.value = title;
   titleCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
   titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } }; // Negro
-  titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
-  worksheet.getRow(1).height = 35;
+  titleCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+  worksheet.getRow(1).height = 36;
+
+  // Intentar cargar e incrustar el logo corporativo en la parte superior derecha
+  const logoBase64 = await loadLogoBase64();
+  if (logoBase64) {
+    try {
+      const logoId = workbook.addImage({
+        base64: logoBase64,
+        extension: 'png',
+      });
+      worksheet.addImage(logoId, {
+        tl: { col: Math.max(colCount - 1, 0), row: 0.1 },
+        ext: { width: 110, height: 30 }
+      });
+    } catch (_) { /* Ignorar si no es posible incrustar la imagen */ }
+  }
 
   // Franja Naranja abajo del título
   worksheet.mergeCells(`A2:${endColLetter}2`);
   const orangeCell = worksheet.getCell('A2');
   orangeCell.value = '';
   orangeCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF8C00' } }; // Naranja Oscuro
-  worksheet.getRow(2).height = 5;
+  worksheet.getRow(2).height = 4;
 
-  // Subtítulo / Fecha de generación
+  // Franja Gris delgada
   worksheet.mergeCells(`A3:${endColLetter}3`);
-  const dateCell = worksheet.getCell('A3');
-  dateCell.value = `Generado el: ${new Date().toLocaleDateString()} a las ${new Date().toLocaleTimeString()}`;
-  dateCell.font = { name: 'Arial', size: 10, italic: true, color: { argb: 'FF555555' } };
+  const greyCell = worksheet.getCell('A3');
+  greyCell.value = '';
+  greyCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB4B4B4' } }; // Gris delgada
+  worksheet.getRow(3).height = 2;
+
+  // Subtítulo / Fecha de generación y Sede
+  worksheet.mergeCells(`A4:${endColLetter}4`);
+  const dateCell = worksheet.getCell('A4');
+  const now = new Date();
+  const fechaHoraStr = `${now.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}  •  ${now.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`;
+  dateCell.value = `Generado el: ${fechaHoraStr}${sede ? `   |   Sede: ${sede}` : ''}   |   Sistema de Gestión - Corporación San Cristobal`;
+  dateCell.font = { name: 'Arial', size: 9.5, italic: true, color: { argb: 'FF555555' } };
   dateCell.alignment = { horizontal: 'right', vertical: 'middle' };
-  worksheet.getRow(3).height = 20;
+  worksheet.getRow(4).height = 20;
 
   // Fila en blanco para separación
-  worksheet.getRow(4).height = 10;
+  worksheet.getRow(5).height = 8;
 
   // Configurar Columnas
   worksheet.columns = columns.map(col => ({
@@ -60,15 +84,15 @@ export const generateExcel = async ({ title, filename, sede, columns, data }: Ex
     width: col.width || 20
   }));
 
-  // Los valores de encabezado van en la fila 5
-  worksheet.getRow(5).values = columns.map(c => c.header);
+  // Los valores de encabezado van en la fila 6
+  worksheet.getRow(6).values = columns.map(c => c.header);
 
   // Estilizar Encabezados (Azul Secundario / Oscuro corporativo)
-  const headerRow = worksheet.getRow(5);
+  const headerRow = worksheet.getRow(6);
   headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Arial' };
   headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002855' } }; // Azul Corporativo Profundo
   headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-  headerRow.height = 30;
+  headerRow.height = 28;
 
   // Agregar Datos
   data.forEach((row, index) => {
@@ -82,9 +106,9 @@ export const generateExcel = async ({ title, filename, sede, columns, data }: Ex
     }
   });
 
-  // Bordes para las celdas (desde la fila 5 en adelante)
+  // Bordes para las celdas (desde la fila 6 en adelante)
   worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-    if (rowNumber >= 5) {
+    if (rowNumber >= 6) {
       row.eachCell({ includeEmpty: false }, (cell) => {
         cell.border = {
           top: { style: 'thin', color: { argb: 'FFDDDDDD' } },

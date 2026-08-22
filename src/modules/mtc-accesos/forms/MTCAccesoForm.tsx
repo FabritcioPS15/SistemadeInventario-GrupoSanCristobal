@@ -48,7 +48,7 @@ export default function MTCAccesoForm({ onClose, onSave, editAcceso }: MTCAcceso
   }, []);
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
     if (data) {
       setLocations(data);
     }

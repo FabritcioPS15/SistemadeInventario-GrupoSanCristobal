@@ -137,7 +137,7 @@ export default function Dashboard() {
         supabase.from('tickets').select('id', { count: 'exact', head: true }),
         supabase.from('tickets').select('status'),
         supabase.from('vehiculos').select('estado, soat_vencimiento, citv_vencimiento, poliza_vencimiento, contrato_alquiler_vencimiento, placa, ubicacion_actual'),
-        supabase.from('locations').select('id, name'),
+        supabase.from('locations').select('id, name').eq('is_active', true),
         supabase.from('tickets')
           .select(`
             id,

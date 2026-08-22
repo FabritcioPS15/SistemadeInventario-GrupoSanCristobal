@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MapPin } from 'lucide-react';
 import { supabase, Location } from '../../../shared/services/supabase';
+import { BUSINESS_TYPE_LABELS, BusinessType } from '../../../shared/types/inventory.types';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
 import { useNotify } from '../../../shared/hooks/useNotify';
 
@@ -18,6 +19,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
 
   const [formData, setFormData] = useState({
     name: editLocation?.name || '',
+    business_type: (editLocation?.business_type as BusinessType) || 'oficinas_administrativas',
     type: editLocation?.type || 'revision',
     address: editLocation?.address || '',
     notes: editLocation?.notes || '',
@@ -73,8 +75,12 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
       newErrors.name = 'El nombre de la ubicación es requerido';
     }
 
-    if (!formData.type) {
-      newErrors.type = 'El tipo de ubicación es requerido';
+    if (!formData.business_type) {
+      newErrors.business_type = 'El rubro es requerido';
+    }
+
+    if (!formData.company_id) {
+      newErrors.company_id = 'La unidad de negocio es requerida';
     }
 
     setErrors(newErrors);
@@ -88,6 +94,7 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
 
     const dataToSave: any = {
       name: formData.name.trim(),
+      business_type: formData.business_type,
       type: formData.type,
       address: formData.address.trim() || null,
       notes: formData.notes.trim() || null,
@@ -183,19 +190,18 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
             />
           </FormField>
 
-          <FormField label="Tipo de Ubicación" required error={errors.type}>
+          <FormField label="Rubro" required error={errors.business_type}>
             <FormSelect
-              name="type"
-              value={formData.type}
+              name="business_type"
+              value={formData.business_type}
               onChange={handleChange}
               required
-              error={errors.type}
+              error={errors.business_type}
             >
-              <option value="revision">Centro de Revisión (CITV)</option>
-              <option value="policlinico">Policlínico</option>
-              <option value="escuela_conductores">Escuela de Conductores</option>
-              <option value="central">Sede Central / Administrativa</option>
-              <option value="circuito">Circuito de Manejo</option>
+              <option value="">Seleccionar rubro...</option>
+              {Object.entries(BUSINESS_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
             </FormSelect>
           </FormField>
 
@@ -211,11 +217,13 @@ export default function LocationForm({ onClose, onSave, editLocation }: Location
             </FormSelect>
           </FormField>
 
-          <FormField label="Unidad de Negocio">
+          <FormField label="Unidad de Negocio" required error={errors.company_id}>
             <FormSelect
               name="company_id"
               value={formData.company_id}
               onChange={handleChange}
+              required
+              error={errors.company_id}
             >
               <option value="">Seleccionar Unidad de Negocio...</option>
               {companies.map(company => (

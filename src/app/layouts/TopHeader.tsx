@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 // Forzar importación para evitar caché
 import { Settings, HelpCircle, Menu, Image as ImageIcon, Check, User as UserIcon, LogOut, ChevronRight, ChevronDown, Search, Plus, X, RefreshCw, BarChart3, Package, Wrench, Calendar, Camera, Users as UsersIcon, Clipboard, Ticket, LayoutGrid, AlertTriangle, MapPin } from 'lucide-react';
@@ -1052,10 +1052,7 @@ export default function TopHeader({ onMobileMenuClick, sidebarCollapsed }: TopHe
                                                 <p className="text-[10px] text-gray-600">Inspector: {visit.inspector_name}</p>
                                             </div>
 
-                                            <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-full ${visit.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                                visit.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                                                    'bg-green-100 text-green-700'
-                                                }`}>
+                                            <span className="text-[14px] font-semibold text-slate-800">
                                                 {visit.status === 'pending' ? 'Pendiente' : visit.status === 'in_progress' ? 'En Progreso' : 'Completada'}
                                             </span>
                                         </div>

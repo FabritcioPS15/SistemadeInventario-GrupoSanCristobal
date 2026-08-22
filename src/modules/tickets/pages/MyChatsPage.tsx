@@ -17,10 +17,10 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 
 // Mapa de estilos visuales para las prioridades en badges
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string }> = {
-    critical: { label: 'P1 - Crítica', color: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
-    high: { label: 'P2 - Alta', color: 'text-orange-600 bg-orange-50', dot: 'bg-orange-500' },
-    medium: { label: 'P3 - Media', color: 'text-blue-600 bg-blue-50', dot: 'bg-blue-500' },
-    low: { label: 'P4 - Baja', color: 'text-emerald-600 bg-emerald-50', dot: 'bg-emerald-500' }
+    critical: { label: 'P1 - Crítica', color: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
+    high: { label: 'P2 - Alta', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
+    medium: { label: 'P3 - Media', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
+    low: { label: 'P4 - Baja', color: 'bg-slate-100 text-slate-600', dot: 'bg-slate-500' }
 };
 
 export default function MyChats() {
@@ -99,6 +99,17 @@ export default function MyChats() {
         }
     };
 
+    // Convierte el código de estado interno a las clases de color resaltadas
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'open': return 'bg-amber-100 text-amber-700';
+            case 'in_progress': return 'bg-blue-100 text-blue-700';
+            case 'resolved': return 'bg-emerald-100 text-emerald-700';
+            case 'closed': return 'bg-slate-100 text-slate-600';
+            default: return 'bg-slate-100 text-slate-600';
+        }
+    };
+
     // Filtra tickets por término de búsqueda y filtro de estado activo
     const filteredTickets = tickets.filter(ticket => {
         const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,7 +147,6 @@ export default function MyChats() {
                     <div className="flex-1">
                         <input
                             type="text"
-                            placeholder="Buscar..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -170,7 +180,7 @@ export default function MyChats() {
                     <div className="flex items-center gap-3 mb-5">
                         <div className="w-2 h-6 bg-blue-500 rounded-full" />
                         <h2 className="text-sm font-semibold text-[#002855] tracking-[0.2em]">Mis Tickets Creados</h2>
-                        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-semibold">{myCreatedTickets.length}</span>
+                        <span className="text-[10px] font-semibold text-slate-600">{myCreatedTickets.length}</span>
                     </div>
                     <div className="bg-white border border-slate-200 shadow-sm overflow-hidden">
                         <Table>
@@ -195,8 +205,7 @@ export default function MyChats() {
                                                 <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{t.locations?.name || 'Central'}</p>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider inline-flex items-center gap-1.5 ${t.status === 'open' ? 'text-orange-600 bg-orange-50 border border-orange-100' : t.status === 'in_progress' ? 'text-blue-600 bg-blue-50 border border-blue-100' : t.status === 'resolved' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'}`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                                <span className={`text-[14px] font-semibold ${getStatusColor(t.status)}`}>
                                                     {getStatusLabel(t.status)}
                                                 </span>
                                             </TableCell>
@@ -209,10 +218,9 @@ export default function MyChats() {
                                                 ) : <span className="text-[10px] text-slate-300 font-semibold">Sin asignar</span>}
                                             </TableCell>
                                             <TableCell>
-                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-none ${prio.color}`}>
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
-                                                    <span className="text-[10px] font-semibold tracking-wider">{prio.label}</span>
-                                                </div>
+                                                <span className={`text-[14px] font-semibold ${prio.color}`}>
+                                                    {prio.label}
+                                                </span>
                                             </TableCell>
                                             <TableCell><span className="text-[10px] font-semibold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</span></TableCell>
                                         </TableRow>
@@ -255,8 +263,7 @@ export default function MyChats() {
                                                 <p className="text-[11px] font-semibold text-slate-400 tracking-wider mt-1">{t.locations?.name || 'Central'}</p>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider inline-flex items-center gap-1.5 ${t.status === 'open' ? 'text-orange-600 bg-orange-50 border border-orange-100' : t.status === 'in_progress' ? 'text-blue-600 bg-blue-50 border border-blue-100' : t.status === 'resolved' ? 'text-emerald-600 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'}`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                                <span className={`text-[14px] font-semibold ${getStatusColor(t.status)}`}>
                                                     {getStatusLabel(t.status)}
                                                 </span>
                                             </TableCell>
@@ -267,10 +274,9 @@ export default function MyChats() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-none ${prio.color}`}>
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
-                                                    <span className="text-[10px] font-semibold tracking-wider">{prio.label}</span>
-                                                </div>
+                                                <span className={`text-[14px] font-semibold ${prio.color}`}>
+                                                    {prio.label}
+                                                </span>
                                             </TableCell>
                                             <TableCell><span className="text-[10px] font-semibold text-slate-400">{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })}</span></TableCell>
                                         </TableRow>

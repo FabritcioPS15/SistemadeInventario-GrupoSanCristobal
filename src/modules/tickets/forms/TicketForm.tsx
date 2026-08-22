@@ -315,7 +315,7 @@ export default function TicketForm({ onClose, onSave }: TicketFormProps) {
                         <span className="text-[12px] font-normal text-[#002855] uppercase">{issue.title}</span>
                         <span className="text-[12px] font-normal text-slate-400 uppercase tracking-widest mt-0.5">{issue.description.slice(0, 60)}...</span>
                       </div>
-                      <span className="text-[12px] font-normal bg-slate-100 text-slate-500 px-2 py-0.5 rounded-none uppercase tracking-widest">{issue.category}</span>
+                      <span className="text-[12px] font-normal text-slate-500">{issue.category}</span>
                     </button>
                   ))}
                 </div>

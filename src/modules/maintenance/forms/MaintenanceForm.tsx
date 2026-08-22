@@ -85,7 +85,7 @@ type MaintenanceFormProps = {
 };
 
 export default function MaintenanceForm({ onClose, onSave, editMaintenance, assetId }: MaintenanceFormProps) {
-  const { success: notifySuccess } = useNotify();
+  const { success: notifySuccess, error: notifyError } = useNotify();
   const allowedLocations = useAllowedLocations();
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
   const [showAssetForm, setShowAssetForm] = useState(false);
@@ -188,12 +188,17 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
       newErrors.description = 'La descripción es requerida';
     }
 
-    setErrors(newErrors);
+    if (sendEmail && emailRecipients.to.length === 0) {
+      newErrors.email = 'Debe agregar al menos un destinatario principal para enviar el correo';
+    }
 
     if (Object.keys(newErrors).length > 0) {
+      newErrors.submit = 'Por favor, completa todos los campos requeridos antes de guardar.';
+      setErrors(newErrors);
       return;
     }
 
+    setErrors({});
     setLoading(true);
 
     const VALID_TYPES = ['preventive', 'corrective', 'technical_review', 'repair'] as const;
@@ -283,8 +288,9 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
 
         if (!emailResult.success) {
           console.error('Error al enviar correo:', emailResult.error);
-          setErrors({ submit: 'Mantenimiento guardado pero error al enviar correo: ' + emailResult.error });
           setLoading(false);
+          notifyError(`El mantenimiento se guardó correctamente, pero no se pudo enviar el correo: ${emailResult.error}`, 'Correo no enviado');
+          onSave();
           return;
         }
       }
@@ -524,7 +530,7 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
       </FormSection>
 
       {/* Sección: Descripción del Trabajo */}
-      <CollapsibleSection title="Descripción del Trabajo" color="blue">
+      <CollapsibleSection title="Descripción del Trabajo" color="blue" defaultOpen={true}>
         <FormField label="Descripción" required error={errors.description}>
           <FormTextarea
             name="description"
@@ -771,8 +777,8 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
             </div>
 
             {emailRecipients.to.length === 0 && (
-              <p className="text-sm text-blue-600 mt-2">
-                Debe agregar al menos un destinatario principal para enviar el correo.
+              <p className={`text-sm mt-2 ${errors.email ? 'text-rose-600 font-semibold' : 'text-blue-600'}`}>
+                {errors.email || 'Debe agregar al menos un destinatario principal para enviar el correo.'}
               </p>
             )}
           </div>

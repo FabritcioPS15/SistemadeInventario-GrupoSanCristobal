@@ -282,7 +282,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
   },
   {
     key: 'equipos-operativos',
-    label: 'Equipos Operativos',
+    label: 'Equipos de Línea',
     tiposActivo: ['Analizador', 'Equipo de Diagnóstico', 'Estetoscopio', 'Tensiómetro', 'Oftalmoscopio', 'Balanza', 'Camilla', 'Equipo Médico', 'Equipo Clínico'],
     camposCategoria: [
       { key: 'certificado_sanitario', label: 'Certificado Sanitario', type: 'text' },

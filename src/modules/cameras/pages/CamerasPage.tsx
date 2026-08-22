@@ -44,7 +44,7 @@ type CamerasProps = {
 };
 export default function Cameras({ subview }: CamerasProps) {
   const { canEdit, user } = useAuth();
-  const { success: notifySuccess, error: notifyError, confirm } = useNotify();
+  const { error: notifyError, confirm } = useNotify();
   const [loading, setLoading] = useState(true);
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -113,7 +113,7 @@ export default function Cameras({ subview }: CamerasProps) {
   }, [cameras, selectedLocations, filterStatus, filterStorage, viewMode, searchTerm, subview]);
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
     if (data) setLocations(data);
   };
 
@@ -147,7 +147,6 @@ export default function Cameras({ subview }: CamerasProps) {
     const { error } = await supabase.from('stored_disks').delete().eq('id', id);
     if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchStoredDisks();
-    notifySuccess('Registro de disco almacenado eliminado correctamente', 'Eliminado');
   };
 
   const openCreate = () => {
@@ -167,7 +166,6 @@ export default function Cameras({ subview }: CamerasProps) {
     if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchCameras();
     setSelectedIds(prev => prev.filter(selectedId => selectedId !== cam.id));
-    notifySuccess(`Cámara "${cam.name}" eliminada correctamente`, 'Eliminada');
   };
 
   const handleBulkDelete = async () => {
@@ -178,7 +176,6 @@ export default function Cameras({ subview }: CamerasProps) {
     if (error) return notifyError('Error al eliminar por lote: ' + error.message);
     await fetchCameras();
     setSelectedIds([]);
-    notifySuccess(`${selectedIds.length} cámaras eliminadas correctamente`, 'Eliminadas');
   };
 
   const toggleSelect = (id: string) => {
@@ -515,10 +512,9 @@ export default function Cameras({ subview }: CamerasProps) {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Buscar..."
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[12px] text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
@@ -654,11 +650,10 @@ export default function Cameras({ subview }: CamerasProps) {
                       </div>
                       {/* Status badge */}
                       <div className="flex flex-col items-end gap-2">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-black uppercase border tracking-widest rounded-none shadow-sm ${cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          cam.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                            'bg-slate-100 text-slate-600 border-slate-200'
+                        <span className={`text-[14px] font-semibold ${cam.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                          cam.status === 'maintenance' ? 'bg-amber-100 text-amber-700' :
+                            'bg-slate-100 text-slate-600'
                           }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${cam.status === 'active' ? 'bg-emerald-500' : cam.status === 'maintenance' ? 'bg-amber-500' : 'bg-slate-400'}`} />
                           {cam.status === 'active' ? 'Activo' : cam.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
                         </span>
                       </div>
@@ -822,10 +817,10 @@ export default function Cameras({ subview }: CamerasProps) {
                             <div key={d.id} className="bg-white border border-gray-200 rounded-none p-3">
                               <div className="flex items-center justify-between mb-2">
                                 <div className="text-sm font-bold text-gray-700">Disco #{d.disk_number} • {d.disk_type || 'Sin tipo'}</div>
-                                <span className={`px-2 py-0.5 text-xs rounded-full font-bold ${d.status === 'active' ? 'bg-green-100 text-green-800' :
-                                  d.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
-                                    d.status === 'full' ? 'bg-red-100 text-red-800' :
-                                      'bg-gray-100 text-gray-800'
+                                <span className={`text-[14px] font-semibold ${d.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                                  d.status === 'maintenance' ? 'bg-amber-100 text-amber-700' :
+                                    d.status === 'full' ? 'bg-rose-100 text-rose-700' :
+                                      'bg-slate-100 text-slate-600'
                                   }`}>
                                   {d.status === 'active' ? 'Activo' : d.status === 'maintenance' ? 'Mantenimiento' : d.status === 'full' ? 'Lleno' : 'Desconocido'}
                                 </span>
@@ -932,7 +927,7 @@ export default function Cameras({ subview }: CamerasProps) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <TableCellBadge className="bg-rose-50 text-rose-700 border-rose-100">ALMACENADO</TableCellBadge>
+                          <TableCellBadge className="bg-rose-100 text-rose-700">ALMACENADO</TableCellBadge>
                         </TableCell>
                         <TableCell>
                           <span className="text-[12px] font-medium text-slate-500 italic max-w-xs block truncate">{disk.notes || 'Sin observaciones'}</span>
@@ -1041,7 +1036,7 @@ export default function Cameras({ subview }: CamerasProps) {
                             </TableCellPrimary>
                           </TableCell>
                           <TableCell>
-                            <TableCellBadge className={cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}>
+                            <TableCellBadge className={cam.status === 'active' ? 'bg-emerald-100 text-emerald-700' : cam.status === 'maintenance' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}>
                               {cam.status === 'active' ? 'ACTIVO' : cam.status === 'maintenance' ? 'MANTENIMIENTO' : 'INACTIVO'}
                             </TableCellBadge>
                           </TableCell>
@@ -1123,7 +1118,7 @@ export default function Cameras({ subview }: CamerasProps) {
                           <p className="text-[12px] font-black text-[#002855] uppercase truncate">{cam.name}</p>
                           <p className="text-[9px] font-bold text-slate-400 truncate">{cam.brand || ''} {cam.model || ''}</p>
                         </div>
-                        <span className={`shrink-0 px-2 py-0.5 text-[8px] font-black tracking-widest border ${cam.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                        <span className={`shrink-0 text-[14px] font-semibold ${cam.status === 'active' ? 'bg-emerald-100 text-emerald-700' : cam.status === 'maintenance' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>
                           {cam.status === 'active' ? 'ACTIVO' : cam.status === 'maintenance' ? 'MANTENIMIENTO' : 'INACTIVO'}
                         </span>
                       </div>
@@ -1193,8 +1188,8 @@ export default function Cameras({ subview }: CamerasProps) {
                     <div className="space-y-2.5 sm:space-y-3">
                       <DetailModalCard className="space-y-2.5 sm:space-y-3">
                         <DetailModalRow label="Estado Operativo">
-                          <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-normal tracking-widest border ${selectedCamera.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                            selectedCamera.status === 'maintenance' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-500 border-slate-200'
+                          <span className={`text-[14px] font-semibold ${selectedCamera.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                            selectedCamera.status === 'maintenance' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
                             }`}>
                             {selectedCamera.status === 'active' ? 'Activo' : selectedCamera.status === 'maintenance' ? 'Mantenimiento' : 'Inactivo'}
                           </span>
@@ -1351,8 +1346,8 @@ export default function Cameras({ subview }: CamerasProps) {
                                       <span className="text-[9px] sm:text-[10px] font-normal text-[#002855] tracking-wide">Disco #{d.disk_number}</span>
                                       {d.serial_number && <span className="block text-[8px] font-normal text-slate-400 uppercase truncate">S/N: {d.serial_number}</span>}
                                     </div>
-                                    <span className={`text-[7px] sm:text-[8px] font-normal px-1.5 sm:px-2 py-0.5 border shrink-0 ${d.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                      d.status === 'full' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-200'
+                                    <span className={`shrink-0 text-[14px] font-semibold ${d.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                                      d.status === 'full' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'
                                       }`}>
                                       {d.status?.toUpperCase() || 'OFFLINE'}
                                     </span>

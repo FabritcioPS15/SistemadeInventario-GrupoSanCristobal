@@ -44,6 +44,28 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
 
   const status = statusMap[asset.status] || { label: asset.status, color: 'slate' };
 
+  const colorClasses: Record<string, string> = {
+    emerald: 'bg-emerald-100 text-emerald-700',
+    slate: 'bg-slate-100 text-slate-600',
+    amber: 'bg-amber-100 text-amber-700',
+    rose: 'bg-rose-100 text-rose-700',
+  };
+
+  const getCondicionColor = (condicion?: string | null): string => {
+    if (condicion === 'Nuevo' || condicion === 'Bueno') return 'bg-emerald-100 text-emerald-700';
+    if (condicion === 'Regular') return 'bg-amber-100 text-amber-700';
+    if (condicion === 'Malo') return 'bg-rose-100 text-rose-700';
+    return 'bg-slate-100 text-slate-600';
+  };
+
+  const getEstadoUsoColor = (estado_uso?: string | null): string => {
+    if (estado_uso === 'Operativo') return 'bg-emerald-100 text-emerald-700';
+    if (estado_uso === 'Inoperativo') return 'bg-slate-100 text-slate-600';
+    if (estado_uso === 'En Reparación') return 'bg-amber-100 text-amber-700';
+    if (estado_uso === 'Baja') return 'bg-rose-100 text-rose-700';
+    return 'bg-slate-100 text-slate-600';
+  };
+
   return (
     <DetailModal maxWidth="7xl" onClose={onClose}>
       <StandardModalHeader
@@ -59,7 +81,7 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
             title={`${asset.brand || ''} ${asset.model || ''}`.trim() || 'SIN MARCA / MODELO'}
             icon={Package}
             badges={
-              <span className={`px-2 py-1 text-[9px] font-normal uppercase tracking-widest border border-current bg-opacity-10 bg-${status.color}-500 text-${status.color}-700 border-${status.color}-200`}>
+              <span className={`text-[14px] font-semibold ${colorClasses[status.color] || colorClasses.slate}`}>
                 {status.label}
               </span>
             }
@@ -320,13 +342,13 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
                   </div>
                   <div>
                     <label className="text-[9px] font-normal text-slate-400 uppercase tracking-widest block mb-1">Condición</label>
-                    <span className={`inline-block px-2 py-0.5 text-[9px] font-normal uppercase tracking-widest border border-current ${asset.condicion === 'Nuevo' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                    <span className={`text-[14px] font-semibold ${getCondicionColor(asset.condicion)}`}>
                       {asset.condicion || 'No especificada'}
                     </span>
                   </div>
                   <div>
                     <label className="text-[9px] font-normal text-slate-400 uppercase tracking-widest block mb-1">Estado de Uso</label>
-                    <span className={`inline-block px-2 py-0.5 text-[9px] font-normal uppercase tracking-widest border border-current ${asset.estado_uso === 'Operativo' ? 'bg-blue-50 text-blue-700' : 'bg-rose-50 text-rose-700'}`}>
+                    <span className={`text-[14px] font-semibold ${getEstadoUsoColor(asset.estado_uso)}`}>
                       {asset.estado_uso || 'No especificado'}
                     </span>
                   </div>

@@ -93,7 +93,6 @@ export default function TecnologiaForm({ form, editAsset, onClose }: Props) {
             <FormInput name="descripcion" value={formData.descripcion} onChange={handleChange} placeholder="Ej. Laptop para contabilidad" />
           </FormField>
         </div>
-
         <div className="border border-slate-200 bg-slate-50/50 p-3 rounded-md space-y-3">
           <div className="flex items-center gap-2">
             <div className="w-1 h-4 bg-blue-500 shrink-0" />

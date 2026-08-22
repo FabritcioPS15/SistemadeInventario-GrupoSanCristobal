@@ -1,10 +1,10 @@
 /**
- * Badge de estado con colores predefinidos.
+ * Badge de estado con fondo suave resaltado.
  *
  * CÓMO AGREGAR UN NUEVO ESTADO:
  * 1. Agrega la entrada a defaultStatusMap (ej: "mi_estado": { label: "Mi Estado", color: "blue" })
  * 2. Asegúrate de que el color esté en colorClasses
- * 3. Si el color no existe, agrégalo: { bg, text, border, dot }
+ * 3. Si el color no existe, agrégalo al mapa colorClasses
  *
  * TIP: usa customMap cuando el mapeo sea específico de un módulo
  * y no deba compartirse globalmente.
@@ -18,22 +18,20 @@ interface StatusBadgeProps {
   className?: string;
 }
 
-const colorClasses: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500' },
-  rose: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', dot: 'bg-rose-500' },
-  amber: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500' },
-  slate: { bg: 'bg-slate-100', text: 'text-slate-600', border: 'border-slate-200', dot: 'bg-slate-400' },
-  blue: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-500' },
-  orange: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-500' },
-  green: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-500' },
-  red: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500' },
-  purple: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', dot: 'bg-purple-500' },
-};
-
-const sizeClasses = {
-  sm: 'px-1.5 py-0.5 text-[8px]',
-  md: 'px-2 py-1 text-[9px]',
-  lg: 'px-3 py-1.5 text-[10px]',
+const colorClasses: Record<string, string> = {
+  emerald: 'bg-emerald-100 text-emerald-700',
+  amber: 'bg-amber-100 text-amber-700',
+  rose: 'bg-rose-100 text-rose-700',
+  red: 'bg-red-100 text-red-700',
+  blue: 'bg-blue-100 text-blue-700',
+  orange: 'bg-orange-100 text-orange-700',
+  slate: 'bg-slate-100 text-slate-600',
+  violet: 'bg-violet-100 text-violet-700',
+  teal: 'bg-teal-100 text-teal-700',
+  indigo: 'bg-indigo-100 text-indigo-700',
+  yellow: 'bg-yellow-100 text-yellow-700',
+  green: 'bg-green-100 text-green-700',
+  purple: 'bg-purple-100 text-purple-700',
 };
 
 const defaultStatusMap: Record<string, { label: string; color: string }> = {
@@ -65,18 +63,13 @@ const defaultStatusMap: Record<string, { label: string; color: string }> = {
 export default function StatusBadge({
   status,
   customMap,
-  size = 'md',
-  showDot = true,
   className = '',
 }: StatusBadgeProps) {
   const config = customMap?.[status] || defaultStatusMap[status] || { label: status, color: 'slate' };
-  const colors = colorClasses[config.color] || colorClasses.slate;
+  const colorClass = colorClasses[config.color] || 'bg-slate-100 text-slate-600';
 
   return (
-    <span
-      className={`inline-flex items-center gap-1 font-semibold uppercase tracking-widest border rounded-none ${colors.bg} ${colors.text} ${colors.border} ${sizeClasses[size]} ${className}`}
-    >
-      {showDot && <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />}
+    <span className={`text-[14px] font-semibold ${colorClass} ${className}`}>
       {config.label}
     </span>
   );

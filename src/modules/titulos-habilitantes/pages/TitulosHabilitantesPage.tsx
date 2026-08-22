@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, MapPin, Search, FileText, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Trash2, MapPin, Search, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import Pagination from '../../../shared/components/ui/Pagination';
 import { supabase, Location } from '../../../shared/services/supabase';
 import { generatePDF, generateExcel } from '../../../shared/utils/exportUtils';
+import { BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../../app/providers/AuthContext';
 import TituloHabilitanteForm from '../forms/TituloHabilitanteForm';
@@ -47,6 +48,7 @@ export default function TitulosHabilitantes() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedRubros, setSelectedRubros] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { selectionMode, toggleSelectionMode } = useSelectionMode();
 
@@ -116,7 +118,7 @@ export default function TitulosHabilitantes() {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
     if (data) {
       // Filtrar para mostrar solo las sedes tipo CITV, ESCON y ECSAL
       const citvLocations = data.filter(loc => ['revision', 'escuela_conductores', 'policlinico'].includes(loc.type));
@@ -175,8 +177,13 @@ export default function TitulosHabilitantes() {
     const matchesLocation = selectedLocations.length === 0 ||
       selectedLocations.length === locations.length ||
       selectedLocations.includes(t.ubicacion_id || '');
+      
+    const rubroEntries = Object.keys(BUSINESS_TYPE_LABELS);
+    const matchesRubro = selectedRubros.length === 0 || 
+      selectedRubros.length === rubroEntries.length ||
+      selectedRubros.includes(t.locations?.business_type || '');
 
-    return matchesSearch && matchesLocation;
+    return matchesSearch && matchesLocation && matchesRubro;
   });
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -246,10 +253,7 @@ export default function TitulosHabilitantes() {
     if (daysLeft <= 0) {
       return (
         <div className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-sm">
-            <AlertTriangle size={11} className="text-rose-500 shrink-0" />
-            Vencido ({Math.abs(daysLeft)}d)
-          </span>
+          <span className="text-[14px] font-semibold bg-rose-100 text-rose-700">Vencido ({Math.abs(daysLeft)}d)</span>
           <span className="text-[10px] font-semibold text-rose-600/80 ml-1">{dateStr}</span>
         </div>
       );
@@ -258,10 +262,7 @@ export default function TitulosHabilitantes() {
     if (daysLeft <= 30) {
       return (
         <div className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
-            <AlertTriangle size={11} className="text-amber-500 shrink-0" />
-            Vence {daysLeft}d
-          </span>
+          <span className="text-[14px] font-semibold bg-amber-100 text-amber-700">Vence {daysLeft}d</span>
           <span className="text-[10px] font-semibold text-amber-600/80 ml-1">{dateStr}</span>
         </div>
       );
@@ -269,11 +270,8 @@ export default function TitulosHabilitantes() {
 
     return (
       <div className="flex flex-col items-start gap-1">
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm">
-          <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
-          Vigente ({daysLeft}d)
-        </span>
-        <span className="text-[10px] font-semibold text-slate-500 ml-1">{dateStr}</span>
+        <span className="text-[14px] font-semibold bg-emerald-100 text-emerald-700">Vigente ({daysLeft}d)</span>
+        <span className="text-[14px] font-semibold text-slate-800 ml-1">{dateStr}</span>
       </div>
     );
   };
@@ -362,21 +360,22 @@ export default function TitulosHabilitantes() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Buscar..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[12px] text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-semibold text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
         >
           <FilterBar
             filters={[
+              { key: 'business_type', placeholder: 'TODOS LOS RUBROS', icon: MapPin, iconClassName: 'text-blue-500', wrapperClassName: 'md:min-w-[220px]', options: Object.keys(BUSINESS_TYPE_LABELS).map(type => ({ value: type, label: BUSINESS_TYPE_LABELS[type as keyof typeof BUSINESS_TYPE_LABELS] })) },
               { key: 'location', multiple: false, placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
             ]}
-            values={{ location: selectedLocations[0] || '' }}
-            onChange={(_key, value) => {
-              setSelectedLocations(value ? [value as string] : []);
+            values={{ location: selectedLocations[0] || '', business_type: selectedRubros }}
+            onChange={(key, value) => {
+              if (key === 'location') setSelectedLocations(value ? [value as string] : []);
+              if (key === 'business_type') setSelectedRubros(value as string[]);
               setCurrentPage(1);
             }}
           />
@@ -506,7 +505,7 @@ export default function TitulosHabilitantes() {
                     )}
                     <div className="min-w-0 flex-1">
                       <p className="text-[12px] font-semibold text-[#002855] truncate leading-tight">{titulo.titulo}</p>
-                      <p className="text-[10px] font-semibold text-slate-500 uppercase">{titulo.tipo}</p>
+                      <p className="text-[14px] font-semibold text-slate-800 uppercase">{titulo.tipo}</p>
                     </div>
                     {renderStatus(titulo)}
                   </div>

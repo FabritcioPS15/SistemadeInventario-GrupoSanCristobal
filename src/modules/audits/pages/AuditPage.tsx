@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Trash2, Edit, List, ClipboardCheck, LayoutGrid, X, User, Calendar, Plus, MapPin } from 'lucide-react';
 import { useHeaderVisible } from '../../../shared/hooks/useHeaderVisible';
 import { supabase, BranchAudit } from '../../../shared/services/supabase';
@@ -15,7 +15,7 @@ type ViewType = 'history' | 'form';
 
 export default function Audit() {
   const { canEdit } = useAuth();
-  const { confirm, success: notifySuccess, error: notifyError } = useNotify();
+  const { confirm, error: notifyError } = useNotify();
   const [view, setView] = useState<ViewType>('history');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [audits, setAudits] = useState<BranchAudit[]>([]);
@@ -52,7 +52,6 @@ export default function Audit() {
     if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchAudits();
     setSelectedIds([]);
-    notifySuccess(`${selectedIds.length} auditorías eliminadas correctamente`, 'Eliminadas');
   };
 
   useEffect(() => {
@@ -72,7 +71,6 @@ export default function Audit() {
     const { error } = await supabase.from('branch_audits').delete().eq('id', id);
     if (error) return notifyError('Error al eliminar: ' + error.message);
     await fetchAudits();
-    notifySuccess('Auditoría eliminada correctamente', 'Eliminada');
   };
 
   const handleEdit = (audit: BranchAudit) => { setEditingAudit(audit); setView('form'); };
@@ -86,11 +84,11 @@ export default function Audit() {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'excellent': return { label: 'EXCELENTE', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
-      case 'good': return { label: 'BUENO', color: 'bg-blue-50 text-blue-800 border-blue-100' };
-      case 'regular': return { label: 'REGULAR', color: 'bg-amber-50 text-amber-800 border-amber-200' };
-      case 'critical': return { label: 'CRÍTICO', color: 'bg-rose-50 text-rose-800 border-rose-200' };
-      default: return { label: status, color: 'bg-slate-50 text-slate-800 border-slate-200' };
+      case 'excellent': return { label: 'EXCELENTE', color: 'bg-emerald-100 text-emerald-700' };
+      case 'good': return { label: 'BUENO', color: 'bg-teal-100 text-teal-700' };
+      case 'regular': return { label: 'REGULAR', color: 'bg-amber-100 text-amber-700' };
+      case 'critical': return { label: 'CRÍTICO', color: 'bg-red-100 text-red-700' };
+      default: return { label: status, color: 'bg-slate-100 text-slate-600' };
     }
   };
 
@@ -117,7 +115,6 @@ export default function Audit() {
           <HeaderSearch
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
-            placeholder="Buscar..."
             variant="light"
           />
 
@@ -232,7 +229,7 @@ export default function Audit() {
                       <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rotate-45 -mr-16 -mt-16 group-hover:bg-blue-50 transition-colors" />
                       <div className="p-7 flex-1 flex flex-col">
                         <div className="flex items-start justify-between mb-8 relative z-10">
-                          <span className={`px-3 py-1 border text-[10px] font-black tracking-wider ${statusCfg.color}`}>{statusCfg.label}</span>
+                          <span className={`text-[10px] font-semibold ${statusCfg.color}`}>{statusCfg.label}</span>
                         </div>
 
                         <div className="mb-8">
@@ -284,7 +281,7 @@ export default function Audit() {
                             <p className="text-[12px] font-black text-[#002855] uppercase tracking-tight truncate leading-tight">{audit.id.slice(0, 8)}</p>
                             <p className="text-[10px] font-semibold text-slate-400 italic">{audit.auditor_name}</p>
                           </div>
-                          <span className={`shrink-0 text-[9px] font-semibold px-1.5 py-0.5 border ${statusCfg.color}`}>{statusCfg.label}</span>
+                          <span className={`text-[10px] font-semibold ${statusCfg.color}`}>{statusCfg.label}</span>
                         </div>
                         <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-500 flex-wrap">
                           <span className="flex items-center gap-0.5">
@@ -361,7 +358,7 @@ export default function Audit() {
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
-                              <span className={`px-4 py-1.5 text-[10px] font-black tracking-wider border ${statusCfg.color}`}>{statusCfg.label}</span>
+                              <span className={`text-[10px] font-semibold ${statusCfg.color}`}>{statusCfg.label}</span>
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end gap-2">

@@ -138,7 +138,7 @@ export default function CameraDiskManager({ disks, onChange }: CameraDiskManager
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-[9px] font-normal text-[#002855] bg-white border border-slate-200 w-5 h-5 flex items-center justify-center shrink-0">{disk.disk_number}</span>
               <span className="text-[10px] font-normal text-[#002855] truncate">{disk.disk_type} {disk.total_capacity_gb}GB</span>
-              <span className={`text-[8px] font-normal px-1 py-0.5 ${disk.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+              <span className={`text-[14px] font-semibold ${disk.status === 'active' ? 'bg-emerald-100 text-emerald-700' : disk.status === 'maintenance' ? 'bg-amber-100 text-amber-700' : disk.status === 'full' || disk.status === 'error' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
                 {disk.status === 'active' ? 'Activo' : disk.status}
               </span>
               {disk.brand && <span className="text-[8px] font-normal text-slate-400 truncate hidden sm:inline">{disk.brand}</span>}

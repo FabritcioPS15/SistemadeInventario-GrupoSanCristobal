@@ -1,4 +1,4 @@
-﻿// =============================================================================
+// =============================================================================
 // PainpointsPage.tsx — Página de Puntos Críticos (Pain Points)
 // Funcionalidades:
 //   - Visualización de incidencias críticas en formato grid o lista
@@ -78,7 +78,7 @@ export default function Painpoints() {
                     <div className="flex items-center gap-3">
                         <div className="w-1.5 h-6 bg-amber-600 rounded-none" />
                         <h3 className="text-[13px] font-semibold text-[#002855] leading-tight tracking-[0.2em]">Registro de Incidencias</h3>
-                        <span className="bg-amber-50 text-amber-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest border border-amber-100">{painpoints.length} ACTIVOS</span>
+                        <span className="text-[14px] font-semibold text-slate-800">{painpoints.length} ACTIVOS</span>
                     </div>
                 </div>
 
@@ -90,7 +90,7 @@ export default function Painpoints() {
                                 <div className="p-6">
                                     <div className="flex justify-between items-start mb-6">
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] font-semibold text-amber-600 uppercase tracking-widest mb-1 italic px-2 py-0.5 bg-amber-50 border border-amber-100 inline-block w-fit">{pp.category}</span>
+                                            <span className="text-[14px] font-semibold text-slate-800 mb-1 w-fit">{pp.category}</span>
                                             <span className="text-[8px] font-mono text-slate-300 font-semibold uppercase tracking-widest">REG: {pp.id}</span>
                                         </div>
                                         <div className="p-2 bg-slate-50 text-slate-400 group-hover:bg-amber-600 group-hover:text-white transition-all duration-500 shadow-inner">
@@ -107,7 +107,7 @@ export default function Painpoints() {
                                         </div>
                                         <div className="flex items-center justify-between text-[11px] border-b border-slate-100 pb-2">
                                             <span className="font-semibold text-slate-400 uppercase tracking-widest">Prioridad Técnica</span>
-                                            <span className={`font-semibold uppercase tracking-widest ${pp.status === 'Crítico' ? 'text-rose-600' : 'text-amber-600'}`}>{pp.status}</span>
+                                            <span className={`font-semibold uppercase tracking-widest ${pp.status === 'Medio' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{pp.status}</span>
                                         </div>
                                     </div>
 
@@ -143,7 +143,7 @@ export default function Painpoints() {
                                         </TableCell>
                                         <TableCell><span className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest">{pp.location}</span></TableCell>
                                         <TableCell className="text-center">
-                                            <span className={`px-4 py-1.5 text-[10px] font-semibold tracking-wider border ${pp.status === 'Crítico' ? 'border-rose-200 text-rose-600 bg-rose-50/50' : 'border-amber-200 text-amber-600 bg-amber-50/50'}`}>{pp.status}</span>
+                                            <span className={`text-[10px] font-semibold tracking-wider ${pp.status === 'Medio' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{pp.status}</span>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <button className="text-[10px] font-semibold text-[#002855] hover:text-amber-600 uppercase tracking-widest">VER DETALLE →</button>

@@ -30,10 +30,19 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '.
 // Estilos visuales para las prioridades de tickets
 // P1 (crítica) es la más urgente, P4 (baja) la menos
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string, badge: string }> = {
-    critical: { label: 'P1', color: 'text-red-700 bg-red-50 border-red-200', dot: 'bg-red-600', badge: 'bg-red-600 text-white' },
-    high: { label: 'P2', color: 'text-orange-700 bg-orange-50 border-orange-200', dot: 'bg-orange-600', badge: 'bg-orange-600 text-white' },
-    medium: { label: 'P3', color: 'text-yellow-700 bg-yellow-50 border-yellow-200', dot: 'bg-yellow-600', badge: 'bg-yellow-600 text-white' },
-    low: { label: 'P4', color: 'text-green-700 bg-green-50 border-green-200', dot: 'bg-green-600', badge: 'bg-green-600 text-white' }
+    critical: { label: 'P1', color: 'bg-red-100 text-red-700', dot: 'bg-red-600', badge: 'bg-red-600 text-white' },
+    high: { label: 'P2', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-600', badge: 'bg-orange-600 text-white' },
+    medium: { label: 'P3', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-600', badge: 'bg-amber-600 text-white' },
+    low: { label: 'P4', color: 'bg-slate-100 text-slate-600', dot: 'bg-slate-500', badge: 'bg-slate-500 text-white' }
+};
+
+// Colores resaltados para los estados de tickets (fondo suave, sin borde)
+const STATUS_STYLES: Record<string, string> = {
+    open: 'bg-amber-100 text-amber-700',
+    in_progress: 'bg-blue-100 text-blue-700',
+    resolved: 'bg-emerald-100 text-emerald-700',
+    closed: 'bg-slate-100 text-slate-600',
+    archived: 'bg-slate-100 text-slate-600'
 };
 
 export default function Tickets() {
@@ -618,7 +627,7 @@ export default function Tickets() {
                                                         <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer">
                                                             <div className="flex items-center justify-between mb-2">
                                                                 <span className="text-[10px] font-semibold text-[#002855] uppercase">#TK-{t.id.slice(0, 6)}</span>
-                                                                <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider border ${prio.color} rounded-none`}>
+                                                                <span className={`text-[14px] font-semibold ${prio.color}`}>
                                                                     {prio.label}
                                                                 </span>
                                                             </div>
@@ -629,8 +638,7 @@ export default function Tickets() {
                                                                 <span>{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}</span>
                                                             </div>
                                                             <div className="flex items-center justify-between">
-                                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold tracking-wider border rounded-none ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' : t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' : t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
-                                                                    <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                                                <span className={`text-[14px] font-semibold ${STATUS_STYLES[t.status] || 'bg-slate-100 text-slate-600'}`}>
                                                                     {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                                 </span>
                                                                 <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[140px]">{t.attendant?.full_name || 'Sin asignar'}</span>
@@ -667,12 +675,7 @@ export default function Tickets() {
                                                                         </div>
                                                                     </TableCell>
                                                                     <TableCell>
-                                                                        <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
-                                                                            t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
-                                                                                t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
-                                                                                    'text-slate-600 bg-slate-100 border-slate-200'
-                                                                            }`}>
-                                                                            <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                                                        <span className={`text-[14px] font-semibold ${STATUS_STYLES[t.status] || 'bg-slate-100 text-slate-600'}`}>
                                                                             {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                                         </span>
                                                                     </TableCell>
@@ -684,8 +687,7 @@ export default function Tickets() {
                                                                         ) : <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">Sin asignar</span>}
                                                                     </TableCell>
                                                                     <TableCell>
-                                                                        <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
-                                                                            <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
+                                                                        <span className={`text-[14px] font-semibold ${prio.color}`}>
                                                                             {prio.label}
                                                                         </span>
                                                                     </TableCell>
@@ -722,7 +724,7 @@ export default function Tickets() {
                                                     <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer">
                                                         <div className="flex items-center justify-between mb-2">
                                                             <span className="text-[10px] font-semibold text-[#002855] uppercase">#TK-{t.id.slice(0, 6)}</span>
-                                                            <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider border ${prio.color} rounded-none`}>
+                                                            <span className={`text-[14px] font-semibold ${prio.color}`}>
                                                                 {prio.label}
                                                             </span>
                                                         </div>
@@ -733,8 +735,7 @@ export default function Tickets() {
                                                             <span>{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}</span>
                                                         </div>
                                                         <div className="flex items-center justify-between">
-                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold tracking-wider border rounded-none ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' : t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' : t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
-                                                                <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                                            <span className={`text-[14px] font-semibold ${STATUS_STYLES[t.status] || 'bg-slate-100 text-slate-600'}`}>
                                                                 {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                             </span>
                                                             <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[140px]">{t.requester?.full_name || 'N/A'}</span>
@@ -771,12 +772,7 @@ export default function Tickets() {
                                                                     </div>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
-                                                                        t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
-                                                                            t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
-                                                                                'text-slate-600 bg-slate-100 border-slate-200'
-                                                                        }`}>
-                                                                        <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500 animate-pulse' : t.status === 'resolved' ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                                                    <span className={`text-[14px] font-semibold ${STATUS_STYLES[t.status] || 'bg-slate-100 text-slate-600'}`}>
                                                                         {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                                     </span>
                                                                 </TableCell>
@@ -784,8 +780,7 @@ export default function Tickets() {
                                                                     <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest">{t.requester?.full_name}</span>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
-                                                                        <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
+                                                                    <span className={`text-[14px] font-semibold ${prio.color}`}>
                                                                         {prio.label}
                                                                     </span>
                                                                 </TableCell>
@@ -821,7 +816,7 @@ export default function Tickets() {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-orange-500" />
                                                 <h3 className="text-[11px] font-semibold text-[#002855] uppercase tracking-[0.2em]">En Espera</h3>
-                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-semibold">{filteredTickets.pending.length}</span>
+                                                <span className="text-[10px] font-semibold text-slate-600">{filteredTickets.pending.length}</span>
                                             </div>
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
@@ -834,7 +829,7 @@ export default function Tickets() {
                                                 >
                                                     <div className="flex justify-between items-start mb-2">
                                                         <span className="text-[8px] sm:text-[9px] font-semibold text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
-                                                        <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-semibold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                        <span className={`text-[14px] font-semibold ${PRIORITY_STYLES[t.priority]?.color || 'bg-slate-100 text-slate-600'}`}>
                                                             {PRIORITY_STYLES[t.priority]?.label || 'P4'}
                                                         </span>
                                                     </div>
@@ -884,7 +879,7 @@ export default function Tickets() {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-blue-500" />
                                                 <h3 className="text-[11px] font-semibold text-[#002855] uppercase tracking-[0.2em]">En Proceso</h3>
-                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-semibold">{filteredTickets.inProgress.length}</span>
+                                                <span className="text-[10px] font-semibold text-slate-600">{filteredTickets.inProgress.length}</span>
                                             </div>
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
@@ -898,7 +893,7 @@ export default function Tickets() {
                                                     <div className="flex justify-between items-start mb-2">
                                                         <span className="text-[8px] sm:text-[9px] font-semibold text-slate-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-semibold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                            <span className={`text-[14px] font-semibold ${PRIORITY_STYLES[t.priority]?.color || 'bg-slate-100 text-slate-600'}`}>
                                                                 {PRIORITY_STYLES[t.priority]?.label || 'P4'}
                                                             </span>
                                                             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
@@ -950,7 +945,7 @@ export default function Tickets() {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-emerald-500" />
                                                 <h3 className="text-[11px] font-semibold text-[#002855] uppercase tracking-[0.2em]">Finalizados</h3>
-                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-semibold">{filteredTickets.resolved.length}</span>
+                                                <span className="text-[10px] font-semibold text-slate-600">{filteredTickets.resolved.length}</span>
                                             </div>
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
@@ -963,7 +958,7 @@ export default function Tickets() {
                                                 >
                                                     <div className="flex justify-between items-start mb-2">
                                                         <span className="text-[8px] sm:text-[9px] font-semibold text-emerald-300 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
-                                                        <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-semibold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                        <span className={`text-[14px] font-semibold ${PRIORITY_STYLES[t.priority]?.color || 'bg-slate-100 text-slate-600'}`}>
                                                             {PRIORITY_STYLES[t.priority]?.label || 'P4'}
                                                         </span>
                                                     </div>
@@ -1013,7 +1008,7 @@ export default function Tickets() {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-2.5 h-2.5 rounded-none bg-slate-400" />
                                                 <h3 className="text-[11px] font-semibold text-[#002855] uppercase tracking-[0.2em]">Cerrados</h3>
-                                                <span className="bg-slate-50 text-[#002855] border border-slate-200 px-2 py-0.5 rounded-none text-[10px] font-semibold">{filteredTickets.closed.length}</span>
+                                                <span className="text-[10px] font-semibold text-slate-600">{filteredTickets.closed.length}</span>
                                             </div>
                                         </div>
                                         <div className="max-h-[400px] overflow-y-auto space-y-3 sm:space-y-4 custom-scrollbar pr-2">
@@ -1053,7 +1048,7 @@ export default function Tickets() {
                                                     <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-slate-50/30 p-4 sm:p-5 rounded-none border border-slate-200 hover:border-slate-400 shadow-sm transition-all cursor-pointer group">
                                                         <div className="flex justify-between items-start mb-2">
                                                             <span className="text-[8px] sm:text-[9px] font-semibold text-slate-400 uppercase tracking-widest">#TK-{t.id.slice(0, 6)}</span>
-                                                            <span className={`px-2 py-1 rounded-none text-[8px] sm:text-[9px] font-semibold uppercase ${PRIORITY_STYLES[t.priority]?.badge || 'bg-gray-600 text-white'}`}>
+                                                            <span className={`text-[14px] font-semibold ${PRIORITY_STYLES[t.priority]?.color || 'bg-slate-100 text-slate-600'}`}>
                                                                 {PRIORITY_STYLES[t.priority]?.label || 'P4'}
                                                             </span>
                                                         </div>
@@ -1141,7 +1136,7 @@ export default function Tickets() {
                                                     <div key={t.id} onClick={() => navigate(`/ticket/${t.id}`)} className="bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer">
                                                         <div className="flex items-center justify-between mb-2">
                                                             <span className="text-[10px] font-semibold text-[#002855] uppercase">#TK-{t.id.slice(0, 6)}</span>
-                                                            <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider border ${prio.color} rounded-none`}>
+                                                            <span className={`text-[14px] font-semibold ${prio.color}`}>
                                                                 {prio.label}
                                                             </span>
                                                         </div>
@@ -1152,8 +1147,7 @@ export default function Tickets() {
                                                             <span>{new Date(String(t.created_at).includes('T') ? String(t.created_at) : `${t.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}</span>
                                                         </div>
                                                         <div className="flex items-center justify-between">
-                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-semibold tracking-wider border rounded-none ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' : t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' : t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
-                                                                <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+                                                            <span className={`text-[14px] font-semibold ${STATUS_STYLES[t.status] || 'bg-slate-100 text-slate-600'}`}>
                                                                 {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                             </span>
                                                             <span className="text-[10px] font-semibold text-slate-600 truncate max-w-[140px]">{t.requester?.full_name || 'N/A'}</span>
@@ -1189,12 +1183,7 @@ export default function Tickets() {
                                                                     </div>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border rounded-none inline-flex items-center gap-1 ${t.status === 'open' ? 'text-orange-700 bg-orange-50 border-orange-200' :
-                                                                        t.status === 'in_progress' ? 'text-blue-700 bg-blue-50 border-blue-200' :
-                                                                            t.status === 'resolved' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' :
-                                                                                'text-slate-600 bg-slate-100 border-slate-200'
-                                                                        }`}>
-                                                                        <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'open' ? 'bg-orange-500' : t.status === 'in_progress' ? 'bg-blue-500' : 'bg-emerald-500'}`} />
+                                                                    <span className={`text-[14px] font-semibold ${STATUS_STYLES[t.status] || 'bg-slate-100 text-slate-600'}`}>
                                                                         {t.status === 'open' ? 'Pendiente' : t.status === 'in_progress' ? 'En Proceso' : t.status === 'resolved' ? 'Resuelto' : 'Cerrado'}
                                                                     </span>
                                                                 </TableCell>
@@ -1205,8 +1194,7 @@ export default function Tickets() {
                                                                     </div>
                                                                 </TableCell>
                                                                 <TableCell>
-                                                                    <span className={`px-2 py-1 text-[10px] font-semibold tracking-wider border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
-                                                                        <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
+                                                                    <span className={`text-[14px] font-semibold ${prio.color}`}>
                                                                         {prio.label}
                                                                     </span>
                                                                 </TableCell>

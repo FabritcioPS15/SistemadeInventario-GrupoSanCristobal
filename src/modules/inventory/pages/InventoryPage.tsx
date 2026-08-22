@@ -29,7 +29,6 @@ import {
   TableCell,
   TableCellPrimary,
   TableCellSecondary,
-  TableCellBadge,
   TableActionButton,
 } from '../../../shared/components/ui/Table';
 
@@ -37,6 +36,25 @@ type InventoryProps = {
   categoryFilter?: string;
   subcategoryFilter?: string;
 };
+
+const STATUS_COLOR_CLASSES: Record<string, string> = {
+  emerald: 'bg-emerald-100 text-emerald-700',
+  slate: 'bg-slate-100 text-slate-600',
+  amber: 'bg-amber-100 text-amber-700',
+  rose: 'bg-rose-100 text-rose-700',
+  blue: 'bg-blue-100 text-blue-700',
+  red: 'bg-red-100 text-red-700',
+  orange: 'bg-orange-100 text-orange-700',
+  violet: 'bg-violet-100 text-violet-700',
+  teal: 'bg-teal-100 text-teal-700',
+  indigo: 'bg-indigo-100 text-indigo-700',
+  yellow: 'bg-yellow-100 text-yellow-700',
+  green: 'bg-green-100 text-green-700',
+  purple: 'bg-purple-100 text-purple-700',
+};
+
+const getStatusColorClass = (estado_uso?: string | null): string =>
+  STATUS_COLOR_CLASSES[STATUS_MAP[estado_uso || '']?.color] || STATUS_COLOR_CLASSES.slate;
 
 export default function Inventory({ categoryFilter, subcategoryFilter }: InventoryProps) {
   const { success: notifySuccess, error: notifyError, confirm } = useNotify();
@@ -204,7 +222,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
       const sedeName = selectedLocations.length === 1 ? locations.find(l => l.id === selectedLocations[0])?.name : undefined;
 
       const data = itemsToExport.map((a: any) => ({
-        code: a.codigo_unico,
+        code: a.codigo_unico || '—',
+        equipo: a.item || a.descripcion || a.subcategories?.name || '—',
         category: a.categories?.name || '—',
         subcategory: a.subcategories?.name || '—',
         brand: a.brand || '—',
@@ -212,8 +231,8 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         serial: a.serial_number || '—',
         location: a.locations?.name || '—',
         area: a.areas?.name || '—',
-        status: a.status || '—',
-        purchase_date: a.fecha_adquisicion ? new Date(String(a.fecha_adquisicion).includes('T') ? String(a.fecha_adquisicion) : `${a.fecha_adquisicion}T12:00:00`).toLocaleDateString() : '—',
+        status: a.status || a.estado_uso || '—',
+        purchase_date: a.fecha_adquisicion ? new Date(String(a.fecha_adquisicion).includes('T') ? String(a.fecha_adquisicion) : `${a.fecha_adquisicion}T12:00:00`).toLocaleDateString('es-PE') : '—',
         notes: a.notes || '—'
       }));
 
@@ -223,6 +242,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         sede: sedeName,
         columns: [
           { header: 'CÓDIGO', key: 'code', width: 15 },
+          { header: 'NOMBRE DEL EQUIPO', key: 'equipo', width: 28 },
           { header: 'CATEGORÍA', key: 'category', width: 25 },
           { header: 'SUBCATEGORÍA', key: 'subcategory', width: 25 },
           { header: 'MARCA', key: 'brand', width: 15 },
@@ -459,18 +479,13 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                             )}
                           </div>
                         </div>
-                        <span className={`inline-flex items-center px-2 py-0.5 text-[9px] font-semibold tracking-wide border rounded-none whitespace-nowrap shrink-0 ${asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          asset.estado_uso === 'Inoperativo' ? 'bg-rose-50 text-rose-600 border-rose-200' :
-                            asset.estado_uso === 'En Reparación' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                              asset.estado_uso === 'Baja' ? 'bg-slate-100 text-slate-500 border-slate-200' :
-                                'bg-slate-50 text-slate-500 border-slate-200'
-                          }`}>
+                        <span className={`text-[14px] font-semibold ${getStatusColorClass(asset.estado_uso)} whitespace-nowrap shrink-0`}>
                           {asset.estado_uso || 'Sin estado'}
                         </span>
                       </div>
 
                       {asset.codigo_unico && (
-                        <span className="inline-flex items-center text-[9px] font-semibold text-slate-400 font-mono mt-2 bg-slate-100 px-2 py-0.5 rounded w-max">
+                        <span className="text-[9px] font-semibold text-slate-400 font-mono">
                           CÓD: {asset.codigo_unico}
                         </span>
                       )}
@@ -607,14 +622,11 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                             </TableCellPrimary>
                           </TableCell>
                           <TableCell className="whitespace-nowrap">
-                            <TableCellBadge className={asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                              asset.estado_uso === 'Inoperativo' ? 'bg-rose-50 text-rose-600 border-rose-200' :
-                                asset.estado_uso === 'En Reparación' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                  asset.estado_uso === 'Baja' ? 'bg-slate-100 text-slate-500 border-slate-200' :
-                                    'bg-slate-50 text-slate-500 border-slate-200'
-                            }>
+                            <TableCellSecondary>
+                            <span className={getStatusColorClass(asset.estado_uso)}>
                               {asset.estado_uso || 'Sin estado'}
-                            </TableCellBadge>
+                            </span>
+                          </TableCellSecondary>
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
@@ -689,14 +701,11 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                               }}
                             />
                           )}
-                          <span className="text-[10px] font-semibold text-[#002855] bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-none font-mono">
+                          <span className="text-[10px] font-semibold text-[#002855] font-mono">
                             CÓD: {asset.codigo_unico || 'N/A'}
                           </span>
                         </div>
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-semibold tracking-wider border rounded-none ${asset.estado_uso === 'Operativo' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          asset.estado_uso === 'Inoperativo' ? 'bg-slate-50 text-slate-700 border-slate-200' :
-                            asset.estado_uso === 'En Reparación' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                              'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                        <span className={`text-[14px] font-semibold ${STATUS_COLOR_CLASSES[status.color] || STATUS_COLOR_CLASSES.slate}`}>
                           {status.label}
                         </span>
                       </div>

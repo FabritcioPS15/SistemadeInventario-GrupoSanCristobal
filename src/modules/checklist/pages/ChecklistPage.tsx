@@ -221,7 +221,6 @@ export default function Checklist({ type }: { type?: string }) {
                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
                      <input
                         type="text"
-                        placeholder="Buscar..."
                         value={searchTerm}
                         onChange={(e) => {
                            setSearchTerm(e.target.value);
@@ -336,7 +335,7 @@ export default function Checklist({ type }: { type?: string }) {
                                           )}
                                        </div>
                                     </div>
-                                    <span className={`shrink-0 px-2 py-0.5 text-[9px] font-normal uppercase tracking-widest border ${color === 'blue' ? 'border-blue-200 text-blue-600 bg-blue-50' : color === 'emerald' ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : 'border-orange-200 text-orange-600 bg-orange-50'}`}>
+                                    <span className="shrink-0 text-[14px] font-semibold text-slate-800">
                                        {label}
                                     </span>
                                  </div>
@@ -427,7 +426,7 @@ export default function Checklist({ type }: { type?: string }) {
                                           </div>
                                        </TableCell>
                                        <TableCell className="text-center">
-                                          <span className={`px-2 py-0.5 text-[10px] font-normal uppercase tracking-widest border ${color === 'blue' ? 'border-blue-200 text-blue-600 bg-blue-50' : color === 'emerald' ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : color === 'orange' ? 'border-orange-200 text-orange-600 bg-orange-50' : 'border-slate-200 text-slate-600 bg-slate-50'}`}>
+                                          <span className="text-[14px] font-semibold text-slate-800">
                                              {label}
                                           </span>
                                        </TableCell>

@@ -112,7 +112,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
         { id: 'inventory-all', label: 'Ver Todo' },
         { id: 'cat-tecnologia', label: 'Tecnología' },
         { id: 'cat-seguridad', label: 'Seguridad y Control' },
-        { id: 'cat-operativos', label: 'Equipos Operativos' },
+        { id: 'cat-operativos', label: 'Equipos de Línea' },
         { id: 'cat-mobiliario', label: 'Mobiliario' },
         { id: 'cat-suministros', label: 'Útiles y Suministros' },
         { id: 'cat-flota', label: 'Flota Vehicular' },
@@ -733,6 +733,9 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
 
     if (formData.password && formData.password.trim() !== '') {
       dataToSave.password = formData.password;
+    } else if (editUser) {
+      // En edición, nunca enviar una contraseña vacía: conserva la actual en BD.
+      delete dataToSave.password;
     }
 
     try {
@@ -1023,6 +1026,7 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
                 required={!editUser}
                 error={errors.password}
                 className="pr-10"
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -1035,6 +1039,11 @@ export default function UserForm({ onClose, onSave, editUser }: UserFormProps) {
             {!editUser && !formData.password && (
               <p className="text-blue-600 text-sm mt-1">
                 La contraseña debe tener al menos 6 caracteres
+              </p>
+            )}
+            {editUser && (
+              <p className="text-blue-600 text-sm mt-1">
+                Déjalo en blanco para conservar la contraseña actual
               </p>
             )}
           </FormField>

@@ -10,10 +10,6 @@ import DetailModal, {
   DetailModalHeader,
   DetailModalBody,
   StandardModalFooter,
-  DetailModalGrid,
-  DetailModalSection,
-  DetailModalCard,
-  DetailModalRow,
 } from '../../../shared/components/ui/DetailModal';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
 import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
@@ -234,19 +230,6 @@ export default function MTCAccesos() {
     }
   };
 
-  const getAccessTypeColor = (type: string) => {
-    switch (type) {
-      case 'web': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'api': return 'bg-green-50 text-green-700 border-green-200';
-      case 'database': return 'bg-purple-50 text-purple-700 border-purple-200';
-      case 'ssh': return 'bg-orange-50 text-orange-700 border-orange-200';
-      case 'ftp': return 'bg-gray-50 text-gray-700 border-gray-200';
-      default: return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
-
-
-
   const handleExportPDF = () => {
     const data = filteredAccesos.map((acceso, i) => ({
       nro: i + 1,
@@ -324,10 +307,9 @@ export default function MTCAccesos() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Buscar..."
                 value={searchTerm}
                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[12px] text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-semibold text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }
@@ -424,7 +406,7 @@ export default function MTCAccesos() {
                           <p className="text-[13px] font-bold text-slate-800 truncate leading-tight">{acceso.name}</p>
                           <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{new Date(String(acceso.created_at).includes('T') ? String(acceso.created_at) : `${acceso.created_at}T12:00:00`).toLocaleDateString()}</p>
                         </div>
-                        <span className={`shrink-0 text-[9px] font-semibold px-2 py-0.5 border ${getAccessTypeColor(acceso.access_type)}`}>{acceso.access_type}</span>
+                        <span className="shrink-0 text-[14px] font-semibold text-slate-800">{acceso.access_type}</span>
                       </div>
                       <div className="mt-2 space-y-1">
                         <a href={acceso.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[11px] font-semibold text-blue-600 truncate block hover:underline">{acceso.url}</a>
@@ -477,7 +459,7 @@ export default function MTCAccesos() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <TableCellBadge className={getAccessTypeColor(acceso.access_type)}>{acceso.access_type}</TableCellBadge>
+                            <TableCellBadge>{acceso.access_type}</TableCellBadge>
                           </TableCell>
                           <TableCell>
                             <a href={acceso.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-[13px] font-semibold text-blue-600 truncate max-w-[220px] block hover:text-blue-800 transition-colors">{acceso.url}</a>
@@ -564,7 +546,7 @@ export default function MTCAccesos() {
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-700 transition-colors tracking-tight mb-2">{acceso.name}</h3>
                             <div className="flex items-center gap-2">
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider border ${getAccessTypeColor(acceso.access_type)}`}>
+                              <span className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-slate-800">
                                 {getAccessTypeIcon(acceso.access_type)} {acceso.access_type}
                               </span>
                             </div>
@@ -677,11 +659,11 @@ export default function MTCAccesos() {
                   <div className="space-y-4">
                     {/* Badge tipo de acceso */}
                     <div className="flex items-center gap-2 flex-wrap pb-2 border-b border-slate-100">
-                      <span className="px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1.5">
+                      <span className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800">
                         {getAccessTypeIcon(viewingAcceso.access_type)}
                         {viewingAcceso.access_type}
                       </span>
-                      <span className="px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider bg-slate-50 text-slate-600 border border-slate-200">
+                      <span className="text-[14px] font-semibold text-slate-800">
                         {viewingAcceso.locations?.name || 'Sede no especificada'}
                       </span>
                     </div>
@@ -762,7 +744,7 @@ export default function MTCAccesos() {
                 <StandardModalFooter
                   onClose={() => setViewingAcceso(undefined)}
                   onEdit={canEdit() ? () => { setViewingAcceso(undefined); handleEditAcceso(viewingAcceso); } : undefined}
-                  editLabel="Editar Acceso"
+                  editLabel="Editar"
                 />
               </DetailModal>
             )}

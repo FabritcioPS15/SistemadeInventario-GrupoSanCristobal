@@ -13,7 +13,7 @@ export const generateAndDownloadTemplate = async () => {
         const { data: assetTypesData } = await supabase.from('asset_types').select('name');
         const { data: categoriesData } = await supabase.from('categories').select('name');
         const { data: subcategoriesData } = await supabase.from('subcategories').select('name');
-const { data: locationsData } = await supabase.from('locations').select('name');
+const { data: locationsData } = await supabase.from('locations').select('name').eq('is_active', true);
 
         const areasList = [...new Set([...(areasData || []).map(a => a.name), 'Línea de inspección', 'Recepción'])].filter(Boolean);
         const typesList = [...new Set((assetTypesData || []).map(t => t.name))].filter(Boolean);

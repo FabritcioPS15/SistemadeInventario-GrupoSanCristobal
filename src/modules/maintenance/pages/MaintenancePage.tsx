@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, Wrench, X, MapPin, ShieldCheck, Search, TrendingUp, DollarSign, Clock, AlertCircle, Edit, Trash2, Calendar } from 'lucide-react';
+import { Plus, Wrench, MapPin, ShieldCheck, Search, TrendingUp, DollarSign, Clock, AlertCircle, Edit, Trash2, Calendar } from 'lucide-react';
 import { FaFilePdf } from 'react-icons/fa6';
 import { RiFileExcel2Fill } from 'react-icons/ri';
 import { supabase, Location } from '../../../shared/services/supabase';
@@ -13,11 +13,11 @@ import SelectionModeButton from '../../../shared/components/ui/SelectionModeButt
 import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ViewToggle from '../../../shared/components/ui/ViewToggle';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableCellPrimary, TableCellSecondary, TableCellBadge, TableActionButton } from '../../../shared/components/ui/Table';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell, TableCellPrimary, TableCellSecondary, TableActionButton } from '../../../shared/components/ui/Table';
 import { generatePDF, generateExcel } from '../../../shared/utils/exportUtils';
 import DetailModal, {
-  DetailModalHeader,
   DetailModalBody,
+  StandardModalHeader,
   StandardModalFooter,
 
 } from '../../../shared/components/ui/DetailModal';
@@ -100,7 +100,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   };
 
   const fetchLocations = async () => {
-    const { data, error } = await supabase.from('locations').select('*').order('name');
+    const { data, error } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
     if (error) console.error('Error fetching locations:', error);
     if (data) setLocations(data);
   };
@@ -108,6 +108,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   // Removed copyToClipboard as it was unused
 
   const handleEditRecord = (record: MaintenanceRecord) => {
+    setViewingRecord(undefined);
+    setViewingAssetHistory(undefined);
     setEditingRecord(record);
     setShowForm(true);
   };
@@ -130,15 +132,53 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
     }
   };
 
+  const handleDeleteFromHistory = async (record: MaintenanceRecord, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const confirmed = await confirm(`¿Eliminar el registro "${record.description}"? Esta acción no se puede deshacer.`, 'Eliminar Registro');
+    if (confirmed) {
+      try {
+        const { error } = await supabase.from('maintenance_records').delete().eq('id', record.id);
+        if (error) throw error;
+        // Actualizar el historial local sin cerrar el modal
+        setViewingAssetHistory(prev => {
+          if (!prev) return prev;
+          const updated = prev.maintenanceRecords.filter(r => r.id !== record.id);
+          if (updated.length === 0) {
+            setViewingAssetHistory(undefined);
+            return undefined;
+          }
+          const latest = [...updated].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          return {
+            ...prev,
+            maintenanceRecords: updated,
+            totalRecords: updated.length,
+            latestStatus: latest.status,
+            latestMaintenanceType: latest.maintenance_type,
+            latestDate: latest.created_at,
+          };
+        });
+        // Refrescar la lista principal en segundo plano
+        fetchMaintenanceRecords();
+        notifySuccess('Registro eliminado del historial correctamente');
+      } catch (err: any) {
+        notifyError('Error al eliminar el registro: ' + err.message);
+      }
+    }
+  };
+
   const handleSaveRecord = async () => {
     setShowForm(false);
     setEditingRecord(undefined);
+    setViewingRecord(undefined);
+    setViewingAssetHistory(undefined);
     await fetchMaintenanceRecords();
   };
 
   const handleCloseForm = () => {
     setShowForm(false);
     setEditingRecord(undefined);
+    setViewingRecord(undefined);
+    setViewingAssetHistory(undefined);
   };
 
   const getMaintenanceCategoryFromFilter = (filter?: string) => {
@@ -153,13 +193,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
     return categoryMap[filter] || '';
   };
 
-  const statusColors: Record<MaintenanceRecord['status'], string> = {
-    pending: 'bg-amber-100 text-amber-800 border-amber-200',
-    in_progress: 'bg-blue-100 text-blue-800 border-blue-200',
-    completed: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    waiting_parts: 'bg-orange-100 text-orange-800 border-orange-200',
-  };
-
   const statusLabels: Record<MaintenanceRecord['status'], string> = {
     pending: 'Pendiente',
     in_progress: 'En Progreso',
@@ -167,11 +200,11 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
     waiting_parts: 'En espera de repuestos',
   };
 
-  const typeColors: Record<MaintenanceRecord['maintenance_type'], string> = {
-    preventive: 'bg-blue-50 text-blue-700 border-blue-100',
-    corrective: 'bg-rose-50 text-rose-700 border-rose-100',
-    technical_review: 'bg-purple-50 text-purple-700 border-purple-100',
-    repair: 'bg-amber-50 text-amber-700 border-amber-100',
+  const statusColors: Record<MaintenanceRecord['status'], string> = {
+    pending: 'bg-amber-100 text-amber-700',
+    in_progress: 'bg-blue-100 text-blue-700',
+    completed: 'bg-emerald-100 text-emerald-700',
+    waiting_parts: 'bg-amber-100 text-amber-700',
   };
 
   const typeLabels: Record<MaintenanceRecord['maintenance_type'], string> = {
@@ -376,20 +409,26 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   };
 
   const handleExportExcel = async () => {
-    const data = sortedRecords.map((ah, i) => ({
-      nro: i + 1,
-      activo: (ah.asset as any).item || ah.asset.descripcion || `${ah.asset.brand || ''} ${ah.asset.model || ''}`.trim() || 'Activo',
-      codigo: ah.asset.codigo_unico || 'N/A',
-      serie: ah.asset.serial_number || 'N/A',
-      tipo: typeLabels[ah.latestMaintenanceType] || ah.latestMaintenanceType,
-      estado: statusLabels[ah.latestStatus] || ah.latestStatus,
-      ubicacion: ah.asset.locations?.name || 'N/A',
-      responsable: ah.maintenanceRecords[0]?.technician || 'S.A.',
-      total_registros: ah.totalRecords,
-      horas_totales: ah.maintenanceRecords.reduce((sum, r) => sum + (r.work_hours || 0), 0).toFixed(1),
-      costo_total: ah.maintenanceRecords.reduce((sum, r) => sum + (r.total_cost || 0), 0).toFixed(2),
-      ultima_fecha: new Date(String(ah.latestDate).includes('T') ? String(ah.latestDate) : `${ah.latestDate}T12:00:00`).toLocaleDateString('es-PE'),
-    }));
+    const data = sortedRecords.map((ah, i) => {
+      const itemOrDesc = (ah.asset as any).item || ah.asset.descripcion;
+      const brandModel = `${ah.asset.brand || ''} ${ah.asset.model || ''}`.trim();
+      const nombreActivo = itemOrDesc ? (brandModel ? `${itemOrDesc} (${brandModel})` : itemOrDesc) : (brandModel || 'Activo');
+
+      return {
+        nro: i + 1,
+        activo: nombreActivo,
+        codigo: ah.asset.codigo_unico || 'N/A',
+        serie: ah.asset.serial_number || 'N/A',
+        tipo: typeLabels[ah.latestMaintenanceType] || ah.latestMaintenanceType,
+        estado: statusLabels[ah.latestStatus] || ah.latestStatus,
+        ubicacion: ah.asset.locations?.name || 'N/A',
+        responsable: ah.maintenanceRecords[0]?.technician || 'S.A.',
+        total_registros: ah.totalRecords,
+        horas_totales: ah.maintenanceRecords.reduce((sum, r) => sum + (r.work_hours || 0), 0).toFixed(1),
+        costo_total: ah.maintenanceRecords.reduce((sum, r) => sum + (r.total_cost || 0), 0).toFixed(2),
+        ultima_fecha: new Date(String(ah.latestDate).includes('T') ? String(ah.latestDate) : `${ah.latestDate}T12:00:00`).toLocaleDateString('es-PE'),
+      };
+    });
 
     await generateExcel({
       title: 'Reporte de Mantenimientos',
@@ -666,13 +705,13 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         </h3>
                         <span className="text-[9px] sm:text-[10px] font-mono font-black text-blue-600">{assetHistory.asset.codigo_unico}</span>
                       </div>
-                      <span className={`shrink-0 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider border hidden xs:inline-block sm:inline-block ${typeColors[assetHistory.latestMaintenanceType]}`}>
+                      <span className="shrink-0 hidden xs:inline-block sm:inline-block text-[9px] sm:text-[10px] font-medium text-slate-400">
                         {typeLabels[assetHistory.latestMaintenanceType]}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-[9px] sm:text-[10px] text-slate-500 flex-wrap">
                       <span className="font-mono font-semibold text-blue-500">{assetHistory.totalRecords} mantenimiento(s)</span>
-                      <span className={`font-semibold ${assetHistory.latestStatus === 'completed' ? 'text-emerald-600' : assetHistory.latestStatus === 'pending' ? 'text-amber-600' : 'text-rose-600'}`}>
+                      <span className={`font-medium ${statusColors[assetHistory.latestStatus] || statusColors.pending}`}>
                         {statusLabels[assetHistory.latestStatus]}
                       </span>
                       <span className="flex items-center gap-0.5 ml-auto">
@@ -730,10 +769,11 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className={`text-[9px] font-semibold px-2 py-0.5 border ${typeColors[assetHistory.latestMaintenanceType] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                      <span className="text-[14px] font-semibold text-slate-800">
                         {typeLabels[assetHistory.latestMaintenanceType]}
                       </span>
-                      <span className={`text-[9px] font-semibold px-2 py-0.5 border ${statusColors[assetHistory.latestStatus] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                      <span className="text-slate-300">•</span>
+                      <span className={`text-[14px] font-semibold ${statusColors[assetHistory.latestStatus] || statusColors.pending}`}>
                         {statusLabels[assetHistory.latestStatus]}
                       </span>
                     </div>
@@ -815,9 +855,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <TableCellBadge className={typeColors[assetHistory.latestMaintenanceType] || 'bg-gray-50 text-gray-700 border-gray-200'}>
+                          <TableCellSecondary>
                             {typeLabels[assetHistory.latestMaintenanceType]}
-                          </TableCellBadge>
+                          </TableCellSecondary>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5 text-slate-700">
@@ -826,9 +866,11 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <TableCellBadge className={statusColors[assetHistory.latestStatus] || 'bg-gray-50 text-gray-700 border-gray-200'}>
-                            {statusLabels[assetHistory.latestStatus]}
-                          </TableCellBadge>
+                          <TableCellSecondary>
+                            <span className={statusColors[assetHistory.latestStatus] || statusColors.pending}>
+                              {statusLabels[assetHistory.latestStatus]}
+                            </span>
+                          </TableCellSecondary>
                         </TableCell>
                         <TableCell>
                           <TableCellSecondary>{assetHistory.maintenanceRecords[0]?.technician || 'S.A.'}</TableCellSecondary>
@@ -870,47 +912,29 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         {
           viewingRecord && (
             <DetailModal maxWidth="3xl" onClose={() => setViewingRecord(undefined)} closeOnBackdrop overlayStyle={{ zIndex: 210 }}>
-              {/* Header con tamaño de icono estandarizado */}
-              <DetailModalHeader>
-                <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
-                  <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                    <Wrench size={20} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white uppercase tracking-tight leading-snug truncate">
-                      {(viewingRecord?.assets as any)?.descripcion || (viewingRecord?.assets as any)?.brand || 'Activo'} {(viewingRecord?.assets as any)?.model}
-                    </h2>
-                    <p className="text-[9px] sm:text-[10px] font-normal text-slate-300 uppercase tracking-wide mt-0.5 flex items-center gap-1.5 truncate">
-                      <span className="font-mono text-slate-300">{(viewingRecord?.assets as any)?.codigo_unico}</span>
-                      <span>•</span>
-                      <span>{viewingRecord?.assets?.asset_types?.name}</span>
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setViewingRecord(undefined)}
-                  className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
-                  aria-label="Cerrar detalle"
-                >
-                  <X size={20} />
-                </button>
-              </DetailModalHeader>
+              <StandardModalHeader
+                title={`${(viewingRecord?.assets as any)?.descripcion || (viewingRecord?.assets as any)?.brand || 'Activo'} ${(viewingRecord?.assets as any)?.model}`}
+                subtitle={`${(viewingRecord?.assets as any)?.codigo_unico} • ${viewingRecord?.assets?.asset_types?.name}`}
+                icon={Wrench}
+                onClose={() => setViewingRecord(undefined)}
+              />
 
-              {/* Scrollable body */}
-              <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4">
+              <DetailModalBody className="space-y-4">
 
-                {/* Status badges row */}
+                {/* Estado / tipo / prioridad */}
                 <div className="flex items-center gap-2 flex-wrap pb-2 border-b border-slate-100">
-                  <span className={`px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider border ${statusColors[viewingRecord?.status || 'pending']}`}>
+                  <span className={`text-[14px] font-semibold ${statusColors[viewingRecord?.status || 'pending']}`}>
                     {statusLabels[viewingRecord?.status || 'pending']}
                   </span>
-                  <span className="px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                  <span className="text-slate-300">•</span>
+                  <span className="text-[11px] font-medium text-slate-500">
                     {typeLabels[viewingRecord?.maintenance_type || 'preventive']}
                   </span>
-                  <span className="px-2.5 py-0.5 text-[8px] font-semibold uppercase tracking-wider bg-slate-100 text-slate-700 border border-slate-200">
+                  <span className="text-slate-300">•</span>
+                  <span className="text-[11px] font-medium text-slate-500">
                     {PRIORITY_LABELS[viewingRecord?.priority || 'medium']}
                   </span>
-                  <span className="ml-auto text-[9px] font-mono text-slate-500">
+                  <span className="ml-auto text-[11px] font-mono text-slate-500">
                     {viewingRecord?.completed_date
                       ? new Date(String(viewingRecord.completed_date as any).includes('T') ? String(viewingRecord.completed_date as any) : `${viewingRecord.completed_date as any}T12:00:00`).toLocaleDateString('es-PE')
                       : 'Pendiente'}
@@ -943,32 +967,32 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
                 {/* Info grid: Technician, Provider, Invoice, Dates */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Técnico</p>
+                  <div className="bg-slate-50 border border-slate-200 p-3">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Técnico</p>
                     <p className="text-[11px] font-medium text-slate-700 truncate">{viewingRecord?.technician || 'N/A'}</p>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Proveedor</p>
+                  <div className="bg-slate-50 border border-slate-200 p-3">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Proveedor</p>
                     <p className="text-[11px] font-medium text-slate-700 truncate">{viewingRecord?.service_provider || 'N/A'}</p>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">N° Factura</p>
+                  <div className="bg-slate-50 border border-slate-200 p-3">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">N° Factura</p>
                     <p className="text-[11px] font-medium text-slate-600 truncate">{viewingRecord?.invoice_number || 'N/A'}</p>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Horas Trabajo</p>
+                  <div className="bg-slate-50 border border-slate-200 p-3">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Horas Trabajo</p>
                     <p className="text-[11px] font-medium text-slate-700">{viewingRecord?.work_hours || 0} h</p>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Próximo Mant.</p>
+                  <div className="bg-slate-50 border border-slate-200 p-3">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Próximo Mant.</p>
                     <p className="text-[11px] font-medium text-slate-700">
                       {viewingRecord?.next_maintenance_date
                         ? new Date(String(viewingRecord.next_maintenance_date).includes('T') ? String(viewingRecord.next_maintenance_date) : `${viewingRecord.next_maintenance_date}T12:00:00`).toLocaleDateString('es-PE')
                         : 'No programado'}
                     </p>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 px-3 py-2">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Frecuencia</p>
+                  <div className="bg-slate-50 border border-slate-200 p-3">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Frecuencia</p>
                     <p className="text-[11px] font-medium text-slate-600">
                       {viewingRecord?.maintenance_frequency ? `Cada ${viewingRecord.maintenance_frequency} días` : 'N/A'}
                     </p>
@@ -976,23 +1000,23 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 </div>
 
                 {/* Costs row (sobrio) */}
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="bg-slate-50 border border-slate-200 px-3 py-2 text-center">
-                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Mano de Obra</p>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="bg-slate-50 border border-slate-200 p-3 text-center">
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">Mano de Obra</p>
                     <p className="text-[12px] font-bold text-slate-700 font-mono">S/ {viewingRecord?.labor_cost?.toFixed(2) || '0.00'}</p>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 px-3 py-2 text-center">
-                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Otros Gastos</p>
+                  <div className="bg-slate-50 border border-slate-200 p-3 text-center">
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">Otros Gastos</p>
                     <p className="text-[12px] font-bold text-slate-700 font-mono">S/ {viewingRecord?.other_costs?.toFixed(2) || '0.00'}</p>
                   </div>
-                  <div className="bg-slate-50 border border-slate-200 px-3 py-2 text-center">
-                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Repuestos</p>
+                  <div className="bg-slate-50 border border-slate-200 p-3 text-center">
+                    <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">Repuestos</p>
                     <p className="text-[12px] font-bold text-slate-700 font-mono">
                       S/ {(viewingRecord?.parts_used as any[] || []).reduce((s: number, p: any) => s + (p.total_cost || 0), 0).toFixed(2)}
                     </p>
                   </div>
-                  <div className="bg-slate-100 border border-slate-300 px-3 py-2 text-center">
-                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">Total</p>
+                  <div className="bg-slate-100 border border-slate-300 p-3 text-center">
+                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Total</p>
                     <p className="text-[13px] font-bold text-[#002855] font-mono">S/ {viewingRecord?.total_cost?.toFixed(2) || '0.00'}</p>
                   </div>
                 </div>
@@ -1034,32 +1058,13 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                     <p className="text-[10px] text-slate-700 leading-relaxed whitespace-pre-wrap">{viewingRecord.notes}</p>
                   </div>
                 )}
+              </DetailModalBody>
 
-              </div>
-
-              {/* Footer */}
-              <div className="bg-slate-50 border-t border-slate-200 px-4 py-2.5 flex items-center justify-between gap-2 shrink-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">Sistema GS</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {canEdit() && (
-                    <button
-                      onClick={() => { setViewingRecord(undefined); handleEditRecord(viewingRecord); }}
-                      className="px-4 py-1.5 bg-[#002855] text-white text-[9px] font-bold uppercase tracking-widest hover:bg-blue-900 transition-all flex items-center gap-1.5"
-                    >
-                      <Edit size={12} />
-                      Editar
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setViewingRecord(undefined)}
-                    className="px-4 py-1.5 bg-slate-200 text-slate-700 text-[9px] font-bold uppercase tracking-widest hover:bg-slate-300 transition-all"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
+              <StandardModalFooter
+                onClose={() => setViewingRecord(undefined)}
+                onEdit={canEdit() ? () => handleEditRecord(viewingRecord) : undefined}
+                editLabel="Editar"
+              />
             </DetailModal>
           )
         }
@@ -1067,32 +1072,12 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         {
           viewingAssetHistory && (
             <DetailModal maxWidth="3xl" onClose={() => setViewingAssetHistory(undefined)} closeOnBackdrop>
-              <DetailModalHeader>
-                <div className="flex items-center gap-2.5 sm:gap-4 min-w-0 flex-1 pr-1">
-                  <div className="w-9 h-9 sm:w-11 sm:h-11 shrink-0 bg-white/10 border border-white/20 flex items-center justify-center text-white">
-                    <Wrench size={20} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-xs sm:text-base md:text-[18px] font-normal text-white uppercase tracking-tight leading-snug truncate">
-                      {viewingAssetHistory?.asset.descripcion || `${viewingAssetHistory?.asset.brand} ${viewingAssetHistory?.asset.model}` || 'Activo'}
-                    </h2>
-                    <p className="text-[9px] sm:text-[10px] font-normal text-slate-300 uppercase tracking-wide mt-0.5 flex items-center gap-1.5 truncate">
-                      <span className="font-mono text-slate-300">{viewingAssetHistory?.asset.codigo_unico}</span>
-                      <span>•</span>
-                      <span>{viewingAssetHistory?.asset.asset_types?.name}</span>
-                      <span>•</span>
-                      <span>{viewingAssetHistory?.totalRecords} mantenimiento(s)</span>
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setViewingAssetHistory(undefined)}
-                  className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center shrink-0 text-white/50 hover:text-white hover:bg-white/10 transition-all -mr-1"
-                  aria-label="Cerrar historial"
-                >
-                  <X size={20} />
-                </button>
-              </DetailModalHeader>
+              <StandardModalHeader
+                title={viewingAssetHistory?.asset.descripcion || `${viewingAssetHistory?.asset.brand} ${viewingAssetHistory?.asset.model}` || 'Activo'}
+                subtitle={`${viewingAssetHistory?.asset.codigo_unico} • ${viewingAssetHistory?.asset.asset_types?.name} • ${viewingAssetHistory?.totalRecords} mantenimiento(s)`}
+                icon={Wrench}
+                onClose={() => setViewingAssetHistory(undefined)}
+              />
 
               <DetailModalBody>
                 {/* Asset info summary bar */}
@@ -1118,9 +1103,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                   </div>
                   <div className="bg-slate-50 border border-slate-200 px-3 py-2.5">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Estado</p>
-                    <span className={`inline-block px-2 py-0.5 text-[8px] font-bold tracking-widest border ${statusColors[viewingAssetHistory?.latestStatus || 'pending']}`}>
+                    <p className={`text-[14px] font-semibold ${statusColors[viewingAssetHistory?.latestStatus || 'pending']}`}>
                       {statusLabels[viewingAssetHistory?.latestStatus || 'pending']}
-                    </span>
+                    </p>
                   </div>
                 </div>
 
@@ -1130,7 +1115,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                   <h3 className="text-[11px] font-bold text-[#002855] uppercase tracking-widest">
                     Historial de Mantenimientos
                   </h3>
-                  <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 border border-blue-200">
+                  <span className="text-[11px] font-bold text-blue-600">
                     {viewingAssetHistory?.totalRecords || 0}
                   </span>
                 </div>
@@ -1172,10 +1157,11 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                                 {record.description}
                               </p>
                               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                <span className={`px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider border ${typeColors[record.maintenance_type]}`}>
+                                <span className="text-[14px] font-semibold text-slate-800">
                                   {typeLabels[record.maintenance_type]}
                                 </span>
-                                <span className={`px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wider border ${statusColors[record.status]}`}>
+                                <span className="text-slate-300">•</span>
+                                <span className={`text-[14px] font-semibold ${statusColors[record.status] || statusColors.pending}`}>
                                   {statusLabels[record.status]}
                                 </span>
                                 {record.technician && (
@@ -1186,12 +1172,22 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                               </div>
                             </div>
 
-                            {/* Right: cost + arrow */}
+                            {/* Right: cost + delete + arrow */}
                             <div className="shrink-0 text-right flex items-center gap-2">
                               {(record.total_cost != null && record.total_cost > 0) && (
                                 <span className="text-[11px] font-bold text-emerald-700 font-mono">
                                   S/ {record.total_cost.toFixed(2)}
                                 </span>
+                              )}
+                              {canEdit() && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteFromHistory(record, e)}
+                                  title="Eliminar este registro"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-slate-300 hover:text-rose-500 hover:bg-rose-50"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
                               )}
                               <svg className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

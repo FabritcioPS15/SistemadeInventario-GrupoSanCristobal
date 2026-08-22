@@ -417,15 +417,15 @@ export default function VehicleImportModal({ isOpen, onClose, onSuccess, locatio
                                                         </td>
                                                         <td className="px-6 py-3 text-center">
                                                             {mapping.ignore ? (
-                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                                                <span className="text-xs font-medium text-slate-500">
                                                                     Ignorado
                                                                 </span>
                                                             ) : isMapped ? (
-                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                                <span className="text-xs font-medium text-slate-500">
                                                                     <CheckCircle size={12} /> Listo
                                                                 </span>
                                                             ) : (
-                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                                <span className="text-xs font-medium text-slate-500">
                                                                     <AlertCircle size={12} /> Pendiente
                                                                 </span>
                                                             )}

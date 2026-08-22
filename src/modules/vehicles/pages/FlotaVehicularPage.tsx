@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, MapPin, X, Car, List, Search, ChevronDown, AlertTriangle, Calendar, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, X, Car, List, Search, ChevronDown, AlertTriangle, Calendar } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -100,7 +100,7 @@ export default function FlotaVehicular() {
 
   const fetchSchools = async () => {
     try {
-      const { data, error } = await supabase.from('locations').select('*').order('name');
+      const { data, error } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
       if (!error && data) setSchools(data as Location[]);
     } catch (error) {
       console.error('Error al cargar ubicaciones:', error);
@@ -426,10 +426,7 @@ export default function FlotaVehicular() {
   const renderDocumentStatus = (fecha?: string) => {
     if (!fecha) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-400 border border-slate-200">
-          <Calendar size={11} className="shrink-0" />
-          Sin fecha
-        </span>
+        <span className="text-[14px] font-semibold text-slate-800">Sin fecha</span>
       );
     }
 
@@ -439,10 +436,7 @@ export default function FlotaVehicular() {
     if (daysLeft <= 0) {
       return (
         <div className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-sm">
-            <AlertTriangle size={11} className="text-rose-500 shrink-0" />
-            Vencido ({Math.abs(daysLeft)}d)
-          </span>
+          <span className="text-[14px] font-semibold bg-rose-100 text-rose-700">Vencido ({Math.abs(daysLeft)}d)</span>
           <span className="text-[10px] font-black text-rose-600/80 ml-1">{dateStr}</span>
         </div>
       );
@@ -451,10 +445,7 @@ export default function FlotaVehicular() {
     if (daysLeft <= 30) {
       return (
         <div className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider bg-amber-50 text-amber-700 border border-amber-200 shadow-sm">
-            <AlertTriangle size={11} className="text-amber-500 shrink-0" />
-            Vence {daysLeft}d
-          </span>
+          <span className="text-[14px] font-semibold bg-amber-100 text-amber-700">Vence {daysLeft}d</span>
           <span className="text-[10px] font-black text-amber-600/80 ml-1">{dateStr}</span>
         </div>
       );
@@ -462,10 +453,7 @@ export default function FlotaVehicular() {
 
     return (
       <div className="flex flex-col items-start gap-1">
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm">
-          <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
-          Vigente ({daysLeft}d)
-        </span>
+        <span className="text-[14px] font-semibold bg-emerald-100 text-emerald-700">Vigente ({daysLeft}d)</span>
         <span className="text-[10px] font-bold text-slate-500 ml-1">{dateStr}</span>
       </div>
     );
@@ -895,9 +883,9 @@ export default function FlotaVehicular() {
   };
 
   const statusColors: Record<string, string> = {
-    activa: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    inactiva: 'bg-rose-50 text-rose-700 border-rose-200',
-    en_proceso: 'bg-amber-50 text-amber-700 border-amber-200',
+    activa: 'text-slate-500',
+    inactiva: 'text-slate-500',
+    en_proceso: 'text-slate-500',
   };
 
   return (
@@ -1072,7 +1060,7 @@ export default function FlotaVehicular() {
                           )}
                           <span className="font-mono text-[13px] font-black text-slate-900 tracking-wider">{v.placa}</span>
                         </div>
-                        <span className={`text-[9px] font-medium px-2 py-0.5 border ${v.estado === 'en_proceso' ? 'text-blue-700 bg-blue-50 border-blue-200' : v.estado === 'activa' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-slate-600 bg-slate-100 border-slate-200'}`}>
+                        <span className="text-[14px] font-semibold text-slate-800">
                           {v.estado === 'en_proceso' ? 'En Proceso' : v.estado === 'activa' ? 'Activa' : 'Inactiva'}
                         </span>
                       </div>
@@ -1219,8 +1207,7 @@ export default function FlotaVehicular() {
                       )}
                       <div className="flex justify-between items-center mb-5">
                         {renderPlacaBadge(v.placa)}
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-black tracking-wider border rounded-none ${statusColors[v.estado]}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${v.estado === 'en_proceso' ? 'bg-blue-500' : v.estado === 'activa' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                        <span className={`text-[10px] font-semibold ${statusColors[v.estado]}`}>
                           {v.estado === 'en_proceso' ? 'En Proceso' : v.estado === 'activa' ? 'Activa' : 'Inactiva'}
                         </span>
                       </div>
@@ -1329,8 +1316,7 @@ export default function FlotaVehicular() {
               <div className="grid grid-cols-3 gap-px bg-slate-200 border-b border-slate-200">
                 <div className="bg-white p-3 sm:p-4 flex flex-col items-center justify-center text-center">
                   <span className="text-[8px] font-normal text-slate-400 tracking-widest mb-1">Estado</span>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[8px] sm:text-[9px] font-normal tracking-widest border rounded-none ${statusColors[selectedVehiculo.estado]}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${selectedVehiculo.estado === 'en_proceso' ? 'bg-blue-500' : selectedVehiculo.estado === 'activa' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                  <span className={`text-[11px] font-semibold ${statusColors[selectedVehiculo.estado]}`}>
                     {selectedVehiculo.estado === 'en_proceso' ? 'En Proceso' : selectedVehiculo.estado === 'activa' ? 'Activa' : 'Inactiva'}
                   </span>
                 </div>

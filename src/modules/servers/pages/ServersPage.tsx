@@ -114,7 +114,7 @@ export default function Servers() {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
     if (data) setLocations(data);
   };
 

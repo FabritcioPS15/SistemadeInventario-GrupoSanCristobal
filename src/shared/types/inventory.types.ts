@@ -1,16 +1,16 @@
 // Multi-Enterprise Inventory Types
 // This file contains all TypeScript types for the multi-company inventory system
 
-export type BusinessType = 
+export type BusinessType =
   | 'revisiones_tecnicas'
   | 'polclinico'
   | 'escuela_conductores'
-  | 'oficinas_administrativas';
+  | 'oficinas_administrativas'
+  | 'circuito_de_manejo';
 
 export interface Company {
   id: string;
   name: string;
-  business_type: BusinessType;
   ruc?: string;
   address?: string;
   phone?: string;
@@ -50,6 +50,7 @@ export interface Location {
   id: string;
   company_id: string;
   name: string;
+  business_type: BusinessType;
   address?: string;
   city?: string;
   is_active: boolean;
@@ -98,7 +99,7 @@ export interface Asset {
   deleted_by?: string;
   created_at: string;
   updated_at: string;
-  
+
   // Joined fields from relationships
   categories?: Category;
   subcategories?: Subcategory;
@@ -123,8 +124,8 @@ export interface AssetWithDetails extends Asset {
   subcategory_slug?: string;
   location_name?: string;
   location_company_id?: string;
+  location_business_type?: BusinessType;
   company_name?: string;
-  company_business_type?: BusinessType;
   area_name?: string;
   asset_type_name?: string;
 }
@@ -168,7 +169,7 @@ export interface MaintenanceRecord {
   is_active?: boolean;
   created_at: string;
   updated_at: string;
-  
+
   // Joined fields
   assets?: AssetWithDetails;
   locations?: Location;
@@ -214,7 +215,7 @@ export interface InventoryMovement {
   performed_by?: string;
   movement_date: string;
   created_at: string;
-  
+
   // Joined fields
   assets?: AssetWithDetails;
   origin_locations?: Location;
@@ -282,7 +283,6 @@ export interface AssetFormData {
 
 export interface CompanyFormData {
   name: string;
-  business_type: BusinessType;
   ruc?: string;
   address?: string;
   phone?: string;
@@ -326,10 +326,11 @@ export interface PaginatedResponse<T> {
 
 // Constants
 export const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
-  revisiones_tecnicas: 'Centro de Revisiones Técnicas Vehiculares',
-  polclinico: 'Policlínico para Licencias de Conducir',
+  revisiones_tecnicas: 'Revisiones Técnicas Vehiculares',
+  polclinico: 'Policlínicos',
   escuela_conductores: 'Escuela de Conductores',
-  oficinas_administrativas: 'Oficinas Administrativas',
+  oficinas_administrativas: 'Oficina Central',
+  circuito_de_manejo: 'Circuito de Manejo'
 };
 
 export const ASSET_STATUS_LABELS: Record<AssetStatus, string> = {
@@ -339,15 +340,6 @@ export const ASSET_STATUS_LABELS: Record<AssetStatus, string> = {
   extracted: 'Extraído',
   lost: 'Perdido',
   damaged: 'Dañado',
-};
-
-export const ASSET_STATUS_COLORS: Record<AssetStatus, string> = {
-  active: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  inactive: 'bg-slate-100 text-slate-800 border-slate-200',
-  maintenance: 'bg-amber-100 text-amber-800 border-amber-200',
-  extracted: 'bg-blue-100 text-blue-800 border-blue-200',
-  lost: 'bg-rose-100 text-rose-800 border-rose-200',
-  damaged: 'bg-red-100 text-red-800 border-red-200',
 };
 
 export const MAINTENANCE_TYPE_LABELS: Record<MaintenanceRecord['maintenance_type'], string> = {
@@ -368,10 +360,4 @@ export const PRIORITY_LABELS: Record<string, string> = {
   high: 'Alta',
   medium: 'Media',
   low: 'Baja',
-};
-
-export const PRIORITY_COLORS: Record<string, string> = {
-  high: 'bg-rose-100 text-rose-800 border-rose-200',
-  medium: 'bg-amber-100 text-amber-800 border-amber-200',
-  low: 'bg-emerald-100 text-emerald-800 border-emerald-200',
 };

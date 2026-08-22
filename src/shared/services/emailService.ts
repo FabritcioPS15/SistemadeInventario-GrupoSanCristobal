@@ -119,6 +119,26 @@ function renderTable(rows: string): string {
 // Servicio de envío de correos usando Supabase Edge Functions
 // Requiere una Edge Function configurada en Supabase llamada 'send-email'
 // ============================================================
+
+/**
+ * Extrae el mensaje de error real devuelto por una Edge Function de Supabase.
+ * Cuando la función responde con un código distinto de 2xx, supabase-js
+ * devuelve un FunctionsHttpError cuya propiedad `context` es la Response.
+ */
+async function readFunctionError(error: { message?: string; context?: unknown }): Promise<string> {
+  try {
+    const response = error.context as Response | undefined;
+    if (response && typeof response.text === 'function') {
+      const text = await response.text();
+      const parsed = JSON.parse(text) as { error?: unknown };
+      if (parsed && typeof parsed.error === 'string' && parsed.error) return parsed.error;
+    }
+  } catch {
+    // si no se puede leer el cuerpo, usar el mensaje genérico
+  }
+  return error.message || 'Error desconocido';
+}
+
 export const emailService = {
   /**
    * Enviar correo electrónico
@@ -138,7 +158,7 @@ export const emailService = {
 
       if (error) {
         console.error('Error al enviar correo:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: await readFunctionError(error) };
       }
 
       return { success: true };

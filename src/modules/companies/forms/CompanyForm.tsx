@@ -4,12 +4,7 @@ import { supabase, Company } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect } from '../../../shared/components/forms/BaseForm';
 import { useNotify } from '../../../shared/hooks/useNotify';
 
-const BUSINESS_TYPE_OPTIONS = [
-  { value: 'revisiones_tecnicas', label: 'Revisiones Técnicas' },
-  { value: 'policlinico', label: 'Policlínico' },
-  { value: 'escuela_conductores', label: 'Escuela de Conductores' },
-  { value: 'oficinas_administrativas', label: 'Oficinas Administrativas' },
-];
+
 
 type CompanyFormProps = {
   onClose: () => void;
@@ -24,7 +19,6 @@ export default function CompanyForm({ onClose, onSave, editCompany }: CompanyFor
 
   const [formData, setFormData] = useState({
     name: editCompany?.name || '',
-    business_type: editCompany?.business_type || 'oficinas_administrativas',
     ruc: editCompany?.ruc || '',
     address: editCompany?.address || '',
     phone: editCompany?.phone || '',
@@ -70,9 +64,6 @@ export default function CompanyForm({ onClose, onSave, editCompany }: CompanyFor
       newErrors.name = 'El nombre es requerido';
     }
 
-    if (!formData.business_type) {
-      newErrors.business_type = 'El rubro es requerido';
-    }
 
     setErrors(newErrors);
 
@@ -85,7 +76,6 @@ export default function CompanyForm({ onClose, onSave, editCompany }: CompanyFor
 
     const dataToSave: any = {
       name: formData.name.trim(),
-      business_type: formData.business_type,
       ruc: formData.ruc.trim() || null,
       address: formData.address.trim() || null,
       phone: formData.phone.trim() || null,
@@ -157,20 +147,6 @@ export default function CompanyForm({ onClose, onSave, editCompany }: CompanyFor
           />
         </FormField>
 
-        <FormField label="Rubro" required error={errors.business_type}>
-          <FormSelect
-            name="business_type"
-            value={formData.business_type}
-            onChange={handleChange}
-            required
-            error={errors.business_type}
-          >
-            <option value="">Seleccionar rubro...</option>
-            {BUSINESS_TYPE_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </FormSelect>
-        </FormField>
 
         <FormField label="RUC" error={errors.ruc}>
           <FormInput

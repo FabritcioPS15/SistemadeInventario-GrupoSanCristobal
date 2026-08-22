@@ -105,7 +105,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
   };
 
   const fetchLocations = async () => {
-    let query = supabase.from('locations').select('*').order('name');
+    let query = supabase.from('locations').select('*').eq('is_active', true).order('name');
     if (!isFullAccess) {
       if (allowedLocationIds.length > 0) {
         query = query.in('id', allowedLocationIds);
@@ -137,37 +137,27 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
   // Resolve the rubro filter (business_type de la empresa) into the set of
   // company/location ids that must be matched. Returns null when the filter is
   // inactive and { companyIds: [], locationIds: [] } when no company matches.
-  const resolveRubroFilter = async (): Promise<{ companyIds: string[]; locationIds: string[] } | null> => {
+  const resolveRubroFilter = async (): Promise<{ locationIds: string[] } | null> => {
     if (!filterRubro) return null;
 
-    // Buscar empresas del rubro — sin filtro is_active para no perder datos
-    const { data: rubroCompanies } = await supabase
-      .from('companies')
-      .select('id, name, business_type')
-      .eq('business_type', filterRubro);
-
-    if (!rubroCompanies || rubroCompanies.length === 0) {
-      console.warn(`[Rubro Filter] No se encontraron empresas con business_type="${filterRubro}"`);
-      return { companyIds: [], locationIds: [] };
-    }
-
-    const companyIds = rubroCompanies.map((c: any) => c.id);
-
-    // Obtener sedes que pertenecen a esas empresas
     const { data: rubroLocations } = await supabase
       .from('locations')
-      .select('id, name, company_id')
-      .in('company_id', companyIds);
+      .select('id')
+      .eq('business_type', filterRubro);
+
+    if (!rubroLocations || rubroLocations.length === 0) {
+      console.warn(`[Rubro Filter] No se encontraron sedes con business_type="${filterRubro}"`);
+      return { locationIds: [] };
+    }
 
     return {
-      companyIds,
-      locationIds: (rubroLocations || []).map((l: any) => l.id),
+      locationIds: rubroLocations.map((l: any) => l.id),
     };
   };
 
   // Build the base query with all active filters applied.
   // Returns null when a filter resolves to an empty result set.
-  const buildQuery = (select: string, currentCategories: Category[], rubro: { companyIds: string[]; locationIds: string[] } | null) => {
+  const buildQuery = (select: string, currentCategories: Category[], rubro: { locationIds: string[] } | null) => {
     let query = supabase
       .from('assets')
       .select(select, { count: 'exact' });
@@ -216,16 +206,9 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
 
     // Apply rubro filter
     if (rubro) {
-      if (rubro.companyIds.length === 0) return null;
+      if (rubro.locationIds.length === 0) return null;
 
-      // Aplicar filtro OR: activo pertenece al rubro por company_id o por location_id
-      if (rubro.locationIds.length > 0) {
-        query = query.or(
-          `company_id.in.(${rubro.companyIds.join(',')}),location_id.in.(${rubro.locationIds.join(',')})`
-        );
-      } else {
-        query = query.in('company_id', rubro.companyIds);
-      }
+      query = query.in('location_id', rubro.locationIds);
     }
 
     return query;

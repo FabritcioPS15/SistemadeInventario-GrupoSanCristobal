@@ -26,12 +26,7 @@ import {
   TableActionButton,
 } from '../../../shared/components/ui';
 
-const BUSINESS_TYPE_LABELS: Record<string, string> = {
-  revisiones_tecnicas: 'Revisiones Técnicas',
-  policlinico: 'Policlínico',
-  escuela_conductores: 'Escuela de Conductores',
-  oficinas_administrativas: 'Oficinas Administrativas',
-};
+
 
 export default function Companies() {
   const { canEdit } = useAuth();
@@ -43,7 +38,6 @@ export default function Companies() {
   const [editing, setEditing] = useState<Company | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { selectionMode, toggleSelectionMode } = useSelectionMode();
 
@@ -117,19 +111,15 @@ export default function Companies() {
     else notifyError('Error al eliminar: ' + error.message);
   };
 
-  const typeEntries = Object.keys(BUSINESS_TYPE_LABELS);
-
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return [...companies].filter(c => {
       const matchesSearch = (c.name || '').toLowerCase().includes(q) ||
         (c.ruc || '').toLowerCase().includes(q) ||
         (c.address || '').toLowerCase().includes(q);
-      const matchesType = selectedTypes.length === 0 || selectedTypes.length === typeEntries.length ||
-        selectedTypes.includes(c.business_type);
-      return matchesSearch && matchesType;
+      return matchesSearch;
     });
-  }, [companies, search, selectedTypes, typeEntries]);
+  }, [companies, search]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -143,7 +133,6 @@ export default function Companies() {
 
       const data = companiesToExport.map(c => ({
         name: c.name,
-        business_type: BUSINESS_TYPE_LABELS[c.business_type] || c.business_type,
         ruc: c.ruc || '—',
         address: c.address || '—',
         phone: c.phone || '—',
@@ -156,7 +145,6 @@ export default function Companies() {
         filename: 'UnidadesDeNegocio',
         columns: [
           { header: 'Nombre', key: 'name', width: 30 },
-          { header: 'Rubro', key: 'business_type', width: 25 },
           { header: 'RUC', key: 'ruc', width: 15 },
           { header: 'Dirección', key: 'address', width: 40 },
           { header: 'Teléfono', key: 'phone', width: 15 },
@@ -179,7 +167,6 @@ export default function Companies() {
 
       const data = companiesToExport.map(c => ({
         name: c.name,
-        business_type: BUSINESS_TYPE_LABELS[c.business_type] || c.business_type,
         ruc: c.ruc || '—',
         address: c.address || '—',
         is_active: c.is_active ? 'Sí' : 'No'
@@ -190,7 +177,6 @@ export default function Companies() {
         filename: 'UnidadesDeNegocio',
         columns: [
           { header: 'Nombre', key: 'name' },
-          { header: 'Rubro', key: 'business_type' },
           { header: 'RUC', key: 'ruc' },
           { header: 'Dirección', key: 'address' },
           { header: 'Activa', key: 'is_active' }
@@ -224,16 +210,6 @@ export default function Companies() {
               </>
             }
           >
-            <FilterBar
-              filters={[
-                { key: 'business_type', placeholder: 'TODOS LOS RUBROS', icon: Filter, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: typeEntries.map(type => ({ value: type, label: BUSINESS_TYPE_LABELS[type] })) },
-              ]}
-              values={{ business_type: selectedTypes }}
-              onChange={(_, value) => {
-                setSelectedTypes(value as string[]);
-                setCurrentPage(1);
-              }}
-            />
 
             {canEdit() && (
               <SelectionModeButton
@@ -289,9 +265,6 @@ export default function Companies() {
                         <span className="text-[12px] font-medium text-[#002855] tracking-[0.15em]">Unidad de Negocio</span>
                       </TableHead>
                       <TableHead>
-                        <span className="text-[12px] font-medium text-[#002855] tracking-[0.15em]">Rubro</span>
-                      </TableHead>
-                      <TableHead>
                         <span className="text-[12px] font-medium text-[#002855] tracking-[0.15em]">RUC</span>
                       </TableHead>
                       <TableHead>
@@ -320,14 +293,8 @@ export default function Companies() {
                             </div>
                             <div className="flex flex-col min-w-0">
                               <TableCellPrimary>{company.name}</TableCellPrimary>
-                              <TableCellSecondary className="md:hidden">{BUSINESS_TYPE_LABELS[company.business_type] || company.business_type}</TableCellSecondary>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <TableCellBadge className="bg-[#002855]/8 text-[#002855] border-[#002855]/20">
-                            {BUSINESS_TYPE_LABELS[company.business_type] || company.business_type}
-                          </TableCellBadge>
                         </TableCell>
                         <TableCell>
                           <TableCellPrimary className="truncate max-w-xs">{company.ruc || '—'}</TableCellPrimary>
@@ -336,7 +303,7 @@ export default function Companies() {
                           <TableCellPrimary className="truncate max-w-xs">{company.email || company.phone || '—'}</TableCellPrimary>
                         </TableCell>
                         <TableCell>
-                          <TableCellBadge className={company.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}>
+                          <TableCellBadge className={company.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
                             {company.is_active ? 'Activa' : 'Inactiva'}
                           </TableCellBadge>
                         </TableCell>

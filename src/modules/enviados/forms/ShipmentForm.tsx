@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Truck, Search } from 'lucide-react';
 import { supabase, AssetWithDetails, Location } from '../../../shared/services/supabase';
 import BaseForm, { FormSection, FormField, FormInput, FormSelect, FormTextarea } from '../../../shared/components/forms/BaseForm';
-import { useNotify } from '../../../shared/hooks/useNotify';
 
 type ShipmentType = {
   id: string;
@@ -27,7 +26,6 @@ type ShipmentFormProps = {
 };
 
 export default function ShipmentForm({ onClose, onSave, editShipment }: ShipmentFormProps) {
-  const { success: notifySuccess } = useNotify();
   const [assets, setAssets] = useState<AssetWithDetails[]>([]);
   const [filteredAssets, setFilteredAssets] = useState<AssetWithDetails[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -186,7 +184,6 @@ export default function ShipmentForm({ onClose, onSave, editShipment }: Shipment
       }
 
       setLoading(false);
-      notifySuccess(editShipment ? 'Envío actualizado correctamente' : 'Envío creado correctamente', editShipment ? 'Actualizado' : 'Creado');
       onSave();
     } catch (err: any) {
       setErrors({ submit: 'Error inesperado: ' + err });
@@ -237,12 +234,11 @@ export default function ShipmentForm({ onClose, onSave, editShipment }: Shipment
                   type="text"
                   value={assetSearch}
                   onChange={(e) => setAssetSearch(e.target.value)}
-                  placeholder="Buscar..."
                   className="pr-10"
                 />
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               </div>
-              
+
               {assetSearch && filteredAssets.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20">
                   {filteredAssets.map((asset) => (
@@ -267,7 +263,7 @@ export default function ShipmentForm({ onClose, onSave, editShipment }: Shipment
                   ))}
                 </div>
               )}
-              
+
               {formData.asset_id && getSelectedAsset() && (
                 <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center justify-between">

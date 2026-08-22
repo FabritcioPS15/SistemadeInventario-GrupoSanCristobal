@@ -50,10 +50,10 @@ interface Ticket {
 // Mapa de estilos visuales para cada nivel de prioridad
 // Se usa para colorear badges y etiquetas en la tabla
 const PRIORITY_STYLES: Record<string, { label: string, color: string, dot: string }> = {
-    critical: { label: 'P1 - Crítica', color: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
-    high: { label: 'P2 - Alta', color: 'text-orange-600 bg-orange-50', dot: 'bg-orange-500' },
-    medium: { label: 'P3 - Media', color: 'text-blue-600 bg-blue-50', dot: 'bg-blue-500' },
-    low: { label: 'P4 - Baja', color: 'text-slate-600 bg-slate-50', dot: 'bg-slate-500' }
+    critical: { label: 'P1 - Crítica', color: 'bg-red-100 text-red-700', dot: 'bg-red-500' },
+    high: { label: 'P2 - Alta', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' },
+    medium: { label: 'P3 - Media', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500' },
+    low: { label: 'P4 - Baja', color: 'bg-slate-100 text-slate-600', dot: 'bg-slate-500' }
 };
 
 export default function TicketHistory() {
@@ -113,7 +113,6 @@ export default function TicketHistory() {
                 ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 ticket.requester?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 ticket.locations?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-
             // Priority filter
             const priorityMatch = filterPriority.length === 0 || filterPriority.includes(ticket.priority);
 
@@ -406,7 +405,7 @@ export default function TicketHistory() {
                                         <div key={ticket.id} onClick={() => navigate(`/ticket/${ticket.id}`)} className="bg-white border border-slate-200 p-4 active:bg-slate-50 transition-all cursor-pointer">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="text-[10px] font-semibold text-[#002855] uppercase">#TK-{ticket.id.slice(0, 6)}</span>
-                                                <span className={`px-2 py-0.5 text-[9px] font-semibold tracking-wider border ${prio.color} rounded-none`}>
+                                                <span className={`text-[9px] font-semibold tracking-wider ${prio.color}`}>
                                                     {prio.label}
                                                 </span>
                                             </div>
@@ -487,8 +486,7 @@ export default function TicketHistory() {
                                                         )}
                                                     </TableCell>
                                                     <TableCell>
-                                                        <span className={`px-2 py-1 text-[9px] font-semibold uppercase tracking-widest border ${prio.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-current/20 rounded-none inline-flex items-center gap-1`}>
-                                                            <span className={`w-1.5 h-1.5 rounded-full ${prio.dot}`} />
+                                                        <span className={`text-[9px] font-semibold uppercase tracking-widest ${prio.color}`}>
                                                             {prio.label}
                                                         </span>
                                                     </TableCell>

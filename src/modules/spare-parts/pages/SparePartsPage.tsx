@@ -537,7 +537,7 @@ export default function SpareParts() {
                         <span className="font-black text-sm text-slate-700">${part.unit_price.toFixed(2)}</span>
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className="bg-slate-100 text-slate-500 px-2 py-0.5 text-[10px] font-bold uppercase">{part.location || "—"}</span>
+                        <span className="text-[14px] font-semibold text-slate-800">{part.location || "—"}</span>
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1 opacity-0 group-hover/row:opacity-100 transition-opacity">

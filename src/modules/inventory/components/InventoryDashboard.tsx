@@ -22,10 +22,17 @@ const ESTADO_USO_LABELS: Record<string, string> = {
 };
 
 const ESTADO_USO_COLORS: Record<string, string> = {
-  Operativo: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-  Inoperativo: 'bg-slate-100 text-slate-800 border-slate-200',
-  'En Reparación': 'bg-amber-100 text-amber-800 border-amber-200',
-  Baja: 'bg-rose-100 text-rose-800 border-rose-200',
+  Operativo: 'bg-emerald-100 text-emerald-700',
+  Inoperativo: 'bg-slate-100 text-slate-600',
+  'En Reparación': 'bg-amber-100 text-amber-700',
+  Baja: 'bg-rose-100 text-rose-700',
+};
+
+const ESTADO_USO_DOT_COLORS: Record<string, string> = {
+  Operativo: 'bg-emerald-500',
+  Inoperativo: 'bg-slate-400',
+  'En Reparación': 'bg-amber-500',
+  Baja: 'bg-rose-500',
 };
 
 interface InventoryDashboardProps {
@@ -249,8 +256,8 @@ export default function InventoryDashboard({ companyId, locationId }: InventoryD
           {Object.entries(metrics.assets_by_status).map(([status, count]) => (
             <div key={status} className="bg-slate-50 rounded-xl p-4 border border-slate-100">
               <div className="flex items-center gap-2 mb-2">
-                <div className={`w-3 h-3 rounded-full ${ESTADO_USO_COLORS[status]?.split(' ')[0] || 'bg-slate-300'}`} />
-                <span className="text-[10px] font-semibold text-slate-600 uppercase">
+                <div className={`w-3 h-3 rounded-full ${ESTADO_USO_DOT_COLORS[status] || 'bg-slate-300'}`} />
+                <span className={`text-[10px] font-semibold uppercase ${ESTADO_USO_COLORS[status] || 'text-slate-600'}`}>
                   {ESTADO_USO_LABELS[status] || status}
                 </span>
               </div>
@@ -302,7 +309,7 @@ export default function InventoryDashboard({ companyId, locationId }: InventoryD
               <div key={item.company_name} className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200">
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">{item.company_name}</p>
                 <p className="text-xl font-semibold text-slate-800">S/ {item.total_value.toLocaleString()}</p>
-                <p className="text-[10px] font-semibold text-slate-500 mt-1">{item.asset_count} activos</p>
+                <p className="text-[14px] font-semibold text-slate-800 mt-1">{item.asset_count} activos</p>
               </div>
             ))}
           </div>

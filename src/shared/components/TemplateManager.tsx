@@ -222,7 +222,7 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
                           <div key={item.id} className="flex items-center justify-between text-[11px] hover:bg-slate-50 rounded px-2 py-1 transition-colors">
                             <span className="font-normal text-slate-600 tracking-tight">{item.title}</span>
                             {item.required && (
-                              <span className="px-2 py-0.5 border border-rose-100 bg-rose-50 text-rose-600 text-[9px] font-normal tracking-widest">Requerido</span>
+                              <span className="text-[14px] font-semibold text-slate-800">Requerido</span>
                             )}
                           </div>
                         ))}
@@ -344,7 +344,7 @@ export default function TemplateManager({ templates, onSaveTemplate, onClose }: 
                           <ChevronDown size={18} className="text-slate-400" />
                         </div>
                         <h4 className="text-[11px] font-normal text-[#002855] uppercase tracking-widest">{category}</h4>
-                        <span className="text-[9px] font-normal text-slate-400 uppercase bg-slate-50 px-2 py-0.5 border border-slate-100">{items.length} Ítems</span>
+                        <span className="text-[14px] font-semibold text-slate-800">{items.length} Ítems</span>
                       </div>
                       <button
                         onClick={(e) => {

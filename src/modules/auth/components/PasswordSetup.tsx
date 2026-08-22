@@ -234,12 +234,7 @@ export default function PasswordSetup() {
                     <div>
                       <h3 className="font-medium text-gray-800">{user.full_name}</h3>
                       <p className="text-sm text-gray-600">{user.email}</p>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs mt-1 ${user.role === 'super_admin' ? 'bg-red-100 text-red-800' :
-                          user.role === 'supervisores' ? 'bg-blue-100 text-blue-800' :
-                            user.role === 'sistemas' ? 'bg-green-100 text-green-800' :
-                              user.role === 'area_legal' ? 'bg-indigo-100 text-indigo-800' :
-                                'bg-gray-100 text-gray-800'
-                        }`}>
+                      <span className="text-xs font-medium text-slate-500 mt-1">
                         {user.role === 'super_admin' ? 'Super Administrador' :
                           user.role === 'supervisores' ? 'Supervisor' :
                             user.role === 'sistemas' ? 'Sistemas' :

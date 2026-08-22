@@ -3,6 +3,7 @@ import { Trash2, MapPin, X, Building, ChevronDown, Search, Plus, Filter, Edit } 
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
 import { supabase, Location } from '../../../shared/services/supabase';
+import { BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 import { useAuth } from '../../../app/providers/AuthContext';
 import LocationForm from '../forms/LocationForm';
 import {
@@ -37,27 +38,11 @@ import { useNotify } from '../../../shared/hooks/useNotify';
 import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
 import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 
-const typeLabels: Record<string, string> = {
-  revision: 'Revisión',
-  policlinico: 'Policlínico',
-  escuela_conductores: 'Escuela de Conductores',
-  central: 'Central',
-  circuito: 'Circuito',
-};
-
-// Uniform corporate palette — same base color for all types
-const typeColors: Record<string, string> = {
-  revision: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
-  policlinico: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
-  escuela_conductores: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
-  central: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
-  circuito: 'bg-[#002855]/8 text-[#002855] border-[#002855]/20',
-};
-
 export default function Sedes() {
   const { canEdit } = useAuth();
-  const { confirm, error: notifyError } = useNotify();
+  const { confirm, success: notifySuccess, error: notifyError } = useNotify();
   const [locations, setLocations] = useState<Location[]>([]);
+  const [companies, setCompanies] = useState<Record<string, string>>({});
   const [cameraCounts, setCameraCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -68,7 +53,8 @@ export default function Sedes() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
+  const [selectedRubros, setSelectedRubros] = useState<string[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { selectionMode, toggleSelectionMode } = useSelectionMode();
@@ -77,13 +63,13 @@ export default function Sedes() {
     setSelectedIds([]);
     toggleSelectionMode();
   };
-  const [sortField, setSortField] = useState<'name' | 'type' | 'cameras'>('name');
+  const [sortField, setSortField] = useState<'name' | 'cameras'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      await Promise.all([fetchLocations(), fetchCameraCounts()]);
+      await Promise.all([fetchLocations(), fetchCameraCounts(), fetchCompanies()]);
       setLoading(false);
     })();
   }, []);
@@ -105,7 +91,7 @@ export default function Sedes() {
 
   const fetchLocations = async () => {
     try {
-      const { data, error } = await supabase.from('locations').select('*').order('name');
+      const { data, error } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
       if (error) {
         console.error('Error al cargar sedes:', error);
       }
@@ -132,24 +118,89 @@ export default function Sedes() {
     }
   };
 
+  const fetchCompanies = async () => {
+    try {
+      const { data, error } = await supabase.from('companies').select('id, name').eq('is_active', true).order('name');
+      if (error) {
+        console.error('Error al cargar unidades de negocio:', error);
+        return;
+      }
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach(c => { map[c.id] = c.name; });
+        setCompanies(map);
+      }
+    } catch (err) {
+      console.error('Error en fetchCompanies:', err);
+    }
+  };
+
   const openCreate = () => { setEditing(undefined); setShowForm(true); };
   const openEdit = (loc: Location) => { setEditing(loc); setShowForm(true); };
 
   const del = async (loc: Location) => {
     const confirmed = await confirm(`¿Eliminar sede "${loc.name}"?`, 'Eliminar Sede');
     if (!confirmed) return;
-    const { error } = await supabase.from('locations').delete().eq('id', loc.id);
-    if (error) {
-      if (error.code === '23503') {
-        return notifyError(
-          `No se puede eliminar "${loc.name}" porque tiene tickets, activos u otros registros asociados. Reasígnalos primero.`,
-          'Sede en uso'
+    try {
+      const { data: deletedRows, error } = await supabase
+        .from('locations')
+        .delete()
+        .eq('id', loc.id)
+        .select('id');
+      console.log('[sedes] Resultado delete:', { deletedRows, error });
+
+      if (error) {
+        if (error.code === '23503') {
+          const { data: updatedRows, error: deactivateError } = await supabase
+            .from('locations')
+            .update({ is_active: false })
+            .eq('id', loc.id)
+            .select('id');
+          if (deactivateError) return notifyError('Error al eliminar: ' + deactivateError.message);
+          if (!updatedRows || updatedRows.length === 0) {
+            return notifyError(
+              'La sede no se pudo eliminar: los permisos de la base de datos (RLS) bloquean la operación. Ejecuta la migración de políticas en Supabase.',
+              'Permiso denegado'
+            );
+          }
+          setSelectedIds(prev => prev.filter(id => id !== loc.id));
+          await Promise.all([fetchLocations(), fetchCameraCounts()]);
+          return notifySuccess(
+            `"${loc.name}" tiene registros asociados (activos, tickets, cámaras, etc.), así que se desactivó en lugar de eliminarse.`,
+            'Sede desactivada'
+          );
+        }
+        return notifyError('Error al eliminar: ' + error.message);
+      }
+
+      if (!deletedRows || deletedRows.length === 0) {
+        const { data: updatedRows, error: deactivateError } = await supabase
+          .from('locations')
+          .update({ is_active: false })
+          .eq('id', loc.id)
+          .select('id');
+        if (deactivateError || !updatedRows || updatedRows.length === 0) {
+          console.error('[sedes] No se pudo eliminar ni desactivar:', { deactivateError, updatedRows });
+          return notifyError(
+            'La sede no se pudo eliminar: los permisos de la base de datos (RLS) lo bloquean. Ejecuta la migración de políticas en Supabase.',
+            'Permiso denegado'
+          );
+        }
+        setSelectedIds(prev => prev.filter(id => id !== loc.id));
+        await Promise.all([fetchLocations(), fetchCameraCounts()]);
+        return notifySuccess(
+          `"${loc.name}" tiene registros asociados, así que se desactivó en lugar de eliminarse.`,
+          'Sede desactivada'
         );
       }
-      return notifyError('Error al eliminar: ' + error.message);
+
+      setSelectedIds(prev => prev.filter(id => id !== loc.id));
+      await Promise.all([fetchLocations(), fetchCameraCounts()]);
+      notifySuccess(`Sede "${loc.name}" eliminada correctamente.`, 'Sede eliminada');
+    } catch (err: any) {
+      console.error('Error inesperado al eliminar sede:', err);
+      notifyError('Error inesperado al eliminar la sede: ' + (err?.message || String(err)));
     }
-    setSelectedIds(prev => prev.filter(id => id !== loc.id));
-    await Promise.all([fetchLocations(), fetchCameraCounts()]);
   };
 
   const toggleSelectAll = () => {
@@ -164,25 +215,74 @@ export default function Sedes() {
   const handleBulkDelete = async () => {
     const confirmed = await confirm(`¿Eliminar ${selectedIds.length} sedes seleccionadas?`, 'Eliminación por Lote');
     if (!confirmed) return;
-    const { error } = await supabase.from('locations').delete().in('id', selectedIds);
-    if (!error) { setSelectedIds([]); await Promise.all([fetchLocations(), fetchCameraCounts()]); }
-    else if (error.code === '23503') {
-      notifyError(
-        'Una o más sedes seleccionadas tienen registros asociados (tickets, activos, etc.). Reasígnalos antes de eliminar.',
-        'Sedes en uso'
-      );
-    } else {
-      notifyError('Error al eliminar: ' + error.message);
+    try {
+      const { data: deletedRows, error } = await supabase
+        .from('locations')
+        .delete()
+        .in('id', selectedIds)
+        .select('id');
+      console.log('[sedes] Resultado delete por lote:', { deletedRows, error });
+
+      if (!error && deletedRows && deletedRows.length > 0) {
+        setSelectedIds([]);
+        await Promise.all([fetchLocations(), fetchCameraCounts()]);
+        notifySuccess(`${deletedRows.length} sedes eliminadas correctamente.`, 'Sedes eliminadas');
+        return;
+      }
+
+      if (!error && (!deletedRows || deletedRows.length === 0)) {
+        const { data: updatedRows, error: deactivateError } = await supabase
+          .from('locations')
+          .update({ is_active: false })
+          .in('id', selectedIds)
+          .select('id');
+        if (deactivateError || !updatedRows || updatedRows.length === 0) {
+          console.error('[sedes] No se pudo eliminar ni desactivar por lote:', { deactivateError, updatedRows });
+          return notifyError(
+            'Las sedes no se pudieron eliminar: los permisos de la base de datos (RLS) lo bloquean. Ejecuta la migración de políticas en Supabase.',
+            'Permiso denegado'
+          );
+        }
+        setSelectedIds([]);
+        await Promise.all([fetchLocations(), fetchCameraCounts()]);
+        return notifySuccess(
+          `${updatedRows.length} sedes se desactivaron en lugar de eliminarse (tienen registros asociados o los permisos lo impiden).`,
+          'Sedes desactivadas'
+        );
+      }
+
+      if (error?.code === '23503') {
+        const { data: updatedRows, error: deactivateError } = await supabase
+          .from('locations')
+          .update({ is_active: false })
+          .in('id', selectedIds)
+          .select('id');
+        if (deactivateError || !updatedRows || updatedRows.length === 0) {
+          return notifyError('Error al eliminar: ' + (deactivateError?.message || 'no se pudo desactivar'));
+        }
+        setSelectedIds([]);
+        await Promise.all([fetchLocations(), fetchCameraCounts()]);
+        return notifySuccess(
+          `${updatedRows.length} sedes tienen registros asociados, así que se desactivaron en lugar de eliminarse.`,
+          'Sedes desactivadas'
+        );
+      }
+
+      if (error) return notifyError('Error al eliminar: ' + error.message);
+    } catch (err: any) {
+      console.error('Error inesperado al eliminar sedes:', err);
+      notifyError('Error inesperado al eliminar las sedes: ' + (err?.message || String(err)));
     }
   };
 
-  const handleSort = (field: 'name' | 'type' | 'cameras') => {
+  const handleSort = (field: 'name' | 'cameras') => {
     if (sortField === field) setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDirection('asc'); }
     setCurrentPage(1);
   };
 
-  const typeEntries = Object.keys(typeLabels);
+  const companyEntries = Object.keys(companies);
+  const rubroEntries = Object.keys(BUSINESS_TYPE_LABELS);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -191,20 +291,21 @@ export default function Sedes() {
         const matchesSearch = loc.name?.toLowerCase().includes(q) ||
           loc.address?.toLowerCase().includes(q) ||
           loc.notes?.toLowerCase().includes(q);
-        const matchesType = selectedTypes.length === 0 || selectedTypes.length === typeEntries.length ||
-          selectedTypes.includes(loc.type || '');
-        return matchesSearch && matchesType;
+        const matchesCompany = selectedCompanies.length === 0 || selectedCompanies.length === companyEntries.length ||
+          selectedCompanies.includes(loc.company_id || '');
+        const matchesRubro = selectedRubros.length === 0 || selectedRubros.length === rubroEntries.length ||
+          selectedRubros.includes(loc.business_type || '');
+        return matchesSearch && matchesCompany && matchesRubro;
       })
       .sort((a, b) => {
         let av: string | number = '', bv: string | number = '';
         if (sortField === 'name') { av = a.name || ''; bv = b.name || ''; }
-        else if (sortField === 'type') { av = typeLabels[a.type] || a.type || ''; bv = typeLabels[b.type] || b.type || ''; }
         else if (sortField === 'cameras') { av = cameraCounts[a.id] || 0; bv = cameraCounts[b.id] || 0; }
         if (av < bv) return sortDirection === 'asc' ? -1 : 1;
         if (av > bv) return sortDirection === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [locations, search, selectedTypes, sortField, sortDirection, cameraCounts]);
+  }, [locations, search, selectedCompanies, selectedRubros, sortField, sortDirection, cameraCounts, companyEntries, rubroEntries]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -218,7 +319,8 @@ export default function Sedes() {
 
       const data = locationsToExport.map(loc => ({
         name: loc.name,
-        type: typeLabels[loc.type] || loc.type,
+        business_type: BUSINESS_TYPE_LABELS[loc.business_type as keyof typeof BUSINESS_TYPE_LABELS] || loc.business_type || '—',
+        company: companies[loc.company_id || ''] || 'Sin asignar',
         address: loc.address || '—',
         cameras: (cameraCounts[loc.id] || 0).toString(),
         notes: loc.notes || '—'
@@ -229,7 +331,8 @@ export default function Sedes() {
         filename: 'Sedes',
         columns: [
           { header: 'Nombre', key: 'name', width: 30 },
-          { header: 'Tipo', key: 'type', width: 25 },
+          { header: 'Rubro', key: 'business_type', width: 25 },
+          { header: 'Unidad de Negocio', key: 'company', width: 25 },
           { header: 'Dirección', key: 'address', width: 40 },
           { header: 'Cámaras', key: 'cameras', width: 15 },
           { header: 'Notas', key: 'notes', width: 40 }
@@ -250,7 +353,8 @@ export default function Sedes() {
 
       const data = locationsToExport.map(loc => ({
         name: loc.name,
-        type: typeLabels[loc.type] || loc.type,
+        business_type: BUSINESS_TYPE_LABELS[loc.business_type as keyof typeof BUSINESS_TYPE_LABELS] || loc.business_type || '—',
+        company: companies[loc.company_id || ''] || 'Sin asignar',
         address: loc.address || '—',
         cameras: (cameraCounts[loc.id] || 0).toString()
       }));
@@ -260,7 +364,8 @@ export default function Sedes() {
         filename: 'Sedes',
         columns: [
           { header: 'Nombre', key: 'name' },
-          { header: 'Tipo', key: 'type' },
+          { header: 'Rubro', key: 'business_type' },
+          { header: 'Unidad de Negocio', key: 'company' },
           { header: 'Dirección', key: 'address' },
           { header: 'Cámaras', key: 'cameras' }
         ],
@@ -272,7 +377,7 @@ export default function Sedes() {
     }
   };
 
-  const renderSortableHeader = (label: string, sortKey: 'name' | 'type' | 'cameras') => {
+  const renderSortableHeader = (label: string, sortKey: 'name' | 'cameras') => {
     const isSorted = sortField === sortKey;
     return (
       <button
@@ -313,11 +418,13 @@ export default function Sedes() {
           >
             <FilterBar
               filters={[
-                { key: 'type', placeholder: 'TODOS LOS TIPOS', icon: Filter, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: typeEntries.map(type => ({ value: type, label: typeLabels[type] })) },
+                { key: 'business_type', placeholder: 'TODOS LOS RUBROS', icon: Filter, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: rubroEntries.map(type => ({ value: type, label: BUSINESS_TYPE_LABELS[type as keyof typeof BUSINESS_TYPE_LABELS] })) },
+                { key: 'company_id', placeholder: 'TODAS LAS UNIDADES DE NEGOCIO', icon: Building, iconClassName: 'text-blue-500', wrapperClassName: 'md:min-w-[220px]', options: companyEntries.map(id => ({ value: id, label: companies[id] })) },
               ]}
-              values={{ type: selectedTypes }}
-              onChange={(_, value) => {
-                setSelectedTypes(value as string[]);
+              values={{ company_id: selectedCompanies, business_type: selectedRubros }}
+              onChange={(key, value) => {
+                if (key === 'company_id') setSelectedCompanies(value as string[]);
+                if (key === 'business_type') setSelectedRubros(value as string[]);
                 setCurrentPage(1);
               }}
             />
@@ -368,9 +475,14 @@ export default function Sedes() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <h3 className="text-[13px] font-black text-[#002855] tracking-tight truncate leading-tight group-hover:text-blue-700 transition-colors">{loc.name}</h3>
-                          <span className={`inline-block px-1.5 py-0.5 text-[10px] font-black tracking-wider border rounded-none mt-1 ${typeColors[loc.type] || 'bg-[#002855]/8 text-[#002855] border-[#002855]/20'}`}>
-                            {typeLabels[loc.type] || loc.type}
-                          </span>
+                          <div className="flex gap-2 flex-wrap">
+                            <span className="text-[14px] font-semibold text-slate-800 mt-1">
+                              {BUSINESS_TYPE_LABELS[loc.business_type as keyof typeof BUSINESS_TYPE_LABELS] || loc.business_type || 'Sin Rubro'}
+                            </span>
+                            <span className="text-[10px] font-semibold text-blue-600 mt-1">
+                              {companies[loc.company_id || ''] || 'Sin Unidad de Negocio'}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -440,7 +552,9 @@ export default function Sedes() {
                               </div>
                               <div className="flex flex-col">
                                 <span className="text-[13px] font-black text-[#002855] leading-tight">{loc.name}</span>
-                                <span className="text-[10px] font-semibold text-slate-400 tracking-wider mt-0.5">{typeLabels[loc.type] || loc.type}</span>
+                                <span className="text-[10px] font-semibold text-slate-400 tracking-wider mt-0.5">
+                                  {BUSINESS_TYPE_LABELS[loc.business_type as keyof typeof BUSINESS_TYPE_LABELS] || loc.business_type} • {companies[loc.company_id || ''] || 'Sin Unidad de Negocio'}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -489,7 +603,10 @@ export default function Sedes() {
                             {renderSortableHeader('SEDE', 'name')}
                           </TableHead>
                           <TableHead>
-                            {renderSortableHeader('TIPO', 'type')}
+                            <span className="text-[12px] font-black text-[#002855] tracking-[0.15em]">Rubro</span>
+                          </TableHead>
+                          <TableHead>
+                            <span className="text-[12px] font-black text-[#002855] tracking-[0.15em]">Unidad de Negocio</span>
                           </TableHead>
                           <TableHead>
                             <span className="text-[12px] font-black text-[#002855] tracking-[0.15em]">Dirección</span>
@@ -519,19 +636,26 @@ export default function Sedes() {
                               <TableCell>
                                 <div className="flex flex-col">
                                   <TableCellPrimary>{loc.name}</TableCellPrimary>
-                                  <TableCellSecondary className="md:hidden">{typeLabels[loc.type] || loc.type}</TableCellSecondary>
+                                  <TableCellSecondary className="md:hidden">
+                                    {BUSINESS_TYPE_LABELS[loc.business_type as keyof typeof BUSINESS_TYPE_LABELS] || loc.business_type}
+                                  </TableCellSecondary>
                                 </div>
                               </TableCell>
                               <TableCell>
-                                <TableCellBadge className={typeColors[loc.type] || 'bg-[#002855]/8 text-[#002855] border-[#002855]/20'}>
-                                  {typeLabels[loc.type] || loc.type}
+                                <TableCellBadge>
+                                  {BUSINESS_TYPE_LABELS[loc.business_type as keyof typeof BUSINESS_TYPE_LABELS] || loc.business_type || '—'}
+                                </TableCellBadge>
+                              </TableCell>
+                              <TableCell>
+                                <TableCellBadge>
+                                  {companies[loc.company_id || ''] || '—'}
                                 </TableCellBadge>
                               </TableCell>
                               <TableCell>
                                 <TableCellPrimary className="truncate max-w-xs">{loc.address || '—'}</TableCellPrimary>
                               </TableCell>
                               <TableCell>
-                                <TableCellBadge className={camCount > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}>
+                                <TableCellBadge>
                                   {camCount} Instaladas
                                 </TableCellBadge>
                               </TableCell>
@@ -612,7 +736,7 @@ export default function Sedes() {
                 </h2>
                 <p className="text-[9px] sm:text-[10px] font-normal text-blue-200 tracking-wide mt-1 flex items-start sm:items-center gap-1.5">
                   <MapPin size={10} className="shrink-0 mt-0.5 sm:mt-0" />
-                  <span className="line-clamp-2 sm:truncate">{typeLabels[selectedLocation.type] || selectedLocation.type}</span>
+                  <span className="line-clamp-2 sm:truncate">{companies[selectedLocation.company_id || ''] || 'Sin Unidad de Negocio'}</span>
                 </p>
               </div>
             </div>
@@ -629,9 +753,14 @@ export default function Sedes() {
             <DetailModalGrid layout="stack-until-xl">
               <DetailModalSection title="Información General">
                 <DetailModalCard className="space-y-2.5 sm:space-y-3">
-                  <DetailModalRow label="Tipo de Sede">
-                    <span className={`inline-block px-2.5 py-0.5 sm:px-3 sm:py-1 text-[8px] sm:text-[9px] font-normal tracking-widest border ${typeColors[selectedLocation.type] || 'bg-slate-50 text-slate-700 border-slate-200'}`}>
-                      {typeLabels[selectedLocation.type] || selectedLocation.type}
+                  <DetailModalRow label="Unidad de Negocio">
+                    <span className="text-[14px] font-semibold text-slate-800">
+                      {companies[selectedLocation.company_id || ''] || 'Sin asignar'}
+                    </span>
+                  </DetailModalRow>
+                  <DetailModalRow label="Rubro">
+                    <span className="text-[10px] sm:text-[11px] font-normal text-slate-700">
+                      {BUSINESS_TYPE_LABELS[selectedLocation.business_type as keyof typeof BUSINESS_TYPE_LABELS] || selectedLocation.business_type || '—'}
                     </span>
                   </DetailModalRow>
                   <DetailModalRow label="Cámaras Instaladas">
@@ -663,7 +792,7 @@ export default function Sedes() {
           <StandardModalFooter
             onClose={() => setShowDetails(false)}
             onEdit={canEdit() ? () => { setShowDetails(false); openEdit(selectedLocation); } : undefined}
-            editLabel="Editar Sede"
+            editLabel="Editar"
           />
         </DetailModal>
       )}

@@ -626,7 +626,7 @@ export default function ChecklistInteractive() {
                                   <div className="flex items-center gap-3 mb-3">
                                     <h5 className="text-[13px] font-normal text-[#002855] leading-tight">{item.title}</h5>
                                     {item.required && (
-                                      <span className="px-2 py-0.5 border border-rose-200 bg-rose-50 text-rose-600 text-[10px] font-normal tracking-wider">Requerido</span>
+                                      <span className="text-[14px] font-semibold bg-amber-100 text-amber-700">Requerido</span>
                                     )}
                                   </div>
                                   <p className="text-[11px] font-normal text-slate-400 uppercase tracking-widest mb-6 leading-relaxed italic">{item.description}</p>
@@ -743,13 +743,9 @@ export default function ChecklistInteractive() {
                             </div>
                           </td>
                           <td className="px-4 py-5 font-normal">
-                            <span className={`px-2.5 py-1 border text-[9px] font-normal uppercase tracking-[0.2em] ${
-                              checklist.status === 'completed'
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                                : 'bg-blue-50 border-blue-200 text-blue-700'
-                            }`}>
-                              {checklist.status === 'completed' ? 'FINALIZADO' : 'EN CURSO'}
-                            </span>
+                                            <span className={`text-[14px] font-semibold ${checklist.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                              {checklist.status === 'completed' ? 'FINALIZADO' : 'EN CURSO'}
+                                            </span>
                           </td>
                           <td className="px-6 py-5 text-right font-normal">
                             <button

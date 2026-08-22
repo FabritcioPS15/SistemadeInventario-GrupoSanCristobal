@@ -180,13 +180,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
             { id: 'inventory-all', label: 'Ver Todo', path: '/inventory/all' },
             { id: 'cat-tecnologia', label: 'Tecnología', path: '/inventory/tecnologia' },
             { id: 'cat-seguridad', label: 'Seguridad y Control', path: '/inventory/seguridad-control' },
-            { id: 'cat-operativos', label: 'Equipos Operativos', path: '/inventory/equipos-operativos' },
+            { id: 'cat-operativos', label: 'Equipos de Línea', path: '/inventory/equipos-operativos' },
             { id: 'cat-mobiliario', label: 'Mobiliario', path: '/inventory/mobiliario' },
             { id: 'cat-suministros', label: 'Útiles y Suministros', path: '/inventory/utiles-suministros' },
-            { id: 'cat-flota', label: 'Flota Vehicular', path: '/inventory/flota-vehicular' },
-            { id: 'cat-infraestructura', label: 'Infraestructura TI', path: '/inventory/infraestructura-ti' },
-            { id: 'cat-herramientas', label: 'Herramientas y Equipos', path: '/inventory/herramientas-equipos' },
-            { id: 'cat-instalaciones', label: 'Instalaciones', path: '/inventory/instalaciones' },
           ]
         },
         {
@@ -452,7 +448,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onClo
 
         <div className="p-4 bg-black/30 border-t border-white/5 shrink-0 flex flex-col gap-4">
           <button onClick={logout} className={`w-full flex items-center justify-center gap-2 py-2 text-[10px] font-black text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all tracking-[2px] ${collapsed ? 'px-0' : 'px-4'}`}>
-            <LogOut size={16} /> {!collapsed && 'Salir'}
+            <LogOut size={16} /> {!collapsed && 'SALIR'}
           </button>
         </div>
       </aside>

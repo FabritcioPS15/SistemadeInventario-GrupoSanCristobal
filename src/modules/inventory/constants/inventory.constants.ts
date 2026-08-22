@@ -32,7 +32,7 @@ export const STATUS_MAP: Record<string, { label: string, color: string }> = {
 export const PATH_CATEGORY_MAP: Record<string, string> = {
   'tecnologia': 'Tecnología',
   'seguridad-control': 'Seguridad y Control',
-  'equipos-operativos': 'Equipos Operativos',
+  'equipos-operativos': 'Equipos de Línea',
   'mobiliario': 'Mobiliario',
   'utiles-suministros': 'Útiles y Suministros',
   'flota-vehicular': 'Flota Vehicular',

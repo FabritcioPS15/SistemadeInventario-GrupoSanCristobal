@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, MapPin, Search, Map, Calendar, AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, MapPin, Search, Map, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Pagination from '../../../shared/components/ui/Pagination';
@@ -57,7 +57,7 @@ export default function PlanosDefensaCivil() {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').order('name');
+    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
     if (data) setLocations(data);
   };
 
@@ -123,11 +123,10 @@ export default function PlanosDefensaCivil() {
     if (plano.estado === 'pendiente') {
       return (
         <div className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 shadow-sm">
-            <AlertTriangle size={11} className="text-rose-500 shrink-0" />
+          <span className="text-[14px] font-semibold bg-amber-100 text-amber-700">
             Pendiente
           </span>
-          <span className="text-[10px] font-black text-rose-600/80 ml-1">{dateStr}</span>
+          <span className="text-[10px] font-black text-amber-600/80 ml-1">{dateStr}</span>
         </div>
       );
     }
@@ -135,8 +134,7 @@ export default function PlanosDefensaCivil() {
     if (plano.estado === 'actualizado') {
       return (
         <div className="flex flex-col items-start gap-1">
-          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-100 shadow-sm">
-            <CheckCircle2 size={11} className="text-emerald-500 shrink-0" />
+          <span className="text-[14px] font-semibold bg-emerald-100 text-emerald-700">
             Actualizado
           </span>
           <span className="text-[10px] font-bold text-slate-500 ml-1">{dateStr}</span>
@@ -146,8 +144,7 @@ export default function PlanosDefensaCivil() {
 
     return (
       <div className="flex flex-col items-start gap-1">
-        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100 shadow-sm">
-          <CheckCircle2 size={11} className="text-blue-500 shrink-0" />
+        <span className="text-[14px] font-semibold bg-emerald-100 text-emerald-700">
           Vigente
         </span>
         <span className="text-[10px] font-bold text-slate-500 ml-1">{dateStr}</span>
@@ -214,10 +211,9 @@ export default function PlanosDefensaCivil() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/search:text-[#002855] transition-colors" size={16} />
               <input
                 type="text"
-                placeholder="Buscar..."
                 value={search}
                 onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                className="w-full pl-12 pr-4 py-3 text-[12px] text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
+                className="w-full pl-12 pr-4 py-3 text-[12px] font-black text-[#002855] bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#002855]/30 focus:ring-4 focus:ring-[#002855]/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.1em]"
               />
             </>
           }

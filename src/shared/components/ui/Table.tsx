@@ -159,7 +159,7 @@ export function TableCellSecondary({
   );
 }
 
-/** Badge/etiqueta con borde — sin bordes redondeados */
+/** Etiqueta de texto — sin borde ni fondo */
 export function TableCellBadge({
   children,
   className = ''
@@ -168,7 +168,7 @@ export function TableCellBadge({
   className?: string;
 }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest border ${className}`}>
+    <span className={`text-[14px] font-semibold text-slate-800 ${className}`}>
       {children}
     </span>
   );

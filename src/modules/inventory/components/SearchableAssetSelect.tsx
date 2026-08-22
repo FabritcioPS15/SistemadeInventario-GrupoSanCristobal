@@ -72,7 +72,7 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
         <div className="flex-1 truncate">
           {selectedAsset ? (
             <div className="flex items-center gap-2">
-              <span className="p-1 bg-blue-100 text-blue-700 rounded-none">
+              <span className="p-1 text-slate-500">
                 {getIcon(selectedAsset.asset_types?.name)}
               </span>
               <span className="text-[11px] font-semibold text-[#002855] uppercase tracking-[0.1em] truncate">

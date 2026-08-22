@@ -47,7 +47,7 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
   const renderStatusBanner = () => {
     const targetDate = titulo.vigencia_al || titulo.fecha_vencimiento;
     if (!targetDate) return (
-      <span className="px-2 py-1 text-[9px] font-semibold uppercase tracking-widest border border-current bg-opacity-10 bg-slate-500 text-slate-700 border-slate-200">
+      <span className="text-[14px] font-semibold bg-slate-100 text-slate-600">
         SIN VENCIMIENTO
       </span>
     );
@@ -56,7 +56,7 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
 
     if (daysLeft <= 0) {
       return (
-        <span className="px-2 py-1 text-[9px] font-semibold uppercase tracking-widest border border-current bg-opacity-10 bg-rose-500 text-rose-700 border-rose-200">
+        <span className="text-[14px] font-semibold bg-rose-100 text-rose-700">
           VENCIDO ({Math.abs(daysLeft)}D)
         </span>
       );
@@ -64,14 +64,14 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
 
     if (daysLeft <= 30) {
       return (
-        <span className="px-2 py-1 text-[9px] font-semibold uppercase tracking-widest border border-current bg-opacity-10 bg-amber-500 text-amber-700 border-amber-200">
+        <span className="text-[14px] font-semibold bg-amber-100 text-amber-700">
           POR VENCER ({daysLeft}D)
         </span>
       );
     }
 
     return (
-      <span className="px-2 py-1 text-[9px] font-semibold uppercase tracking-widest border border-current bg-opacity-10 bg-emerald-500 text-emerald-700 border-emerald-200">
+      <span className="text-[14px] font-semibold bg-emerald-100 text-emerald-700">
         VIGENTE ({daysLeft}D)
       </span>
     );
@@ -154,7 +154,7 @@ export default function TituloHabilitanteDetails({ titulo, onClose, onEdit }: Ti
                   </div>
                   <div className="pt-4 border-t border-slate-50">
                     <label className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest block mb-1">Vigencia del Documento (Tiempo)</label>
-                    <p className="text-[11px] font-semibold text-slate-700 uppercase">{titulo.vigencia_documento || 'No especificada'}</p>
+                    <p className="text-[14px] font-semibold text-slate-800 uppercase">{titulo.vigencia_documento || 'No especificada'}</p>
                   </div>
                 </div>
               </section>

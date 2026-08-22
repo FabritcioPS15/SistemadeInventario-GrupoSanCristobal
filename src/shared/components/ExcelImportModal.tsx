@@ -860,15 +860,15 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                                                         </td>
                                                         <td className="px-6 py-3 text-center">
                                                             {mapping.ignore ? (
-                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                                                                <span className="text-xs font-medium text-slate-500">
                                                                     Ignorado
                                                                 </span>
                                                             ) : isMapped ? (
-                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                                                                <span className="text-xs font-medium text-slate-500">
                                                                     <CheckCircle size={12} /> Listo
                                                                 </span>
                                                             ) : (
-                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                                <span className="text-xs font-medium text-slate-500">
                                                                     <AlertCircle size={12} /> Pendiente
                                                                 </span>
                                                             )}
@@ -910,7 +910,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                                                     <tr key={i} className="hover:bg-blue-50/30 transition-colors">
                                                         <td className="px-6 py-3 font-normal text-slate-700 uppercase">{record.descripcion}</td>
                                                         <td className="px-6 py-3">
-                                                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 font-normal uppercase rounded-none">{record._typeName}</span>
+                                                            <span className="text-[11px] font-normal text-slate-500 uppercase">{record._typeName}</span>
                                                         </td>
                                                         <td className="px-6 py-3 font-normal text-slate-500 uppercase">{record._categoryName}</td>
                                                         <td className="px-6 py-3 font-normal text-slate-400 uppercase">{record._subcategoryName}</td>
