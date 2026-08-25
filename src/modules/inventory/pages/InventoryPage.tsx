@@ -230,7 +230,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         model: a.model || '—',
         serial: a.serial_number || '—',
         location: a.locations?.name || '—',
-        area: a.areas?.name || '—',
+        area: a.areas?.name || a.area_ubicacion || '—',
         status: a.status || a.estado_uso || '—',
         purchase_date: a.fecha_adquisicion ? new Date(String(a.fecha_adquisicion).includes('T') ? String(a.fecha_adquisicion) : `${a.fecha_adquisicion}T12:00:00`).toLocaleDateString('es-PE') : '—',
         notes: a.notes || '—'
@@ -607,7 +607,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                           <TableCell>
                             <div className="flex flex-col min-w-0">
                               <TableCellPrimary className="truncate max-w-[180px]">{asset.locations?.name || 'No asignada'}</TableCellPrimary>
-                              <TableCellSecondary className="truncate max-w-[180px] mt-1">{asset.areas?.name || 'Sin área'}</TableCellSecondary>
+                               <TableCellSecondary className="truncate max-w-[180px] mt-1">{asset.areas?.name || (asset as any).area_ubicacion || 'Sin área'}</TableCellSecondary>
                             </div>
                           </TableCell>
                           <TableCell className="whitespace-nowrap">

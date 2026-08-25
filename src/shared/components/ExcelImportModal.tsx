@@ -37,12 +37,12 @@ const ASSET_TYPE_KEYWORDS: Record<string, string> = {
     'PANTALLAS': 'Monitor',
     'PANTALLAS PARA PC': 'Monitor',
     'DISPLAY': 'Monitor',
-    // PC variantes
-    'COMPUTADORA': 'PC',
-    'ORDENADOR': 'PC',
-    'DESKTOP': 'PC',
-    'PC ': 'PC',  // PC con espacio para evitar coincidencias con otros
-    'CPU ': 'PC', // CPU con espacio para evitar coincidencias
+    // Equipos de Línea variantes (antes "PC")
+    'COMPUTADORA': 'EQUIPOS DE LÍNEA',
+    'ORDENADOR': 'EQUIPOS DE LÍNEA',
+    'DESKTOP': 'EQUIPOS DE LÍNEA',
+    'PC ': 'EQUIPOS DE LÍNEA',  // PC con espacio para evitar coincidencias con otros
+    'CPU ': 'EQUIPOS DE LÍNEA', // CPU con espacio para evitar coincidencias
     // Laptop variantes
     'PORTATIL': 'Laptop',
     'NOTEBOOK': 'Laptop',
@@ -250,7 +250,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                         // Priorizar palabras más largas (más específicas)
                         if (b.length !== a.length) return b.length - a.length;
                         // Si tienen la misma longitud, priorizar Monitor, PC, Laptop antes que Maquinaria
-                        const priority: Record<string, number> = { 'MONITOR': 100, 'MONITORES': 99, 'MONITO': 98, 'PANTALLA': 97, 'PANTALLAS': 96, 'PC ': 95, 'CPU ': 94, 'MAQUINARIA': 1 };
+                        const priority: Record<string, number> = { 'MONITOR': 100, 'MONITORES': 99, 'MONITO': 98, 'PANTALLA': 97, 'PANTALLAS': 96, 'EQUIPOS DE LÍNEA': 95, 'COMPUTADORA': 94, 'DESKTOP': 93, 'MAQUINARIA': 1 };
                         return (priority[b] || 50) - (priority[a] || 50);
                     });
 
@@ -292,7 +292,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                 // Determinar category_id (buscando coincidencia heurística o desde el excel)
                 const excelCategory = cleanField(normalizedRow['CATEGORÍA'] || normalizedRow['CATEGORIA']);
                 const targetCatName = excelCategory || (
-                    ['PC', 'Laptop', 'Monitor', 'Impresora', 'Escáner', 'Proyector', 'Switch', 'Periféricos', 'Fuente de Poder', 'DVR', 'Cámara', 'Estabilizador'].includes(typeName) ? 'Equipos de Cómputo y TI' :
+                    ['EQUIPOS DE LÍNEA', 'Laptop', 'Monitor', 'Impresora', 'Escáner', 'Proyector', 'Switch', 'Periféricos', 'Fuente de Poder', 'DVR', 'Cámara', 'Estabilizador'].includes(typeName) ? 'Equipos de Cómputo y TI' :
                         ['Biométrico'].includes(typeName) ? 'Equipos Biométricos y Control' :
                             ['Mobiliario'].includes(typeName) ? 'Mobiliario' :
                                 ['Seguridad'].includes(typeName) ? 'Seguridad' :
@@ -303,7 +303,7 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
 
                 // Determinar subcategory_id (buscando coincidencia heurística)
                 let targetSubName = typeName;
-                if (typeName === 'PC') targetSubName = 'Computadoras (CPU)';
+                if (typeName === 'EQUIPOS DE LÍNEA') targetSubName = 'Computadoras (CPU)';
                 if (typeName === 'Monitor') targetSubName = 'Monitores';
                 if (typeName === 'Periféricos') targetSubName = 'Accesorios TI';
                 if (typeName === 'Cámara') targetSubName = 'Cámaras';
@@ -380,8 +380,8 @@ const ExcelImportModal: React.FC<ExcelImportModalProps> = ({ isOpen, onClose, on
                     assetRecord.valor_estimado = valorEstimado > 0 ? valorEstimado : null;
                     assetRecord.estado_uso = cleanField(normalizedRow['ESTADO DE USO'] || normalizedRow['ESTADO USO'] || normalizedRow['ESTADO_USO'] || normalizedRow['ESTADO OPERATIVO']);
 
-                    // Agregar campos específicos para PC/Laptop
-                    if (typeName === 'PC' || typeName === 'Laptop') {
+                    // Agregar campos específicos para Equipos de Línea/Laptop
+                    if (typeName === 'EQUIPOS DE LÍNEA' || typeName === 'Laptop') {
                         assetRecord.processor = cleanField(normalizedRow['PROCESADOR']);
                         assetRecord.ram = cleanField(normalizedRow['RAM'] || normalizedRow['MEMORIA RAM']);
                         assetRecord.operating_system = cleanField(normalizedRow['SISTEMA OPERATIVO'] || normalizedRow['SO']);

@@ -17,7 +17,7 @@ const { data: locationsData } = await supabase.from('locations').select('name').
 
         const areasList = [...new Set([...(areasData || []).map(a => a.name), 'Línea de inspección', 'Recepción'])].filter(Boolean);
         const typesList = [...new Set((assetTypesData || []).map(t => t.name))].filter(Boolean);
-        const catList = ['Tecnología', 'Seguridad y Control', 'Equipos Operativos', 'Mobiliario', 'Útiles y Suministros'];
+        const catList = ['Tecnología', 'Seguridad y Control', 'Equipos de línea', 'Mobiliario', 'Útiles y Suministros'];
         const subcatList = [...new Set((subcategoriesData || []).map(s => s.name))].filter(Boolean);
 const locationsList = [...new Set((locationsData || []).map(l => l.name))].filter(Boolean);
         

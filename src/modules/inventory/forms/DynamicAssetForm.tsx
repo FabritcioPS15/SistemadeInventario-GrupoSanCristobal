@@ -1,4 +1,4 @@
-import { Package, Monitor, Shield, Wrench, Home, Briefcase, ClipboardCheck, Stethoscope, Paperclip, Server, Box, Search } from 'lucide-react';
+import { Package, Monitor, Shield, Wrench, Home, Armchair, ClipboardCheck, Computer, Paperclip, Server, Box, Search } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
 import { FormField, FormInput, FormSelect, FormTextarea, FormSection, FormGrid } from '../../../shared/components/forms/BaseForm';
@@ -15,9 +15,9 @@ const CATEGORY_ICONS: Record<string, any> = {
   'seguridad-control': Shield,
   'herramientas-equipos': Wrench,
   'instalaciones': Home,
-  'mobiliario': Briefcase,
+  'mobiliario': Armchair,
   'equipos-revision': ClipboardCheck,
-  'equipos-operativos': Stethoscope,
+  'equipos-operativos': Computer,
   'utiles-suministros': Paperclip,
   'infraestructura-ti': Server,
   'otros-activos': Box,
@@ -168,8 +168,8 @@ export default function DynamicAssetForm({ onClose, onSaved, editAsset, initialC
                     setTipoActivoSearch('');
                   }}
                   className={`flex flex-col items-center justify-center p-4 border transition-all duration-200 text-left ${isSelected
-                      ? 'border-blue-600 bg-blue-50/50 shadow-[0_0_0_1px_rgba(37,99,235,1)] rounded-xl'
-                      : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50/50 rounded-xl'
+                    ? 'border-blue-600 bg-blue-50/50 shadow-[0_0_0_1px_rgba(37,99,235,1)] rounded-xl'
+                    : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50/50 rounded-xl'
                     }`}
                 >
                   <Icon
@@ -219,8 +219,8 @@ export default function DynamicAssetForm({ onClose, onSaved, editAsset, initialC
                         form.setField('tipo_activo_custom', '');
                       }}
                       className={`px-3 py-1.5 text-[11px] font-normal uppercase tracking-wider rounded-lg transition-all duration-200 border ${isSelected
-                          ? 'bg-emerald-500 border-emerald-600 text-white shadow-sm'
-                          : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300 hover:bg-emerald-50'
+                        ? 'bg-emerald-500 border-emerald-600 text-white shadow-sm'
+                        : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300 hover:bg-emerald-50'
                         }`}
                     >
                       {tipo}
@@ -232,8 +232,8 @@ export default function DynamicAssetForm({ onClose, onSaved, editAsset, initialC
                     type="button"
                     onClick={() => form.setField('tipo_activo', 'Otro')}
                     className={`px-3 py-1.5 text-[11px] font-normal uppercase tracking-wider rounded-lg transition-all duration-200 border ${form.formData.tipo_activo === 'Otro'
-                        ? 'bg-amber-500 border-amber-600 text-white shadow-sm'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300 hover:bg-amber-50'
+                      ? 'bg-amber-500 border-amber-600 text-white shadow-sm'
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300 hover:bg-amber-50'
                       }`}
                   >
                     Otro...

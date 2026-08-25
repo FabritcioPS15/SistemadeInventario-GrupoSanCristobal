@@ -130,20 +130,32 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
   }, []);
 
   const fetchAssets = async () => {
-    const { data } = await supabase
-      .from('assets')
-      .select(`
-        *,
-        asset_types(name),
-        locations(name)
-      `)
-      .order('created_at', { ascending: false });
+    const [assetsResult, categoriesResult] = await Promise.all([
+      supabase
+        .from('assets')
+        .select(`
+          *,
+          asset_types(name),
+          locations(name)
+        `)
+        .order('created_at', { ascending: false }),
+      supabase.from('categories').select('id, name'),
+    ]);
 
-    if (data) {
+    const catsMap: Record<string, string> = {};
+    if (categoriesResult.data) {
+      categoriesResult.data.forEach((c: any) => { catsMap[c.id] = c.name; });
+    }
+
+    if (assetsResult.data) {
       const filtered = allowedLocations
-        ? (data as AssetWithDetails[]).filter(a => a.location_id && allowedLocations.includes(a.location_id))
-        : data as AssetWithDetails[];
-      setAssets(filtered);
+        ? (assetsResult.data as AssetWithDetails[]).filter(a => a.location_id && allowedLocations.includes(a.location_id))
+        : assetsResult.data as AssetWithDetails[];
+      const withCategories = filtered.map(a => ({
+        ...a,
+        categories: catsMap[a.category_id] ? { id: a.category_id, name: catsMap[a.category_id] } : a.categories,
+      }));
+      setAssets(withCategories as AssetWithDetails[]);
     }
   };
 

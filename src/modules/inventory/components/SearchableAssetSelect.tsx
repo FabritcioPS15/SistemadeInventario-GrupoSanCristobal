@@ -168,7 +168,7 @@ export default function SearchableAssetSelect({ assets, value, onChange, error, 
                         </p>
                       )}
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest truncate">{asset.asset_types?.name}</span>
+                        <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest truncate">{asset.categories?.name || asset.asset_types?.name}</span>
                         <span className="w-1 h-1 bg-slate-300 rounded-full shrink-0"></span>
                         <div className="flex items-center gap-1 text-[9px] font-semibold text-rose-500 uppercase italic truncate">
                           <MapPin size={10} />
