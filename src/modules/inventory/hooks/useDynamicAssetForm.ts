@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
 import { supabase, Category, Location, AssetWithDetails } from '../../../shared/services/supabase';
 
 export type DynamicAssetFormData = {
@@ -66,7 +67,7 @@ const BASE_FIELDS: DynamicAssetFormData = {
   tipo_activo_custom: '',
 };
 
-function buildInitialFields(editAsset?: AssetWithDetails, initialCategoryId?: string): DynamicAssetFormData {
+function buildInitialFields(editAsset?: AssetWithDetails, initialCategoryId?: string, allowedLocations?: string[] | null): DynamicAssetFormData {
   const fields = { ...BASE_FIELDS };
 
   if (editAsset) {
@@ -97,6 +98,10 @@ function buildInitialFields(editAsset?: AssetWithDetails, initialCategoryId?: st
 
   if (!editAsset) {
     if (initialCategoryId) fields.category_id = initialCategoryId;
+    // Si el usuario está restringido a una sola sede, predefinirla automáticamente
+    if (allowedLocations !== null && allowedLocations.length === 1 && !fields.location_id) {
+      fields.location_id = allowedLocations[0];
+    }
     if (!fields.codigo_unico) {
       fields.codigo_unico = 'ACT-' + Math.floor(100000 + Math.random() * 900000).toString();
     }
@@ -121,18 +126,27 @@ function buildInitialCamposEspecificos(editAsset?: AssetWithDetails): Record<str
 
 export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: UseDynamicAssetFormProps): UseDynamicAssetFormReturn {
   const { success: notifySuccess, error: notifyError } = useNotify();
+  const allowedLocations = useAllowedLocations();
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<DynamicAssetFormData>(() =>
-    buildInitialFields(editAsset, initialCategoryId)
+    buildInitialFields(editAsset, initialCategoryId, allowedLocations)
   );
 
   const [camposEspecificos, setCamposEspecificos] = useState<Record<string, any>>(() =>
     buildInitialCamposEspecificos(editAsset)
   );
+
+  // Si el usuario está restringido a una sola sede, forzar (y fijar) esa sede
+  const isSingleLocationRestricted = allowedLocations !== null && allowedLocations.length === 1;
+  useEffect(() => {
+    if (!editAsset && isSingleLocationRestricted && allowedLocations[0]) {
+      setFormData(prev => ({ ...prev, location_id: allowedLocations[0] }));
+    }
+  }, [isSingleLocationRestricted, allowedLocations, editAsset]);
 
   useEffect(() => {
     fetchInitialData();
@@ -140,9 +154,26 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
 
   const fetchInitialData = async () => {
     try {
+      // Sin sedes asignadas y usuario restringido → no hay sedes que mostrar
+      if (allowedLocations !== null && allowedLocations.length === 0) {
+        const catRes = await supabase.from('categories').select('*');
+        if (catRes.error) {
+          setErrors(prev => ({ ...prev, submit: `Error cargando categorías: ${catRes.error.message}` }));
+          return;
+        }
+        setCategories(catRes.data || []);
+        setLocations([]);
+        return;
+      }
+
+      let locQuery = supabase.from('locations').select('*').eq('is_active', true).order('name');
+      if (allowedLocations !== null && allowedLocations.length > 0) {
+        locQuery = locQuery.in('id', allowedLocations);
+      }
+
       const [catRes, locRes] = await Promise.all([
         supabase.from('categories').select('*'),
-        supabase.from('locations').select('*').eq('is_active', true).order('name'),
+        locQuery,
       ]);
 
       if (catRes.error) {

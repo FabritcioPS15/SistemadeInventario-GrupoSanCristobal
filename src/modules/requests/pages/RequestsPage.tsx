@@ -6,6 +6,7 @@ import { supabase } from '../../../shared/services/supabase';
 import RequestForm from '../forms/RequestForm';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
 import { emailService } from '../../../shared/services/emailService';
 import { Request, RequestStatus, RequestPriority, RequestCategory } from '../../../shared/types/requests.types';
 import Pagination from '../../../shared/components/ui/Pagination';
@@ -74,6 +75,7 @@ const categoryLabels: Record<RequestCategory, string> = {
 
 export default function RequestsPage() {
   const { canEdit } = useAuth();
+  const allowedLocations = useAllowedLocations();
   const { success: notifySuccess, error: notifyError, confirm } = useNotify();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,15 +92,30 @@ export default function RequestsPage() {
   
   useEffect(() => {
     fetchRequests();
-  }, []);
+  }, [JSON.stringify(allowedLocations)]);
 
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const { data } = await supabase
+
+      // Si el usuario tiene restricción de sedes pero ninguna asignada, no hay nada que mostrar
+      if (allowedLocations !== null && allowedLocations.length === 0) {
+        setRequests([]);
+        setLoading(false);
+        return;
+      }
+
+      let query = supabase
         .from('requests')
         .select('*')
         .order('created_at', { ascending: false });
+
+      // Filtrar por sedes permitidas directamente en la query
+      if (allowedLocations !== null && allowedLocations.length > 0) {
+        query = query.in('location_id', allowedLocations);
+      }
+
+      const { data } = await query;
 
       const requestsData = data || [];
 
@@ -146,6 +163,7 @@ export default function RequestsPage() {
       setLoading(false);
     }
   };
+
 
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';

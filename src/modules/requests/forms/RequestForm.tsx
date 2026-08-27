@@ -7,6 +7,7 @@ import { emailService } from '../../../shared/services/emailService';
 import { RequestFormData, RequestCategory, RequestPriority } from '../../../shared/types/requests.types';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
 
 type RequestFormProps = {
   onClose: () => void;
@@ -41,7 +42,7 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
   const [newEmailTo, setNewEmailTo] = useState('');
   const [newEmailCc, setNewEmailCc] = useState('');
   const [locations, setLocations] = useState<any[]>([]);
-  const allowedLocations = user?.location_ids?.length ? user.location_ids : null;
+  const allowedLocations = useAllowedLocations();
 
   const [formData, setFormData] = useState<RequestFormData>({
     title: '',
@@ -69,20 +70,24 @@ export default function RequestForm({ onClose, onSave }: RequestFormProps) {
 
   const fetchLocations = async () => {
     try {
-      const { data } = await supabase
-        .from('locations')
-        .select('id, name')
-        .order('name');
-      if (data) {
-        const filtered = allowedLocations
-          ? data.filter(l => allowedLocations.includes(l.id))
-          : data;
-        setLocations(filtered);
+      // Sin sedes asignadas y usuario restringido → no hay sedes que mostrar
+      if (allowedLocations !== null && allowedLocations.length === 0) {
+        setLocations([]);
+        return;
       }
+
+      let query = supabase.from('locations').select('id, name').order('name');
+      // Filtrar por sedes permitidas directamente en la query
+      if (allowedLocations !== null && allowedLocations.length > 0) {
+        query = query.in('id', allowedLocations);
+      }
+      const { data } = await query;
+      if (data) setLocations(data);
     } catch (err) {
       console.error('Error fetching locations:', err);
     }
   };
+
 
   const handleSubmit = async () => {
     const newErrors: Record<string, string> = {};

@@ -14,6 +14,7 @@ import SelectionModeButton from '../../../shared/components/ui/SelectionModeButt
 import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
 import SearchBar from '../../../shared/components/ui/SearchBar';
 import { useInventory } from '../hooks/useInventory';
+import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
 import { PATH_CATEGORY_MAP, SUBCATEGORY_SLUG_MAP, STATUS_MAP } from '../constants/inventory.constants';
 import InventoryDashboard from '../components/InventoryDashboard';
 import { InventoryFilter } from '../../../shared/types/inventory.types';
@@ -58,7 +59,8 @@ const getStatusColorClass = (estado_uso?: string | null): string =>
 
 export default function Inventory({ categoryFilter, subcategoryFilter }: InventoryProps) {
   const { success: notifySuccess, error: notifyError, confirm } = useNotify();
-  const { canEdit, user } = useAuth();
+  const { canEdit, hasPermission, user } = useAuth();
+  const allowedLocations = useAllowedLocations();
 
   // UI-only state
   const [showAssetForm, setShowAssetForm] = useState(false);
@@ -79,19 +81,26 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     setSelectionMode(!selectionMode);
   };
 
+  // Permite editar/eliminar activos si el usuario puede editarlos globalmente
+  // o si tiene permisos específicos de editar/eliminar inventario
+  const canEditAsset = (asset: AssetWithDetails): boolean => {
+    return canEdit() || hasPermission('inventory-edit') || hasPermission('inventory-delete');
+  };
+
   // Determinar los filtros de empresa/sede según el rol y accesos del usuario
   const multiEnterpriseFilters: InventoryFilter = (() => {
-    // Super admin y gerencia ven todo
-    if (user?.role === 'super_admin' || user?.role === 'gerencia') {
+    // Roles con acceso total ven todo
+    if (allowedLocations === null) {
       return {};
     }
     // Otros roles solo ven sus sedes asignadas
-    if (user?.location_ids && user.location_ids.length > 0) {
+    if (allowedLocations.length > 0) {
       return {
-        location_id: user.location_ids[0] // Usar la primera sede para el dashboard
+        location_id: allowedLocations[0] // Usar la primera sede para el dashboard
       };
     }
-    return {};
+    // Sin sedes asignadas = no ve nada
+    return { location_id: 'none' };
   })();
 
   // Use hook for inventory logic
@@ -330,7 +339,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
             }}
           />
 
-          {canEdit() && (
+          {hasPermission('inventory-create') && (
             <button
               onClick={() => setShowAssetForm(true)}
               className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
@@ -630,7 +639,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                              {canEdit() && (
+                              {canEditAsset(asset) && (
                                 <>
                                   {(asset.cantidad || 1) > 1 && (
                                     <TableActionButton
@@ -732,7 +741,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                     </div>
 
                     <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex gap-2">
-                      {canEdit() && (
+                      {canEditAsset(asset) && (
                         <>
                           <button
                             onClick={() => { setEditingAsset(asset); setShowAssetForm(true); }}

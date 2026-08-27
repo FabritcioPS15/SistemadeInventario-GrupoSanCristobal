@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase, AssetWithDetails, Category, Subcategory, Location, Area } from '../../../shared/services/supabase';
 import { PATH_CATEGORY_MAP } from '../constants/inventory.constants';
 import { useAuth } from '../../../app/providers/AuthContext';
+import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
 
 export interface UseInventoryProps {
   categoryFilter?: string;
@@ -56,8 +57,7 @@ export interface UseInventoryReturn {
 
 export function useInventory({ categoryFilter, subcategoryFilter }: UseInventoryProps = {}): UseInventoryReturn {
   const { user } = useAuth();
-  const isFullAccess = ['super_admin', 'gerencia', 'sistemas'].includes(user?.role || '');
-  const allowedLocationIds = user?.location_ids || [];
+  const allowedLocations = useAllowedLocations(); // null = acceso total, [] = sin acceso, [...] = sedes permitidas
 
   // Data state
   const [rawInventory, setRawInventory] = useState<any[]>([]);
@@ -106,13 +106,14 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
 
   const fetchLocations = async () => {
     let query = supabase.from('locations').select('*').eq('is_active', true).order('name');
-    if (!isFullAccess) {
-      if (allowedLocationIds.length > 0) {
-        query = query.in('id', allowedLocationIds);
-      } else if (user?.location_id) {
-        query = query.eq('id', user.location_id);
+    if (allowedLocations !== null) {
+      // Usuario restringido: si tiene sedes asignadas, filtrar; si no, no retornar ninguna
+      if (allowedLocations.length > 0) {
+        query = query.in('id', allowedLocations);
       } else {
-        query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+        // Sin sedes asignadas → no mostrar nada
+        setLocations([]);
+        return;
       }
     }
     const { data } = await query;
@@ -168,13 +169,13 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     }
 
     // Apply access control location filter
-    if (!isFullAccess) {
-      if (allowedLocationIds.length > 0) {
-        query = query.in('location_id', allowedLocationIds);
-      } else if (user?.location_id) {
-        query = query.eq('location_id', user.location_id);
+    if (allowedLocations !== null) {
+      // Usuario restringido: filtrar por sus sedes
+      if (allowedLocations.length > 0) {
+        query = query.in('location_id', allowedLocations);
       } else {
-        query = query.eq('location_id', '00000000-0000-0000-0000-000000000000');
+        // Sin sedes asignadas → retornar null para indicar que no hay resultados
+        return null;
       }
     }
 
@@ -337,15 +338,15 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Initial fetch
+  // Initial fetch — re-run when allowedLocations changes (location data loads async from AuthContext)
   useEffect(() => {
     fetchDropdownData();
-  }, []);
+  }, [JSON.stringify(allowedLocations)]);
 
-  // Fetch inventory when dependencies change
+  // Fetch inventory when dependencies change (incluido allowedLocations para react a carga async)
   useEffect(() => {
     fetchInventory();
-  }, [currentPage, itemsPerPage, searchTerm, filterCategory, selectedLocations, filterStatus, filterRubro, categoryFilter, subcategoryFilter, sortConfig]);
+  }, [currentPage, itemsPerPage, searchTerm, filterCategory, selectedLocations, filterStatus, filterRubro, categoryFilter, subcategoryFilter, sortConfig, JSON.stringify(allowedLocations)]);
 
   // Realtime subscription for assets table
   useEffect(() => {

@@ -1,13 +1,31 @@
 import { useAuth } from '../../app/providers/AuthContext';
 
 /**
- * Retorna los IDs de sedes a los que tiene acceso el usuario actual.
- * - null => acceso a todas las sedes (super admin o sin restricción)
- * - string[] => solo puede operar con estas sedes
+ * Retorna el ID de la sede a la que pertenece el usuario actual.
+ *
+ * - null      → acceso a TODAS las sedes (roles: super_admin, gerencia, sistemas)
+ * - string[]  → solo puede operar con la sede definida en `users.location_id`
+ *               (array vacío si no tiene una sede asignada)
+ *
+ * Regla: los roles de acceso total nunca tienen restricciones de sede.
+ * El resto de roles están limitados a la sede de `users.location_id`,
+ * replicando el comportamiento del módulo de cámaras.
  */
+
+const FULL_ACCESS_ROLES = ['super_admin', 'gerencia', 'sistemas'];
+
 export function useAllowedLocations(): string[] | null {
   const { user } = useAuth();
-  if (!user) return null;
-  const ids = user.location_ids;
-  return ids && ids.length > 0 ? ids : null;
+  if (!user) return [];
+
+  // Roles con acceso total a todas las sedes → sin restricción
+  if (FULL_ACCESS_ROLES.includes(user.role)) return null;
+
+  const ids = new Set<string>();
+
+  if (user.location_id) {
+    ids.add(user.location_id);
+  }
+
+  return Array.from(ids);
 }

@@ -90,7 +90,7 @@ const BASE_FIELDS: AssetFormData = {
   bios_mode: '',
 };
 
-function buildInitialFields(editAsset?: AssetWithDetails, defaultFields?: AssetFormData, initialCategoryId?: string, initialSubcategoryId?: string): AssetFormData {
+function buildInitialFields(editAsset?: AssetWithDetails, defaultFields?: AssetFormData, initialCategoryId?: string, initialSubcategoryId?: string, allowedLocations?: string[] | null): AssetFormData {
   const fields = { ...BASE_FIELDS };
 
   if (editAsset) {
@@ -109,6 +109,10 @@ function buildInitialFields(editAsset?: AssetWithDetails, defaultFields?: AssetF
   if (!editAsset) {
     if (initialCategoryId) fields.category_id = initialCategoryId;
     if (initialSubcategoryId) fields.subcategory_id = initialSubcategoryId;
+    // Si el usuario está restringido a una sola sede, predefinirla automáticamente
+    if (allowedLocations !== null && allowedLocations.length === 1 && !fields.location_id) {
+      fields.location_id = allowedLocations[0];
+    }
     if (!fields.codigo_unico) {
       fields.codigo_unico = 'ACT-' + Math.floor(100000 + Math.random() * 900000).toString();
     }
@@ -126,8 +130,16 @@ export function useAssetForm({ editAsset, initialCategoryId, initialSubcategoryI
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<AssetFormData>(() =>
-    buildInitialFields(editAsset, defaultFields, initialCategoryId, initialSubcategoryId)
+    buildInitialFields(editAsset, defaultFields, initialCategoryId, initialSubcategoryId, allowedLocations)
   );
+
+  // Si el usuario está restringido a una sola sede, forzar (y fijar) esa sede
+  const isSingleLocationRestricted = allowedLocations !== null && allowedLocations.length === 1;
+  useEffect(() => {
+    if (!editAsset && isSingleLocationRestricted && allowedLocations[0]) {
+      setFormData(prev => ({ ...prev, location_id: allowedLocations[0] }));
+    }
+  }, [isSingleLocationRestricted, allowedLocations, editAsset]);
 
   useEffect(() => {
     fetchInitialData();
@@ -135,10 +147,31 @@ export function useAssetForm({ editAsset, initialCategoryId, initialSubcategoryI
 
   const fetchInitialData = async () => {
     try {
+      // Sin sedes asignadas y usuario restringido → no hay sedes que mostrar
+      if (allowedLocations !== null && allowedLocations.length === 0) {
+        const [catRes, subRes] = await Promise.all([
+          supabase.from('categories').select('*'),
+          supabase.from('subcategories').select('*').order('sort_order'),
+        ]);
+        if (catRes.error) {
+          setErrors(prev => ({ ...prev, submit: `Error cargando categorías: ${catRes.error.message}` }));
+          return;
+        }
+        setCategories(catRes.data || []);
+        setSubcategories(subRes.data || []);
+        setLocations([]);
+        return;
+      }
+
+      let locQuery = supabase.from('locations').select('*').eq('is_active', true).order('name');
+      if (allowedLocations !== null && allowedLocations.length > 0) {
+        locQuery = locQuery.in('id', allowedLocations);
+      }
+
       const [catRes, subRes, locRes] = await Promise.all([
         supabase.from('categories').select('*'),
         supabase.from('subcategories').select('*').order('sort_order'),
-        supabase.from('locations').select('*').eq('is_active', true).order('name'),
+        locQuery,
       ]);
 
       if (catRes.error) {
@@ -148,16 +181,12 @@ export function useAssetForm({ editAsset, initialCategoryId, initialSubcategoryI
 
       setCategories(catRes.data || []);
       setSubcategories(subRes.data || []);
-      if (locRes.data) {
-        const filtered = allowedLocations
-          ? locRes.data.filter(l => allowedLocations.includes(l.id))
-          : locRes.data;
-        setLocations(filtered);
-      }
+      setLocations(locRes.data || []);
     } catch {
       setErrors(prev => ({ ...prev, submit: 'Error de conexión con la base de datos' }));
     }
   };
+
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

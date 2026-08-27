@@ -11,7 +11,6 @@ type User = {
   password?: string;
   role: string;
   location_id?: string;
-  location_ids?: string[]; // Array de sedes a las que tiene acceso el usuario
   phone?: string;
   status: 'active' | 'inactive';
   notes?: string;
@@ -94,39 +93,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           .single();
 
         if (updatedUser && mountedRef.current) {
-          // Recargar location_ids también
-          const { data: userLocations } = await supabase
-            .from('user_locations')
-            .select('location_id')
-            .eq('user_id', user.id);
-
-          const locationIds = userLocations?.map(ul => ul.location_id) || [];
-
-          setUser({
-            ...updatedUser as User,
-            location_ids: locationIds
-          });
-        }
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'user_locations',
-        filter: `user_id=eq.${user.id}`
-      }, async () => {
-        // Recargar location_ids cuando cambian los accesos
-        const { data: userLocations } = await supabase
-          .from('user_locations')
-          .select('location_id')
-          .eq('user_id', user.id);
-
-        const locationIds = userLocations?.map(ul => ul.location_id) || [];
-
-        if (mountedRef.current && user) {
-          setUser({
-            ...user,
-            location_ids: locationIds
-          });
+          setUser(updatedUser as User);
         }
       })
       .subscribe();
@@ -145,7 +112,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const parsedUser = JSON.parse(savedUser);
 
         // Refrescar datos desde la DB para asegurar que tenemos location_id y permisos actualizados
-        // También cargar las sedes a las que tiene acceso el usuario
         const { data: freshUser } = await supabase
           .from('users')
           .select('*')
@@ -153,22 +119,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
           .single();
 
         if (freshUser && mountedRef.current) {
-          // Cargar las sedes a las que tiene acceso el usuario
-          const { data: userLocations } = await supabase
-            .from('user_locations')
-            .select('location_id')
-            .eq('user_id', freshUser.id);
-
-          const locationIds = userLocations?.map(ul => ul.location_id) || [];
-
-          setUser({
-            ...freshUser as User,
-            location_ids: locationIds
-          });
-          localStorage.setItem('auth_user', JSON.stringify({
-            ...freshUser,
-            location_ids: locationIds
-          }));
+          setUser(freshUser as User);
+          localStorage.setItem('auth_user', JSON.stringify(freshUser));
         } else if (mountedRef.current) {
           setUser(parsedUser);
         }
@@ -195,7 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const login = (userData: User, remember: boolean = false) => {
+  const login = async (userData: User, remember: boolean = false) => {
     if (mountedRef.current) {
       setUser(userData);
       if (remember) {

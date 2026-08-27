@@ -124,12 +124,19 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
     location_id: editMaintenance?.location_id || '',
   });
 
+  // Re-fetch cuando cambian las sedes permitidas (se cargan async desde AuthContext)
   useEffect(() => {
     fetchAssets();
     fetchLocations();
-  }, []);
+  }, [JSON.stringify(allowedLocations)]);
 
   const fetchAssets = async () => {
+    // Sin sedes asignadas y usuario restringido → no hay activos que mostrar
+    if (allowedLocations !== null && allowedLocations.length === 0) {
+      setAssets([]);
+      return;
+    }
+
     const [assetsResult, categoriesResult] = await Promise.all([
       supabase
         .from('assets')
@@ -148,29 +155,32 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
     }
 
     if (assetsResult.data) {
-      const filtered = allowedLocations
+      // Filtrar solo los activos de las sedes permitidas
+      const filtered = allowedLocations !== null
         ? (assetsResult.data as AssetWithDetails[]).filter(a => a.location_id && allowedLocations.includes(a.location_id))
         : assetsResult.data as AssetWithDetails[];
       const withCategories = filtered.map(a => ({
         ...a,
-        categories: catsMap[a.category_id] ? { id: a.category_id, name: catsMap[a.category_id] } : a.categories,
+        categories: (a.category_id && catsMap[a.category_id]) ? { id: a.category_id, name: catsMap[a.category_id] } : a.categories,
       }));
       setAssets(withCategories as AssetWithDetails[]);
     }
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase
-      .from('locations')
-      .select('id, name')
-      .order('name');
-
-    if (data) {
-      const filtered = allowedLocations
-        ? data.filter(l => allowedLocations.includes(l.id))
-        : data;
-      setLocations(filtered);
+    // Sin sedes asignadas y usuario restringido → no hay sedes que mostrar
+    if (allowedLocations !== null && allowedLocations.length === 0) {
+      setLocations([]);
+      return;
     }
+
+    let query = supabase.from('locations').select('id, name').order('name');
+    // Filtrar sedes directamente en la query
+    if (allowedLocations !== null && allowedLocations.length > 0) {
+      query = query.in('id', allowedLocations);
+    }
+    const { data } = await query;
+    if (data) setLocations(data);
   };
 
   const calculateTotalCost = () => {

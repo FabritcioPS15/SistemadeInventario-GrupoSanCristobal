@@ -6,6 +6,7 @@ import { generatePDF, generateExcel } from '../../../shared/utils/exportUtils';
 import { BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../../app/providers/AuthContext';
+import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
 import TituloHabilitanteForm from '../forms/TituloHabilitanteForm';
 import TituloHabilitanteDetails from '../components/TituloHabilitanteDetails';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
@@ -40,6 +41,7 @@ type TituloHabilitante = {
 
 export default function TitulosHabilitantes() {
   const { canEdit } = useAuth();
+  const allowedLocations = useAllowedLocations();
   const [titulos, setTitulos] = useState<TituloHabilitante[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +111,20 @@ export default function TitulosHabilitantes() {
   }, []);
 
   const fetchTitulos = async () => {
-    const { data, error } = await supabase.from('titulos_habilitantes').select('*, locations(*)').order('created_at', { ascending: false });
+    // Sin sedes asignadas y usuario restringido → no hay nada que mostrar
+    if (allowedLocations !== null && allowedLocations.length === 0) {
+      setTitulos([]);
+      return;
+    }
+
+    let query = supabase.from('titulos_habilitantes').select('*, locations(*)').order('created_at', { ascending: false });
+
+    // Filtrar por sedes permitidas directamente en la query
+    if (allowedLocations !== null && allowedLocations.length > 0) {
+      query = query.in('ubicacion_id', allowedLocations);
+    }
+
+    const { data, error } = await query;
     if (!error && data) {
       // Filtrar para mostrar solo los títulos de sedes tipo CITV, ESCON y ECSAL
       const citvTitulos = (data as TituloHabilitante[]).filter(t => t.locations && ['revision', 'escuela_conductores', 'policlinico'].includes(t.locations.type));
@@ -118,7 +133,19 @@ export default function TitulosHabilitantes() {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
+    // Sin sedes asignadas y usuario restringido → no hay sedes que mostrar
+    if (allowedLocations !== null && allowedLocations.length === 0) {
+      setLocations([]);
+      return;
+    }
+
+    let query = supabase.from('locations').select('*').eq('is_active', true).order('name');
+    // Filtrar sedes directamente en la query
+    if (allowedLocations !== null && allowedLocations.length > 0) {
+      query = query.in('id', allowedLocations);
+    }
+
+    const { data } = await query;
     if (data) {
       // Filtrar para mostrar solo las sedes tipo CITV, ESCON y ECSAL
       const citvLocations = data.filter(loc => ['revision', 'escuela_conductores', 'policlinico'].includes(loc.type));

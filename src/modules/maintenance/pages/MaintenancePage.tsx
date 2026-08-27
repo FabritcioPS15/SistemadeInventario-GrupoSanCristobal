@@ -7,6 +7,7 @@ import { supabase, Location } from '../../../shared/services/supabase';
 import MaintenanceForm from '../forms/MaintenanceForm';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
+import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
 import Pagination from '../../../shared/components/ui/Pagination';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
 import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
@@ -28,7 +29,8 @@ type MaintenanceProps = {
 };
 
 export default function Maintenance({ categoryFilter }: MaintenanceProps) {
-  const { canEdit } = useAuth();
+  const { canEdit, hasPermission } = useAuth();
+  const allowedLocations = useAllowedLocations();
   const { success: notifySuccess, error: notifyError, confirm } = useNotify();
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -68,7 +70,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
   useEffect(() => {
     fetchData();
-  }, [statusFilter.join(','), typeFilter.join(','), machineTypeFilter.join(',')]);
+  }, [statusFilter.join(','), typeFilter.join(','), machineTypeFilter.join(','), JSON.stringify(allowedLocations)]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -78,6 +80,12 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
   const fetchMaintenanceRecords = async () => {
     try {
+      // Si el usuario tiene restricción de sedes pero ninguna asignada, no hay nada que mostrar
+      if (allowedLocations !== null && allowedLocations.length === 0) {
+        setMaintenanceRecords([]);
+        return;
+      }
+
       let query = supabase
         .from('maintenance_records')
         .select('*, assets!inner(id, codigo_unico, brand, model, descripcion, serial_number, asset_types(*), locations(*)), locations!location_id(*)')
@@ -87,12 +95,15 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
       if (typeFilter.length > 0) query = query.in('maintenance_type', typeFilter);
       if (machineTypeFilter.length > 0) query = query.in('assets.asset_type_id', machineTypeFilter);
 
+      // Filtrar por sedes permitidas directamente en la query
+      if (allowedLocations !== null && allowedLocations.length > 0) {
+        query = query.in('assets.location_id', allowedLocations);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
 
-      if (data) {
-        setMaintenanceRecords(data as MaintenanceRecord[]);
-      }
+      setMaintenanceRecords((data as MaintenanceRecord[]) ?? []);
     } catch (err: any) {
       console.error('Error loading maintenance records:', err);
       notifyError(`Error al cargar registros: ${err.message}`);
@@ -100,7 +111,18 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   };
 
   const fetchLocations = async () => {
-    const { data, error } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
+    // Sin sedes asignadas y usuario restringido → no hay sedes que mostrar
+    if (allowedLocations !== null && allowedLocations.length === 0) {
+      setLocations([]);
+      return;
+    }
+
+    let query = supabase.from('locations').select('*').eq('is_active', true).order('name');
+    // Filtrar sedes directamente en la query
+    if (allowedLocations !== null && allowedLocations.length > 0) {
+      query = query.in('id', allowedLocations);
+    }
+    const { data, error } = await query;
     if (error) console.error('Error fetching locations:', error);
     if (data) setLocations(data);
   };
@@ -639,6 +661,18 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
             />
           )}
 
+          {hasPermission('maintenance-create') && (
+            <button
+              onClick={() => {
+                setEditingRecord(undefined);
+                setShowForm(true);
+              }}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
+            >
+              <Plus size={14} />
+              Nuevo Mantenimiento
+            </button>
+          )}
           {canEdit() && (
             <div className="flex gap-2">
               {selectionMode && selectedIds.length > 0 && (
@@ -652,16 +686,6 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                   </span>
                 </button>
               )}
-              <button
-                onClick={() => {
-                  setEditingRecord(undefined);
-                  setShowForm(true);
-                }}
-                className="w-full md:w-auto flex items-center justify-center gap-2 px-4 py-3 bg-[#002855] text-white text-[10px] font-normal uppercase tracking-widest hover:bg-blue-800 transition-all shadow-sm"
-              >
-                <Plus size={14} />
-                Nuevo Mantenimiento
-              </button>
             </div>
           )}
         </ActionToolbar>
