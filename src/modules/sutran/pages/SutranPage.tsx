@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Plus, Building2, Calendar, FileText, User, AlertTriangle, Edit, X, Search, MapPin, Trash2, ExternalLink, Eye } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Building2, Calendar, FileText, User, AlertTriangle, Edit, X, Search, MapPin, Trash2, ExternalLink, Eye, Filter } from 'lucide-react';
 import { supabase } from '../../../shared/services/supabase';
 import type { SutranVisit } from '../../../shared/services/supabase';
+import { BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
 import { useSupabaseQuery } from '../../../shared/hooks/useSupabaseQuery';
 import SutranVisitForm from '../forms/SutranVisitForm';
@@ -29,6 +30,7 @@ export default function Sutran() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [visitTypeFilter, setVisitTypeFilter] = useState<string[]>([]);
+  const [selectedRubros, setSelectedRubros] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingVisit, setEditingVisit] = useState<SutranVisit | undefined>();
@@ -107,11 +109,16 @@ export default function Sutran() {
 
   const { data: locationsData } = useSupabaseQuery<any[]>(
     'locations:all',
-    async () => await supabase.from('locations').select('id, name, type, region').eq('is_active', true).order('name')
+    async () => await supabase.from('locations').select('*, companies(id, name)').eq('is_active', true).order('name')
   );
 
   const paginatedVisits = visitsData?.data ?? [];
   const locations = locationsData ?? [];
+
+  const filteredLocations = useMemo(() => {
+    if (selectedRubros.length === 0) return locations;
+    return locations.filter(loc => loc.business_type && selectedRubros.includes(loc.business_type));
+  }, [locations, selectedRubros]);
   const totalPages = Math.ceil((visitsData?.count ?? 0) / itemsPerPage);
 
   const statusColors: Record<string, string> = {
@@ -305,7 +312,25 @@ export default function Sutran() {
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              {
+                key: 'business_type',
+                placeholder: 'TODOS LOS RUBROS',
+                icon: Filter,
+                iconClassName: 'text-blue-500',
+                wrapperClassName: 'md:min-w-[220px]',
+                options: Object.entries(BUSINESS_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+              },
+              {
+                key: 'location',
+                placeholder: 'TODAS LAS SEDES',
+                icon: MapPin,
+                iconClassName: 'text-rose-500',
+                wrapperClassName: 'md:min-w-[240px]',
+                options: filteredLocations.map(loc => ({
+                  value: loc.id,
+                  label: loc.companies?.name ? `${loc.name} (${loc.companies.name})` : loc.name
+                }))
+              },
               { key: 'status', placeholder: 'TODOS LOS ESTADOS', options: Object.entries(statusLabels).map(([val, label]) => ({ value: val, label })) },
               {
                 key: 'visitType', placeholder: 'TODOS LOS TIPOS', options: [
@@ -315,11 +340,29 @@ export default function Sutran() {
                 ]
               },
             ]}
-            values={{ location: selectedLocations, status: statusFilter, visitType: visitTypeFilter }}
+            values={{ business_type: selectedRubros, location: selectedLocations, status: statusFilter, visitType: visitTypeFilter }}
             onChange={(key, value) => {
-              if (key === 'location') setSelectedLocations(value as string[]);
-              else if (key === 'status') setStatusFilter(value as string[]);
-              else if (key === 'visitType') setVisitTypeFilter(value as string[]);
+              if (key === 'business_type') {
+                const newRubros = value as string[];
+                setSelectedRubros(newRubros);
+                if (newRubros.length > 0) {
+                  const validIds = new Set(locations.filter(l => l.business_type && newRubros.includes(l.business_type)).map(l => l.id));
+                  setSelectedLocations(selectedLocations.filter(id => validIds.has(id)));
+                }
+              } else if (key === 'location') {
+                setSelectedLocations(value as string[]);
+              } else if (key === 'status') {
+                setStatusFilter(value as string[]);
+              } else if (key === 'visitType') {
+                setVisitTypeFilter(value as string[]);
+              }
+              setCurrentPage(1);
+            }}
+            onClearAll={() => {
+              setSelectedRubros([]);
+              setSelectedLocations([]);
+              setStatusFilter([]);
+              setVisitTypeFilter([]);
               setCurrentPage(1);
             }}
           />

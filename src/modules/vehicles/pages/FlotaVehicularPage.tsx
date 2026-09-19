@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { Plus, Edit, Trash2, MapPin, X, Car, List, Search, ChevronDown, AlertTriangle, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, X, Car, List, Search, ChevronDown, AlertTriangle, Calendar, Filter } from 'lucide-react';
 import { RiFileExcel2Fill } from "react-icons/ri";
 import { FaFilePdf } from "react-icons/fa6";
 import ExcelJS from 'exceljs';
@@ -9,6 +9,7 @@ import VehicleImportModal from '../components/VehicleImportModal';
 import FlotaVehicularForm from '../forms/FlotaVehicularForm';
 import Pagination from '../../../shared/components/ui/Pagination';
 import { supabase, Location } from '../../../shared/services/supabase';
+import { BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import DetailModal, {
@@ -64,8 +65,14 @@ export default function FlotaVehicular() {
   const [view, setView] = useState<'list' | 'form'>('list');
   const [editing, setEditing] = useState<Vehiculo | undefined>();
   const [filterEstado, setFilterEstado] = useState<string[]>([]);
+  const [selectedRubros, setSelectedRubros] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [schools, setSchools] = useState<Location[]>([]);
+
+  const filteredSchools = useMemo(() => {
+    if (selectedRubros.length === 0) return schools;
+    return schools.filter(s => s.business_type && selectedRubros.includes(s.business_type));
+  }, [schools, selectedRubros]);
   const [showImportModal, setShowImportModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -100,7 +107,7 @@ export default function FlotaVehicular() {
 
   const fetchSchools = async () => {
     try {
-      const { data, error } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
+      const { data, error } = await supabase.from('locations').select('*, companies(id, name)').eq('is_active', true).order('name');
       if (!error && data) setSchools(data as Location[]);
     } catch (error) {
       console.error('Error al cargar ubicaciones:', error);
@@ -402,11 +409,15 @@ export default function FlotaVehicular() {
     return vehiculos.filter(v => {
       const q = search.toLowerCase();
       const searchMatch = !search || v.placa.toLowerCase().includes(q) || v.marca.toLowerCase().includes(q) || v.modelo.toLowerCase().includes(q);
+      const rubroMatch = selectedRubros.length === 0 || selectedRubros.length === Object.keys(BUSINESS_TYPE_LABELS).length || (() => {
+        const school = schools.find(s => s.id === v.ubicacion_actual);
+        return school?.business_type ? selectedRubros.includes(school.business_type) : false;
+      })();
       const sedeMatch = selectedLocations.length === 0 || selectedLocations.length === schools.length || selectedLocations.includes(v.ubicacion_actual);
       const estadoMatch = filterEstado.length === 0 || filterEstado.includes(v.estado);
-      return searchMatch && sedeMatch && estadoMatch;
+      return searchMatch && rubroMatch && sedeMatch && estadoMatch;
     });
-  }, [vehiculos, search, selectedLocations, filterEstado, schools.length]);
+  }, [vehiculos, search, selectedRubros, selectedLocations, filterEstado, schools]);
 
   const sortedVehiculos = useMemo(() => {
     if (!sortConfig) return filteredVehiculos;
@@ -908,7 +919,25 @@ export default function FlotaVehicular() {
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: schools.map(loc => ({ value: loc.id, label: loc.name })) },
+              {
+                key: 'business_type',
+                placeholder: 'TODOS LOS RUBROS',
+                icon: Filter,
+                iconClassName: 'text-blue-500',
+                wrapperClassName: 'md:min-w-[220px]',
+                options: Object.entries(BUSINESS_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+              },
+              {
+                key: 'location',
+                placeholder: 'TODAS LAS SEDES',
+                icon: MapPin,
+                iconClassName: 'text-rose-500',
+                wrapperClassName: 'md:min-w-[240px]',
+                options: filteredSchools.map(loc => ({
+                  value: loc.id,
+                  label: loc.companies?.name ? `${loc.name} (${loc.companies.name})` : loc.name
+                }))
+              },
               {
                 key: 'estado', placeholder: 'TODOS LOS ESTADOS', options: [
                   { value: 'activa', label: 'Activa' },
@@ -917,10 +946,26 @@ export default function FlotaVehicular() {
                 ]
               },
             ]}
-            values={{ location: selectedLocations, estado: filterEstado }}
+            values={{ business_type: selectedRubros, location: selectedLocations, estado: filterEstado }}
             onChange={(key, value) => {
-              if (key === 'location') setSelectedLocations(value as string[]);
-              else if (key === 'estado') setFilterEstado(value as string[]);
+              if (key === 'business_type') {
+                const newRubros = value as string[];
+                setSelectedRubros(newRubros);
+                if (newRubros.length > 0) {
+                  const validIds = new Set(schools.filter(s => s.business_type && newRubros.includes(s.business_type)).map(s => s.id));
+                  setSelectedLocations(selectedLocations.filter(id => validIds.has(id)));
+                }
+              } else if (key === 'location') {
+                setSelectedLocations(value as string[]);
+              } else if (key === 'estado') {
+                setFilterEstado(value as string[]);
+              }
+              setCurrentPage(1);
+            }}
+            onClearAll={() => {
+              setSelectedRubros([]);
+              setSelectedLocations([]);
+              setFilterEstado([]);
               setCurrentPage(1);
             }}
           />

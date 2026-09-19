@@ -3,6 +3,7 @@ import { supabase, AssetWithDetails, Category, Subcategory, Location, Area } fro
 import { PATH_CATEGORY_MAP } from '../constants/inventory.constants';
 import { useAuth } from '../../../app/providers/AuthContext';
 import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
+import { BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 
 export interface UseInventoryProps {
   categoryFilter?: string;
@@ -25,7 +26,7 @@ export interface UseInventoryReturn {
   selectedLocations: string[];
   showLocationDropdown: boolean;
   filterStatus: string[];
-  filterRubro: string;
+  filterRubro: string[];
   dropdownRef: React.RefObject<HTMLDivElement>;
 
   // Pagination
@@ -42,7 +43,7 @@ export interface UseInventoryReturn {
   setSelectedLocations: (value: string[]) => void;
   setShowLocationDropdown: (value: boolean) => void;
   setFilterStatus: (value: string[]) => void;
-  setFilterRubro: (value: string) => void;
+  setFilterRubro: (value: string[]) => void;
   setCurrentPage: (value: number) => void;
   setItemsPerPage: (value: number) => void;
   setSortConfig: (value: { key: string; direction: 'asc' | 'desc' } | null) => void;
@@ -74,12 +75,12 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
-  const [filterRubro, setFilterRubro] = useState('');
+  const [filterRubro, setFilterRubro] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(15);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Sort state
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'created_at', direction: 'desc' });
@@ -105,7 +106,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
   };
 
   const fetchLocations = async () => {
-    let query = supabase.from('locations').select('*').eq('is_active', true).order('name');
+    let query = supabase.from('locations').select('*, companies(id, name)').eq('is_active', true).order('name');
     if (allowedLocations !== null) {
       // Usuario restringido: si tiene sedes asignadas, filtrar; si no, no retornar ninguna
       if (allowedLocations.length > 0) {
@@ -135,19 +136,27 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
     return categories;
   };
 
-  // Resolve the rubro filter (business_type de la empresa) into the set of
-  // company/location ids that must be matched. Returns null when the filter is
-  // inactive and { companyIds: [], locationIds: [] } when no company matches.
+  // Resolve the rubro filter into the set of location IDs.
+  // Returns null when inactive (or all selected) and { locationIds: [...] } when filtered.
   const resolveRubroFilter = async (): Promise<{ locationIds: string[] } | null> => {
-    if (!filterRubro) return null;
+    if (!filterRubro || filterRubro.length === 0 || filterRubro.length === Object.keys(BUSINESS_TYPE_LABELS).length) {
+      return null;
+    }
+
+    if (locations.length > 0) {
+      const matchingIds = locations
+        .filter(l => l.business_type && filterRubro.includes(l.business_type))
+        .map(l => l.id);
+      return { locationIds: matchingIds };
+    }
 
     const { data: rubroLocations } = await supabase
       .from('locations')
       .select('id')
-      .eq('business_type', filterRubro);
+      .in('business_type', filterRubro);
 
     if (!rubroLocations || rubroLocations.length === 0) {
-      console.warn(`[Rubro Filter] No se encontraron sedes con business_type="${filterRubro}"`);
+      console.warn(`[Rubro Filter] No se encontraron sedes con business_type en [${filterRubro.join(', ')}]`);
       return { locationIds: [] };
     }
 
@@ -168,15 +177,36 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       query = query.or(`codigo_unico.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,model.ilike.%${searchTerm}%,serial_number.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,item.ilike.%${searchTerm}%`);
     }
 
+    // Determine the effective locations to query by intersecting active location filters
+    let effectiveLocationIds: string[] | null = null;
+
+    if (selectedLocations.length > 0 && rubro) {
+      if (rubro.locationIds.length === 0) return null;
+      const intersected = selectedLocations.filter(id => rubro.locationIds.includes(id));
+      if (intersected.length === 0) return null;
+      effectiveLocationIds = intersected;
+    } else if (selectedLocations.length > 0) {
+      effectiveLocationIds = selectedLocations;
+    } else if (rubro) {
+      if (rubro.locationIds.length === 0) return null;
+      effectiveLocationIds = rubro.locationIds;
+    }
+
     // Apply access control location filter
     if (allowedLocations !== null) {
-      // Usuario restringido: filtrar por sus sedes
-      if (allowedLocations.length > 0) {
-        query = query.in('location_id', allowedLocations);
-      } else {
-        // Sin sedes asignadas → retornar null para indicar que no hay resultados
+      if (allowedLocations.length === 0) {
         return null;
       }
+      if (effectiveLocationIds !== null) {
+        effectiveLocationIds = effectiveLocationIds.filter(id => allowedLocations.includes(id));
+        if (effectiveLocationIds.length === 0) return null;
+      } else {
+        effectiveLocationIds = allowedLocations;
+      }
+    }
+
+    if (effectiveLocationIds !== null) {
+      query = query.in('location_id', effectiveLocationIds);
     }
 
     // Apply category filter from URL
@@ -195,21 +225,9 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
       query = query.eq('category_id', filterCategory);
     }
 
-    // Apply location filter
-    if (selectedLocations.length > 0) {
-      query = query.in('location_id', selectedLocations);
-    }
-
     // Apply status filter
     if (filterStatus.length > 0) {
       query = query.in('estado_uso', filterStatus);
-    }
-
-    // Apply rubro filter
-    if (rubro) {
-      if (rubro.locationIds.length === 0) return null;
-
-      query = query.in('location_id', rubro.locationIds);
     }
 
     return query;
@@ -346,7 +364,7 @@ export function useInventory({ categoryFilter, subcategoryFilter }: UseInventory
   // Fetch inventory when dependencies change (incluido allowedLocations para react a carga async)
   useEffect(() => {
     fetchInventory();
-  }, [currentPage, itemsPerPage, searchTerm, filterCategory, selectedLocations, filterStatus, filterRubro, categoryFilter, subcategoryFilter, sortConfig, JSON.stringify(allowedLocations)]);
+  }, [currentPage, itemsPerPage, searchTerm, filterCategory, JSON.stringify(selectedLocations), JSON.stringify(filterStatus), JSON.stringify(filterRubro), categoryFilter, subcategoryFilter, JSON.stringify(sortConfig), JSON.stringify(allowedLocations)]);
 
   // Realtime subscription for assets table
   useEffect(() => {

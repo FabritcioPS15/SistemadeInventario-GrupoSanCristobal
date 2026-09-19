@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Edit, Trash2, Mail, MapPin, X, Users as UsersIcon, Shield, Crown, Lock, Settings, TrendingUp, User as UserIcon, Search, Scale } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, MapPin, X, Users as UsersIcon, Shield, Crown, Lock, Settings, TrendingUp, User as UserIcon, Search, Scale, Filter } from 'lucide-react';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
 import SelectionModeButton from '../../../shared/components/ui/SelectionModeButton';
 import { useSelectionMode } from '../../../shared/hooks/useSelectionMode';
@@ -9,6 +9,7 @@ import ViewToggle from '../../../shared/components/ui/ViewToggle';
 import PrimaryButton from '../../../shared/components/ui/PrimaryButton';
 import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
 import { supabase, Location } from '../../../shared/services/supabase';
+import { BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 import UserForm from '../forms/UserForm';
 import { useAuth } from '../../../app/providers/AuthContext';
 import Pagination from '../../../shared/components/ui/Pagination';
@@ -58,8 +59,14 @@ export default function Users() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [selectedRubros, setSelectedRubros] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+
+  const filteredLocations = useMemo(() => {
+    if (selectedRubros.length === 0) return locations;
+    return locations.filter(loc => loc.business_type && selectedRubros.includes(loc.business_type));
+  }, [locations, selectedRubros]);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -108,7 +115,7 @@ export default function Users() {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
+    const { data } = await supabase.from('locations').select('*, companies(id, name)').eq('is_active', true).order('name');
     if (data) setLocations(data);
   };
 
@@ -290,8 +297,11 @@ export default function Users() {
         user.role.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesRole = roleFilter.length === 0 || roleFilter.includes(user.role);
       const matchesStatus = statusFilter.length === 0 || statusFilter.includes(user.status);
+      const matchesRubro = selectedRubros.length === 0 ||
+        selectedRubros.length === Object.keys(BUSINESS_TYPE_LABELS).length ||
+        selectedRubros.includes(user.locations?.business_type || '');
       const matchesLocation = selectedLocations.length === 0 || selectedLocations.includes(user.location_id || '');
-      return matchesSearch && matchesRole && matchesStatus && matchesLocation;
+      return matchesSearch && matchesRole && matchesStatus && matchesRubro && matchesLocation;
     });
 
     if (!sortConfig) return filtered;
@@ -454,7 +464,25 @@ export default function Users() {
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              {
+                key: 'business_type',
+                placeholder: 'TODOS LOS RUBROS',
+                icon: Filter,
+                iconClassName: 'text-blue-500',
+                wrapperClassName: 'md:min-w-[220px]',
+                options: Object.entries(BUSINESS_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+              },
+              {
+                key: 'location',
+                placeholder: 'TODAS LAS SEDES',
+                icon: MapPin,
+                iconClassName: 'text-rose-500',
+                wrapperClassName: 'md:min-w-[240px]',
+                options: filteredLocations.map(loc => ({
+                  value: loc.id,
+                  label: loc.companies?.name ? `${loc.name} (${loc.companies.name})` : loc.name
+                }))
+              },
               {
                 key: 'role', placeholder: 'TODOS LOS ROLES', wrapperClassName: 'md:min-w-[180px]', options: [
                   { value: 'super_admin', label: 'Super Admin' },
@@ -474,11 +502,25 @@ export default function Users() {
                 ]
               },
             ]}
-            values={{ location: selectedLocations, role: roleFilter, status: statusFilter }}
+            values={{ business_type: selectedRubros, location: selectedLocations, role: roleFilter, status: statusFilter }}
             onChange={(key, value) => {
-              if (key === 'location') setSelectedLocations(value as string[]);
+              if (key === 'business_type') {
+                const newRubros = value as string[];
+                setSelectedRubros(newRubros);
+                if (newRubros.length > 0) {
+                  const validIds = new Set(locations.filter(l => l.business_type && newRubros.includes(l.business_type)).map(l => l.id));
+                  setSelectedLocations(selectedLocations.filter(id => validIds.has(id)));
+                }
+              } else if (key === 'location') setSelectedLocations(value as string[]);
               else if (key === 'role') setRoleFilter(value as string[]);
               else if (key === 'status') setStatusFilter(value as string[]);
+              setCurrentPage(1);
+            }}
+            onClearAll={() => {
+              setSelectedRubros([]);
+              setSelectedLocations([]);
+              setRoleFilter([]);
+              setStatusFilter([]);
               setCurrentPage(1);
             }}
           />

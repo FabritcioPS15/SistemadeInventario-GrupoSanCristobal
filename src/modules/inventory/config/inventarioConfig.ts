@@ -18,11 +18,30 @@ export interface CategoriaConfig {
   camposPorTipo: Record<string, CampoConfig[]>;
 }
 
+// Opciones de color en orden alfabético
+export const COLOR_OPCIONES = [
+  'Amarillo',
+  'Azul',
+  'Beige',
+  'Blanco',
+  'Gris',
+  'Marrón',
+  'Morado',
+  'Negro',
+  'Naranja',
+  'Plateado',
+  'Rojo',
+  'Transparente',
+  'Turquesa',
+  'Verde',
+  'Vinotinto',
+];
+
 export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
   {
     key: 'tecnologia',
     label: 'Tecnología',
-    tiposActivo: ['Computadora', 'Laptop', 'Monitor', 'Teclado', 'Mouse', 'Impresora', 'Servidor', 'Celular', 'Tablet', 'Proyector', 'Router', 'Switch', 'Cable', 'Disco', 'Memoria', 'USB', 'Escáner', 'Teléfono', 'TV', 'Pantalla'],
+    tiposActivo: ['Adaptador', 'Batería', 'Cable', 'Cargador', 'Celular', 'Computadora', 'Disco', 'Escáner', 'Impresora', 'Laptop', 'Memoria', 'Monitor', 'Mouse', 'Pantalla', 'Parlante', 'Proyector', 'Router', 'Servidor', 'Switch', 'Tablet', 'Teclado', 'Teléfono', 'TV', 'USB', 'Webcam'],
     camposCategoria: [
       { key: 'conectado_a_red', label: 'Conectado a Red', type: 'boolean' }
     ],
@@ -106,7 +125,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
   {
     key: 'seguridad-control',
     label: 'Seguridad y Control',
-    tiposActivo: ['Cámara', 'DVR', 'NVR', 'Biométrico', 'Huella', 'Alarma', 'Extintor', 'Vigilancia', 'Luces de Emergencia'],
+    tiposActivo: ['Alarma', 'Biométrico', 'Cámara', 'Candado', 'Cerco Eléctrico', 'DVR', 'Extintor', 'Huella', 'Kit Contra Incendio', 'Luces de Emergencia', 'NVR', 'Sensor', 'Sirena', 'Vigilancia'],
     camposCategoria: [],
     camposPorTipo: {
       'Cámara': [
@@ -164,7 +183,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
   {
     key: 'herramientas-equipos',
     label: 'Herramientas y Equipos',
-    tiposActivo: ['Alicate', 'Taladro', 'Destornillador', 'Llave', 'Martillo', 'Sierra', 'Pinza', 'Cutter', 'Cinta', 'Medidor', 'Nivel', 'Clavo', 'Tornillo', 'Broca', 'Lima', 'Soldadora', 'Amoladora', 'Esmeril'],
+    tiposActivo: ['Alicate', 'Amoladora', 'Broca', 'Carretilla de Mano', 'Cinta', 'Clavo', 'Cutter', 'Destornillador', 'Escalera', 'Esmeril', 'Generador', 'Herramienta de Mano', 'Lima', 'Llave', 'Martillo', 'Medidor', 'Nivel', 'Pinza', 'Sierra', 'Soldadora', 'Taladro', 'Tornillo'],
     camposCategoria: [
       { key: 'ubicacion_taller', label: 'Ubicación en Taller', type: 'text' }
     ],
@@ -214,7 +233,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
   {
     key: 'instalaciones',
     label: 'Instalaciones',
-    tiposActivo: ['Lámpara', 'Luz', 'Aire Acondicionado', 'Baño', 'Grifo', 'Tubería', 'Plomería', 'Electricidad', 'Ventilador', 'Extractor', 'Foco', 'Interruptor', 'Enchufe', 'Ventana', 'Puerta', 'Pintura', 'Tablero', 'Tanque', 'Calentador'],
+    tiposActivo: ['Aire Acondicionado', 'Baño', 'Calentador', 'Electricidad', 'Enchufe', 'Extractor', 'Foco', 'Grifo', 'Interruptor', 'Lámpara', 'Luz', 'Pintura', 'Plomería', 'Puerta', 'Tablero', 'Tanque', 'Tubería', 'Ventilador', 'Ventana'],
     camposCategoria: [
       { key: 'ambiente', label: 'Ambiente', type: 'text' },
       { key: 'fecha_instalacion', label: 'Fecha de Instalación', type: 'date' },
@@ -255,19 +274,19 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
   {
     key: 'mobiliario',
     label: 'Mobiliario',
-    tiposActivo: ['Escritorio', 'Silla', 'Mesa', 'Estante', 'Armario', 'Mueble', 'Banca', 'Módulo', 'Pizarra', 'Biombo', 'Archivador', 'Gabinete'],
+    tiposActivo: ['Archivador', 'Armario', 'Banca', 'Biombo', 'Credenza', 'Escritorio', 'Estante', 'Gabinete', 'Librero', 'Mesa', 'Módulo', 'Mueble', 'Perchero', 'Pizarra', 'Silla', 'Sillón'],
     camposCategoria: [
       { key: 'material', label: 'Material', type: 'text' },
       { key: 'dimensiones', label: 'Dimensiones', type: 'text' },
       { key: 'cantidad_modulos', label: 'Cantidad de Módulos', type: 'number' },
-      { key: 'color', label: 'Color', type: 'text' }
+      { key: 'color', label: 'Color', type: 'select', opciones: COLOR_OPCIONES }
     ],
     camposPorTipo: {}
   },
   {
     key: 'equipos-revision',
     label: 'Equipos de Revisión (RTV/CITV)',
-    tiposActivo: ['Opacímetro', 'Frenómetro', 'Alineador', 'Banco de Suspensión', 'Sonómetro', 'Gasómetro', 'Analizador de Gases', 'Luxómetro', 'Banco de Pruebas', 'PIT', 'Foso', 'Dinamómetro', 'Holgurómetro', 'Tacómetro', 'Detector de Holguras', 'Analizador Vehicular'],
+    tiposActivo: ['Alineador', 'Analizador de Gases', 'Analizador Vehicular', 'Banco de Pruebas', 'Banco de Suspensión', 'Detector de Holguras', 'Dinamómetro', 'Foso', 'Frenómetro', 'Gasómetro', 'Holgurómetro', 'Luxómetro', 'Opacímetro', 'PIT', 'Sonómetro', 'Tacómetro'],
     camposCategoria: [
       { key: 'certificado_calibracion', label: 'Certificado de Calibración', type: 'text' },
       { key: 'fecha_ultima_calibracion', label: 'Fecha Última Calibración', type: 'date' },
@@ -283,7 +302,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
   {
     key: 'equipos-operativos',
     label: 'Equipos de Línea',
-    tiposActivo: ['Analizador', 'Equipo de Diagnóstico', 'Estetoscopio', 'Tensiómetro', 'Oftalmoscopio', 'Balanza', 'Camilla', 'Equipo Médico', 'Equipo Clínico'],
+    tiposActivo: ['Analizador', 'Balanza', 'Báscula', 'Camilla', 'Desfibrilador', 'Equipo Clínico', 'Equipo de Diagnóstico', 'Equipo Médico', 'Estetoscopio', 'Oftalmoscopio', 'Oxímetro', 'Tensiómetro', 'Termómetro'],
     camposCategoria: [
       { key: 'certificado_sanitario', label: 'Certificado Sanitario', type: 'text' },
       { key: 'fecha_calibracion', label: 'Fecha Calibración', type: 'date' },
@@ -301,7 +320,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
   {
     key: 'utiles-suministros',
     label: 'Útiles y Suministros',
-    tiposActivo: ['Lapicero', 'Lápiz', 'Papel', 'Carpeta', 'Grapadora', 'Tinta', 'Cartucho', 'Notas', 'Cinta Adhesiva', 'Sello', 'Tijera', 'Botiquín', 'Resma', 'Folders'],
+    tiposActivo: ['Botiquín', 'Carpeta', 'Cartucho', 'Cinta Adhesiva', 'Clips', 'Corrector', 'Folders', 'Grapadora', 'Lápiz', 'Lapicero', 'Marcador', 'Notas', 'Papel', 'Perforador', 'Resaltador', 'Resma', 'Sello', 'Sobre Manila', 'Tijera', 'Tinta'],
     camposCategoria: [
       { key: 'unidad_medida', label: 'Unidad de Medida', type: 'text' },
       { key: 'cantidad', label: 'Cantidad', type: 'number' }
@@ -311,7 +330,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
   {
     key: 'infraestructura-ti',
     label: 'Infraestructura TI',
-    tiposActivo: ['Rack', 'Patch Panel', 'UPS', 'Estabilizador', 'NAS', 'Storage', 'WiFi', 'Access Point', 'Cableado', 'Fibra', 'Servidor de Red', 'Switch de Red'],
+    tiposActivo: ['Access Point', 'Cableado', 'Canaleta', 'Estabilizador', 'Fibra', 'NAS', 'Patch Panel', 'Rack', 'Servidor de Red', 'Storage', 'Switch de Red', 'UPS', 'WiFi'],
     camposCategoria: [],
     camposPorTipo: {
       'UPS': [
@@ -365,7 +384,7 @@ export const CATEGORIAS_CONFIG: CategoriaConfig[] = [
   {
     key: 'otros-activos',
     label: 'Otros Activos',
-    tiposActivo: ['Compresora', 'Aspiradora', 'Carretilla', 'Estructura', 'Instalación Especial'],
+    tiposActivo: ['Aspiradora', 'Carretilla', 'Compresora', 'Estructura', 'Instalación Especial'],
     camposCategoria: [
       { key: 'descripcion_detallada', label: 'Descripción Detallada', type: 'textarea' }
     ],

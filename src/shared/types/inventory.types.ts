@@ -326,10 +326,10 @@ export interface PaginatedResponse<T> {
 
 // Constants
 export const BUSINESS_TYPE_LABELS: Record<BusinessType, string> = {
-  revisiones_tecnicas: 'Revisiones Técnicas Vehiculares',
-  polclinico: 'Policlínicos',
-  escuela_conductores: 'Escuela de Conductores',
-  oficinas_administrativas: 'Oficina Central',
+  revisiones_tecnicas: 'CITV (Revisiones Técnicas)',
+  escuela_conductores: 'ESCON (Escuela de Conductores)',
+  polclinico: 'ECSAL (Policlínicos)',
+  oficinas_administrativas: 'Oficinas Administrativas',
   circuito_de_manejo: 'Circuito de Manejo'
 };
 

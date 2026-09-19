@@ -13,7 +13,12 @@ export interface FilterDef {
   iconClassName?: string;
   wrapperClassName?: string;
   multiple?: boolean;
-  options: FilterOption[];
+  /**
+   * Opciones de este filtro. Puede ser un arreglo estático o una función que
+   * recibe los valores actuales de todos los filtros y devuelve las opciones.
+   * Permite filtros en cascada (ej. Sede depende del Rubro seleccionado).
+   */
+  options: FilterOption[] | ((values: Record<string, string | string[]>) => FilterOption[]);
 }
 
 interface FilterBarProps {
@@ -43,6 +48,7 @@ export default function FilterBar({
         // Por defecto todos los filtros son multi-select (multiple=true)
         // a menos que se pase explícitamente multiple=false
         const isMultiple = f.multiple !== false;
+        const resolvedOptions = typeof f.options === 'function' ? f.options(values) : f.options;
         return (
           <FilterSelect
             key={f.key}
@@ -54,7 +60,7 @@ export default function FilterBar({
             multiple={isMultiple}
           >
             <option value="">{f.placeholder}</option>
-            {f.options.map(opt => (
+            {resolvedOptions.map(opt => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </FilterSelect>

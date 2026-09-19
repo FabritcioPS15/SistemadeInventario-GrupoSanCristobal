@@ -126,7 +126,9 @@ export type Location = {
   company_id?: string;
   is_active?: boolean;
 
-  business_type?: 'revisiones_tecnicas' | 'policlinico' | 'escuela_conductores' | 'oficinas_administrativas';
+  business_type?: 'revisiones_tecnicas' | 'polclinico' | 'escuela_conductores' | 'oficinas_administrativas' | 'circuito_de_manejo';
+
+  companies?: { id: string; name: string } | null;
 
 };
 

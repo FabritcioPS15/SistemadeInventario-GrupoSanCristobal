@@ -139,7 +139,7 @@ export default function TitulosHabilitantes() {
       return;
     }
 
-    let query = supabase.from('locations').select('*').eq('is_active', true).order('name');
+    let query = supabase.from('locations').select('*, companies(id, name)').eq('is_active', true).order('name');
     // Filtrar sedes directamente en la query
     if (allowedLocations !== null && allowedLocations.length > 0) {
       query = query.in('id', allowedLocations);
@@ -147,11 +147,14 @@ export default function TitulosHabilitantes() {
 
     const { data } = await query;
     if (data) {
-      // Filtrar para mostrar solo las sedes tipo CITV, ESCON y ECSAL
-      const citvLocations = data.filter(loc => ['revision', 'escuela_conductores', 'policlinico'].includes(loc.type));
-      setLocations(citvLocations);
+      setLocations(data as any[]);
     }
   };
+
+  const filteredLocations = useMemo(() => {
+    if (selectedRubros.length === 0) return locations;
+    return locations.filter(loc => loc.business_type && selectedRubros.includes(loc.business_type));
+  }, [locations, selectedRubros]);
 
   const getDaysUntil = (dateString: string) => {
     if (!dateString) return 0;
@@ -396,13 +399,25 @@ export default function TitulosHabilitantes() {
         >
           <FilterBar
             filters={[
-              { key: 'business_type', placeholder: 'TODOS LOS RUBROS', icon: MapPin, iconClassName: 'text-blue-500', wrapperClassName: 'md:min-w-[220px]', options: Object.keys(BUSINESS_TYPE_LABELS).map(type => ({ value: type, label: BUSINESS_TYPE_LABELS[type as keyof typeof BUSINESS_TYPE_LABELS] })) },
-              { key: 'location', multiple: false, placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              { key: 'business_type', placeholder: 'TODOS LOS RUBROS', icon: MapPin, iconClassName: 'text-blue-500', wrapperClassName: 'md:min-w-[220px]', options: Object.entries(BUSINESS_TYPE_LABELS).map(([value, label]) => ({ value, label })) },
+              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[240px]', options: filteredLocations.map(loc => ({ value: loc.id, label: loc.companies?.name ? `${loc.name} (${loc.companies.name})` : loc.name })) },
             ]}
-            values={{ location: selectedLocations[0] || '', business_type: selectedRubros }}
+            values={{ location: selectedLocations, business_type: selectedRubros }}
             onChange={(key, value) => {
-              if (key === 'location') setSelectedLocations(value ? [value as string] : []);
-              if (key === 'business_type') setSelectedRubros(value as string[]);
+              if (key === 'location') setSelectedLocations(value as string[]);
+              if (key === 'business_type') {
+                const newRubros = value as string[];
+                setSelectedRubros(newRubros);
+                if (newRubros.length > 0) {
+                  const validIds = new Set(locations.filter(l => l.business_type && newRubros.includes(l.business_type)).map(l => l.id));
+                  setSelectedLocations(selectedLocations.filter(id => validIds.has(id)));
+                }
+              }
+              setCurrentPage(1);
+            }}
+            onClearAll={() => {
+              setSelectedRubros([]);
+              setSelectedLocations([]);
               setCurrentPage(1);
             }}
           />

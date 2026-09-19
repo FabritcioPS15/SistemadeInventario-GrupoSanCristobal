@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, Star, Video, ArrowRight, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Eye, X, Copy, ChevronDown, ChevronUp, EyeOff, Star, Video, ArrowRight, Search, Filter } from 'lucide-react';
+import { BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 import { GiCctvCamera } from 'react-icons/gi';
 import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
 import { supabase, Camera as CameraType, Location, StoredDisk } from '../../../shared/services/supabase';
@@ -54,6 +55,7 @@ export default function Cameras({ subview }: CamerasProps) {
   const [selectedCamera, setSelectedCamera] = useState<Camera | undefined>();
   const [expandedStorage, setExpandedStorage] = useState<Set<string>>(new Set());
   const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
+  const [selectedRubros, setSelectedRubros] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterStorage, setFilterStorage] = useState(false);
@@ -113,9 +115,14 @@ export default function Cameras({ subview }: CamerasProps) {
   }, [cameras, selectedLocations, filterStatus, filterStorage, viewMode, searchTerm, subview]);
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
+    const { data } = await supabase.from('locations').select('*, companies(id, name)').eq('is_active', true).order('name');
     if (data) setLocations(data);
   };
+
+  const filteredLocations = useMemo(() => {
+    if (selectedRubros.length === 0) return locations;
+    return locations.filter(loc => loc.business_type && selectedRubros.includes(loc.business_type));
+  }, [locations, selectedRubros]);
 
   const fetchCameras = async () => {
     let query = supabase
@@ -268,6 +275,11 @@ export default function Cameras({ subview }: CamerasProps) {
           c.model?.toLowerCase().includes(searchTerm.toLowerCase());
         if (!matchesSearch) return false;
 
+        if (selectedRubros.length > 0) {
+          const locBusinessType = (c as any).locations?.business_type;
+          if (!locBusinessType || !selectedRubros.includes(locBusinessType)) return false;
+        }
+
         if (selectedLocations.length > 0) {
           const cameraLocationId = (c as any).locations?.id;
           if (!cameraLocationId || !selectedLocations.includes(cameraLocationId)) return false;
@@ -312,7 +324,7 @@ export default function Cameras({ subview }: CamerasProps) {
     }
 
     return filtered;
-  }, [cameras, searchTerm, selectedLocations, filterStatus, filterStorage, subview, sortConfig]);
+  }, [cameras, searchTerm, selectedRubros, selectedLocations, filterStatus, filterStorage, subview, sortConfig]);
 
   const totalPages = Math.ceil(filteredCameras.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -521,7 +533,26 @@ export default function Cameras({ subview }: CamerasProps) {
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', multiple: true, options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              {
+                key: 'business_type',
+                placeholder: 'TODOS LOS RUBROS',
+                icon: Filter,
+                iconClassName: 'text-blue-500',
+                wrapperClassName: 'md:min-w-[220px]',
+                options: Object.entries(BUSINESS_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+              },
+              {
+                key: 'location',
+                placeholder: 'TODAS LAS SEDES',
+                icon: MapPin,
+                iconClassName: 'text-rose-500',
+                wrapperClassName: 'md:min-w-[240px]',
+                multiple: true,
+                options: filteredLocations.map(loc => ({
+                  value: loc.id,
+                  label: (loc as any).companies?.name ? `${loc.name} (${(loc as any).companies.name})` : loc.name
+                }))
+              },
               ...(subview !== 'cameras-disks' ? [{
                 key: 'status', placeholder: 'TODOS LOS ESTADOS', options: [
                   { value: 'active', label: 'ACTIVO' },
@@ -530,10 +561,23 @@ export default function Cameras({ subview }: CamerasProps) {
                 ]
               }] : []),
             ]}
-            values={{ location: selectedLocations, status: filterStatus }}
+            values={{ business_type: selectedRubros, location: selectedLocations, status: filterStatus }}
             onChange={(key, value) => {
-              if (key === 'location') setSelectedLocations(value as string[]);
+              if (key === 'business_type') {
+                const newRubros = value as string[];
+                setSelectedRubros(newRubros);
+                if (newRubros.length > 0) {
+                  const validIds = new Set(locations.filter(l => l.business_type && newRubros.includes(l.business_type)).map(l => l.id));
+                  setSelectedLocations(selectedLocations.filter(id => validIds.has(id)));
+                }
+              } else if (key === 'location') setSelectedLocations(value as string[]);
               else if (key === 'status') setFilterStatus(value as string[]);
+              setCurrentPage(1);
+            }}
+            onClearAll={() => {
+              setSelectedRubros([]);
+              setSelectedLocations([]);
+              setFilterStatus([]);
               setCurrentPage(1);
             }}
           />

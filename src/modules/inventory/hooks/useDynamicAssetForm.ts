@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
-import { supabase, Category, Location, AssetWithDetails } from '../../../shared/services/supabase';
+import { supabase, Category, Location, Area, AssetWithDetails } from '../../../shared/services/supabase';
 
 export type DynamicAssetFormData = {
   codigo_unico: string;
@@ -37,6 +37,7 @@ export type UseDynamicAssetFormReturn = {
   setCamposEspecificos: React.Dispatch<React.SetStateAction<Record<string, any>>>;
   categories: Category[];
   locations: Location[];
+  areas: Area[];
   loading: boolean;
   errors: Record<string, string>;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
@@ -129,6 +130,7 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
   const allowedLocations = useAllowedLocations();
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -163,6 +165,7 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
         }
         setCategories(catRes.data || []);
         setLocations([]);
+        setAreas([]);
         return;
       }
 
@@ -171,9 +174,10 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
         locQuery = locQuery.in('id', allowedLocations);
       }
 
-      const [catRes, locRes] = await Promise.all([
+      const [catRes, locRes, areasRes] = await Promise.all([
         supabase.from('categories').select('*'),
         locQuery,
+        supabase.from('areas').select('id, name, location_id').order('name'),
       ]);
 
       if (catRes.error) {
@@ -183,6 +187,7 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
 
       setCategories(catRes.data || []);
       if (locRes.data) setLocations(locRes.data);
+      if (areasRes.data) setAreas((areasRes.data as Area[]) || []);
     } catch {
       setErrors(prev => ({ ...prev, submit: 'Error de conexión con la base de datos' }));
     }
@@ -217,7 +222,13 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
       if (!formData.estado_uso) throw new Error('El estado es obligatorio');
       if (!formData.category_id) throw new Error('La categoría es obligatoria');
 
-      const finalTipoActivo = formData.tipo_activo === 'Otro' ? formData.tipo_activo_custom : formData.tipo_activo;
+      const esTipoOtro = formData.tipo_activo === 'Otro';
+      // Si el usuario elige "Otro", el activo se registra como tipo "Otro" (no se crea un tipo nuevo);
+      // el texto personalizado se conserva dentro de campos_especificos.
+      const finalTipoActivo = esTipoOtro ? 'Otro' : formData.tipo_activo;
+      const camposFinales = esTipoOtro && formData.tipo_activo_custom
+        ? { ...camposEspecificos, tipo_activo_custom: formData.tipo_activo_custom }
+        : camposEspecificos;
 
       const dataToSave: Record<string, any> = {
         updated_at: new Date().toISOString(),
@@ -238,7 +249,7 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
         descripcion: formData.descripcion || null,
         category_id: formData.category_id,
         tipo_activo: finalTipoActivo || null,
-        campos_especificos: camposEspecificos,
+        campos_especificos: camposFinales,
       };
 
       if (editAsset) {
@@ -266,6 +277,7 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
     setCamposEspecificos,
     categories,
     locations,
+    areas,
     loading,
     errors,
     handleChange,

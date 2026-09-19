@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, Wrench, MapPin, ShieldCheck, Search, TrendingUp, DollarSign, Clock, AlertCircle, Edit, Trash2, Calendar } from 'lucide-react';
+import { Plus, Wrench, MapPin, ShieldCheck, Search, TrendingUp, DollarSign, Clock, AlertCircle, Edit, Trash2, Calendar, Filter } from 'lucide-react';
 import { FaFilePdf } from 'react-icons/fa6';
 import { RiFileExcel2Fill } from 'react-icons/ri';
 import { supabase, Location } from '../../../shared/services/supabase';
@@ -22,16 +22,21 @@ import DetailModal, {
   StandardModalFooter,
 
 } from '../../../shared/components/ui/DetailModal';
-import { MaintenanceRecord, AssetWithMaintenanceHistory, PRIORITY_LABELS } from '../../../shared/types/inventory.types';
+import { MaintenanceRecord, AssetWithMaintenanceHistory, PRIORITY_LABELS, BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 
 type MaintenanceProps = {
   categoryFilter?: string;
 };
 
 export default function Maintenance({ categoryFilter }: MaintenanceProps) {
-  const { canEdit, hasPermission } = useAuth();
+  const { canEdit, hasPermission, user } = useAuth();
   const allowedLocations = useAllowedLocations();
   const { success: notifySuccess, error: notifyError, confirm } = useNotify();
+
+  // Los administradores pueden ver, crear y editar mantenimiento, pero no eliminar.
+  const isAdminRole = user?.role === 'administradores';
+  const canEditRecord = canEdit() || hasPermission('maintenance-edit');
+  const canDeleteRecord = !isAdminRole && canEdit();
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,7 +49,13 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   const [assetFilter, setAssetFilter] = useState(locationState.state?.assetFilter || '');
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [rubroFilter, setRubroFilter] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState<string[]>([]);
+
+  const filteredLocations = useMemo(() => {
+    if (rubroFilter.length === 0) return locations;
+    return locations.filter(loc => loc.business_type && rubroFilter.includes(loc.business_type));
+  }, [locations, rubroFilter]);
   const [machineTypeFilter, setMachineTypeFilter] = useState<string[]>([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -88,8 +99,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
       let query = supabase
         .from('maintenance_records')
-        .select('*, assets!inner(id, codigo_unico, brand, model, descripcion, serial_number, asset_types(*), locations(*)), locations!location_id(*)')
-        .order('created_at', { ascending: false });
+        .select('*, assets!inner(id, codigo_unico, item, brand, model, descripcion, serial_number, asset_types(*), locations(*)), locations!location_id(*)')
+        .order('completed_date', { ascending: false, nullsFirst: false });
 
       if (statusFilter.length > 0) query = query.in('status', statusFilter);
       if (typeFilter.length > 0) query = query.in('maintenance_type', typeFilter);
@@ -117,7 +128,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
       return;
     }
 
-    let query = supabase.from('locations').select('*').eq('is_active', true).order('name');
+    let query = supabase.from('locations').select('*, companies(id, name)').eq('is_active', true).order('name');
     // Filtrar sedes directamente en la query
     if (allowedLocations !== null && allowedLocations.length > 0) {
       query = query.in('id', allowedLocations);
@@ -169,14 +180,14 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
             setViewingAssetHistory(undefined);
             return undefined;
           }
-          const latest = [...updated].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+          const latest = [...updated].sort((a, b) => new Date(getRecordDate(b)).getTime() - new Date(getRecordDate(a)).getTime())[0];
           return {
             ...prev,
             maintenanceRecords: updated,
             totalRecords: updated.length,
             latestStatus: latest.status,
             latestMaintenanceType: latest.maintenance_type,
-            latestDate: latest.created_at,
+            latestDate: getRecordDate(latest),
           };
         });
         // Refrescar la lista principal en segundo plano
@@ -237,6 +248,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
   };
 
 
+  // Ordenar por fecha de completado; si el registro aún no tiene fecha de completado, usa la fecha de creación
+  const getRecordDate = (r: MaintenanceRecord): string => r.completed_date || r.created_at;
+
   // Agrupar mantenimientos por activo
   const assetsWithHistory = useMemo(() => {
     const grouped = new Map<string, AssetWithMaintenanceHistory>();
@@ -250,11 +264,11 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         existing.totalRecords = existing.maintenanceRecords.length;
         // Actualizar el estado más reciente
         const latest = existing.maintenanceRecords.sort((a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          new Date(getRecordDate(b)).getTime() - new Date(getRecordDate(a)).getTime()
         )[0];
         existing.latestStatus = latest.status;
         existing.latestMaintenanceType = latest.maintenance_type;
-        existing.latestDate = latest.created_at;
+        existing.latestDate = getRecordDate(latest);
       } else {
         grouped.set(record.asset_id, {
           asset: record.assets,
@@ -262,7 +276,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
           totalRecords: 1,
           latestStatus: record.status,
           latestMaintenanceType: record.maintenance_type,
-          latestDate: record.created_at,
+          latestDate: getRecordDate(record),
         });
       }
     });
@@ -298,6 +312,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
       const matchesStatus = statusFilter.length === 0 || statusFilter.includes(assetHistory.latestStatus);
       const matchesType = typeFilter.length === 0 || typeFilter.includes(assetHistory.latestMaintenanceType);
+      const matchesRubro = rubroFilter.length === 0 || rubroFilter.includes(assetHistory.asset.locations?.business_type ?? '');
       const matchesLocation = locationFilter.length === 0 || locationFilter.includes(assetHistory.asset.location_id ?? '');
       const matchesAsset = !assetFilter || assetHistory.asset.id === assetFilter;
       const matchesMachineType = machineTypeFilter.length === 0 || machineTypeFilter.includes(assetHistory.asset.asset_type_id ?? '');
@@ -310,7 +325,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         matchesDate = matchesDate && new Date(assetHistory.latestDate) <= new Date(`${endDate}T23:59:59.999`);
       }
 
-      return matchesSearch && matchesCategory && matchesStatus && matchesType && matchesLocation && matchesAsset && matchesMachineType && matchesDate;
+      return matchesSearch && matchesCategory && matchesStatus && matchesType && matchesRubro && matchesLocation && matchesAsset && matchesMachineType && matchesDate;
     });
 
     if (!sortConfig) return filtered;
@@ -588,19 +603,45 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              {
+                key: 'business_type',
+                placeholder: 'TODOS LOS RUBROS',
+                icon: Filter,
+                iconClassName: 'text-blue-500',
+                wrapperClassName: 'md:min-w-[220px]',
+                options: Object.entries(BUSINESS_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+              },
+              {
+                key: 'location',
+                placeholder: 'TODAS LAS SEDES',
+                icon: MapPin,
+                iconClassName: 'text-rose-500',
+                wrapperClassName: 'md:min-w-[240px]',
+                options: filteredLocations.map(loc => ({
+                  value: loc.id,
+                  label: loc.companies?.name ? `${loc.name} (${loc.companies.name})` : loc.name
+                }))
+              },
               { key: 'type', placeholder: 'TODOS LOS TIPOS', options: Object.entries(typeLabels).map(([key, label]) => ({ value: key, label })) },
               { key: 'status', placeholder: 'TODOS LOS ESTADOS', options: Object.entries(statusLabels).map(([key, label]) => ({ value: key, label })) },
             ]}
-            values={{ location: locationFilter, type: typeFilter, status: statusFilter, asset: assetFilter }}
+            values={{ business_type: rubroFilter, location: locationFilter, type: typeFilter, status: statusFilter, asset: assetFilter }}
             onChange={(key, value) => {
-              if (key === 'location') setLocationFilter(value as string[]);
+              if (key === 'business_type') {
+                const newRubros = value as string[];
+                setRubroFilter(newRubros);
+                if (newRubros.length > 0) {
+                  const validIds = new Set(locations.filter(l => l.business_type && newRubros.includes(l.business_type)).map(l => l.id));
+                  setLocationFilter(locationFilter.filter(id => validIds.has(id)));
+                }
+              } else if (key === 'location') setLocationFilter(value as string[]);
               else if (key === 'type') setTypeFilter(value as string[]);
               else if (key === 'status') setStatusFilter(value as string[]);
               else if (key === 'asset') setAssetFilter(value as string);
               setCurrentPage(1);
             }}
             onClearAll={() => {
+              setRubroFilter([]);
               setStatusFilter([]);
               setTypeFilter([]);
               setLocationFilter([]);
@@ -653,7 +694,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
             <FaFilePdf size={20} className="text-slate-400 group-hover:text-rose-600 transition-colors" />
           </button>
 
-          {canEdit() && (
+          {canDeleteRecord && (
             <SelectionModeButton
               active={selectionMode}
               onClick={handleToggleSelectionMode}
@@ -673,7 +714,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
               Nuevo Mantenimiento
             </button>
           )}
-          {canEdit() && (
+          {canDeleteRecord && (
             <div className="flex gap-2">
               {selectionMode && selectedIds.length > 0 && (
                 <button
@@ -725,9 +766,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                       )}
                       <div className="min-w-0 flex-1">
                         <h3 className="text-[11px] sm:text-[13px] font-black text-[#002855] uppercase truncate leading-tight">
-                          {assetHistory.asset.descripcion || `${assetHistory.asset.brand} ${assetHistory.asset.model}` || 'Activo'}
+                          {(assetHistory.asset as any).item || assetHistory.asset.descripcion || `${assetHistory.asset.brand} ${assetHistory.asset.model}` || 'Activo'}
                         </h3>
-                        <span className="text-[9px] sm:text-[10px] font-mono font-black text-blue-600">{assetHistory.asset.codigo_unico}</span>
                       </div>
                       <span className="shrink-0 hidden xs:inline-block sm:inline-block text-[9px] sm:text-[10px] font-medium text-slate-400">
                         {typeLabels[assetHistory.latestMaintenanceType]}
@@ -744,11 +784,15 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                       </span>
                     </div>
                   </div>
-                  {canEdit() && (
+                  {(canEditRecord || canDeleteRecord) && (
                     <div className="px-2 sm:px-4 py-1 sm:py-3 bg-slate-50/50 border-t border-slate-100 flex gap-1.5 sm:gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleEditRecord(assetHistory.maintenanceRecords[0])} className="text-[9px] sm:text-[10px] font-semibold text-blue-600 hover:underline">Editar</button>
-                      <span className="text-slate-300">|</span>
-                      <button onClick={() => handleDeleteRecord(assetHistory.maintenanceRecords[0])} className="text-[9px] sm:text-[10px] font-semibold text-rose-500 hover:underline">Eliminar</button>
+                      {canEditRecord && (
+                        <button onClick={() => handleEditRecord(assetHistory.maintenanceRecords[0])} className="text-[9px] sm:text-[10px] font-semibold text-blue-600 hover:underline">Editar</button>
+                      )}
+                      {canEditRecord && canDeleteRecord && <span className="text-slate-300">|</span>}
+                      {canDeleteRecord && (
+                        <button onClick={() => handleDeleteRecord(assetHistory.maintenanceRecords[0])} className="text-[9px] sm:text-[10px] font-semibold text-rose-500 hover:underline">Eliminar</button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -787,9 +831,9 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="text-[12px] font-black text-slate-800 truncate leading-tight">
-                          {assetHistory.asset.descripcion || `${assetHistory.asset.brand} ${assetHistory.asset.model}` || 'Activo'}
+                          {(assetHistory.asset as any).item || assetHistory.asset.descripcion || `${assetHistory.asset.brand} ${assetHistory.asset.model}` || 'Activo'}
                         </p>
-                        <p className="text-[10px] font-semibold text-blue-600 font-mono">{assetHistory.asset.codigo_unico} · {assetHistory.totalRecords} mantenimiento(s)</p>
+                        <p className="text-[10px] font-semibold text-blue-600 font-mono">{assetHistory.totalRecords} mantenimiento(s)</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -806,10 +850,14 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                       <span className="truncate">{assetHistory.asset.locations?.name || 'Ubicación N/A'}</span>
                       <span className="ml-auto">{assetHistory.maintenanceRecords[0]?.technician || 'S.A.'}</span>
                     </div>
-                    {canEdit() && (
+                    {(canEditRecord || canDeleteRecord) && (
                       <div className="flex gap-1.5 pt-2 border-t border-slate-100" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => handleEditRecord(assetHistory.maintenanceRecords[0])} className="text-[10px] font-bold text-blue-600 hover:underline bg-blue-50 px-2 py-1 rounded-sm w-full text-center">Editar</button>
-                        <button onClick={() => handleDeleteRecord(assetHistory.maintenanceRecords[0])} className="text-[10px] font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-1 rounded-sm w-full text-center">Eliminar</button>
+                        {canEditRecord && (
+                          <button onClick={() => handleEditRecord(assetHistory.maintenanceRecords[0])} className="text-[10px] font-bold text-blue-600 hover:underline bg-blue-50 px-2 py-1 rounded-sm w-full text-center">Editar</button>
+                        )}
+                        {canDeleteRecord && (
+                          <button onClick={() => handleDeleteRecord(assetHistory.maintenanceRecords[0])} className="text-[10px] font-bold text-rose-600 hover:underline bg-rose-50 px-2 py-1 rounded-sm w-full text-center">Eliminar</button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -831,7 +879,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         </TableHead>
                       )}
                       <TableHead sortable isSorted={sortConfig?.key === 'asset'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('asset')}>
-                        Activo / Código
+                        Activo
                       </TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'type'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('type')}>
                         Tipo
@@ -870,11 +918,10 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         <TableCell className="font-bold">
                           <div className="flex flex-col">
                             <TableCellPrimary>
-                              {assetHistory.asset.descripcion || `${assetHistory.asset.brand} ${assetHistory.asset.model}` || 'Activo'}
+                              {(assetHistory.asset as any).item || assetHistory.asset.descripcion || `${assetHistory.asset.brand} ${assetHistory.asset.model}` || 'Activo'}
                             </TableCellPrimary>
                             <TableCellSecondary>
-                              <span className="font-mono text-blue-600">{assetHistory.asset.codigo_unico}</span>
-                              <span className="ml-2">{assetHistory.totalRecords} mantenimiento(s)</span>
+                              <span className="ml-0">{assetHistory.totalRecords} mantenimiento(s)</span>
                             </TableCellSecondary>
                           </div>
                         </TableCell>
@@ -901,20 +948,20 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                            {canEdit() && (
-                              <>
-                                <TableActionButton
-                                  icon={<Edit size={14} />}
-                                  onClick={() => handleEditRecord(assetHistory.maintenanceRecords[0])}
-                                  title="Editar"
-                                />
-                                <TableActionButton
-                                  icon={<Trash2 size={14} />}
-                                  onClick={() => handleDeleteRecord(assetHistory.maintenanceRecords[0])}
-                                  title="Eliminar"
-                                  variant="danger"
-                                />
-                              </>
+                            {canEditRecord && (
+                              <TableActionButton
+                                icon={<Edit size={14} />}
+                                onClick={() => handleEditRecord(assetHistory.maintenanceRecords[0])}
+                                title="Editar"
+                              />
+                            )}
+                            {canDeleteRecord && (
+                              <TableActionButton
+                                icon={<Trash2 size={14} />}
+                                onClick={() => handleDeleteRecord(assetHistory.maintenanceRecords[0])}
+                                title="Eliminar"
+                                variant="danger"
+                              />
                             )}
                           </div>
                         </TableCell>
@@ -937,8 +984,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
           viewingRecord && (
             <DetailModal maxWidth="3xl" onClose={() => setViewingRecord(undefined)} closeOnBackdrop overlayStyle={{ zIndex: 210 }}>
               <StandardModalHeader
-                title={`${(viewingRecord?.assets as any)?.descripcion || (viewingRecord?.assets as any)?.brand || 'Activo'} ${(viewingRecord?.assets as any)?.model}`}
-                subtitle={`${(viewingRecord?.assets as any)?.codigo_unico} • ${viewingRecord?.assets?.asset_types?.name}`}
+                title={`${(viewingRecord?.assets as any)?.item || (viewingRecord?.assets as any)?.descripcion || (viewingRecord?.assets as any)?.brand || 'Activo'} ${(viewingRecord?.assets as any)?.model}`}
+                subtitle={`${viewingRecord?.assets?.asset_types?.name}`}
                 icon={Wrench}
                 onClose={() => setViewingRecord(undefined)}
               />
@@ -992,7 +1039,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 {/* Info grid: Technician, Provider, Invoice, Dates */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="bg-slate-50 border border-slate-200 p-3">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Técnico</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Responsable</p>
                     <p className="text-[11px] font-medium text-slate-700 truncate">{viewingRecord?.technician || 'N/A'}</p>
                   </div>
                   <div className="bg-slate-50 border border-slate-200 p-3">
@@ -1086,7 +1133,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
 
               <StandardModalFooter
                 onClose={() => setViewingRecord(undefined)}
-                onEdit={canEdit() ? () => handleEditRecord(viewingRecord) : undefined}
+                onEdit={canEditRecord ? () => handleEditRecord(viewingRecord) : undefined}
                 editLabel="Editar"
               />
             </DetailModal>
@@ -1097,8 +1144,8 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
           viewingAssetHistory && (
             <DetailModal maxWidth="3xl" onClose={() => setViewingAssetHistory(undefined)} closeOnBackdrop>
               <StandardModalHeader
-                title={viewingAssetHistory?.asset.descripcion || `${viewingAssetHistory?.asset.brand} ${viewingAssetHistory?.asset.model}` || 'Activo'}
-                subtitle={`${viewingAssetHistory?.asset.codigo_unico} • ${viewingAssetHistory?.asset.asset_types?.name} • ${viewingAssetHistory?.totalRecords} mantenimiento(s)`}
+                title={(viewingAssetHistory?.asset as any)?.item || viewingAssetHistory?.asset.descripcion || `${viewingAssetHistory?.asset.brand} ${viewingAssetHistory?.asset.model}` || 'Activo'}
+                subtitle={`${viewingAssetHistory?.asset.asset_types?.name} • ${viewingAssetHistory?.totalRecords} mantenimiento(s)`}
                 icon={Wrench}
                 onClose={() => setViewingAssetHistory(undefined)}
               />
@@ -1147,7 +1194,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                 {/* Scrollable compact cards list */}
                 <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-1">
                   {viewingAssetHistory?.maintenanceRecords
-                    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                    .sort((a, b) => new Date(getRecordDate(b)).getTime() - new Date(getRecordDate(a)).getTime())
                     .map((record) => {
                       const statusBorderColor: Record<string, string> = {
                         pending: 'border-l-amber-400',
@@ -1165,10 +1212,10 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                             {/* Left: date column */}
                             <div className="shrink-0 text-center w-14">
                               <p className="text-[10px] font-mono font-bold text-slate-700 leading-tight">
-                                {new Date(String(record.created_at).includes('T') ? String(record.created_at) : `${record.created_at}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
+                                {new Date(String(getRecordDate(record)).includes('T') ? String(getRecordDate(record)) : `${getRecordDate(record)}T12:00:00`).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' })}
                               </p>
                               <p className="text-[9px] font-mono text-slate-400">
-                                {new Date(String(record.created_at).includes('T') ? String(record.created_at) : `${record.created_at}T12:00:00`).getFullYear()}
+                                {new Date(String(getRecordDate(record)).includes('T') ? String(getRecordDate(record)) : `${getRecordDate(record)}T12:00:00`).getFullYear()}
                               </p>
                             </div>
 
@@ -1203,7 +1250,7 @@ export default function Maintenance({ categoryFilter }: MaintenanceProps) {
                                   S/ {record.total_cost.toFixed(2)}
                                 </span>
                               )}
-                              {canEdit() && (
+                              {canDeleteRecord && (
                                 <button
                                   type="button"
                                   onClick={(e) => handleDeleteFromHistory(record, e)}

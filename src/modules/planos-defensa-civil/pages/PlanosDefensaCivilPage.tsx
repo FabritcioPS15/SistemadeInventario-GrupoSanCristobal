@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Plus, MapPin, Search, Map, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Plus, MapPin, Search, Map, Calendar, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import Pagination from '../../../shared/components/ui/Pagination';
 import { supabase, Location } from '../../../shared/services/supabase';
+import { BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 import { useAuth } from '../../../app/providers/AuthContext';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
 import FilterBar from '../../../shared/components/ui/FilterBar';
@@ -37,6 +38,7 @@ export default function PlanosDefensaCivil() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedRubros, setSelectedRubros] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [sortField, setSortField] = useState<'nombre' | 'tipo' | 'fecha_actualizacion' | 'ubicacion'>('nombre');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
@@ -57,9 +59,14 @@ export default function PlanosDefensaCivil() {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
+    const { data } = await supabase.from('locations').select('*, companies(id, name)').eq('is_active', true).order('name');
     if (data) setLocations(data);
   };
+
+  const filteredLocations = useMemo(() => {
+    if (selectedRubros.length === 0) return locations;
+    return locations.filter(loc => loc.business_type && selectedRubros.includes(loc.business_type));
+  }, [locations, selectedRubros]);
 
   const sortedPlanos = [...planos].sort((a, b) => {
     let aValue: string | number = '';
@@ -96,11 +103,15 @@ export default function PlanosDefensaCivil() {
       p.descripcion?.toLowerCase().includes(q) ||
       p.locations?.name?.toLowerCase().includes(q);
 
+    const matchesRubro = selectedRubros.length === 0 ||
+      selectedRubros.length === Object.keys(BUSINESS_TYPE_LABELS).length ||
+      selectedRubros.includes(p.locations?.business_type || '');
+
     const matchesLocation = selectedLocations.length === 0 ||
       selectedLocations.length === locations.length ||
       selectedLocations.includes(p.ubicacion_id || '');
 
-    return matchesSearch && matchesLocation;
+    return matchesSearch && matchesRubro && matchesLocation;
   });
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -220,11 +231,26 @@ export default function PlanosDefensaCivil() {
         >
           <FilterBar
             filters={[
-              { key: 'location', multiple: false, placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              { key: 'business_type', placeholder: 'TODOS LOS RUBROS', icon: Filter, iconClassName: 'text-blue-500', wrapperClassName: 'md:min-w-[220px]', options: Object.entries(BUSINESS_TYPE_LABELS).map(([value, label]) => ({ value, label })) },
+              { key: 'location', placeholder: 'TODAS LAS SEDES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[240px]', options: filteredLocations.map(loc => ({ value: loc.id, label: loc.companies?.name ? `${loc.name} (${loc.companies.name})` : loc.name })) },
             ]}
-            values={{ location: selectedLocations[0] || '' }}
-            onChange={(_, value) => {
-              setSelectedLocations(value ? [value as string] : []);
+            values={{ business_type: selectedRubros, location: selectedLocations }}
+            onChange={(key, value) => {
+              if (key === 'business_type') {
+                const newRubros = value as string[];
+                setSelectedRubros(newRubros);
+                if (newRubros.length > 0) {
+                  const validIds = new Set(locations.filter(l => l.business_type && newRubros.includes(l.business_type)).map(l => l.id));
+                  setSelectedLocations(selectedLocations.filter(id => validIds.has(id)));
+                }
+              } else if (key === 'location') {
+                setSelectedLocations(value as string[]);
+              }
+              setCurrentPage(1);
+            }}
+            onClearAll={() => {
+              setSelectedRubros([]);
+              setSelectedLocations([]);
               setCurrentPage(1);
             }}
           />

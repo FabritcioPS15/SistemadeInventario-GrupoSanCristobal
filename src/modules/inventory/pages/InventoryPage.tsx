@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Edit, Trash2, MapPin, Upload, Package, Layers, LayoutGrid, List, BarChart3, FileSpreadsheet, Circle, Plus } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Edit, Trash2, MapPin, Upload, Package, Layers, LayoutGrid, List, BarChart3, FileSpreadsheet, Circle, Plus, Filter } from 'lucide-react';
 import { useNotify } from '../../../shared/hooks/useNotify';
 import { supabase, AssetWithDetails } from '../../../shared/services/supabase';
 import { generateExcel, generatePDF } from '../../../shared/utils/exportUtils';
@@ -17,7 +17,7 @@ import { useInventory } from '../hooks/useInventory';
 import { useAllowedLocations } from '../../../shared/hooks/useAllowedLocations';
 import { PATH_CATEGORY_MAP, SUBCATEGORY_SLUG_MAP, STATUS_MAP } from '../constants/inventory.constants';
 import InventoryDashboard from '../components/InventoryDashboard';
-import { InventoryFilter } from '../../../shared/types/inventory.types';
+import { InventoryFilter, BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 import ActionToolbar from '../../../shared/components/ui/ActionToolbar';
 import FilterBar from '../../../shared/components/ui/FilterBar';
 import ExportButtons from '../../../shared/components/ui/ExportButtons';
@@ -114,6 +114,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     searchTerm,
     selectedLocations,
     filterStatus,
+    filterRubro,
     currentPage,
     itemsPerPage,
     totalPages,
@@ -121,6 +122,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     setSearchTerm,
     setSelectedLocations,
     setFilterStatus,
+    setFilterRubro,
     setCurrentPage,
     setItemsPerPage,
     refresh,
@@ -128,6 +130,11 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     fetchAllFilteredIds,
     fetchAllFilteredData,
   } = useInventory({ categoryFilter, subcategoryFilter });
+
+  const filteredLocations = useMemo(() => {
+    if (!filterRubro || filterRubro.length === 0) return locations;
+    return locations.filter(loc => loc.business_type && filterRubro.includes(loc.business_type));
+  }, [locations, filterRubro]);
 
   // Listen to TopHeader action events
   useEffect(() => {
@@ -321,7 +328,26 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'Todas las ubicaciones', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', multiple: true, options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              {
+                key: 'business_type',
+                placeholder: 'TODOS LOS RUBROS',
+                icon: Filter,
+                iconClassName: 'text-blue-500',
+                wrapperClassName: 'md:min-w-[220px]',
+                options: Object.entries(BUSINESS_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+              },
+              {
+                key: 'location',
+                placeholder: 'TODAS LAS SEDES',
+                icon: MapPin,
+                iconClassName: 'text-rose-500',
+                wrapperClassName: 'md:min-w-[240px]',
+                multiple: true,
+                options: filteredLocations.map(loc => ({
+                  value: loc.id,
+                  label: loc.companies?.name ? `${loc.name} (${loc.companies.name})` : loc.name
+                }))
+              },
               {
                 key: 'status', placeholder: 'Todos los estados', icon: Circle, iconClassName: 'text-emerald-500', wrapperClassName: 'md:min-w-[170px]', options: [
                   { value: 'Operativo', label: 'Operativo' },
@@ -331,10 +357,28 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                 ]
               },
             ]}
-            values={{ location: selectedLocations, status: filterStatus }}
+            values={{ business_type: filterRubro, location: selectedLocations, status: filterStatus }}
             onChange={(key, value) => {
-              if (key === 'location') setSelectedLocations(value as string[]);
-              else if (key === 'status') setFilterStatus(value as string[]);
+              if (key === 'business_type') {
+                const newRubros = value as string[];
+                setFilterRubro(newRubros);
+                if (newRubros.length > 0 && selectedLocations.length > 0) {
+                  const validIds = new Set(
+                    locations.filter(l => l.business_type && newRubros.includes(l.business_type)).map(l => l.id)
+                  );
+                  setSelectedLocations(selectedLocations.filter(id => validIds.has(id)));
+                }
+              } else if (key === 'location') {
+                setSelectedLocations(value as string[]);
+              } else if (key === 'status') {
+                setFilterStatus(value as string[]);
+              }
+              setCurrentPage(1);
+            }}
+            onClearAll={() => {
+              setFilterRubro([]);
+              setSelectedLocations([]);
+              setFilterStatus([]);
               setCurrentPage(1);
             }}
           />

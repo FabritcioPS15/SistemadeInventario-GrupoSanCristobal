@@ -1,5 +1,5 @@
 import { Package, Monitor, Shield, Wrench, Home, Armchair, ClipboardCheck, Computer, Paperclip, Server, Box, Search } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
 import { FormField, FormInput, FormSelect, FormTextarea, FormSection, FormGrid } from '../../../shared/components/forms/BaseForm';
 import DateTimePicker from '../../../shared/components/forms/DateTimePicker';
@@ -23,22 +23,24 @@ const CATEGORY_ICONS: Record<string, any> = {
   'otros-activos': Box,
 };
 
-const AREAS_POR_TIPO: Record<string, string[]> = {
-  'revision': ['Línea 1', 'Línea 2', 'Counter', 'Recepción', 'Oficina Administrativa', 'Almacén'],
-  'policlinico': ['Consultorio', 'Recepción', 'Oficina Administrativa'],
-  'escuela_conductores': ['Aula', 'Oficina Administrativa'],
-  'central': ['Oficina', 'Counter / Recepción', 'Contabilidad', 'RRHH', 'Sala de Reuniones', 'Almacén'],
-  'circuito': ['Circuito', 'Módulo de Control', 'Oficina', 'Cámaras', 'DVR'],
-};
-
 export default function DynamicAssetForm({ onClose, onSaved, editAsset, initialCategoryId }: DynamicAssetFormProps) {
   const form = useDynamicAssetForm({ editAsset, initialCategoryId, onSaved });
   const [tipoActivoSearch, setTipoActivoSearch] = useState('');
   const [tieneGarantia, setTieneGarantia] = useState(!!(editAsset && form.formData.garantia_hasta));
   const [areaEsOtro, setAreaEsOtro] = useState(false);
 
-  const selectedLocation = form.locations.find(loc => loc.id === form.formData.location_id);
-  const areaOptions = (selectedLocation && AREAS_POR_TIPO[selectedLocation.type]) || [];
+  // Categorías ordenadas alfabéticamente (Otros Activos siempre al final)
+  const sortedCategories = useMemo(() => {
+    return [...form.categories].sort((a, b) => {
+      const esOtros = (c: any) => c.slug === 'otros-activos' || c.name?.toLowerCase().includes('otros');
+      if (esOtros(a) !== esOtros(b)) return esOtros(a) ? 1 : -1;
+      return (a.name || '').localeCompare(b.name || '', 'es');
+    });
+  }, [form.categories]);
+
+  const areaOptions = form.areas
+    .filter(area => area.location_id === form.formData.location_id)
+    .map(area => area.name);
   const areaValue = form.formData.area_ubicacion;
   const areaEsCustom = !!areaValue && areaValue !== '__otro__' && !areaOptions.includes(areaValue);
 
@@ -46,10 +48,30 @@ export default function DynamicAssetForm({ onClose, onSaved, editAsset, initialC
   const currentCategory = CATEGORIAS_CONFIG.find(c => c.key === currentCategoryObj?.slug);
   const tiposActivo = currentCategory?.tiposActivo || [];
 
+  // Tipos de activo ordenados alfabéticamente (el botón "Otro..." se mantiene al final)
+  const sortedTiposActivo = useMemo(() => {
+    return [...tiposActivo].sort((a, b) => a.localeCompare(b, 'es'));
+  }, [tiposActivo]);
+
   const filteredTiposActivo = useMemo(() => {
-    if (!tipoActivoSearch) return tiposActivo;
-    return tiposActivo.filter(t => t.toLowerCase().includes(tipoActivoSearch.toLowerCase()));
-  }, [tiposActivo, tipoActivoSearch]);
+    if (!tipoActivoSearch) return sortedTiposActivo;
+    return sortedTiposActivo.filter(t => t.toLowerCase().includes(tipoActivoSearch.toLowerCase()));
+  }, [sortedTiposActivo, tipoActivoSearch]);
+
+  // Al editar un activo cuyo tipo no existe en las opciones de su categoría,
+  // dejarlo registrado como "Otro" y volcar el valor original en el campo personalizado.
+  useEffect(() => {
+    const tipo = form.formData.tipo_activo;
+    if (!tipo) return;
+    const categoriasDelTipo = CATEGORIAS_CONFIG.find(c => c.key === currentCategoryObj?.slug)?.tiposActivo || [];
+    if (tipo !== 'Otro' && !categoriasDelTipo.includes(tipo)) {
+      form.setField('tipo_activo', 'Otro');
+      form.setField('tipo_activo_custom', tipo);
+    } else if (tipo === 'Otro' && !form.formData.tipo_activo_custom && form.camposEspecificos?.tipo_activo_custom) {
+      form.setField('tipo_activo_custom', String(form.camposEspecificos.tipo_activo_custom));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.categories, form.formData.category_id]);
 
   const camposCategoria = currentCategory?.camposCategoria || [];
   const tipoActivoValue = form.formData.tipo_activo === 'Otro' ? form.formData.tipo_activo_custom : form.formData.tipo_activo;
@@ -86,7 +108,7 @@ export default function DynamicAssetForm({ onClose, onSaved, editAsset, initialC
             required={config.required}
           >
             <option value="">Seleccionar...</option>
-            {config.opciones?.map(opt => (
+            {[...(config.opciones || [])].sort((o1, o2) => o1.localeCompare(o2, 'es')).map(opt => (
               <option key={opt} value={opt}>{opt}</option>
             ))}
           </FormSelect>
@@ -153,7 +175,7 @@ export default function DynamicAssetForm({ onClose, onSaved, editAsset, initialC
             1. Seleccione la Categoría
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {form.categories.map(cat => {
+            {sortedCategories.map(cat => {
               const slug = (cat as any).slug;
               const Icon = CATEGORY_ICONS[slug] || Package;
               const isSelected = form.formData.category_id === cat.id;

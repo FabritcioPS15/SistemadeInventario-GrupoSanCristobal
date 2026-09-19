@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Trash2, MapPin, X, Copy, ChevronDown, Search } from 'lucide-react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Trash2, MapPin, X, Copy, ChevronDown, Search, Filter } from 'lucide-react';
 import { GrServerCluster as ServerIcon } from 'react-icons/gr';
 import { SiAnydesk } from "react-icons/si";
 import { supabase, Server, Location } from '../../../shared/services/supabase';
+import { BUSINESS_TYPE_LABELS } from '../../../shared/types/inventory.types';
 import { generatePDF, generateExcel } from '../../../shared/utils/exportUtils';
 import { useAuth } from '../../../app/providers/AuthContext';
 import ServerForm from '../forms/ServerForm';
@@ -59,7 +60,13 @@ export default function Servers() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [selectedRubros, setSelectedRubros] = useState<string[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+
+  const filteredLocations = useMemo(() => {
+    if (selectedRubros.length === 0) return locations;
+    return locations.filter(loc => loc.business_type && selectedRubros.includes(loc.business_type));
+  }, [locations, selectedRubros]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { selectionMode, toggleSelectionMode } = useSelectionMode();
@@ -114,7 +121,7 @@ export default function Servers() {
   };
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('locations').select('*').eq('is_active', true).order('name');
+    const { data } = await supabase.from('locations').select('*, companies(id, name)').eq('is_active', true).order('name');
     if (data) setLocations(data);
   };
 
@@ -294,12 +301,17 @@ export default function Servers() {
       s.anydesk_id?.toLowerCase().includes(q) ||
       s.locations?.name?.toLowerCase().includes(q);
 
+    const matchesRubro =
+      selectedRubros.length === 0 ||
+      selectedRubros.length === Object.keys(BUSINESS_TYPE_LABELS).length ||
+      selectedRubros.includes(s.locations?.business_type || '');
+
     const matchesLocation =
       selectedLocations.length === 0 ||
       selectedLocations.length === locations.length ||
       selectedLocations.includes(s.location_id || '');
 
-    return matchesSearch && matchesLocation;
+    return matchesSearch && matchesRubro && matchesLocation;
   });
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -337,11 +349,43 @@ export default function Servers() {
         >
           <FilterBar
             filters={[
-              { key: 'location', placeholder: 'TODAS LAS UBICACIONES', icon: MapPin, iconClassName: 'text-rose-500', wrapperClassName: 'md:min-w-[220px]', options: locations.map(loc => ({ value: loc.id, label: loc.name })) },
+              {
+                key: 'business_type',
+                placeholder: 'TODOS LOS RUBROS',
+                icon: Filter,
+                iconClassName: 'text-blue-500',
+                wrapperClassName: 'md:min-w-[220px]',
+                options: Object.entries(BUSINESS_TYPE_LABELS).map(([value, label]) => ({ value, label }))
+              },
+              {
+                key: 'location',
+                placeholder: 'TODAS LAS SEDES',
+                icon: MapPin,
+                iconClassName: 'text-rose-500',
+                wrapperClassName: 'md:min-w-[240px]',
+                options: filteredLocations.map(loc => ({
+                  value: loc.id,
+                  label: loc.companies?.name ? `${loc.name} (${loc.companies.name})` : loc.name
+                }))
+              },
             ]}
-            values={{ location: selectedLocations }}
+            values={{ business_type: selectedRubros, location: selectedLocations }}
             onChange={(key, value) => {
-              if (key === 'location') setSelectedLocations(value as string[]);
+              if (key === 'business_type') {
+                const newRubros = value as string[];
+                setSelectedRubros(newRubros);
+                if (newRubros.length > 0) {
+                  const validIds = new Set(locations.filter(l => l.business_type && newRubros.includes(l.business_type)).map(l => l.id));
+                  setSelectedLocations(selectedLocations.filter(id => validIds.has(id)));
+                }
+              } else if (key === 'location') {
+                setSelectedLocations(value as string[]);
+              }
+              setCurrentPage(1);
+            }}
+            onClearAll={() => {
+              setSelectedRubros([]);
+              setSelectedLocations([]);
               setCurrentPage(1);
             }}
           />

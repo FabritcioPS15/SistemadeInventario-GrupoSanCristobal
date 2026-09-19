@@ -398,13 +398,13 @@ export default function MaintenanceForm({ onClose, onSave, editMaintenance, asse
             </FormSelect>
           </FormField>
 
-          <FormField label="Técnico Asignado" error={errors.technician}>
+          <FormField label="Responsable" error={errors.technician}>
             <FormInput
               type="text"
               name="technician"
               value={formData.technician}
               onChange={handleChange}
-              placeholder="Nombre del técnico"
+              placeholder="Nombre del responsable"
               error={errors.technician}
             />
           </FormField>
