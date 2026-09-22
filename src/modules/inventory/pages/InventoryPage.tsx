@@ -196,9 +196,6 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
   };
 
   const handleDecoupleAsset = (asset: AssetWithDetails) => {
-    const cantidad = parseInt(asset.cantidad?.toString() || '1');
-    if (cantidad < 2) return;
-
     setDecoupleAssetData(asset);
     setShowDecoupleModal(true);
   };
@@ -232,10 +229,61 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
     return allFiltered;
   };
 
+  // Ordena los activos para el reporte: Categoría → Sede → Nombre del activo → Código
+  const sortForExport = (items: any[]) => {
+    return [...items].sort((a: any, b: any) => {
+      const catA = a.categories?.name || '';
+      const catB = b.categories?.name || '';
+      if (catA !== catB) return catA.localeCompare(catB, 'es');
+      const locA = a.locations?.name || '';
+      const locB = b.locations?.name || '';
+      if (locA !== locB) return locA.localeCompare(locB, 'es');
+      const itemA = a.item || a.descripcion || '';
+      const itemB = b.item || b.descripcion || '';
+      if (itemA !== itemB) return itemA.localeCompare(itemB, 'es');
+      return (a.codigo_unico || '').localeCompare(b.codigo_unico || '', 'es');
+    });
+  };
+
+  const getSedeNameById = (id: string) => locations.find(l => l.id === id)?.name;
+
+  // Sedes efectivamente aplicadas en la exportación: las del filtro activo o,
+  // si no hay filtro, las restringidas por los permisos del usuario (allowedLocations).
+  const getEffectiveFilteredSedes = (): string[] => {
+    if (selectedLocations.length > 0) return selectedLocations;
+    if (allowedLocations !== null && allowedLocations.length > 0) return allowedLocations;
+    return [];
+  };
+
+  // Nombre de la sede a usar en el encabezado y el nombre de archivo del reporte.
+  const getSedeNameForExport = (): string | undefined => {
+    const sedes = getEffectiveFilteredSedes();
+    if (sedes.length === 1) return getSedeNameById(sedes[0]);
+    return undefined;
+  };
+
+  // Construye el resumen de filtros activos para mostrarlo en el reporte
+  const buildExportFilters = () => {
+    const activos: string[] = [];
+    if (searchTerm) activos.push(`Búsqueda: "${searchTerm}"`);
+    const sedes = getEffectiveFilteredSedes();
+    if (sedes.length > 0) {
+      const nombres = sedes.map(getSedeNameById).filter((n): n is string => !!n);
+      if (nombres.length > 0) activos.push(`Sedes: ${nombres.join(', ')}`);
+    }
+    if (filterStatus.length > 0) activos.push(`Estados: ${filterStatus.join(', ')}`);
+    if (filterRubro.length > 0) {
+      activos.push(`Rubros: ${filterRubro.map(r => BUSINESS_TYPE_LABELS[r as keyof typeof BUSINESS_TYPE_LABELS] || r).join(', ')}`);
+    }
+    if (categoryFilter || subcategoryFilter) activos.push('Categoría activa');
+    return activos;
+  };
+
   const handleExportExcel = async () => {
     try {
-      const itemsToExport = await getExportItems();
-      const sedeName = selectedLocations.length === 1 ? locations.find(l => l.id === selectedLocations[0])?.name : undefined;
+      const itemsToExport = sortForExport(await getExportItems());
+      const sedeName = getSedeNameForExport();
+      const filtros = buildExportFilters();
 
       const data = itemsToExport.map((a: any) => ({
         code: a.codigo_unico || '—',
@@ -249,13 +297,16 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         area: a.areas?.name || a.area_ubicacion || '—',
         status: a.status || a.estado_uso || '—',
         purchase_date: a.fecha_adquisicion ? new Date(String(a.fecha_adquisicion).includes('T') ? String(a.fecha_adquisicion) : `${a.fecha_adquisicion}T12:00:00`).toLocaleDateString('es-PE') : '—',
-        notes: a.notes || '—'
+        notes: a.notes || ''
       }));
 
       await generateExcel({
         title: 'Reporte de Inventario de Activos',
         filename: 'Inventario',
         sede: sedeName,
+        sheetBy: 'category',
+        filters: filtros,
+        registros: itemsToExport.length,
         columns: [
           { header: 'CÓDIGO', key: 'code', width: 15 },
           { header: 'NOMBRE DEL EQUIPO', key: 'equipo', width: 28 },
@@ -268,7 +319,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
           { header: 'ÁREA', key: 'area', width: 20 },
           { header: 'ESTADO', key: 'status', width: 15 },
           { header: 'FECHA ADQ.', key: 'purchase_date', width: 15 },
-          { header: 'NOTAS', key: 'notes', width: 30 }
+          { header: 'OBSERVACIONES', key: 'notes', width: 30 }
         ],
         data
       });
@@ -280,8 +331,9 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
 
   const handleExportPdf = async () => {
     try {
-      const itemsToExport = await getExportItems();
-      const sedeName = selectedLocations.length === 1 ? locations.find(l => l.id === selectedLocations[0])?.name : undefined;
+      const itemsToExport = sortForExport(await getExportItems());
+      const sedeName = getSedeNameForExport();
+      const filtros = buildExportFilters();
 
       const data = itemsToExport.map((a: any) => ({
         code: a.codigo_unico || '—',
@@ -296,6 +348,9 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
         title: 'Reporte de Inventario de Activos',
         filename: 'Inventario',
         sede: sedeName,
+        groupBy: 'category',
+        filters: filtros,
+        registros: itemsToExport.length,
         columns: [
           { header: 'Código', key: 'code' },
           { header: 'Categoría', key: 'category' },
@@ -565,11 +620,9 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
 
                     {canEdit() && (
                       <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 flex gap-2">
-                        {(asset.cantidad || 1) > 1 && (
-                          <button onClick={(e) => { e.stopPropagation(); handleDecoupleAsset(asset); }} className="flex-1 text-[10px] font-bold text-emerald-600 hover:underline bg-emerald-50 px-2 py-2 rounded-sm text-center" title="Desacoplar">
-                            Desacoplar
-                          </button>
-                        )}
+                        <button onClick={(e) => { e.stopPropagation(); handleDecoupleAsset(asset); }} className="flex-1 text-[10px] font-bold text-emerald-600 hover:underline bg-emerald-50 px-2 py-2 rounded-sm text-center" title="Desacoplar">
+                          Desacoplar
+                        </button>
                         <button onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setShowAssetForm(true); }} className="flex-1 text-[10px] font-bold text-[#002855] hover:underline bg-[#002855]/5 px-2 py-2 rounded-sm text-center">
                           Editar
                         </button>
@@ -685,13 +738,11 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                             <div className="flex items-center justify-center gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                               {canEditAsset(asset) && (
                                 <>
-                                  {(asset.cantidad || 1) > 1 && (
-                                    <TableActionButton
-                                      icon={<Layers size={14} />}
-                                      onClick={(e) => { e.stopPropagation(); handleDecoupleAsset(asset); }}
-                                      title="Desacoplar Activos"
-                                    />
-                                  )}
+                                  <TableActionButton
+                                    icon={<Layers size={14} />}
+                                    onClick={(e) => { e.stopPropagation(); handleDecoupleAsset(asset); }}
+                                    title="Desacoplar Activos"
+                                  />
                                   <TableActionButton
                                     icon={<Edit size={14} />}
                                     onClick={(e) => { e.stopPropagation(); setEditingAsset(asset); setShowAssetForm(true); }}
@@ -788,8 +839,16 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                       {canEditAsset(asset) && (
                         <>
                           <button
+                            onClick={() => handleDecoupleAsset(asset)}
+                            className="p-2 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                            title="Desacoplar Activos"
+                          >
+                            <Layers size={16} />
+                          </button>
+                          <button
                             onClick={() => { setEditingAsset(asset); setShowAssetForm(true); }}
                             className="p-2 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-800 hover:text-white transition-all shadow-sm"
+                            title="Editar Activo"
                           >
                             <Edit size={16} />
                           </button>
