@@ -40,6 +40,8 @@ export type UseDynamicAssetFormReturn = {
   areas: Area[];
   loading: boolean;
   errors: Record<string, string>;
+  editSingleUnitFromGroup: boolean;
+  setEditSingleUnitFromGroup: (val: boolean) => void;
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
   handleCamposEspecificosChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
   handleCamposEspecificosCheckedChange: (key: string, checked: boolean) => void;
@@ -208,6 +210,8 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
     setCamposEspecificos(prev => ({ ...prev, [name]: checked }));
   }, []);
 
+  const [editSingleUnitFromGroup, setEditSingleUnitFromGroup] = useState<boolean>(false);
+
   const setField = useCallback((name: string, value: string) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   }, []);
@@ -253,9 +257,32 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
       };
 
       if (editAsset) {
-        const { error } = await supabase.from('assets').update(dataToSave).eq('id', editAsset.id);
-        if (error) throw error;
-        notifySuccess('El activo se actualizó correctamente', '¡Excelente!');
+        const origCount = Math.max(1, parseInt(editAsset.cantidad?.toString() || '1', 10));
+
+        if (editSingleUnitFromGroup && origCount > 1) {
+          // Descontar 1 unidad del lote original
+          const { error: updateError } = await supabase
+            .from('assets')
+            .update({ cantidad: origCount - 1, updated_at: new Date().toISOString() })
+            .eq('id', editAsset.id);
+          if (updateError) throw updateError;
+
+          // Crear la unidad desacoplada individual con los datos guardados
+          const singleUnitData = {
+            ...dataToSave,
+            cantidad: 1,
+            codigo_unico: 'ACT-' + Math.floor(100000 + Math.random() * 900000).toString(),
+          };
+          const { error: insertError } = await supabase.from('assets').insert([singleUnitData]);
+          if (insertError) throw insertError;
+
+          notifySuccess(`Se extrajo y actualizó 1 unidad individual. El grupo original conserva ${origCount - 1} unidades.`, '¡Unidad individual guardada!');
+        } else {
+          // Actualización normal del activo/grupo completo
+          const { error } = await supabase.from('assets').update(dataToSave).eq('id', editAsset.id);
+          if (error) throw error;
+          notifySuccess('El activo se actualizó correctamente', '¡Excelente!');
+        }
       } else {
         const { error } = await supabase.from('assets').insert([dataToSave]);
         if (error) throw error;
@@ -268,7 +295,7 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
     } finally {
       setLoading(false);
     }
-  }, [formData, camposEspecificos, editAsset, onSaved]);
+  }, [formData, camposEspecificos, editAsset, editSingleUnitFromGroup, onSaved]);
 
   return {
     formData,
@@ -280,6 +307,8 @@ export function useDynamicAssetForm({ editAsset, initialCategoryId, onSaved }: U
     areas,
     loading,
     errors,
+    editSingleUnitFromGroup,
+    setEditSingleUnitFromGroup,
     handleChange,
     handleCamposEspecificosChange,
     handleCamposEspecificosCheckedChange,

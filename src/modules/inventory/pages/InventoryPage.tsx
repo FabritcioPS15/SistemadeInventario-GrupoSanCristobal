@@ -612,7 +612,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                           <p className="text-[12px] font-semibold text-slate-700 mt-0.5">{asset.cantidad || 1} {asset.unidad_medida || 'UNIDAD(ES)'}</p>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Valor Ref.</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Costo</p>
                           <p className="text-[12px] font-semibold text-slate-700 mt-0.5">{asset.valor_estimado != null ? `S/ ${Number(asset.valor_estimado).toFixed(2)}` : '—'}</p>
                         </div>
                       </div>
@@ -668,7 +668,7 @@ export default function Inventory({ categoryFilter, subcategoryFilter }: Invento
                       <TableHead sortable isSorted={sortConfig?.key === 'category_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('category_id')}>Categoría</TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'location_id'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('location_id')}>Ubicación</TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'cantidad'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('cantidad')}>Stock</TableHead>
-                      <TableHead sortable isSorted={sortConfig?.key === 'valor_estimado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('valor_estimado')}>Valor Referencial</TableHead>
+                      <TableHead sortable isSorted={sortConfig?.key === 'valor_estimado'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('valor_estimado')}>Costo</TableHead>
                       <TableHead sortable isSorted={sortConfig?.key === 'estado_uso'} sortDirection={sortConfig?.direction || 'asc'} onClick={() => handleSort('estado_uso')}>Estado</TableHead>
                       <TableHead className="text-center">Acciones</TableHead>
                     </TableRow>

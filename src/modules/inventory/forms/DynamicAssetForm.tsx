@@ -1,4 +1,4 @@
-import { Package, Monitor, Shield, Wrench, Home, Armchair, ClipboardCheck, Computer, Paperclip, Server, Box, Search } from 'lucide-react';
+import { Package, Monitor, Shield, Wrench, Home, Armchair, ClipboardCheck, Computer, Paperclip, Server, Box, Search, Layers } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import MultiStepForm from '../../../shared/components/forms/MultiStepForm';
 import { FormField, FormInput, FormSelect, FormTextarea, FormSection, FormGrid } from '../../../shared/components/forms/BaseForm';
@@ -154,6 +154,8 @@ export default function DynamicAssetForm({ onClose, onSaved, editAsset, initialC
     { title: 'Específicos', description: 'Campos por tipo de activo' },
   ];
 
+  const cantidadLote = editAsset ? Math.max(1, parseInt(editAsset.cantidad?.toString() || '1', 10)) : 1;
+
   return (
     <MultiStepForm
       title={editAsset ? 'Editar Activo' : 'Nuevo Activo'}
@@ -168,6 +170,63 @@ export default function DynamicAssetForm({ onClose, onSaved, editAsset, initialC
     >
       {/* Paso 1: Categoría */}
       <div className="space-y-8 min-h-[350px]">
+
+        {/* Banner para editar 1 unidad de un lote si cantidad > 1 */}
+        {editAsset && cantidadLote > 1 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0 mt-0.5">
+                <Layers size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                  Registro agrupado ({cantidadLote} unidades en este registro)
+                </h4>
+                <p className="text-xs text-amber-700 mt-1">
+                  Este registro en inventario representa <strong>{cantidadLote} unidades</strong>. ¿Cómo deseas guardar las modificaciones?
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                    !form.editSingleUnitFromGroup ? 'bg-white border-amber-500 shadow-sm text-slate-800 font-bold' : 'bg-white/60 border-amber-200 text-slate-600 hover:bg-white'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="modoEdicionLote"
+                      checked={!form.editSingleUnitFromGroup}
+                      onChange={() => form.setEditSingleUnitFromGroup(false)}
+                      className="w-4 h-4 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="text-xs">
+                      Editar todo el grupo (<strong>{cantidadLote} unidades</strong>)
+                    </span>
+                  </label>
+
+                  <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                    form.editSingleUnitFromGroup ? 'bg-white border-amber-500 shadow-sm text-slate-800 font-bold' : 'bg-white/60 border-amber-200 text-slate-600 hover:bg-white'
+                  }`}>
+                    <input
+                      type="radio"
+                      name="modoEdicionLote"
+                      checked={form.editSingleUnitFromGroup}
+                      onChange={() => form.setEditSingleUnitFromGroup(true)}
+                      className="w-4 h-4 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="text-xs">
+                      Editar solo <strong>1 unidad individual</strong> (desglosar)
+                    </span>
+                  </label>
+                </div>
+
+                {form.editSingleUnitFromGroup && (
+                  <p className="text-[11px] text-amber-800 font-semibold mt-2.5 bg-amber-100/70 p-2.5 rounded-xl border border-amber-200">
+                    ℹ️ Al guardar, se restará 1 unidad del lote original (quedando {cantidadLote - 1} unidades) y se creará esta unidad editada como un activo individual de 1 unidad sin alterar las demás.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div>
           <h3 className="text-[13px] font-normal text-[#002855] tracking-widest uppercase mb-3 flex items-center gap-2">

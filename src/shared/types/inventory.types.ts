@@ -249,6 +249,13 @@ export interface DashboardMetrics {
     total_value: number;
     asset_count: number;
   }>;
+  assets_by_location: Array<{
+    location_name: string;
+    total_assets: number;
+    total_value: number;
+  }>;
+  total_inventory_value: number;
+  recent_assets?: AssetWithDetails[];
 }
 
 export interface CategoryTree {

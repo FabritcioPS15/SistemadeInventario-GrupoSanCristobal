@@ -185,9 +185,19 @@ export default function AssetDetails({ asset, onClose, onEdit }: AssetDetailsPro
                     {asset.fecha_adquisicion ? new Date(String(asset.fecha_adquisicion).includes('T') ? String(asset.fecha_adquisicion) : `${asset.fecha_adquisicion}T12:00:00`).toLocaleDateString('es-PE') : '—'}
                   </span>
                 </DetailModalRow>
-                <DetailModalRow label="Valor Estimado">
+                <DetailModalRow label="Costo">
                   <span className="text-[10px] sm:text-[12px] font-semibold text-emerald-700">
                     S/. {asset.valor_estimado ? Number(asset.valor_estimado).toFixed(2) : '0.00'}
+                  </span>
+                </DetailModalRow>
+                <DetailModalRow label="Agregado el">
+                  <span className="text-[10px] sm:text-[12px] font-normal text-slate-600">
+                    {asset.created_at ? new Date(String(asset.created_at).includes('T') ? String(asset.created_at) : `${asset.created_at}T12:00:00`).toLocaleDateString('es-PE') : '—'}
+                  </span>
+                </DetailModalRow>
+                <DetailModalRow label="Modificado el">
+                  <span className="text-[10px] sm:text-[12px] font-normal text-slate-600">
+                    {asset.updated_at ? new Date(String(asset.updated_at).includes('T') ? String(asset.updated_at) : `${asset.updated_at}T12:00:00`).toLocaleDateString('es-PE') : '—'}
                   </span>
                 </DetailModalRow>
               </DetailModalCard>
